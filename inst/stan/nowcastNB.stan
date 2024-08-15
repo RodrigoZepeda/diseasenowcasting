@@ -63,9 +63,14 @@ generated quantities {
 
   // Predictions
   for (t in 1:Today){
+    N_cases_predicted[t] = 0;
     for (d in 1:(D + 1)){
       n_pred[t, d] = neg_binomial_2_log_rng(lambda[t, d], r);
+      if (n[t,d] >= 0){
+        N_cases_predicted[t] += n[t, d];
+      } else {
+        N_cases_predicted[t] += n_pred[t, d];
+      }
     }
-    N_cases_predicted[t] = sum(n_pred[t, 1:(D + 1)]);
   }
 }

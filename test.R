@@ -211,11 +211,12 @@ nowcasts2 <- nowcasts |>
 
 ggplot(nowcasts2) +
   geom_line(aes(onset_date,estimate,col="Nobbs estimate"),linetype="longdash") +
-  geom_line(aes(onset_date,mean_7,col="Rod estimate"),linetype="dashed") +
-  geom_point(aes(onset_date,mean_17,col="Rod estimate 2")) +
+  geom_point(aes(onset_date,median_8,col="Rod estimate"),linetype="dashed") +
+  geom_line(aes(onset_date,median_18,col="Rod estimate 2")) +
   geom_line(aes(onset_date,n_reported,col="Reported to date"),linetype="solid") +
   theme_classic()+
   #geom_ribbon(aes(x = onset_date,ymin=lower, ymax=upper, fill = "Nobbs"),alpha=0.3)+
   #geom_ribbon(aes(x = onset_date,ymin=q5, ymax=q95, fill = "Rod"),alpha=0.3)+
   xlab("Case onset date") + ylab("Estimated cases") +
   ggtitle("Observed and predicted number of cases \nat the week of nowcast (Oct 1990) and weeks prior")
+ggsave("rod2.pdf", width = 8, height = 6)
