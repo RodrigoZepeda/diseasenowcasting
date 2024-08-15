@@ -1,3 +1,9 @@
+library(NobBS)
+library(cmdstanr)
+library(dplyr)
+library(tidybayes)
+library(tidyverse)
+
 data <- denguedat
 now  <- as.Date("1990-10-01")
 units <- "1 week"
@@ -17,7 +23,8 @@ specs=list(
   beta.priors=NULL,
   param_names=NULL,
   conf=0.95,
-  dispersion.prior=NULL,
+  dispersion.prior.shape = 0.001,
+  dispersion.prior.rate = 0.001,
   nAdapt=1000,
   nChains=1,
   nBurnin=1000,
@@ -112,7 +119,6 @@ if (is.null(specs[["nThin",exact=TRUE]])) {
 if (is.null(specs[["nSamp",exact=TRUE]])) {
   specs$nSamp <- 10000
 }
-
 # Warnings
 if(max_D>(moving_window-1)){
   stop("Maximum delay cannot be greater than the length of the moving window minus 1 time unit")
@@ -141,7 +147,7 @@ for(t in 1:now.T){
   for(d in 0:max_D){
     reporting.triangle[t,(d+1)] <- nrow(realtime.data[which(realtime.data$week.t==t & realtime.data$delay==d),])
     if(now.T < (t+d)){
-      reporting.triangle[t,(d+1)] <- 0
+      reporting.triangle[t,(d+1)] <- -1
     }
   }
 }
@@ -175,8 +181,28 @@ if(specs[["dist"]]=="NB"){
 }
 
 nowcastmodel <- cmdstanr::cmdstan_model("inst/stan/nowcastNB.stan")
-mod = nowcastmodel$sample(
+mod <- nowcastmodel$sample(
   data = dataList,
   chains = 4,
-  parallel_chains = 4
+  parallel_chains = 4,
 )
+
+ncases <- mod$summary(variables = "N_cases_predicted")
+
+test_nowcast <- NobBS(data=denguedat, now=as.Date("1990-10-01"),
+                      specs = specs,
+                      units="1 week",onset_date="onset_week",report_date="report_week")
+
+nowcasts <- data.frame(test_nowcast$estimates)
+
+nowcasts <- nowcasts |> bind_cols(ncases)
+
+ggplot(nowcasts) +
+  geom_line(aes(onset_date,estimate,col="Nobbs estimate"),linetype="longdash") +
+  geom_line(aes(onset_date,mean,col="Rod estimate"),linetype="dashed") +
+  geom_line(aes(onset_date,n.reported,col="Reported to date"),linetype="solid") +
+  theme_classic()+
+  #geom_ribbon(aes(x = onset_date,ymin=lower, ymax=upper, fill = "Nobbs"),alpha=0.3)+
+  #geom_ribbon(aes(x = onset_date,ymin=q5, ymax=q95, fill = "Rod"),alpha=0.3)+
+  xlab("Case onset date") + ylab("Estimated cases") +
+  ggtitle("Observed and predicted number of cases \nat the week of nowcast (Oct 1990) and weeks prior")
