@@ -3,7 +3,7 @@ library(cmdstanr)
 library(dplyr)
 library(tidybayes)
 library(tidyverse)
-
+library(janitor)
 data <- denguedat
 now  <- as.Date("1990-10-01")
 units <- "1 week"
@@ -189,18 +189,31 @@ mod <- nowcastmodel$sample(
 
 ncases <- mod$summary(variables = "N_cases_predicted")
 
+nowcastmodel2 <- cmdstanr::cmdstan_model("inst/stan/noBSrodsversion.stan")
+mod <- nowcastmodel2$sample(
+  data = dataList,
+  chains = 4,
+  parallel_chains = 4,
+)
+
+ncases2 <- mod$summary(variables = "N_cases_predicted")
+
 test_nowcast <- NobBS(data=denguedat, now=as.Date("1990-10-01"),
                       specs = specs,
                       units="1 week",onset_date="onset_week",report_date="report_week")
 
 nowcasts <- data.frame(test_nowcast$estimates)
 
-nowcasts <- nowcasts |> bind_cols(ncases)
+nowcasts2 <- nowcasts |>
+  bind_cols(ncases) |>
+  bind_cols(ncases2) |>
+  clean_names()
 
-ggplot(nowcasts) +
+ggplot(nowcasts2) +
   geom_line(aes(onset_date,estimate,col="Nobbs estimate"),linetype="longdash") +
-  geom_line(aes(onset_date,mean,col="Rod estimate"),linetype="dashed") +
-  geom_line(aes(onset_date,n.reported,col="Reported to date"),linetype="solid") +
+  geom_line(aes(onset_date,mean_7,col="Rod estimate"),linetype="dashed") +
+  geom_point(aes(onset_date,mean_17,col="Rod estimate 2")) +
+  geom_line(aes(onset_date,n_reported,col="Reported to date"),linetype="solid") +
   theme_classic()+
   #geom_ribbon(aes(x = onset_date,ymin=lower, ymax=upper, fill = "Nobbs"),alpha=0.3)+
   #geom_ribbon(aes(x = onset_date,ymin=q5, ymax=q95, fill = "Rod"),alpha=0.3)+
