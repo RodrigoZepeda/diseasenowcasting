@@ -20,30 +20,42 @@
 #' data(denguedat)
 #'
 #' # Get counts by onset date and report week consider all possible delays
-#' preprocess_for_nowcast(denguedat, "onset_week", "report_week", units = "weeks")
+#' preprocess_for_nowcast(denguedat, "onset_week", "report_week",
+#'   units = "weeks", now = as.Date("1990-03-05")
+#' )
 #'
 #' # Complete one date when there was no onset week
 #' df <- data.frame(
 #'   onset_week  = as.Date(c("1994-09-19", "1994-10-03", "1994-10-03", "1994-10-10")),
 #'   report_week = as.Date(c("1994-09-19", "1994-10-03", "1994-10-10", "1994-10-10"))
 #' )
-#' preprocess_for_nowcast(df, "onset_week", "report_week", units = "weeks")
+#' preprocess_for_nowcast(df, "onset_week", "report_week",
+#'   units = "weeks",
+#'   now = as.Date("1994-10-10")
+#' )
 #'
 #' # Complete one date when there was no report of delay 3 mostly
 #' df <- data.frame(
 #'   onset_week  = as.Date(c("1994-09-19", "1994-10-03", "1994-10-03", "1994-10-10")),
 #'   report_week = as.Date(c("1994-10-10", "1994-10-03", "1994-10-10", "1994-10-10"))
 #' )
-#' preprocess_for_nowcast(df, "onset_week", "report_week", units = "weeks")
+#' preprocess_for_nowcast(df, "onset_week", "report_week",
+#'   units = "weeks",
+#'   now = as.Date("1994-10-10")
+#' )
 #'
 #' # Get counts by onset date and report week stratifying by gender and state
 #' df <- data.frame(
 #'   onset_week = sample(as.Date(c("1994-09-19", "1994-10-03", "1994-10-10")), 100, replace = TRUE),
-#'   gender = sample(c("Male", "Female"), 100, replace = T),
-#'   state = sample(c("A", "B", "C", "D"), prob = c(0.5, 0.2, 0.2, 0.1), size = 100, replace = T)
+#'   gender = sample(c("Male", "Female"), 100, replace = TRUE),
+#'   state = sample(c("A", "B", "C", "D"), prob = c(0.5, 0.2, 0.2, 0.1), size = 100, replace = TRUE)
 #' )
-#' df$report_week <- df$onset_week + sample(c(lubridate::weeks(1), lubridate::weeks(2)), 100, replace = TRUE)
-#' preprocess_for_nowcast(df, "onset_week", "report_week", "gender", "state", units = "weeks")
+#' df$report_week <- df$onset_week +
+#'   sample(c(lubridate::weeks(1), lubridate::weeks(2)), 100, replace = TRUE)
+#' preprocess_for_nowcast(df, "onset_week", "report_week", "gender", "state",
+#'   units = "weeks",
+#'   now = as.Date("1994-09-26")
+#' )
 #'
 #' @export
 preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, ..., now, units,
@@ -60,7 +72,8 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, ..., 
 
   # Calculate the delay column
   .disease_data <- .disease_data |>
-    dplyr::mutate(.delay = as.numeric(difftime(!!as.symbol(report_date), !!as.symbol(onset_date), units = !!units)))
+    dplyr::mutate(.delay = as.numeric(
+      difftime(!!as.symbol(report_date), !!as.symbol(onset_date), units = !!units)))
 
   # Get all possible onset dates in data
   min_date <- .disease_data |>
@@ -136,7 +149,7 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, ..., 
       dplyr::ungroup()
   } else if (data_type == "count") {
     .disease_data <- .disease_data |>
-      dplyr::summarise(n = sum(n), .groups = "drop")
+      dplyr::summarise(!!as.symbol("n") := sum(!!as.symbol("n")), .groups = "drop")
   }
 
   # Bind the data counts to the delay

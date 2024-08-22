@@ -27,9 +27,10 @@ library(diseasenowcasting)
 
 data(denguedat)
 
-#Might need to run again if it gives an unserialized error. Working on it. 
-predictions <- nowcast(denguedat, "onset_week", "report_week", 
-                       now = as.Date("1990-10-01"), 
-                       dist = "NegativeBinomial", cores = 4, iter = 1000)
+# Might need to run again if it gives an unserialized error. Working on it.
+predictions <- nowcast(denguedat, "onset_week", "report_week",
+  now = as.Date("1990-10-01"),
+  dist = "NegativeBinomial", cores = 4, iter = 1000
+)
 ```
 

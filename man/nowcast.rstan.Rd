@@ -2,15 +2,16 @@
 % Please edit documentation in R/nowcast.R
 \name{nowcast.rstan}
 \alias{nowcast.rstan}
-\title{Nowcasting with specific engines}
+\title{Nowcasting with the `rstan` engine}
 \usage{
 nowcast.rstan(
   .disease_data,
   onset_date,
   report_date,
-  covariates = NULL,
+  strata = NULL,
   dist = c("NegativeBinomial", "Poisson"),
   prior_only = FALSE,
+  init = 0,
   ...
 )
 }
@@ -24,16 +25,17 @@ such that each row has a column for onset date, report date, and}
 \item{report_date}{In quotations, the name of the column of datatype
 \code{Date} designating the date of case report. e.g. "report_week"}
 
+\item{strata}{Character vector of names of the strata included in the data.}
+
 \item{dist}{Distribution. Either "NegativeBinomial"  or "Poisson"}
+
+\item{prior_only}{Boolean variable indicating whether to compute only the prior}
+
+\item{init}{Initial values for [rstan::sampling()]}
 
 \item{...}{Additional arguments to pass to [rstan::sample()]}
 }
 \description{
-Nowcasting with specific engines
+Nowcasting with the `rstan` engine
 }
-\examples{
-# Load the data
-data(denguedat)
-now <- as.Date("1990-10-01")
-nowcast(denguedat, onset_dat)
-}
+\keyword{internal}

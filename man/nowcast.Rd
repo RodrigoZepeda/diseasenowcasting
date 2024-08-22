@@ -8,14 +8,13 @@ nowcast(
   .disease_data,
   onset_date,
   report_date,
-  covariates = NULL,
+  strata = NULL,
   dist = c("NegativeBinomial", "Poisson"),
   now = NULL,
   units = NULL,
-  seed = NULL,
-  moving_window = NULL,
   max_delay = Inf,
   prior_only = FALSE,
+  init = 0,
   proportion_reported = 1,
   ...
 )
@@ -30,6 +29,8 @@ such that each row has a column for onset date, report date, and}
 \item{report_date}{In quotations, the name of the column of datatype
 \code{Date} designating the date of case report. e.g. "report_week"}
 
+\item{strata}{Character vector of names of the strata included in the data.}
+
 \item{dist}{Distribution. Either "NegativeBinomial"  or "Poisson"}
 
 \item{now}{An object of datatype \code{Date} indicating the date at which
@@ -37,13 +38,12 @@ to perform the nowcast.}
 
 \item{units}{Time scale of reporting. Options: "1 day", "1 week".}
 
-\item{moving_window}{Size of moving window for estimation of cases (numeric).
-The moving window size should be specified in the same date units as the
-reporting data (i.e. specify 7 to indicate 7 days, 7 weeks, etc).
-Default: NULL, i.e. takes all historical dates into consideration.}
-
 \item{max_delay}{Maximum possible delay observed or considered for estimation
 of the delay distribution (numeric). Default: `Inf`}
+
+\item{prior_only}{Boolean variable indicating whether to compute only the prior}
+
+\item{init}{Initial values for [rstan::sampling()]}
 
 \item{proportion_reported}{A decimal greater than 0 and less than or equal to
 1 representing the proportion of all cases expected to be reported.
@@ -55,11 +55,13 @@ or for outbreaks in which severe under-reporting is expected, change this
 \item{...}{Additional arguments to pass to [rstan::sampling()]}
 }
 \description{
-Function that uses the `brms` engine to generate nowcasts.
+Function that uses the [rstan::sampling()] engine to generate nowcasts.
 }
 \examples{
 # Load the data
 data(denguedat)
 now <- as.Date("1990-10-01")
-nowcast(denguedat, "onset_week", "report_week")
+
+# Run a nowcast with very few iterations
+nowcast(denguedat, "onset_week", "report_week", iter = 10)
 }

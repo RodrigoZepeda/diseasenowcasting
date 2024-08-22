@@ -1,6 +1,6 @@
 #' Nowcasting
 #'
-#' Function that uses the `brms` engine to generate nowcasts.
+#' Function that uses the [rstan::sampling()] engine to generate nowcasts.
 #'
 #' @param .disease_data A time series of reporting data in aggregated line list format
 #' such that each row has a column for onset date, report date, and
@@ -18,10 +18,7 @@
 #' @param report_date In quotations, the name of the column of datatype
 #' \code{Date} designating the date of case report. e.g. "report_week"
 #'
-#' @param moving_window Size of moving window for estimation of cases (numeric).
-#' The moving window size should be specified in the same date units as the
-#' reporting data (i.e. specify 7 to indicate 7 days, 7 weeks, etc).
-#' Default: NULL, i.e. takes all historical dates into consideration.
+#' @param strata Character vector of names of the strata included in the data.
 #'
 #' @param max_delay Maximum possible delay observed or considered for estimation
 #' of the delay distribution (numeric). Default: `Inf`
@@ -33,35 +30,33 @@
 #' or for outbreaks in which severe under-reporting is expected, change this
 #'  to less than 1.
 #'
+#'@param prior_only Boolean variable indicating whether to compute only the prior
+#'
+#' @param init Initial values for [rstan::sampling()]
 #' @param ... Additional arguments to pass to [rstan::sampling()]
 #'
 #' @examples
 #' # Load the data
 #' data(denguedat)
 #' now <- as.Date("1990-10-01")
-#' nowcast(denguedat, "onset_week", "report_week")
+#'
+#' # Run a nowcast with very few iterations
+#' nowcast(denguedat, "onset_week", "report_week", iter = 10)
 #' @export
 nowcast <- function(.disease_data, onset_date, report_date,
-                    covariates = NULL,
+                    strata = NULL,
                     dist = c("NegativeBinomial", "Poisson"),
                     now = NULL,
                     units = NULL,
-                    seed = NULL,
-                    moving_window = NULL,
                     max_delay = Inf,
                     prior_only = FALSE,
+                    init = 0,
                     proportion_reported = 1, ...) {
-
   # Check that the columns of onset and report are columns of data and are dates
   .disease_data <- check_date_columns(.disease_data, onset_date = onset_date, report_date = report_date)
 
   # Check proportion reported
   check_proportion_reported(proportion_reported)
-
-  # Set seed if null
-  if (is.null(seed)) {
-    seed <- ceiling(1000000 * runif(1))
-  }
 
   # Get `now` as the last date by default
   now <- infer_now(.disease_data, now = now, onset_date = onset_date)
@@ -79,70 +74,66 @@ nowcast <- function(.disease_data, onset_date, report_date,
 
   # Get the data for processing
   .disease_data <- preprocess_for_nowcast(.disease_data,
-      onset_date = onset_date,
-      report_date = report_date, now = now, units = units,
-      max_delay = max_delay
+    onset_date = onset_date,
+    report_date = report_date,
+    now = now,
+    units = units,
+    max_delay = max_delay
   )
 
-  nowcast.rstan(.disease_data, onset_date, report_date, dist = dist, ...)
-
+  nowcast.rstan(.disease_data, onset_date, report_date, dist = dist, init = init, ...)
 }
 
-#' Nowcasting with specific engines
+#' Nowcasting with the `rstan` engine
 #'
 #' @inheritParams nowcast
 #' @param ... Additional arguments to pass to [rstan::sample()]
 #'
-#' @examples
-#' # Load the data
-#' data(denguedat)
-#' now <- as.Date("1990-10-01")
-#' nowcast(denguedat, onset_dat)
-#' @export
+#' @keywords internal
 nowcast.rstan <- function(.disease_data, onset_date, report_date,
-                          covariates = NULL,
+                          strata = NULL,
                           dist = c("NegativeBinomial", "Poisson"),
                           prior_only = FALSE,
+                          init = 0,
                           ...) {
-
-  #Get maximum time for model
+  # Get maximum time for model
   max_time <- .disease_data |>
-    dplyr::summarise(max_time = max(.tval)) |>
+    dplyr::summarise(max_time = max(!!as.symbol(".tval"))) |>
     dplyr::pull(max_time)
 
-  #Get maximum delay for model
+  # Get maximum delay for model
   max_delays <- .disease_data |>
-    dplyr::summarise(max_delays = max(.delay)) |>
+    dplyr::summarise(max_delays = max(!!as.symbol(".delay"))) |>
     dplyr::pull(max_delays)
 
-  #Number of strata
+  # Number of strata
   num_strata <- 1
 
-  #Number of covariates
+  # Number of covariates
   num_covariates <- 0
 
-  #Nmatrix
+  # Nmatrix
   Nmat <- .disease_data |>
     dplyr::select(-!!as.symbol(report_date), -!!as.symbol(onset_date)) |>
     dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), tidyr::everything())
 
-  #Distribution
+  # Distribution
   is_negative_binomial <- as.numeric(dist == "NegativeBinomial")
 
-  #Sample only from the prior
+  # Sample only from the prior
   prior_only <- as.numeric(prior_only)
 
   dispersion_prior_shape <- 0.001
-  dispersion_prior_rate  <- 0.001
+  dispersion_prior_rate <- 0.001
 
   beta_mean_prior <- 0
-  beta_sd_prior   <- 1
+  beta_sd_prior <- 1
 
   alpha_mean_prior <- 0
-  alpha_sd_prior   <- 1.0 / sqrt(0.001)
+  alpha_sd_prior <- 1.0 / sqrt(0.001)
 
   alphat_shape_prior <- 0.001
-  alphat_rate_prior  <- 0.001
+  alphat_rate_prior <- 0.001
 
   stan_data <- list(
     max_time = max_time,
@@ -163,9 +154,8 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date,
     alphat_rate_prior = alphat_rate_prior
   )
 
-  #model <- rstan::stan_model("inst/stan/nowcast.stan")
-  out   <- rstan::sampling(stanmodels$nowcast, data = stan_data, init = 0, ...)
+  # model <- rstan::stan_model("inst/stan/nowcast.stan")
+  out <- rstan::sampling(stanmodels$nowcast, data = stan_data, ...)
 
   return(out)
-
 }

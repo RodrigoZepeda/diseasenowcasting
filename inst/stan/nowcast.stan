@@ -5,12 +5,15 @@
 //
 // Data:
 // ------------------------------------------------------------------------------------------------
-// Data consists of a matrix Nmat of (max_time * max_delays * num_strata) × (3 + num_covariates)
+// Data consists of a matrix Nmat of nobs × (3 + num_covariates)
 // where
+// num_covariates .- Number of covariates included in the model.
+// nobs           .- The number of observations is bounded by (max_time × max_delays × num_strata)
+//
+// with:
 // max_time       .- Length of the time frame under consideration.
 // max_delays     .- Maximum number of delays to consider.
 // num_strata     .- Number of variables to stratify by.
-// num_covariates .- Number of covariates included in the model.
 //
 // Here is an example of what the Nmat should look like:
 //
