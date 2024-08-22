@@ -154,7 +154,7 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, ..., 
     dplyr::mutate(.tval = 1 + as.numeric(difftime(!!as.symbol(onset_date), !!min_date, units = !!units))) |>
     # dplyr::filter(!!as.symbol(report_date) <= max_report_date) |>
     dplyr::filter(!!as.symbol(report_date) <= max_date) |>
-    dplyr::filter(!!as.symbol(".delay") <= !!max_D) |>
+    dplyr::filter(!!as.symbol(".delay") <= !!max_delay) |>
     dplyr::arrange(!!as.symbol(onset_date), !!as.symbol(".delay"))
 
   return(all_delay_onsets)

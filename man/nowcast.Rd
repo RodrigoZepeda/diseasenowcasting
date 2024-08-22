@@ -52,7 +52,7 @@ For asymptomatic diseases where not all cases will ever be reported,
 or for outbreaks in which severe under-reporting is expected, change this
  to less than 1.}
 
-\item{...}{Additional arguments to pass to Stan.}
+\item{...}{Additional arguments to pass to [rstan::sampling()]}
 }
 \description{
 Function that uses the `brms` engine to generate nowcasts.

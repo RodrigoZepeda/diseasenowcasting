@@ -84,7 +84,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
       max_delay = max_delay
   )
 
-  nowcast.rstan(.disease_data, onset_date, dist, ...)
+  nowcast.rstan(.disease_data, onset_date, dist = dist, ...)
 
 }
 
@@ -164,7 +164,7 @@ nowcast.rstan <- function(.disease_data, onset_date,
   )
 
   #model <- rstan::stan_model("inst/stan/nowcast.stan")
-  out   <- rstan::sampling(stanmodels$nowcast, data = stan_data, cores = 4, init = 0, ...)
+  out   <- rstan::sampling(stanmodels$nowcast, data = stan_data, init = 0, ...)
 
   return(out)
 
