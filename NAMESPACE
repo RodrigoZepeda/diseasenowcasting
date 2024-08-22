@@ -3,6 +3,7 @@
 export(nowcast)
 export(preprocess_for_nowcast)
 importFrom(RcppParallel,RcppParallelLibs)
+importFrom(methods,new)
 importFrom(rlang,":=")
 importFrom(rstan,sampling)
 importFrom(rstantools,rstan_config)

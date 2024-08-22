@@ -9,5 +9,6 @@
 #' @importFrom rlang :=
 #' @importFrom rstan sampling
 #' @importFrom rstantools rstan_config
+#' @importFrom methods new
 ## usethis namespace: end
 NULL

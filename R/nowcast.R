@@ -96,6 +96,7 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date,
                           prior_only = FALSE,
                           init = 0,
                           ...) {
+
   # Get maximum time for model
   max_time <- .disease_data |>
     dplyr::summarise(max_time = max(!!as.symbol(".tval"))) |>
