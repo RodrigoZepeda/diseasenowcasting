@@ -84,7 +84,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
       max_delay = max_delay
   )
 
-  nowcast.rstan(.disease_data, onset_date, dist = dist, ...)
+  nowcast.rstan(.disease_data, onset_date, report_date, dist = dist, ...)
 
 }
 
@@ -99,7 +99,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
 #' now <- as.Date("1990-10-01")
 #' nowcast(denguedat, onset_dat)
 #' @export
-nowcast.rstan <- function(.disease_data, onset_date,
+nowcast.rstan <- function(.disease_data, onset_date, report_date,
                           covariates = NULL,
                           dist = c("NegativeBinomial", "Poisson"),
                           prior_only = FALSE,
@@ -107,13 +107,13 @@ nowcast.rstan <- function(.disease_data, onset_date,
 
   #Get maximum time for model
   max_time <- .disease_data |>
-    summarise(max_time = max(.tval)) |>
-    pull(max_time)
+    dplyr::summarise(max_time = max(.tval)) |>
+    dplyr::pull(max_time)
 
   #Get maximum delay for model
   max_delays <- .disease_data |>
-    summarise(max_delays = max(.delay)) |>
-    pull(max_delays)
+    dplyr::summarise(max_delays = max(.delay)) |>
+    dplyr::pull(max_delays)
 
   #Number of strata
   num_strata <- 1

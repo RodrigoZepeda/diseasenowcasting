@@ -7,6 +7,7 @@
 nowcast.rstan(
   .disease_data,
   onset_date,
+  report_date,
   covariates = NULL,
   dist = c("NegativeBinomial", "Poisson"),
   prior_only = FALSE,
@@ -19,6 +20,9 @@ such that each row has a column for onset date, report date, and}
 
 \item{onset_date}{In quotations, the name of the column of datatype
 \code{Date} designating the date of case onset. e.g. "onset_week"}
+
+\item{report_date}{In quotations, the name of the column of datatype
+\code{Date} designating the date of case report. e.g. "report_week"}
 
 \item{dist}{Distribution. Either "NegativeBinomial"  or "Poisson"}
 
