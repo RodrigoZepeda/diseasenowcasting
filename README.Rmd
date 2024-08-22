@@ -20,5 +20,14 @@ knitr::opts_chunk$set(
 [![Codecov test coverage](https://codecov.io/gh/RodrigoZepeda/diseasenowcasting/graph/badge.svg)](https://app.codecov.io/gh/RodrigoZepeda/diseasenowcasting)
 <!-- badges: end -->
 
-The goal of diseasenowcasting is to ...
+## Example
+
+```{r}
+library(diseasenowcasting)
+
+data(denguedat)
+
+predictions <- nowcast(denguedat, "onset_week", "report_week", now = as.Date("1990-10-01"),
+                       dist = "NegativeBinomial")
+```
 

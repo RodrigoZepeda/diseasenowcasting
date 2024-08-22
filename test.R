@@ -143,10 +143,13 @@ if(length(unique(realtime.data$week.t))!=now.T){
 # Build the reporting triangle, fill with NAs where unobservable
 reporting.triangle <- matrix(0, nrow=now.T,ncol=(max_D+1))
 
+sumt <- 0
 for(t in 1:now.T){
   for(d in 0:max_D){
+    sumt <- sumt + 1
     reporting.triangle[t,(d+1)] <- nrow(realtime.data[which(realtime.data$week.t==t & realtime.data$delay==d),])
     if(now.T < (t+d)){
+      sumt <- sumt -1
       reporting.triangle[t,(d+1)] <- -1
     }
   }
@@ -187,7 +190,15 @@ mod <- nowcastmodel$sample(
   parallel_chains = 4,
 )
 
-ncases <- mod$summary(variables = "N_cases_predicted")
+nowcastmodel2 <- cmdstanr::cmdstan_model("inst/stan/nowcast.stan")
+mod1 <- nowcastmodel2$sample(
+  data = stan_data,
+  chains = 4,
+  parallel_chains = 4,
+  iter_sampling = 100,
+  iter_warmup = 100
+)
+ncases <- mod1$summary(variables = "N_predict")
 
 nowcastmodel2 <- cmdstanr::cmdstan_model("inst/stan/noBSrodsversion.stan")
 mod <- nowcastmodel2$sample(
@@ -196,7 +207,23 @@ mod <- nowcastmodel2$sample(
   parallel_chains = 4,
 )
 
-ncases2 <- mod$summary(variables = "N_cases_predicted")
+ncases3 <- mod1$summary(variables = "Nmat_predict")
+# Step 2: Filter the rows that correspond to the Nmat_predict variable
+Nmat_predict_means <- ncases3 %>%
+  filter(str_detect(variable, "^Nmat_predict\\[")) %>%
+  mutate(
+    row = as.numeric(str_extract(variable, "(?<=\\[)\\d+(?=,)")),
+    col = as.numeric(str_extract(variable, "(?<=,)\\d+(?=\\])"))
+  ) %>%
+  select(row, col, mean)
+
+# Step 3: Reshape the means into a matrix
+Nmat2 <- with(Nmat_predict_means, {
+  matrix(data = mean, nrow = max(row), ncol = max(col), byrow = FALSE)
+})
+Nmat2 <- Nmat2 |> as.data.frame()
+
+
 
 test_nowcast <- NobBS(data=denguedat, now=as.Date("1990-10-01"),
                       specs = specs,
@@ -206,17 +233,16 @@ nowcasts <- data.frame(test_nowcast$estimates)
 
 nowcasts2 <- nowcasts |>
   bind_cols(ncases) |>
-  bind_cols(ncases2) |>
   clean_names()
 
 ggplot(nowcasts2) +
   geom_line(aes(onset_date,estimate,col="Nobbs estimate"),linetype="longdash") +
-  geom_point(aes(onset_date,median_8,col="Rod estimate"),linetype="dashed") +
-  geom_line(aes(onset_date,median_18,col="Rod estimate 2")) +
+  geom_point(aes(onset_date,median,col="Rod estimate"),linetype="dashed") +
+  #geom_line(aes(onset_date,median_18,col="Rod estimate 2")) +
   geom_line(aes(onset_date,n_reported,col="Reported to date"),linetype="solid") +
   theme_classic()+
   #geom_ribbon(aes(x = onset_date,ymin=lower, ymax=upper, fill = "Nobbs"),alpha=0.3)+
-  #geom_ribbon(aes(x = onset_date,ymin=q5, ymax=q95, fill = "Rod"),alpha=0.3)+
+  #geom_ribbon(aes(x = onset_date,ymin=q5_11, ymax=q95_12, fill = "Rod"),alpha=0.3)+2
   xlab("Case onset date") + ylab("Estimated cases") +
   ggtitle("Observed and predicted number of cases \nat the week of nowcast (Oct 1990) and weeks prior")
 ggsave("rod2.pdf", width = 8, height = 6)

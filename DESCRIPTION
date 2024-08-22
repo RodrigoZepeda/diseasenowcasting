@@ -10,16 +10,24 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports: 
+    brms,
+    bsts,
+    cli,
+    lubridate,
     methods,
     Rcpp (>= 0.12.0),
     RcppParallel (>= 5.0.1),
+    rlang,
     rstan (>= 2.18.1),
-    rstantools (>= 2.4.0)
+    rstantools (>= 2.4.0),
+    tidyr
 Depends: 
-    R (>= 3.4.0)
+    R (>= 4.2.0)
 RoxygenNote: 7.3.2
 Suggests: 
-    cmdstanr
+    cmdstanr,
+    NobBS,
+    testthat (>= 3.0.0)
 Biarch: true
 LinkingTo: 
     BH (>= 1.66.0),
@@ -29,3 +37,5 @@ LinkingTo:
     rstan (>= 2.18.1),
     StanHeaders (>= 2.18.0)
 SystemRequirements: GNU make
+Config/testthat/edition: 3
+Config/testthat/parallel: true
