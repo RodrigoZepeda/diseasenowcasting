@@ -48,7 +48,7 @@ specified in `...`</p>
 <span>  <span class="va">.disease_data</span>,</span>
 <span>  <span class="va">onset_date</span>,</span>
 <span>  <span class="va">report_date</span>,</span>
-<span>  <span class="va">...</span>,</span>
+<span>  strata <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">now</span>,</span>
 <span>  <span class="va">units</span>,</span>
 <span>  max_delay <span class="op">=</span> <span class="cn">Inf</span>,</span>
@@ -75,8 +75,8 @@ such that each row has a column for onset date, report date, and</p></dd>
 <code>Date</code> designating the date of case report. e.g. "report_week"</p></dd>
 
 
-<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional covariates to involve in the count.</p></dd>
+<dt id="arg-strata">strata<a class="anchor" aria-label="anchor" href="#arg-strata"></a></dt>
+<dd><p>Character vector of names of the strata included in the data.</p></dd>
 
 
 <dt id="arg-now">now<a class="anchor" aria-label="anchor" href="#arg-now"></a></dt>
@@ -183,7 +183,7 @@ codifies the difference between onset and report.</p>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">report_week</span> <span class="op">&lt;-</span> <span class="va">df</span><span class="op">$</span><span class="va">onset_week</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/period.html" class="external-link">weeks</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/period.html" class="external-link">weeks</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span>, <span class="fl">100</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">preprocess_for_nowcast</span><span class="op">(</span><span class="va">df</span>, <span class="st">"onset_week"</span>, <span class="st">"report_week"</span>, <span class="st">"gender"</span>, <span class="st">"state"</span>,</span></span>
+<span class="r-in"><span><span class="fu">preprocess_for_nowcast</span><span class="op">(</span><span class="va">df</span>, <span class="st">"onset_week"</span>, <span class="st">"report_week"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gender"</span>, <span class="st">"state"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  units <span class="op">=</span> <span class="st">"weeks"</span>,</span></span>
 <span class="r-in"><span>  now <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1994-09-26"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
