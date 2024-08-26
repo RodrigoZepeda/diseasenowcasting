@@ -3,7 +3,8 @@ data(denguedat)
 now <- as.Date("1990-10-01")
 
 disease_data <- denguedat
-disease_data <- preprocess_for_nowcast(disease_data, "onset_week", "report_week",
+disease_data <- preprocess_for_nowcast(.disease_data, "onset_week", "report_week",
+                                       strata = "gender",
                                        now = now, units = "weeks")
 
 # Nmatrix
