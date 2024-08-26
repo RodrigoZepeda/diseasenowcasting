@@ -58,6 +58,10 @@
 // Additional notes:
 // Currentlty strata and covariates are not programmed.
 // Should add zero-inflation for cases when people stratify too much
+
+#include /include/license.stan
+// #include /include/timetrends.stan
+
 data {
 
     //Data
@@ -99,6 +103,7 @@ parameters {
     vector<lower=0>[is_negative_binomial ? 1 : 0] r; //Precision parameter for negative binomial
     vector[max_time] alpha_centered;        //Parameter for random walk
     vector[max_delays + 1] beta_centered;   //Parameter for delays (delays start at 0)
+    vector[num_covariates] coef_covariates; //Parameter for covariates beta
     real<lower=0> sigma_alpha_t;            //Noise parameter for alpha
 }
 
@@ -123,7 +128,7 @@ transformed parameters {
   //Priors
   // ------------------------------------------------------------------------------------------------
   real lprior = 0;
-  lprior += std_normal_lpdf(beta_centered); //Prior for beta
+  lprior += std_normal_lpdf(beta_centered);
   lprior += std_normal_lpdf(alpha_centered);
   lprior += inv_gamma_lpdf(sigma_alpha_t | alphat_shape_prior, alphat_rate_prior); //Prior for sigma_t
 

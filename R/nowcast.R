@@ -76,6 +76,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
   .disease_data <- preprocess_for_nowcast(.disease_data,
     onset_date = onset_date,
     report_date = report_date,
+    strata = strata,
     now = now,
     units = units,
     max_delay = max_delay
@@ -90,11 +91,20 @@ nowcast <- function(.disease_data, onset_date, report_date,
 #' @param ... Additional arguments to pass to [rstan::sample()]
 #'
 #' @keywords internal
-nowcast.rstan <- function(.disease_data, onset_date, report_date,
+nowcast.rstan <- function(.disease_data, onset_date,
+                          report_date,
                           strata = NULL,
                           dist = c("NegativeBinomial", "Poisson"),
                           prior_only = FALSE,
                           init = 0,
+                          dispersion_prior_shape = 0.001,
+                          dispersion_prior_rate = 0.001,
+                          beta_mean_prior = 0,
+                          beta_sd_prior = 1,
+                          alpha_mean_prior = 0,
+                          alpha_sd_prior = 31,
+                          alphat_shape_prior = 0.001,
+                          alphat_rate_prior = 0.001,
                           ...) {
 
   # Get maximum time for model
@@ -108,7 +118,7 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date,
     dplyr::pull(max_delays)
 
   # Number of strata
-  num_strata <- 1
+  num_strata <- 1 #FIXME: Change
 
   # Number of covariates
   num_covariates <- 0
@@ -124,20 +134,8 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date,
   # Sample only from the prior
   prior_only <- as.numeric(prior_only)
 
-  dispersion_prior_shape <- 0.001
-  dispersion_prior_rate <- 0.001
-
-  beta_mean_prior <- 0
-  beta_sd_prior <- 1
-
-  alpha_mean_prior <- 0
-  alpha_sd_prior <- 1.0 / sqrt(0.001)
-
-  alphat_shape_prior <- 0.001
-  alphat_rate_prior <- 0.001
-
   stan_data <- list(
-    max_time = max_time,
+    max_time   = max_time,
     max_delays = max_delays,
     num_strata = num_strata,
     num_covariates = num_covariates,

@@ -8,7 +8,7 @@ preprocess_for_nowcast(
   .disease_data,
   onset_date,
   report_date,
-  ...,
+  strata = NULL,
   now,
   units,
   max_delay = Inf,
@@ -25,7 +25,7 @@ such that each row has a column for onset date, report date, and}
 \item{report_date}{In quotations, the name of the column of datatype
 \code{Date} designating the date of case report. e.g. "report_week"}
 
-\item{...}{Additional covariates to involve in the count.}
+\item{strata}{Character vector of names of the strata included in the data.}
 
 \item{now}{An object of datatype \code{Date} indicating the date at which
 to perform the nowcast.}
@@ -85,7 +85,7 @@ df <- data.frame(
 )
 df$report_week <- df$onset_week +
   sample(c(lubridate::weeks(1), lubridate::weeks(2)), 100, replace = TRUE)
-preprocess_for_nowcast(df, "onset_week", "report_week", "gender", "state",
+preprocess_for_nowcast(df, "onset_week", "report_week", c("gender", "state"),
   units = "weeks",
   now = as.Date("1994-09-26")
 )
