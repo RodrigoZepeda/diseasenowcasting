@@ -109,10 +109,12 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, strat
 
   # If there are covariates extend to include all covariates
   if (length(strata) > 0) {
-    all_delay_onsets <- tidyr::expand_grid(
-      all_delay_onsets,
-      dplyr::select_at(.disease_data, strata)
-    )
+    for (k in 1:length(strata)){
+      all_delay_onsets <- tidyr::expand_grid(
+        all_delay_onsets,
+        dplyr::distinct_at(.disease_data, strata[k])
+      )
+    }
   }
 
   # Create the new data

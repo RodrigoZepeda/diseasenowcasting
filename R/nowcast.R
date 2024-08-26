@@ -82,7 +82,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
     max_delay = max_delay
   )
 
-  nowcast.rstan(.disease_data, onset_date, report_date, dist = dist, init = init, ...)
+  nowcast.rstan(.disease_data, onset_date, report_date, strata = strata, dist = dist, init = init, ...)
 }
 
 #' Nowcasting with the `rstan` engine
@@ -118,7 +118,7 @@ nowcast.rstan <- function(.disease_data, onset_date,
     dplyr::pull(max_delays)
 
   # Number of strata
-  num_strata <- 1 #FIXME: Change
+  num_strata <- length(strata)
 
   # Number of covariates
   num_covariates <- 0
