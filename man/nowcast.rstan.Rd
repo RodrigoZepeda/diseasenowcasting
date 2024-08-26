@@ -12,6 +12,14 @@ nowcast.rstan(
   dist = c("NegativeBinomial", "Poisson"),
   prior_only = FALSE,
   init = 0,
+  dispersion_prior_shape = 0.001,
+  dispersion_prior_rate = 0.001,
+  beta_mean_prior = 0,
+  beta_sd_prior = 1,
+  alpha_mean_prior = 0,
+  alpha_sd_prior = 31,
+  alphat_shape_prior = 0.001,
+  alphat_rate_prior = 0.001,
   ...
 )
 }

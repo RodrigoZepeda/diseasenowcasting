@@ -27,81 +27,83 @@ namespace model_nowcast_namespace {
 using stan::model::model_base_crtp;
 using namespace stan::math;
 stan::math::profile_map profiles__;
-static constexpr std::array<const char*, 74> locations_array__ =
+static constexpr std::array<const char*, 76> locations_array__ =
   {" (found before start of program)",
-  " (in 'nowcast', line 91, column 4 to column 52)",
-  " (in 'nowcast', line 92, column 4 to column 36)",
-  " (in 'nowcast', line 93, column 4 to column 41)",
-  " (in 'nowcast', line 94, column 4 to column 32)",
-  " (in 'nowcast', line 99, column 2 to column 25)",
-  " (in 'nowcast', line 103, column 2 to column 30)",
-  " (in 'nowcast', line 107, column 2 to column 42)",
-  " (in 'nowcast', line 112, column 2 to column 18)",
-  " (in 'nowcast', line 137, column 2 to column 51)",
-  " (in 'nowcast', line 139, column 2 to column 32)",
-  " (in 'nowcast', line 100, column 2 to column 65)",
-  " (in 'nowcast', line 102, column 4 to column 62)",
-  " (in 'nowcast', line 101, column 2 to line 102, column 62)",
-  " (in 'nowcast', line 104, column 2 to column 55)",
-  " (in 'nowcast', line 109, column 4 to column 33)",
-  " (in 'nowcast', line 108, column 2 to line 109, column 33)",
-  " (in 'nowcast', line 113, column 2 to column 43)",
-  " (in 'nowcast', line 114, column 2 to column 44)",
-  " (in 'nowcast', line 115, column 2 to column 82)",
-  " (in 'nowcast', line 118, column 4 to column 76)",
-  " (in 'nowcast', line 117, column 2 to line 118, column 76)",
-  " (in 'nowcast', line 145, column 10 to column 59)",
-  " (in 'nowcast', line 144, column 13 to line 146, column 7)",
-  " (in 'nowcast', line 143, column 10 to column 100)",
-  " (in 'nowcast', line 142, column 31 to line 144, column 7)",
-  " (in 'nowcast', line 142, column 6 to line 146, column 7)",
-  " (in 'nowcast', line 141, column 23 to line 147, column 3)",
-  " (in 'nowcast', line 141, column 2 to line 147, column 3)",
-  " (in 'nowcast', line 150, column 4 to column 55)",
-  " (in 'nowcast', line 149, column 19 to line 151, column 3)",
-  " (in 'nowcast', line 149, column 2 to line 151, column 3)",
-  " (in 'nowcast', line 154, column 4 to column 42)",
-  " (in 'nowcast', line 153, column 23 to line 155, column 3)",
-  " (in 'nowcast', line 153, column 2 to line 155, column 3)",
-  " (in 'nowcast', line 129, column 8 to column 85)",
-  " (in 'nowcast', line 128, column 6 to line 129, column 85)",
-  " (in 'nowcast', line 127, column 11 to line 130, column 5)",
-  " (in 'nowcast', line 126, column 8 to column 94)",
-  " (in 'nowcast', line 125, column 6 to line 126, column 94)",
-  " (in 'nowcast', line 124, column 29 to line 127, column 5)",
-  " (in 'nowcast', line 124, column 4 to line 130, column 5)",
-  " (in 'nowcast', line 122, column 18 to line 131, column 3)",
-  " (in 'nowcast', line 122, column 2 to line 131, column 3)",
-  " (in 'nowcast', line 133, column 2 to column 19)",
-  " (in 'nowcast', line 64, column 4 to column 26)",
-  " (in 'nowcast', line 65, column 4 to column 28)",
-  " (in 'nowcast', line 66, column 4 to column 28)",
-  " (in 'nowcast', line 67, column 4 to column 32)",
-  " (in 'nowcast', line 68, column 4 to column 22)",
-  " (in 'nowcast', line 69, column 10 to column 14)",
-  " (in 'nowcast', line 69, column 16 to column 34)",
-  " (in 'nowcast', line 69, column 4 to column 45)",
-  " (in 'nowcast', line 72, column 4 to column 47)",
-  " (in 'nowcast', line 73, column 4 to column 37)",
-  " (in 'nowcast', line 76, column 4 to column 41)",
-  " (in 'nowcast', line 77, column 4 to column 40)",
-  " (in 'nowcast', line 78, column 4 to column 26)",
-  " (in 'nowcast', line 79, column 4 to column 33)",
-  " (in 'nowcast', line 80, column 4 to column 37)",
-  " (in 'nowcast', line 81, column 4 to column 36)",
-  " (in 'nowcast', line 82, column 4 to column 25)",
-  " (in 'nowcast', line 83, column 4 to column 32)",
-  " (in 'nowcast', line 88, column 2 to column 33)",
-  " (in 'nowcast', line 91, column 20 to column 48)",
-  " (in 'nowcast', line 92, column 11 to column 19)",
-  " (in 'nowcast', line 93, column 11 to column 25)",
-  " (in 'nowcast', line 99, column 9 to column 17)",
-  " (in 'nowcast', line 103, column 9 to column 23)",
-  " (in 'nowcast', line 107, column 9 to column 17)",
-  " (in 'nowcast', line 107, column 19 to column 33)",
-  " (in 'nowcast', line 137, column 8 to column 16)",
-  " (in 'nowcast', line 137, column 18 to column 32)",
-  " (in 'nowcast', line 139, column 8 to column 16)"};
+  " (in 'nowcast', line 106, column 4 to column 52)",
+  " (in 'nowcast', line 107, column 4 to column 36)",
+  " (in 'nowcast', line 108, column 4 to column 41)",
+  " (in 'nowcast', line 109, column 4 to column 43)",
+  " (in 'nowcast', line 110, column 4 to column 32)",
+  " (in 'nowcast', line 115, column 2 to column 25)",
+  " (in 'nowcast', line 119, column 2 to column 30)",
+  " (in 'nowcast', line 123, column 2 to column 42)",
+  " (in 'nowcast', line 128, column 2 to column 18)",
+  " (in 'nowcast', line 153, column 2 to column 51)",
+  " (in 'nowcast', line 155, column 2 to column 32)",
+  " (in 'nowcast', line 116, column 2 to column 65)",
+  " (in 'nowcast', line 118, column 4 to column 62)",
+  " (in 'nowcast', line 117, column 2 to line 118, column 62)",
+  " (in 'nowcast', line 120, column 2 to column 55)",
+  " (in 'nowcast', line 125, column 4 to column 33)",
+  " (in 'nowcast', line 124, column 2 to line 125, column 33)",
+  " (in 'nowcast', line 129, column 2 to column 43)",
+  " (in 'nowcast', line 130, column 2 to column 44)",
+  " (in 'nowcast', line 131, column 2 to column 82)",
+  " (in 'nowcast', line 134, column 4 to column 76)",
+  " (in 'nowcast', line 133, column 2 to line 134, column 76)",
+  " (in 'nowcast', line 161, column 10 to column 59)",
+  " (in 'nowcast', line 160, column 13 to line 162, column 7)",
+  " (in 'nowcast', line 159, column 10 to column 100)",
+  " (in 'nowcast', line 158, column 31 to line 160, column 7)",
+  " (in 'nowcast', line 158, column 6 to line 162, column 7)",
+  " (in 'nowcast', line 157, column 23 to line 163, column 3)",
+  " (in 'nowcast', line 157, column 2 to line 163, column 3)",
+  " (in 'nowcast', line 166, column 4 to column 55)",
+  " (in 'nowcast', line 165, column 19 to line 167, column 3)",
+  " (in 'nowcast', line 165, column 2 to line 167, column 3)",
+  " (in 'nowcast', line 170, column 4 to column 42)",
+  " (in 'nowcast', line 169, column 23 to line 171, column 3)",
+  " (in 'nowcast', line 169, column 2 to line 171, column 3)",
+  " (in 'nowcast', line 145, column 8 to column 84)",
+  " (in 'nowcast', line 144, column 6 to line 145, column 84)",
+  " (in 'nowcast', line 143, column 11 to line 146, column 5)",
+  " (in 'nowcast', line 142, column 8 to column 94)",
+  " (in 'nowcast', line 141, column 6 to line 142, column 94)",
+  " (in 'nowcast', line 140, column 29 to line 143, column 5)",
+  " (in 'nowcast', line 140, column 4 to line 146, column 5)",
+  " (in 'nowcast', line 138, column 18 to line 147, column 3)",
+  " (in 'nowcast', line 138, column 2 to line 147, column 3)",
+  " (in 'nowcast', line 149, column 2 to column 19)",
+  " (in 'nowcast', line 79, column 4 to column 26)",
+  " (in 'nowcast', line 80, column 4 to column 28)",
+  " (in 'nowcast', line 81, column 4 to column 28)",
+  " (in 'nowcast', line 82, column 4 to column 32)",
+  " (in 'nowcast', line 83, column 4 to column 22)",
+  " (in 'nowcast', line 84, column 10 to column 14)",
+  " (in 'nowcast', line 84, column 16 to column 34)",
+  " (in 'nowcast', line 84, column 4 to column 45)",
+  " (in 'nowcast', line 87, column 4 to column 47)",
+  " (in 'nowcast', line 88, column 4 to column 37)",
+  " (in 'nowcast', line 91, column 4 to column 41)",
+  " (in 'nowcast', line 92, column 4 to column 40)",
+  " (in 'nowcast', line 93, column 4 to column 26)",
+  " (in 'nowcast', line 94, column 4 to column 33)",
+  " (in 'nowcast', line 95, column 4 to column 37)",
+  " (in 'nowcast', line 96, column 4 to column 36)",
+  " (in 'nowcast', line 97, column 4 to column 25)",
+  " (in 'nowcast', line 98, column 4 to column 32)",
+  " (in 'nowcast', line 103, column 2 to column 33)",
+  " (in 'nowcast', line 106, column 20 to column 48)",
+  " (in 'nowcast', line 107, column 11 to column 19)",
+  " (in 'nowcast', line 108, column 11 to column 25)",
+  " (in 'nowcast', line 109, column 11 to column 25)",
+  " (in 'nowcast', line 115, column 9 to column 17)",
+  " (in 'nowcast', line 119, column 9 to column 23)",
+  " (in 'nowcast', line 123, column 9 to column 17)",
+  " (in 'nowcast', line 123, column 19 to column 33)",
+  " (in 'nowcast', line 153, column 8 to column 16)",
+  " (in 'nowcast', line 153, column 18 to column 32)",
+  " (in 'nowcast', line 155, column 8 to column 16)"};
 #include <stan_meta_header.hpp>
 class model_nowcast final : public model_base_crtp<model_nowcast> {
 private:
@@ -149,55 +151,55 @@ public:
     try {
       int pos__ = std::numeric_limits<int>::min();
       pos__ = 1;
-      current_statement__ = 45;
+      current_statement__ = 46;
       context__.validate_dims("data initialization", "max_time", "int",
         std::vector<size_t>{});
       max_time = std::numeric_limits<int>::min();
-      current_statement__ = 45;
-      max_time = context__.vals_i("max_time")[(1 - 1)];
-      current_statement__ = 45;
-      stan::math::check_greater_or_equal(function__, "max_time", max_time, 1);
       current_statement__ = 46;
+      max_time = context__.vals_i("max_time")[(1 - 1)];
+      current_statement__ = 46;
+      stan::math::check_greater_or_equal(function__, "max_time", max_time, 1);
+      current_statement__ = 47;
       context__.validate_dims("data initialization", "max_delays", "int",
         std::vector<size_t>{});
       max_delays = std::numeric_limits<int>::min();
-      current_statement__ = 46;
+      current_statement__ = 47;
       max_delays = context__.vals_i("max_delays")[(1 - 1)];
-      current_statement__ = 46;
+      current_statement__ = 47;
       stan::math::check_greater_or_equal(function__, "max_delays",
         max_delays, 0);
-      current_statement__ = 47;
+      current_statement__ = 48;
       context__.validate_dims("data initialization", "num_strata", "int",
         std::vector<size_t>{});
       num_strata = std::numeric_limits<int>::min();
-      current_statement__ = 47;
+      current_statement__ = 48;
       num_strata = context__.vals_i("num_strata")[(1 - 1)];
-      current_statement__ = 47;
+      current_statement__ = 48;
       stan::math::check_greater_or_equal(function__, "num_strata",
         num_strata, 1);
-      current_statement__ = 48;
+      current_statement__ = 49;
       context__.validate_dims("data initialization", "num_covariates", "int",
         std::vector<size_t>{});
       num_covariates = std::numeric_limits<int>::min();
-      current_statement__ = 48;
+      current_statement__ = 49;
       num_covariates = context__.vals_i("num_covariates")[(1 - 1)];
-      current_statement__ = 48;
+      current_statement__ = 49;
       stan::math::check_greater_or_equal(function__, "num_covariates",
         num_covariates, 0);
-      current_statement__ = 49;
+      current_statement__ = 50;
       context__.validate_dims("data initialization", "nobs", "int",
         std::vector<size_t>{});
       nobs = std::numeric_limits<int>::min();
-      current_statement__ = 49;
-      nobs = context__.vals_i("nobs")[(1 - 1)];
-      current_statement__ = 49;
-      stan::math::check_greater_or_equal(function__, "nobs", nobs, 0);
       current_statement__ = 50;
-      stan::math::validate_non_negative_index("Nmat", "nobs", nobs);
+      nobs = context__.vals_i("nobs")[(1 - 1)];
+      current_statement__ = 50;
+      stan::math::check_greater_or_equal(function__, "nobs", nobs, 0);
       current_statement__ = 51;
+      stan::math::validate_non_negative_index("Nmat", "nobs", nobs);
+      current_statement__ = 52;
       stan::math::validate_non_negative_index("Nmat", "3 + num_covariates",
         (3 + num_covariates));
-      current_statement__ = 52;
+      current_statement__ = 53;
       context__.validate_dims("data initialization", "Nmat", "int",
         std::vector<size_t>{static_cast<size_t>(nobs),
           static_cast<size_t>((3 + num_covariates))});
@@ -206,7 +208,7 @@ public:
                  std::numeric_limits<int>::min()));
       {
         std::vector<int> Nmat_flat__;
-        current_statement__ = 52;
+        current_statement__ = 53;
         Nmat_flat__ = context__.vals_i("Nmat");
         pos__ = 1;
         for (int sym1__ = 1; sym1__ <= (3 + num_covariates); ++sym1__) {
@@ -218,154 +220,158 @@ public:
           }
         }
       }
-      current_statement__ = 53;
+      current_statement__ = 54;
       context__.validate_dims("data initialization", "is_negative_binomial",
         "int", std::vector<size_t>{});
       is_negative_binomial = std::numeric_limits<int>::min();
-      current_statement__ = 53;
+      current_statement__ = 54;
       is_negative_binomial = context__.vals_i("is_negative_binomial")[(1 -
         1)];
-      current_statement__ = 53;
+      current_statement__ = 54;
       stan::math::check_greater_or_equal(function__, "is_negative_binomial",
         is_negative_binomial, 0);
-      current_statement__ = 53;
+      current_statement__ = 54;
       stan::math::check_less_or_equal(function__, "is_negative_binomial",
         is_negative_binomial, 1);
-      current_statement__ = 54;
+      current_statement__ = 55;
       context__.validate_dims("data initialization", "prior_only", "int",
         std::vector<size_t>{});
       prior_only = std::numeric_limits<int>::min();
-      current_statement__ = 54;
+      current_statement__ = 55;
       prior_only = context__.vals_i("prior_only")[(1 - 1)];
-      current_statement__ = 54;
+      current_statement__ = 55;
       stan::math::check_greater_or_equal(function__, "prior_only",
         prior_only, 0);
-      current_statement__ = 54;
-      stan::math::check_less_or_equal(function__, "prior_only", prior_only, 1);
       current_statement__ = 55;
+      stan::math::check_less_or_equal(function__, "prior_only", prior_only, 1);
+      current_statement__ = 56;
       context__.validate_dims("data initialization",
         "dispersion_prior_shape", "double", std::vector<size_t>{});
       dispersion_prior_shape = std::numeric_limits<double>::quiet_NaN();
-      current_statement__ = 55;
+      current_statement__ = 56;
       dispersion_prior_shape = context__.vals_r("dispersion_prior_shape")[(1
         - 1)];
-      current_statement__ = 55;
+      current_statement__ = 56;
       stan::math::check_greater_or_equal(function__,
         "dispersion_prior_shape", dispersion_prior_shape, 0);
-      current_statement__ = 56;
+      current_statement__ = 57;
       context__.validate_dims("data initialization", "dispersion_prior_rate",
         "double", std::vector<size_t>{});
       dispersion_prior_rate = std::numeric_limits<double>::quiet_NaN();
-      current_statement__ = 56;
+      current_statement__ = 57;
       dispersion_prior_rate = context__.vals_r("dispersion_prior_rate")[(1 -
         1)];
-      current_statement__ = 56;
+      current_statement__ = 57;
       stan::math::check_greater_or_equal(function__, "dispersion_prior_rate",
         dispersion_prior_rate, 0);
-      current_statement__ = 57;
+      current_statement__ = 58;
       context__.validate_dims("data initialization", "alpha_mean_prior",
         "double", std::vector<size_t>{});
       alpha_mean_prior = std::numeric_limits<double>::quiet_NaN();
-      current_statement__ = 57;
-      alpha_mean_prior = context__.vals_r("alpha_mean_prior")[(1 - 1)];
       current_statement__ = 58;
+      alpha_mean_prior = context__.vals_r("alpha_mean_prior")[(1 - 1)];
+      current_statement__ = 59;
       context__.validate_dims("data initialization", "alpha_sd_prior",
         "double", std::vector<size_t>{});
       alpha_sd_prior = std::numeric_limits<double>::quiet_NaN();
-      current_statement__ = 58;
+      current_statement__ = 59;
       alpha_sd_prior = context__.vals_r("alpha_sd_prior")[(1 - 1)];
-      current_statement__ = 58;
+      current_statement__ = 59;
       stan::math::check_greater_or_equal(function__, "alpha_sd_prior",
         alpha_sd_prior, 0);
-      current_statement__ = 59;
+      current_statement__ = 60;
       context__.validate_dims("data initialization", "alphat_shape_prior",
         "double", std::vector<size_t>{});
       alphat_shape_prior = std::numeric_limits<double>::quiet_NaN();
-      current_statement__ = 59;
+      current_statement__ = 60;
       alphat_shape_prior = context__.vals_r("alphat_shape_prior")[(1 - 1)];
-      current_statement__ = 59;
+      current_statement__ = 60;
       stan::math::check_greater_or_equal(function__, "alphat_shape_prior",
         alphat_shape_prior, 0);
-      current_statement__ = 60;
+      current_statement__ = 61;
       context__.validate_dims("data initialization", "alphat_rate_prior",
         "double", std::vector<size_t>{});
       alphat_rate_prior = std::numeric_limits<double>::quiet_NaN();
-      current_statement__ = 60;
+      current_statement__ = 61;
       alphat_rate_prior = context__.vals_r("alphat_rate_prior")[(1 - 1)];
-      current_statement__ = 60;
+      current_statement__ = 61;
       stan::math::check_greater_or_equal(function__, "alphat_rate_prior",
         alphat_rate_prior, 0);
-      current_statement__ = 61;
+      current_statement__ = 62;
       context__.validate_dims("data initialization", "beta_mean_prior",
         "double", std::vector<size_t>{});
       beta_mean_prior = std::numeric_limits<double>::quiet_NaN();
-      current_statement__ = 61;
-      beta_mean_prior = context__.vals_r("beta_mean_prior")[(1 - 1)];
       current_statement__ = 62;
+      beta_mean_prior = context__.vals_r("beta_mean_prior")[(1 - 1)];
+      current_statement__ = 63;
       context__.validate_dims("data initialization", "beta_sd_prior",
         "double", std::vector<size_t>{});
       beta_sd_prior = std::numeric_limits<double>::quiet_NaN();
-      current_statement__ = 62;
+      current_statement__ = 63;
       beta_sd_prior = context__.vals_r("beta_sd_prior")[(1 - 1)];
-      current_statement__ = 62;
+      current_statement__ = 63;
       stan::math::check_greater_or_equal(function__, "beta_sd_prior",
         beta_sd_prior, 0);
-      current_statement__ = 63;
+      current_statement__ = 64;
       ncovs = std::numeric_limits<int>::min();
-      current_statement__ = 63;
+      current_statement__ = 64;
       ncovs = (3 + num_covariates);
-      current_statement__ = 64;
+      current_statement__ = 65;
       r_1dim__ = std::numeric_limits<int>::min();
-      current_statement__ = 64;
+      current_statement__ = 65;
       r_1dim__ = (is_negative_binomial ? 1 : 0);
-      current_statement__ = 64;
+      current_statement__ = 65;
       stan::math::validate_non_negative_index("r",
         "is_negative_binomial ? 1 : 0", r_1dim__);
-      current_statement__ = 65;
+      current_statement__ = 66;
       stan::math::validate_non_negative_index("alpha_centered", "max_time",
         max_time);
-      current_statement__ = 66;
+      current_statement__ = 67;
       beta_centered_1dim__ = std::numeric_limits<int>::min();
-      current_statement__ = 66;
+      current_statement__ = 67;
       beta_centered_1dim__ = (max_delays + 1);
-      current_statement__ = 66;
+      current_statement__ = 67;
       stan::math::validate_non_negative_index("beta_centered",
         "max_delays + 1", beta_centered_1dim__);
-      current_statement__ = 67;
+      current_statement__ = 68;
+      stan::math::validate_non_negative_index("coef_covariates",
+        "num_covariates", num_covariates);
+      current_statement__ = 69;
       stan::math::validate_non_negative_index("alpha", "max_time", max_time);
-      current_statement__ = 68;
+      current_statement__ = 70;
       beta_1dim__ = std::numeric_limits<int>::min();
-      current_statement__ = 68;
+      current_statement__ = 70;
       beta_1dim__ = (max_delays + 1);
-      current_statement__ = 68;
+      current_statement__ = 70;
       stan::math::validate_non_negative_index("beta", "max_delays + 1",
         beta_1dim__);
-      current_statement__ = 69;
+      current_statement__ = 71;
       stan::math::validate_non_negative_index("lambda", "max_time", max_time);
-      current_statement__ = 70;
+      current_statement__ = 72;
       lambda_2dim__ = std::numeric_limits<int>::min();
-      current_statement__ = 70;
+      current_statement__ = 72;
       lambda_2dim__ = (max_delays + 1);
-      current_statement__ = 70;
+      current_statement__ = 72;
       stan::math::validate_non_negative_index("lambda", "max_delays + 1",
         lambda_2dim__);
-      current_statement__ = 71;
+      current_statement__ = 73;
       stan::math::validate_non_negative_index("Nmat_predict", "max_time",
         max_time);
-      current_statement__ = 72;
+      current_statement__ = 74;
       Nmat_predict_2dim__ = std::numeric_limits<int>::min();
-      current_statement__ = 72;
+      current_statement__ = 74;
       Nmat_predict_2dim__ = (max_delays + 1);
-      current_statement__ = 72;
+      current_statement__ = 74;
       stan::math::validate_non_negative_index("Nmat_predict",
         "max_delays + 1", Nmat_predict_2dim__);
-      current_statement__ = 73;
+      current_statement__ = 75;
       stan::math::validate_non_negative_index("N_predict", "max_time",
         max_time);
     } catch (const std::exception& e) {
       stan::lang::rethrow_located(e, locations_array__[current_statement__]);
     }
-    num_params_r__ = r_1dim__ + max_time + beta_centered_1dim__ + 1;
+    num_params_r__ = r_1dim__ + max_time + beta_centered_1dim__ +
+      num_covariates + 1;
   }
   inline std::string model_name() const final {
     return "model_nowcast";
@@ -415,20 +421,26 @@ public:
       current_statement__ = 3;
       beta_centered = in__.template read<
                         Eigen::Matrix<local_scalar_t__,-1,1>>(beta_centered_1dim__);
-      local_scalar_t__ sigma_alpha_t = DUMMY_VAR__;
+      Eigen::Matrix<local_scalar_t__,-1,1> coef_covariates =
+        Eigen::Matrix<local_scalar_t__,-1,1>::Constant(num_covariates,
+          DUMMY_VAR__);
       current_statement__ = 4;
+      coef_covariates = in__.template read<
+                          Eigen::Matrix<local_scalar_t__,-1,1>>(num_covariates);
+      local_scalar_t__ sigma_alpha_t = DUMMY_VAR__;
+      current_statement__ = 5;
       sigma_alpha_t = in__.template read_constrain_lb<local_scalar_t__,
                         jacobian__>(0, lp__);
       Eigen::Matrix<local_scalar_t__,-1,1> alpha =
         Eigen::Matrix<local_scalar_t__,-1,1>::Constant(max_time, DUMMY_VAR__);
-      current_statement__ = 11;
+      current_statement__ = 12;
       stan::model::assign(alpha, (alpha_mean_prior + (alpha_sd_prior *
         stan::model::rvalue(alpha_centered, "alpha_centered",
           stan::model::index_uni(1)))), "assigning variable alpha",
         stan::model::index_uni(1));
-      current_statement__ = 13;
+      current_statement__ = 14;
       for (int t = 2; t <= max_time; ++t) {
-        current_statement__ = 12;
+        current_statement__ = 13;
         stan::model::assign(alpha,
           (stan::model::rvalue(alpha, "alpha",
              stan::model::index_uni((t - 1))) + (sigma_alpha_t *
@@ -439,7 +451,7 @@ public:
       Eigen::Matrix<local_scalar_t__,-1,1> beta =
         Eigen::Matrix<local_scalar_t__,-1,1>::Constant(beta_1dim__,
           DUMMY_VAR__);
-      current_statement__ = 14;
+      current_statement__ = 15;
       stan::model::assign(beta,
         stan::math::add(beta_mean_prior,
           stan::math::multiply(beta_sd_prior, beta_centered)),
@@ -447,9 +459,9 @@ public:
       Eigen::Matrix<local_scalar_t__,-1,-1> lambda =
         Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(max_time,
           lambda_2dim__, DUMMY_VAR__);
-      current_statement__ = 16;
+      current_statement__ = 17;
       for (int d = 1; d <= (max_delays + 1); ++d) {
-        current_statement__ = 15;
+        current_statement__ = 16;
         stan::model::assign(lambda,
           stan::math::add(alpha,
             stan::model::rvalue(beta, "beta", stan::model::index_uni(d))),
@@ -457,31 +469,31 @@ public:
           stan::model::index_uni(d));
       }
       local_scalar_t__ lprior = DUMMY_VAR__;
-      current_statement__ = 8;
+      current_statement__ = 9;
       lprior = 0;
-      current_statement__ = 17;
-      lprior = (lprior + stan::math::std_normal_lpdf<false>(beta_centered));
       current_statement__ = 18;
-      lprior = (lprior + stan::math::std_normal_lpdf<false>(alpha_centered));
+      lprior = (lprior + stan::math::std_normal_lpdf<false>(beta_centered));
       current_statement__ = 19;
+      lprior = (lprior + stan::math::std_normal_lpdf<false>(alpha_centered));
+      current_statement__ = 20;
       lprior = (lprior +
         stan::math::inv_gamma_lpdf<false>(sigma_alpha_t, alphat_shape_prior,
           alphat_rate_prior));
-      current_statement__ = 21;
+      current_statement__ = 22;
       if (is_negative_binomial) {
-        current_statement__ = 20;
+        current_statement__ = 21;
         lprior = (lprior +
           stan::math::gamma_lpdf<false>(r, dispersion_prior_shape,
             dispersion_prior_rate));
       }
       {
-        current_statement__ = 43;
+        current_statement__ = 44;
         if (stan::math::logical_negation(prior_only)) {
-          current_statement__ = 41;
+          current_statement__ = 42;
           if (is_negative_binomial) {
-            current_statement__ = 39;
+            current_statement__ = 40;
             for (int k = 1; k <= nobs; ++k) {
-              current_statement__ = 38;
+              current_statement__ = 39;
               lp_accum__.add(stan::math::neg_binomial_2_log_lpmf<false>(
                                stan::model::rvalue(Nmat, "Nmat",
                                  stan::model::index_uni(k),
@@ -497,9 +509,9 @@ public:
                                       stan::model::index_uni(3)) + 1))), r));
             }
           } else {
-            current_statement__ = 36;
+            current_statement__ = 37;
             for (int k = 1; k <= nobs; ++k) {
-              current_statement__ = 35;
+              current_statement__ = 36;
               lp_accum__.add(stan::math::poisson_log_lpmf<false>(
                                stan::model::rvalue(Nmat, "Nmat",
                                  stan::model::index_uni(k),
@@ -516,7 +528,7 @@ public:
             }
           }
         }
-        current_statement__ = 44;
+        current_statement__ = 45;
         lp_accum__.add(lprior);
       }
     } catch (const std::exception& e) {
@@ -566,20 +578,26 @@ public:
       current_statement__ = 3;
       beta_centered = in__.template read<
                         Eigen::Matrix<local_scalar_t__,-1,1>>(beta_centered_1dim__);
-      local_scalar_t__ sigma_alpha_t = DUMMY_VAR__;
+      Eigen::Matrix<local_scalar_t__,-1,1> coef_covariates =
+        Eigen::Matrix<local_scalar_t__,-1,1>::Constant(num_covariates,
+          DUMMY_VAR__);
       current_statement__ = 4;
+      coef_covariates = in__.template read<
+                          Eigen::Matrix<local_scalar_t__,-1,1>>(num_covariates);
+      local_scalar_t__ sigma_alpha_t = DUMMY_VAR__;
+      current_statement__ = 5;
       sigma_alpha_t = in__.template read_constrain_lb<local_scalar_t__,
                         jacobian__>(0, lp__);
       Eigen::Matrix<local_scalar_t__,-1,1> alpha =
         Eigen::Matrix<local_scalar_t__,-1,1>::Constant(max_time, DUMMY_VAR__);
-      current_statement__ = 11;
+      current_statement__ = 12;
       stan::model::assign(alpha, (alpha_mean_prior + (alpha_sd_prior *
         stan::model::rvalue(alpha_centered, "alpha_centered",
           stan::model::index_uni(1)))), "assigning variable alpha",
         stan::model::index_uni(1));
-      current_statement__ = 13;
+      current_statement__ = 14;
       for (int t = 2; t <= max_time; ++t) {
-        current_statement__ = 12;
+        current_statement__ = 13;
         stan::model::assign(alpha,
           (stan::model::rvalue(alpha, "alpha",
              stan::model::index_uni((t - 1))) + (sigma_alpha_t *
@@ -590,7 +608,7 @@ public:
       Eigen::Matrix<local_scalar_t__,-1,1> beta =
         Eigen::Matrix<local_scalar_t__,-1,1>::Constant(beta_1dim__,
           DUMMY_VAR__);
-      current_statement__ = 14;
+      current_statement__ = 15;
       stan::model::assign(beta,
         stan::math::add(beta_mean_prior,
           stan::math::multiply(beta_sd_prior, beta_centered)),
@@ -598,9 +616,9 @@ public:
       Eigen::Matrix<local_scalar_t__,-1,-1> lambda =
         Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(max_time,
           lambda_2dim__, DUMMY_VAR__);
-      current_statement__ = 16;
+      current_statement__ = 17;
       for (int d = 1; d <= (max_delays + 1); ++d) {
-        current_statement__ = 15;
+        current_statement__ = 16;
         stan::model::assign(lambda,
           stan::math::add(alpha,
             stan::model::rvalue(beta, "beta", stan::model::index_uni(d))),
@@ -608,31 +626,31 @@ public:
           stan::model::index_uni(d));
       }
       local_scalar_t__ lprior = DUMMY_VAR__;
-      current_statement__ = 8;
+      current_statement__ = 9;
       lprior = 0;
-      current_statement__ = 17;
-      lprior = (lprior + stan::math::std_normal_lpdf<false>(beta_centered));
       current_statement__ = 18;
-      lprior = (lprior + stan::math::std_normal_lpdf<false>(alpha_centered));
+      lprior = (lprior + stan::math::std_normal_lpdf<false>(beta_centered));
       current_statement__ = 19;
+      lprior = (lprior + stan::math::std_normal_lpdf<false>(alpha_centered));
+      current_statement__ = 20;
       lprior = (lprior +
         stan::math::inv_gamma_lpdf<false>(sigma_alpha_t, alphat_shape_prior,
           alphat_rate_prior));
-      current_statement__ = 21;
+      current_statement__ = 22;
       if (is_negative_binomial) {
-        current_statement__ = 20;
+        current_statement__ = 21;
         lprior = (lprior +
           stan::math::gamma_lpdf<false>(r, dispersion_prior_shape,
             dispersion_prior_rate));
       }
       {
-        current_statement__ = 43;
+        current_statement__ = 44;
         if (stan::math::logical_negation(prior_only)) {
-          current_statement__ = 41;
+          current_statement__ = 42;
           if (is_negative_binomial) {
-            current_statement__ = 39;
+            current_statement__ = 40;
             for (int k = 1; k <= nobs; ++k) {
-              current_statement__ = 38;
+              current_statement__ = 39;
               lp_accum__.add(stan::math::neg_binomial_2_log_lpmf<false>(
                                stan::model::rvalue(Nmat, "Nmat",
                                  stan::model::index_uni(k),
@@ -648,9 +666,9 @@ public:
                                       stan::model::index_uni(3)) + 1))), r));
             }
           } else {
-            current_statement__ = 36;
+            current_statement__ = 37;
             for (int k = 1; k <= nobs; ++k) {
-              current_statement__ = 35;
+              current_statement__ = 36;
               lp_accum__.add(stan::math::poisson_log_lpmf<false>(
                                stan::model::rvalue(Nmat, "Nmat",
                                  stan::model::index_uni(k),
@@ -667,7 +685,7 @@ public:
             }
           }
         }
-        current_statement__ = 44;
+        current_statement__ = 45;
         lp_accum__.add(lprior);
       }
     } catch (const std::exception& e) {
@@ -730,8 +748,14 @@ public:
       current_statement__ = 3;
       beta_centered = in__.template read<
                         Eigen::Matrix<local_scalar_t__,-1,1>>(beta_centered_1dim__);
-      double sigma_alpha_t = std::numeric_limits<double>::quiet_NaN();
+      Eigen::Matrix<double,-1,1> coef_covariates =
+        Eigen::Matrix<double,-1,1>::Constant(num_covariates,
+          std::numeric_limits<double>::quiet_NaN());
       current_statement__ = 4;
+      coef_covariates = in__.template read<
+                          Eigen::Matrix<local_scalar_t__,-1,1>>(num_covariates);
+      double sigma_alpha_t = std::numeric_limits<double>::quiet_NaN();
+      current_statement__ = 5;
       sigma_alpha_t = in__.template read_constrain_lb<local_scalar_t__,
                         jacobian__>(0, lp__);
       Eigen::Matrix<double,-1,1> alpha =
@@ -747,20 +771,21 @@ public:
       out__.write(r);
       out__.write(alpha_centered);
       out__.write(beta_centered);
+      out__.write(coef_covariates);
       out__.write(sigma_alpha_t);
       if (stan::math::logical_negation(
             (stan::math::primitive_value(emit_transformed_parameters__) ||
             stan::math::primitive_value(emit_generated_quantities__)))) {
         return ;
       }
-      current_statement__ = 11;
+      current_statement__ = 12;
       stan::model::assign(alpha, (alpha_mean_prior + (alpha_sd_prior *
         stan::model::rvalue(alpha_centered, "alpha_centered",
           stan::model::index_uni(1)))), "assigning variable alpha",
         stan::model::index_uni(1));
-      current_statement__ = 13;
+      current_statement__ = 14;
       for (int t = 2; t <= max_time; ++t) {
-        current_statement__ = 12;
+        current_statement__ = 13;
         stan::model::assign(alpha,
           (stan::model::rvalue(alpha, "alpha",
              stan::model::index_uni((t - 1))) + (sigma_alpha_t *
@@ -768,33 +793,33 @@ public:
             stan::model::index_uni(t)))), "assigning variable alpha",
           stan::model::index_uni(t));
       }
-      current_statement__ = 14;
+      current_statement__ = 15;
       stan::model::assign(beta,
         stan::math::add(beta_mean_prior,
           stan::math::multiply(beta_sd_prior, beta_centered)),
         "assigning variable beta");
-      current_statement__ = 16;
+      current_statement__ = 17;
       for (int d = 1; d <= (max_delays + 1); ++d) {
-        current_statement__ = 15;
+        current_statement__ = 16;
         stan::model::assign(lambda,
           stan::math::add(alpha,
             stan::model::rvalue(beta, "beta", stan::model::index_uni(d))),
           "assigning variable lambda", stan::model::index_omni(),
           stan::model::index_uni(d));
       }
-      current_statement__ = 8;
+      current_statement__ = 9;
       lprior = 0;
-      current_statement__ = 17;
-      lprior = (lprior + stan::math::std_normal_lpdf<false>(beta_centered));
       current_statement__ = 18;
-      lprior = (lprior + stan::math::std_normal_lpdf<false>(alpha_centered));
+      lprior = (lprior + stan::math::std_normal_lpdf<false>(beta_centered));
       current_statement__ = 19;
+      lprior = (lprior + stan::math::std_normal_lpdf<false>(alpha_centered));
+      current_statement__ = 20;
       lprior = (lprior +
         stan::math::inv_gamma_lpdf<false>(sigma_alpha_t, alphat_shape_prior,
           alphat_rate_prior));
-      current_statement__ = 21;
+      current_statement__ = 22;
       if (is_negative_binomial) {
-        current_statement__ = 20;
+        current_statement__ = 21;
         lprior = (lprior +
           stan::math::gamma_lpdf<false>(r, dispersion_prior_shape,
             dispersion_prior_rate));
@@ -814,11 +839,11 @@ public:
             std::numeric_limits<int>::min()));
       std::vector<int> N_predict =
         std::vector<int>(max_time, std::numeric_limits<int>::min());
-      current_statement__ = 28;
+      current_statement__ = 29;
       for (int t = 1; t <= max_time; ++t) {
-        current_statement__ = 26;
+        current_statement__ = 27;
         if (is_negative_binomial) {
-          current_statement__ = 24;
+          current_statement__ = 25;
           stan::model::assign(Nmat_predict,
             stan::math::neg_binomial_2_log_rng(
               stan::model::rvalue(lambda, "lambda",
@@ -829,7 +854,7 @@ public:
             "assigning variable Nmat_predict", stan::model::index_uni(t),
             stan::model::index_omni());
         } else {
-          current_statement__ = 22;
+          current_statement__ = 23;
           stan::model::assign(Nmat_predict,
             stan::math::poisson_log_rng(
               stan::model::rvalue(lambda, "lambda",
@@ -838,9 +863,9 @@ public:
             stan::model::index_uni(t), stan::model::index_omni());
         }
       }
-      current_statement__ = 31;
+      current_statement__ = 32;
       for (int k = 1; k <= nobs; ++k) {
-        current_statement__ = 29;
+        current_statement__ = 30;
         stan::model::assign(Nmat_predict,
           stan::model::rvalue(Nmat, "Nmat", stan::model::index_uni(k),
             stan::model::index_uni(1)), "assigning variable Nmat_predict",
@@ -851,16 +876,16 @@ public:
             (stan::model::rvalue(Nmat, "Nmat", stan::model::index_uni(k),
                stan::model::index_uni(3)) + 1)));
       }
-      current_statement__ = 34;
+      current_statement__ = 35;
       for (int t = 1; t <= max_time; ++t) {
-        current_statement__ = 32;
+        current_statement__ = 33;
         stan::model::assign(N_predict,
           stan::math::sum(
             stan::model::rvalue(Nmat_predict, "Nmat_predict",
               stan::model::index_uni(t), stan::model::index_omni())),
           "assigning variable N_predict", stan::model::index_uni(t));
       }
-      current_statement__ = 9;
+      current_statement__ = 10;
       for (int sym1__ = 1; sym1__ <= Nmat_predict_2dim__; ++sym1__) {
         for (int sym2__ = 1; sym2__ <= max_time; ++sym2__) {
           out__.write(Nmat_predict[(sym2__ - 1)][(sym1__ - 1)]);
@@ -909,8 +934,16 @@ public:
         in__.read<Eigen::Matrix<local_scalar_t__,-1,1>>(beta_centered_1dim__),
         "assigning variable beta_centered");
       out__.write(beta_centered);
-      local_scalar_t__ sigma_alpha_t = DUMMY_VAR__;
+      Eigen::Matrix<local_scalar_t__,-1,1> coef_covariates =
+        Eigen::Matrix<local_scalar_t__,-1,1>::Constant(num_covariates,
+          DUMMY_VAR__);
       current_statement__ = 4;
+      stan::model::assign(coef_covariates,
+        in__.read<Eigen::Matrix<local_scalar_t__,-1,1>>(num_covariates),
+        "assigning variable coef_covariates");
+      out__.write(coef_covariates);
+      local_scalar_t__ sigma_alpha_t = DUMMY_VAR__;
+      current_statement__ = 5;
       sigma_alpha_t = in__.read<local_scalar_t__>();
       out__.write_free_lb(0, sigma_alpha_t);
     } catch (const std::exception& e) {
@@ -941,6 +974,9 @@ public:
         "double",
         std::vector<size_t>{static_cast<size_t>(beta_centered_1dim__)});
       current_statement__ = 4;
+      context__.validate_dims("parameter initialization", "coef_covariates",
+        "double", std::vector<size_t>{static_cast<size_t>(num_covariates)});
+      current_statement__ = 5;
       context__.validate_dims("parameter initialization", "sigma_alpha_t",
         "double", std::vector<size_t>{});
       int pos__ = std::numeric_limits<int>::min();
@@ -990,8 +1026,24 @@ public:
         }
       }
       out__.write(beta_centered);
+      Eigen::Matrix<local_scalar_t__,-1,1> coef_covariates =
+        Eigen::Matrix<local_scalar_t__,-1,1>::Constant(num_covariates,
+          DUMMY_VAR__);
+      {
+        std::vector<local_scalar_t__> coef_covariates_flat__;
+        current_statement__ = 4;
+        coef_covariates_flat__ = context__.vals_r("coef_covariates");
+        pos__ = 1;
+        for (int sym1__ = 1; sym1__ <= num_covariates; ++sym1__) {
+          stan::model::assign(coef_covariates, coef_covariates_flat__[(pos__
+            - 1)], "assigning variable coef_covariates",
+            stan::model::index_uni(sym1__));
+          pos__ = (pos__ + 1);
+        }
+      }
+      out__.write(coef_covariates);
       local_scalar_t__ sigma_alpha_t = DUMMY_VAR__;
-      current_statement__ = 4;
+      current_statement__ = 5;
       sigma_alpha_t = context__.vals_r("sigma_alpha_t")[(1 - 1)];
       out__.write_free_lb(0, sigma_alpha_t);
     } catch (const std::exception& e) {
@@ -1003,7 +1055,7 @@ public:
                   emit_transformed_parameters__ = true, const bool
                   emit_generated_quantities__ = true) const {
     names__ = std::vector<std::string>{"r", "alpha_centered",
-                "beta_centered", "sigma_alpha_t"};
+                "beta_centered", "coef_covariates", "sigma_alpha_t"};
     if (emit_transformed_parameters__) {
       std::vector<std::string> temp{"alpha", "beta", "lambda", "lprior"};
       names__.reserve(names__.size() + temp.size());
@@ -1024,6 +1076,7 @@ public:
                                                                     r_1dim__)},
                 std::vector<size_t>{static_cast<size_t>(max_time)},
                 std::vector<size_t>{static_cast<size_t>(beta_centered_1dim__)},
+                std::vector<size_t>{static_cast<size_t>(num_covariates)},
                 std::vector<size_t>{}};
     if (emit_transformed_parameters__) {
       std::vector<std::vector<size_t>>
@@ -1057,6 +1110,10 @@ public:
     }
     for (int sym1__ = 1; sym1__ <= beta_centered_1dim__; ++sym1__) {
       param_names__.emplace_back(std::string() + "beta_centered" + '.' +
+        std::to_string(sym1__));
+    }
+    for (int sym1__ = 1; sym1__ <= num_covariates; ++sym1__) {
+      param_names__.emplace_back(std::string() + "coef_covariates" + '.' +
         std::to_string(sym1__));
     }
     param_names__.emplace_back(std::string() + "sigma_alpha_t");
@@ -1106,6 +1163,10 @@ public:
       param_names__.emplace_back(std::string() + "beta_centered" + '.' +
         std::to_string(sym1__));
     }
+    for (int sym1__ = 1; sym1__ <= num_covariates; ++sym1__) {
+      param_names__.emplace_back(std::string() + "coef_covariates" + '.' +
+        std::to_string(sym1__));
+    }
     param_names__.emplace_back(std::string() + "sigma_alpha_t");
     if (emit_transformed_parameters__) {
       for (int sym1__ = 1; sym1__ <= max_time; ++sym1__) {
@@ -1138,10 +1199,10 @@ public:
     }
   }
   inline std::string get_constrained_sizedtypes() const {
-    return std::string("[{\"name\":\"r\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(r_1dim__) + "},\"block\":\"parameters\"},{\"name\":\"alpha_centered\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(max_time) + "},\"block\":\"parameters\"},{\"name\":\"beta_centered\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(beta_centered_1dim__) + "},\"block\":\"parameters\"},{\"name\":\"sigma_alpha_t\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"alpha\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(max_time) + "},\"block\":\"transformed_parameters\"},{\"name\":\"beta\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(beta_1dim__) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lambda\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(max_time) + ",\"cols\":" + std::to_string(lambda_2dim__) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lprior\",\"type\":{\"name\":\"real\"},\"block\":\"transformed_parameters\"},{\"name\":\"Nmat_predict\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(max_time) + ",\"element_type\":{\"name\":\"array\",\"length\":" + std::to_string(Nmat_predict_2dim__) + ",\"element_type\":{\"name\":\"int\"}}},\"block\":\"generated_quantities\"},{\"name\":\"N_predict\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(max_time) + ",\"element_type\":{\"name\":\"int\"}},\"block\":\"generated_quantities\"}]");
+    return std::string("[{\"name\":\"r\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(r_1dim__) + "},\"block\":\"parameters\"},{\"name\":\"alpha_centered\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(max_time) + "},\"block\":\"parameters\"},{\"name\":\"beta_centered\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(beta_centered_1dim__) + "},\"block\":\"parameters\"},{\"name\":\"coef_covariates\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(num_covariates) + "},\"block\":\"parameters\"},{\"name\":\"sigma_alpha_t\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"alpha\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(max_time) + "},\"block\":\"transformed_parameters\"},{\"name\":\"beta\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(beta_1dim__) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lambda\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(max_time) + ",\"cols\":" + std::to_string(lambda_2dim__) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lprior\",\"type\":{\"name\":\"real\"},\"block\":\"transformed_parameters\"},{\"name\":\"Nmat_predict\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(max_time) + ",\"element_type\":{\"name\":\"array\",\"length\":" + std::to_string(Nmat_predict_2dim__) + ",\"element_type\":{\"name\":\"int\"}}},\"block\":\"generated_quantities\"},{\"name\":\"N_predict\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(max_time) + ",\"element_type\":{\"name\":\"int\"}},\"block\":\"generated_quantities\"}]");
   }
   inline std::string get_unconstrained_sizedtypes() const {
-    return std::string("[{\"name\":\"r\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(r_1dim__) + "},\"block\":\"parameters\"},{\"name\":\"alpha_centered\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(max_time) + "},\"block\":\"parameters\"},{\"name\":\"beta_centered\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(beta_centered_1dim__) + "},\"block\":\"parameters\"},{\"name\":\"sigma_alpha_t\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"alpha\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(max_time) + "},\"block\":\"transformed_parameters\"},{\"name\":\"beta\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(beta_1dim__) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lambda\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(max_time) + ",\"cols\":" + std::to_string(lambda_2dim__) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lprior\",\"type\":{\"name\":\"real\"},\"block\":\"transformed_parameters\"},{\"name\":\"Nmat_predict\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(max_time) + ",\"element_type\":{\"name\":\"array\",\"length\":" + std::to_string(Nmat_predict_2dim__) + ",\"element_type\":{\"name\":\"int\"}}},\"block\":\"generated_quantities\"},{\"name\":\"N_predict\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(max_time) + ",\"element_type\":{\"name\":\"int\"}},\"block\":\"generated_quantities\"}]");
+    return std::string("[{\"name\":\"r\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(r_1dim__) + "},\"block\":\"parameters\"},{\"name\":\"alpha_centered\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(max_time) + "},\"block\":\"parameters\"},{\"name\":\"beta_centered\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(beta_centered_1dim__) + "},\"block\":\"parameters\"},{\"name\":\"coef_covariates\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(num_covariates) + "},\"block\":\"parameters\"},{\"name\":\"sigma_alpha_t\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"alpha\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(max_time) + "},\"block\":\"transformed_parameters\"},{\"name\":\"beta\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(beta_1dim__) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lambda\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(max_time) + ",\"cols\":" + std::to_string(lambda_2dim__) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lprior\",\"type\":{\"name\":\"real\"},\"block\":\"transformed_parameters\"},{\"name\":\"Nmat_predict\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(max_time) + ",\"element_type\":{\"name\":\"array\",\"length\":" + std::to_string(Nmat_predict_2dim__) + ",\"element_type\":{\"name\":\"int\"}}},\"block\":\"generated_quantities\"},{\"name\":\"N_predict\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(max_time) + ",\"element_type\":{\"name\":\"int\"}},\"block\":\"generated_quantities\"}]");
   }
   // Begin method overload boilerplate
   template <typename RNG> inline void
@@ -1150,8 +1211,8 @@ public:
               emit_transformed_parameters = true, const bool
               emit_generated_quantities = true, std::ostream*
               pstream = nullptr) const {
-    const size_t num_params__ = (((r_1dim__ + max_time) +
-      beta_centered_1dim__) + 1);
+    const size_t num_params__ = ((((r_1dim__ + max_time) +
+      beta_centered_1dim__) + num_covariates) + 1);
     const size_t num_transformed = emit_transformed_parameters * ((((max_time
       + beta_1dim__) + (max_time * lambda_2dim__)) + 1));
     const size_t num_gen_quantities = emit_generated_quantities * (((max_time
@@ -1170,8 +1231,8 @@ public:
               emit_transformed_parameters = true, bool
               emit_generated_quantities = true, std::ostream*
               pstream = nullptr) const {
-    const size_t num_params__ = (((r_1dim__ + max_time) +
-      beta_centered_1dim__) + 1);
+    const size_t num_params__ = ((((r_1dim__ + max_time) +
+      beta_centered_1dim__) + num_covariates) + 1);
     const size_t num_transformed = emit_transformed_parameters * ((((max_time
       + beta_1dim__) + (max_time * lambda_2dim__)) + 1));
     const size_t num_gen_quantities = emit_generated_quantities * (((max_time

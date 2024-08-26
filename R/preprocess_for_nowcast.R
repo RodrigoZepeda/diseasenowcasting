@@ -5,7 +5,6 @@
 #' specified in `...`
 #'
 #' @inheritParams nowcast
-#' @param ... Additional covariates to involve in the count.
 #'
 #' @param data_type Either `linedata` if each row represents a test or `counts` if there
 #' is a column named `n` with counts of how many tests had that onset and report dates
@@ -52,19 +51,17 @@
 #' )
 #' df$report_week <- df$onset_week +
 #'   sample(c(lubridate::weeks(1), lubridate::weeks(2)), 100, replace = TRUE)
-#' preprocess_for_nowcast(df, "onset_week", "report_week", "gender", "state",
+#' preprocess_for_nowcast(df, "onset_week", "report_week", c("gender", "state"),
 #'   units = "weeks",
 #'   now = as.Date("1994-09-26")
 #' )
 #'
 #' @export
-preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, ..., now, units,
+preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, strata = NULL, now, units,
                                    max_delay = Inf, data_type = c("auto", "linelist", "count")) {
+
   # Get whether data is count or line data
   data_type <- infer_data_type(.disease_data, data_type = data_type)
-
-  # Capture the covariate groups
-  group_ <- unlist(list(...))
 
   # NOTE:
   # This part is done with dplyr otherwise if .disease_data were a tibble
@@ -111,10 +108,10 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, ..., 
   )
 
   # If there are covariates extend to include all covariates
-  if (length(group_) > 0) {
+  if (length(strata) > 0) {
     all_delay_onsets <- tidyr::expand_grid(
       all_delay_onsets,
-      dplyr::select(.disease_data, group_)
+      dplyr::select_at(.disease_data, strata)
     )
   }
 
@@ -137,9 +134,9 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, ..., 
   .disease_data <- .disease_data |>
     dplyr::group_by(!!as.symbol(onset_date), !!as.symbol(report_date), !!as.symbol(".delay"))
 
-  if (length(group_) > 0) {
+  if (length(strata) > 0) {
     .disease_data <- .disease_data |>
-      dplyr::group_by_at(.vars = group_, .add = TRUE)
+      dplyr::group_by_at(.vars = strata, .add = TRUE)
   }
 
   # Count the data aggregating by groups
@@ -154,7 +151,7 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, ..., 
 
   # Bind the data counts to the delay
   all_delay_onsets <- all_delay_onsets |>
-    dplyr::left_join(.disease_data, by = c(onset_date, report_date, ".delay", group_)) |>
+    dplyr::left_join(.disease_data, by = c(onset_date, report_date, ".delay", strata)) |>
     dplyr::mutate(
       !!as.symbol("n") := tidyr::replace_na(!!as.symbol("n"), 0)
     )
@@ -165,7 +162,6 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, ..., 
   # Sort by date of onset and delay
   all_delay_onsets <- all_delay_onsets |>
     dplyr::mutate(.tval = 1 + as.numeric(difftime(!!as.symbol(onset_date), !!min_date, units = !!units))) |>
-    # dplyr::filter(!!as.symbol(report_date) <= max_report_date) |>
     dplyr::filter(!!as.symbol(report_date) <= max_date) |>
     dplyr::filter(!!as.symbol(".delay") <= !!max_delay) |>
     dplyr::arrange(!!as.symbol(onset_date), !!as.symbol(".delay"))
