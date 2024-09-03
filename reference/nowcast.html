@@ -16,6 +16,10 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/Nowcasting-methods.html">Nowcasting methods</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -127,8 +131,79 @@ or for outbreaks in which severe under-reporting is expected, change this
 <span class="r-in"><span><span class="fu">nowcast</span><span class="op">(</span><span class="va">denguedat</span>, <span class="st">"onset_week"</span>, <span class="st">"report_week"</span>, iter <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Computing a nowcast for <span style="font-style: italic;">2010-11-29</span> per <span style="font-style: italic;">weeks</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Assuming data is linelist-data where each observation is a test. If you are working with count-data set `data_type = <span style="color: #0000BB;">"count"</span>`</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Error : Exception: model_nowcast_namespace::model_nowcast: num_strata is 0, but must be greater than or equal to 1.000000 (in 'nowcast', line 81, column 4 to column 28)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> failed to create the sampler; sampling not done</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SAMPLING FOR MODEL 'nowcast' NOW (CHAIN 1).</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: Gradient evaluation took 0.009583 seconds</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 95.83 seconds.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: Adjust your expectations accordingly!</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: WARNING: No variance estimation is</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1:          performed for num_warmup &lt; 20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: Iteration: 1 / 10 [ 10%]  (Warmup)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: Iteration: 2 / 10 [ 20%]  (Warmup)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: Iteration: 3 / 10 [ 30%]  (Warmup)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: Iteration: 4 / 10 [ 40%]  (Warmup)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: Iteration: 5 / 10 [ 50%]  (Warmup)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: Iteration: 6 / 10 [ 60%]  (Sampling)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: Iteration: 7 / 10 [ 70%]  (Sampling)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: Iteration: 8 / 10 [ 80%]  (Sampling)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: Iteration: 9 / 10 [ 90%]  (Sampling)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: Iteration: 10 / 10 [100%]  (Sampling)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1:  Elapsed Time: 0.117 seconds (Warm-up)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1:                0.126 seconds (Sampling)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1:                0.243 seconds (Total)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chain 1: </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Error : Exception: neg_binomial_2_log_rng: Random number that came from gamma distribution is 1.97542e+09, but must be less than 1073741824.000000 (in 'nowcast', line 159, column 10 to column 100)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [1] "Chain 1: Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:"                        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [2] "Chain 1: Exception: gamma_lpdf: Random variable[1] is 0, but must be positive finite! (in 'nowcast', line 134, column 4 to column 76)"          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [3] "Chain 1: If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [4] "Chain 1: but if this warning occurs often then your model may be either severely ill-conditioned or misspecified."                              </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [5] "Chain 1: "                                                                                                                                      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [6] "Chain 1: Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:"                        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [7] "Chain 1: Exception: gamma_lpdf: Random variable[1] is 0, but must be positive finite! (in 'nowcast', line 134, column 4 to column 76)"          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [8] "Chain 1: If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [9] "Chain 1: but if this warning occurs often then your model may be either severely ill-conditioned or misspecified."                              </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [10] "Chain 1: "                                                                                                                                      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [11] "Chain 1: Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:"                        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [12] "Chain 1: Exception: gamma_lpdf: Random variable[1] is 0, but must be positive finite! (in 'nowcast', line 134, column 4 to column 76)"          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [13] "Chain 1: If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [14] "Chain 1: but if this warning occurs often then your model may be either severely ill-conditioned or misspecified."                              </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [15] "Chain 1: "                                                                                                                                      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [16] "Chain 1: Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:"                        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [17] "Chain 1: Exception: gamma_lpdf: Random variable[1] is 0, but must be positive finite! (in 'nowcast', line 134, column 4 to column 76)"          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [18] "Chain 1: If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [19] "Chain 1: but if this warning occurs often then your model may be either severely ill-conditioned or misspecified."                              </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [20] "Chain 1: "                                                                                                                                      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [21] "Chain 1: Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:"                        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [22] "Chain 1: Exception: gamma_lpdf: Random variable[1] is 0, but must be positive finite! (in 'nowcast', line 134, column 4 to column 76)"          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [23] "Chain 1: If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [24] "Chain 1: but if this warning occurs often then your model may be either severely ill-conditioned or misspecified."                              </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [25] "Chain 1: "                                                                                                                                      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [26] "Chain 1: Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:"                        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [27] "Chain 1: Exception: gamma_lpdf: Random variable[1] is 0, but must be positive finite! (in 'nowcast', line 134, column 4 to column 76)"          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [28] "Chain 1: If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [29] "Chain 1: but if this warning occurs often then your model may be either severely ill-conditioned or misspecified."                              </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [30] "Chain 1: "                                                                                                                                      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [31] "Chain 1: Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:"                        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [32] "Chain 1: Exception: gamma_lpdf: Random variable[1] is 0, but must be positive finite! (in 'nowcast', line 134, column 4 to column 76)"          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [33] "Chain 1: If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [34] "Chain 1: but if this warning occurs often then your model may be either severely ill-conditioned or misspecified."                              </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [35] "Chain 1: "                                                                                                                                      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [36] "Chain 1: Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:"                        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [37] "Chain 1: Exception: gamma_lpdf: Random variable[1] is 0, but must be positive finite! (in 'nowcast', line 134, column 4 to column 76)"          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [38] "Chain 1: If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [39] "Chain 1: but if this warning occurs often then your model may be either severely ill-conditioned or misspecified."                              </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [40] "Chain 1: "                                                                                                                                      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [41] "Chain 1: Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:"                        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [42] "Chain 1: Exception: gamma_lpdf: Random variable[1] is 0, but must be positive finite! (in 'nowcast', line 134, column 4 to column 76)"          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [43] "Chain 1: If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [44] "Chain 1: but if this warning occurs often then your model may be either severely ill-conditioned or misspecified."                              </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [45] "Chain 1: "                                                                                                                                      </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> error occurred during calling the sampler; sampling not done</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Stan model 'nowcast' does not contain samples.</span>
 </code></pre></div>
     </div>

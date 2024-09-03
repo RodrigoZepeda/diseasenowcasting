@@ -32,6 +32,12 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="articles/Nowcasting-methods.html">Nowcasting methods</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -64,7 +70,33 @@
 <span>  dist <span class="op">=</span> <span class="st">"NegativeBinomial"</span>, cores <span class="op">=</span> <span class="fl">4</span>, iter <span class="op">=</span> <span class="fl">1000</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; ℹ Computing a nowcast for 1990-10-01 per weeks</span></span>
-<span><span class="co">#&gt; ℹ Assuming data is linelist-data where each observation is a test. If you are working with count-data set `data_type = "count"`</span></span></code></pre></div>
+<span><span class="co">#&gt; ℹ Assuming data is linelist-data where each observation is a test. If you are working with count-data set `data_type = "count"`</span></span>
+<span><span class="co">#&gt; Warning in .local(object, ...): some chains had errors; consider specifying</span></span>
+<span><span class="co">#&gt; chains = 1 to debug</span></span>
+<span><span class="co">#&gt; here are whatever error messages were returned</span></span>
+<span><span class="co">#&gt; [[1]]</span></span>
+<span><span class="co">#&gt; Stan model 'nowcast' does not contain samples.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [[2]]</span></span>
+<span><span class="co">#&gt; Stan model 'nowcast' does not contain samples.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [[3]]</span></span>
+<span><span class="co">#&gt; Stan model 'nowcast' does not contain samples.</span></span>
+<span><span class="co">#&gt; Warning: The largest R-hat is NA, indicating chains have not mixed.</span></span>
+<span><span class="co">#&gt; Running the chains for more iterations may help. See</span></span>
+<span><span class="co">#&gt; https://mc-stan.org/misc/warnings.html#r-hat</span></span>
+<span><span class="co">#&gt; Warning: Bulk Effective Samples Size (ESS) is too low, indicating posterior means and medians may be unreliable.</span></span>
+<span><span class="co">#&gt; Running the chains for more iterations may help. See</span></span>
+<span><span class="co">#&gt; https://mc-stan.org/misc/warnings.html#bulk-ess</span></span>
+<span><span class="co">#&gt; Warning: Tail Effective Samples Size (ESS) is too low, indicating posterior variances and tail quantiles may be unreliable.</span></span>
+<span><span class="co">#&gt; Running the chains for more iterations may help. See</span></span>
+<span><span class="co">#&gt; https://mc-stan.org/misc/warnings.html#tail-ess</span></span>
+<span></span>
+<span><span class="co">#Get the predicted values</span></span>
+<span><span class="va">preds</span> <span class="op">&lt;-</span> <span class="va">predictions</span> <span class="op">|&gt;</span> </span>
+<span>  <span class="fu">posterior</span><span class="fu">::</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws.html" class="external-link">as_draws</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> </span>
+<span>  <span class="fu">posterior</span><span class="fu">::</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/subset_draws.html" class="external-link">subset_draws</a></span><span class="op">(</span><span class="st">"N_predict"</span><span class="op">)</span> <span class="op">|&gt;</span> </span>
+<span>  <span class="fu">posterior</span><span class="fu">::</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">summarise_draws</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="license">
