@@ -52,6 +52,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
                     prior_only = FALSE,
                     init = 0,
                     proportion_reported = 1, ...) {
+
   # Check that the columns of onset and report are columns of data and are dates
   .disease_data <- check_date_columns(.disease_data, onset_date = onset_date, report_date = report_date)
 

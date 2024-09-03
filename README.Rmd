@@ -33,5 +33,11 @@ predictions <- nowcast(denguedat, "onset_week", "report_week",
   now = as.Date("1990-10-01"),
   dist = "NegativeBinomial", cores = 4, iter = 1000
 )
+
+#Get the predicted values
+preds <- predictions |> 
+  posterior::as_draws() |> 
+  posterior::subset_draws("N_predict") |> 
+  posterior::summarise_draws()
 ```
 
