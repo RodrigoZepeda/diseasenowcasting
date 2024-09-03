@@ -37,7 +37,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::pkgdown, any::ggtext, any::quarto, any::tidyverse, any::latex2exp, any::MetBrewer, local::.
+          extra-packages: any::pkgdown, any::ggtext,  any::quarto, any::tidyverse, any::latex2exp, any::MetBrewer, local::.
           needs: website
 
       - name: Build site
