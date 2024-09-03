@@ -176,7 +176,7 @@ public:
       num_strata = context__.vals_i("num_strata")[(1 - 1)];
       current_statement__ = 48;
       stan::math::check_greater_or_equal(function__, "num_strata",
-        num_strata, 1);
+        num_strata, 0);
       current_statement__ = 49;
       context__.validate_dims("data initialization", "num_covariates", "int",
         std::vector<size_t>{});

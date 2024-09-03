@@ -38,3 +38,4 @@ SystemRequirements: GNU make
 Config/testthat/edition: 3
 Config/testthat/parallel: true
 URL: https://rodrigozepeda.github.io/diseasenowcasting/
+Config/Needs/website: rmarkdown

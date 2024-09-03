@@ -68,7 +68,7 @@ data {
     // ------------------------------------------------------------------------------------------------
     int<lower=1> max_time;       //Maximum number of unique times modelled
     int<lower=0> max_delays;     //Maximum number of unique delays considered
-    int<lower=1> num_strata;     //Number of strata included in the model
+    int<lower=0> num_strata;     //Number of strata included in the model
     int<lower=0> num_covariates; //Number of covariates included in the model
     int<lower=0> nobs;           //Number of rows in data Nmat
     array[nobs, 3 + num_covariates] int Nmat; //Matrix with first entry = n, second = time, third = delay
