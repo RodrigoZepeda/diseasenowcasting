@@ -3,35 +3,23 @@ title: "Nowcasting methods"
 bibliography: references.bib
 ---
 
-```{r}
-#| message: false
-#| echo: false
-#| include: false
-
+```{r, message=FALSE, echo=FALSE, include=FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 
-library(ggplot2)
+library(tidyverse)
 library(ggtext)
 library(MetBrewer)
-library(dplyr)
-library(tidyr)
-library(lubridate)
-library(tibble)
-library(scales)
 library(latex2exp)
-library(forcats)
 ```
 
 ## Intuitive explanation
 
 We consider the problem of reporting the number of cases for a certain disease. Results of disease's tests are reported with a delay. So for any day we will see only some disease-cases in that day;  other disease-cases for the same day will be reported in the upcoming days.
 
-```{r}
-#| echo: false
-#| fig-cap: "Delay ladder shows that by each day the reports come in the subsequent days thus forming a ladder."
+```{r, echo=FALSE, fig.cap="Delay ladder shows that by each day the reports come in the subsequent days thus forming a ladder."}
 set.seed(2359)
 max_time  <- 10
 max_delay <- 6
@@ -91,11 +79,7 @@ Figure 1 shows this idea where we assume that the maximum delay corresponds to $
 
 The main variable of the model is the (log) expected number of cases at time $t$ that will be reported with delay $d$: $\ell_{t,d}$. The average of this variable is driven by a process composed of two elements: a **time-dependent** process and a **delay-time-dependent** process. You can think of the time-dependent process as the process that drives the epidemic curve while the delay-time-dependent process is the process that drives the testing (or changes in the testing). 
 
-```{r}
-#| echo: false
-#| fig-height: 1
-#| fig-align: center
-#| fig-cap: "The log expected number of cases at time $t$ reported with delay $d$, $\\ell_{t,d}$ is a function of a **time-dependent** process $\\mu_t$ and a **delay-time-dependent** process $\\nu_{t,d}$."
+```{r, echo=FALSE, fig.height=1, fig.align='center', fig.cap="The log expected number of cases at time $t$ reported with delay $d$, $\\ell_{t,d}$ is a function of a **time-dependent** process $\\mu_t$ and a **delay-time-dependent** process $\\nu_{t,d}$."}
 df <- tibble(x = c(1,2,3,4,5), 
              y = c(1,1,1,1,1), 
              fill_col = c("n",NA_character_,"mu",NA_character_,"nu"),
