@@ -13,16 +13,10 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 
-library(ggplot2)
+library(tidyverse)
 library(ggtext)
 library(MetBrewer)
-library(dplyr)
-library(tidyr)
-library(lubridate)
-library(tibble)
-library(scales)
 library(latex2exp)
-library(forcats)
 ```
 
 ## Intuitive explanation

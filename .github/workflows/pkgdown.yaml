@@ -24,6 +24,9 @@ jobs:
     permissions:
       contents: write
     steps:
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+
       - uses: actions/checkout@v4
 
       - uses: r-lib/actions/setup-pandoc@v2
@@ -34,7 +37,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::pkgdown, local::.
+          extra-packages: any::pkgdown, any::ggtext, any::tidyverse, any::latex2exp, any::MetBrewer, local::.
           needs: website
 
       - name: Build site
