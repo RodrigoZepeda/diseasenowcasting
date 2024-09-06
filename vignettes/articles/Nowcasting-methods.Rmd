@@ -13,13 +13,14 @@ library(tidyverse)
 library(ggtext)
 library(MetBrewer)
 library(latex2exp)
+library(cowplot)
 ```
 
 ## Intuitive explanation
 
 We consider the problem of reporting the number of cases for a certain disease. Results of disease's tests are reported with a delay. So for any day we will see only some disease-cases in that day;  other disease-cases for the same day will be reported in the upcoming days.
 
-```{r, echo=FALSE, fig.cap="Delay ladder shows that by each day the reports come in the subsequent days thus forming a ladder."}
+```{r, echo=FALSE, fig.cap="Delay ladder shows that by each day the reports come in the subsequent days thus forming a ladder.", fig.align='center'}
 set.seed(2359)
 max_time  <- 10
 max_delay <- 6
@@ -77,6 +78,49 @@ ggplot(df) +
 
 Figure 1 shows this idea where we assume that the maximum delay corresponds to $6$ days. We can see that by **today**, April 11th, all of the data for April the 2nd has already arrived: the data that arrived with zero delay (report Apr. 2) as well as the data that arrived with a delay of $1$ (report Apr. 3), $2$ (report Apr. 4), $3$ (report Apr. 5), etc until the data that was reported on April 8th with the maximum delay of 6. For other dates not all data has yet arrived. We can see that for April 9th we only see the data with delay 0 up till 3 (corresponding to April 11th). Data with delay larger than 3 will be seen in the future. 
 
+The idea of the model is to predict the number of cases that will be seen at time $t$ denoted $n_{t}$ as the sum of the delayed cases. This includes both the cases we've already observed $n_{t,d}$ and the cases we haven't yet observed $\tilde{n}_{t,d}$. 
+
+```{r, echo=FALSE, fig.height=1, fig.align='center', fig.cap="The log expected number of cases at time $t$ reported with delay $d$, $\\ell_{t,d}$ is a function of a **time-dependent** process $\\mu_t$ and a **delay-time-dependent** process $\\nu_{t,d}$."}
+df <- tibble(x = 1:13, 
+             y = rep(1, 13), 
+             fill_col = c("infered", NA_character_,
+                          "Observed",NA_character_, "Observed",NA_character_,
+                           "Observed",NA_character_, "Predicted",NA_character_,
+                          "Predicted",NA_character_,"Predicted"),
+             z = c(TeX(r'($n_{t}$)', output = "character"), 
+                   TeX(r'($=$)', output = "character"), 
+                   TeX(r'($n_{t,1}$)', output = "character"),
+                   TeX("+", output = "character"),
+                   TeX(r'($\n_{t,2}$)', output = "character"),
+                   TeX("+", output = "character"),
+                   TeX(r'($\n_{t,3}$)', output = "character"),
+                   TeX("+", output = "character"),
+                   TeX(r'($\tilde{\n}_{t,4}$)', output = "character"),
+                   TeX("+", output = "character"),
+                   TeX(r'($\tilde{\n}_{t,5}$)', output = "character"),
+                   TeX("+", output = "character"),
+                   TeX(r'($\tilde{\n}_{t,6}$)', output = "character")
+                  ))
+
+ggplot(df) +
+  geom_tile(aes(x = x, y = y, fill = fill_col)) +
+  geom_text(aes(x = x, y = y, label = z), parse = T, size = 5, color = "black",
+            data = df |> filter(x %in% seq(0,14, by = 2))) +
+  geom_text(aes(x = x, y = y, label = z), parse = T, size = 5, color = "white",
+            data = df |> filter(x %in% seq(1,13, by = 2))) +
+  annotate("text", x = 5, y = 2, size = 5,
+           label = "Observed", color = met.brewer("Juarez", 5)[2]) +
+  annotate("text", x = 11, y = 2, size = 5,
+           label = "Predicted (unobserved)", color = met.brewer("Juarez", 5)[1]) +
+  theme_void() +
+  scale_y_continuous(expand = c(0.5,0.5)) +
+  theme(
+    legend.position = "none"
+  ) +
+  scale_fill_manual("", values = c("black", met.brewer("Juarez", 5)[c(2,1)]), na.value = "white") 
+  
+```
+
 The main variable of the model is the (log) expected number of cases at time $t$ that will be reported with delay $d$: $\ell_{t,d}$. The average of this variable is driven by a process composed of two elements: a **time-dependent** process and a **delay-time-dependent** process. You can think of the time-dependent process as the process that drives the epidemic curve while the delay-time-dependent process is the process that drives the testing (or changes in the testing). 
 
 ```{r, echo=FALSE, fig.height=1, fig.align='center', fig.cap="The log expected number of cases at time $t$ reported with delay $d$, $\\ell_{t,d}$ is a function of a **time-dependent** process $\\mu_t$ and a **delay-time-dependent** process $\\nu_{t,d}$."}
@@ -109,9 +153,113 @@ ggplot(df) +
 
 Each of the processes can be further decomposed into a **trend**, a **season** (or multiple seasons), and a cycle:
 
+```{r, echo=FALSE, fig.cap="The decomposition of the **time-dependent** process $\\mu_t$. The **delay-time-dependent** process $\\nu_{t,d}$ is decomposed in a similar fashion.", fig.align='center'}
+#Create data frame
+set.seed(765843)
+df <- tibble(t = 0:365, day = ymd("2021/01/01") + t, 
+             epiweek = epiweek(day), wday = wday(day, label = T)) |> 
+  group_by(epiweek) |> 
+  mutate(week_effect = rnorm(1, mean = 1)) |> 
+  group_by(wday) |> 
+  mutate(day_effect = rnorm(1, mean = 0, sd = 2)) |> 
+  ungroup() |> 
+  rowwise() |> 
+  mutate(noise = rnorm(1, sd = 0.5)) |> 
+  ungroup() |> 
+  mutate(trend = rnorm(1)*t/15 - rnorm(1)) |> 
+  mutate(log_mu = trend + week_effect + day_effect + noise)
 
+#Create plot for seasonality
+seasonality_1 <- ggplot(df) +
+  geom_point(aes(x = wday, y = day_effect), color = "#a82203") +
+  labs(
+    x = "Day",
+    y = "Seasonal",
+    title = "Day-of-the-week"
+  ) +
+  theme_classic() +
+  theme(
+    panel.background = element_blank(),
+    plot.background  = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+  )
 
+seasonality_2 <- ggplot(df) +
+  geom_point(aes(x = epiweek, y = week_effect), color = "#a82203") +
+  labs(
+    x = "Epiweek",
+    y = "Sesonal",
+    title = "Epidemiological-week"
+  ) +
+  theme_classic() +
+  theme(
+    panel.background = element_blank(),
+    plot.background  = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+  )
 
+seasonality <- plot_grid(seasonality_1, seasonality_2)
+
+#Create plot for trend
+trend <- ggplot(df) +
+  geom_line(aes(x = day, y = trend), color = "#a82203") +
+  labs(
+    x = "Day",
+    y = "Trend",
+    title = "Trend"
+  ) +
+  theme_classic() +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month")  +
+  theme(
+    panel.background = element_blank(),
+    plot.background  = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+  )
+
+#Create plot for noise
+noise <- ggplot(df) +
+  geom_line(aes(x = day, y = noise), color = "#a82203") +
+  labs(
+    x = "Day",
+    y = "Noise",
+    title = "Noise"
+  ) +
+  theme_classic() +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme(
+    panel.background = element_blank(),
+    plot.background  = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+  )
+
+#Create a plot for the lambda
+df <- tibble(x = c(1), 
+             y = c(1), 
+             fill_col = c("n"),
+             z = c(TeX(r'($\mu_{t}$)', output = "character")))
+
+tdmu <- ggplot(df) +
+  geom_tile(aes(x = x, y = y, fill = fill_col)) +
+  geom_segment(aes(x = 1, y = 1, xend = 2.5, yend = 1.8), color = "#a82203", arrow = arrow()) +
+  geom_segment(aes(x = 1, y = 1, xend = 2.5, yend = 1), color = "#a82203", arrow = arrow()) +
+  geom_segment(aes(x = 1, y = 1, xend = 2.5, yend = 0.2), color = "#a82203", arrow = arrow()) +
+  geom_text(aes(x = x, y = y, label = z), parse = T, size = 7, color = "white") +
+  annotate("text", x = 1, y = 1.75, label = "Time-dependent", color = met.brewer("Juarez", 5)[1]) +
+  theme_void() +
+  scale_y_continuous(expand = c(0,0), limits = c(-0.5,2.5)) +
+  theme(
+    legend.position = "none"
+  ) +
+  scale_fill_manual("", values = met.brewer("Juarez", 5)[c(1,2,5)], na.value = "white")  +
+  xlim(c(0,7)) 
+  
+ggdraw(tdmu) +
+  draw_plot(seasonality, x = .4, y = .65, width = .5, height = .3) +
+  draw_plot(trend, x = .4, y = .35, width = .5, height = .3) +
+  draw_plot(noise, x = .4, y = .05, width = .5, height = .3) 
+```
+
+The model thus captures seasonality both for the epidemic curve and for the delay curve as well as their own trends and noise. 
 
 ## Mathematical explanation
 
@@ -131,7 +279,7 @@ where $\ell_{t,d}^s = \ln\lambda_{t,d}^s$ follows a linear state-space model wit
 \end{aligned}  
 \end{equation}
 
-where $\mu_{t}^s$ represents the time-dependent latent process and $\nu_{t,d}^s$ the delay-dependent latent process. The system is defined for $t = 1,\dots, T$ (time), $d = 0,\dots, D$ (delays) and $s = 1,\dots,S$ (strata). Table @tbl-dimensions describes each of the variables and their dimensions. 
+where $\mu_{t}^s$ represents the time-dependent latent process and $\nu_{t,d}^s$ the delay-dependent latent process. The system is defined for $t = 1,\dots, T$ (time), $d = 0,\dots, D$ (delays) and $s = 1,\dots,S$ (strata). Table 1 describes each of the variables and their dimensions. 
 
 | Variable(s)           | Dimension                |
 |-----------------------|--------------------------|
@@ -145,7 +293,7 @@ where $\mu_{t}^s$ represents the time-dependent latent process and $\nu_{t,d}^s$
 | $\epsilon_{d,t}^{s}$ | $(1 \times 1)$      |
 | $\xi_{d,t}^{s,\mu}$ | $(r_{\mu} \times 1)$      |
 | $\xi_{d,t}^{s,nu}$ | $(r_{\nu} \times 1)$      |
-: Dimensions of variables. {#tbl-dimensions}
+: Dimensions of variables.
 
 In this model, $A^{\mu}$,$A_{d}^{\nu}$, $R^{\mu}$,$R_d^{\nu}$,$L^{\mu}$, and $L_d^{\nu}$ are given. Variables $\epsilon_{t,d}^s$, $\xi_{t}^{s,\mu}$, and $\xi_{t,d}^{s,\nu}$ represent random (correlated) noise; $X_{t,d}^s$ is a vector of known covariates, $B_d$ is a vector of unknown parameters. Additionally, $\mu_{0}$ and $\nu_{0,d}$ are also unknown parameters. 
 
