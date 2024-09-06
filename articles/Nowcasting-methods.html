@@ -72,7 +72,7 @@ certain disease. Results of disease’s tests are reported with a delay.
 So for any day we will see only some disease-cases in that day; other
 disease-cases for the same day will be reported in the upcoming
 days.</p>
-<div class="figure">
+<div class="figure" style="text-align: center">
 <img src="Nowcasting-methods_files/figure-html/unnamed-chunk-2-1.png" alt="Delay ladder shows that by each day the reports come in the subsequent days thus forming a ladder." width="700"><p class="caption">
 Delay ladder shows that by each day the reports come in the subsequent
 days thus forming a ladder.
@@ -95,6 +95,29 @@ the maximum delay of 6. For other dates not all data has yet arrived. We
 can see that for April 9th we only see the data with delay 0 up till 3
 (corresponding to April 11th). Data with delay larger than 3 will be
 seen in the future.</p>
+<p>The idea of the model is to predict the number of cases that will be
+seen at time
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+denoted
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>n</mi><mi>t</mi></msub><annotation encoding="application/x-tex">n_{t}</annotation></semantics></math>
+as the sum of the delayed cases. This includes both the cases we’ve
+already observed
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>n</mi><mrow><mi>t</mi><mo>,</mo><mi>d</mi></mrow></msub><annotation encoding="application/x-tex">n_{t,d}</annotation></semantics></math>
+and the cases we haven’t yet observed
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mover><mi>n</mi><mo accent="true">̃</mo></mover><mrow><mi>t</mi><mo>,</mo><mi>d</mi></mrow></msub><annotation encoding="application/x-tex">\tilde{n}_{t,d}</annotation></semantics></math>.</p>
+<div class="figure" style="text-align: center">
+<img src="Nowcasting-methods_files/figure-html/unnamed-chunk-3-1.png" alt="The log expected number of cases at time $t$ reported with delay $d$, $\ell_{t,d}$ is a function of a **time-dependent** process $\mu_t$ and a **delay-time-dependent** process $\nu_{t,d}$." width="700"><p class="caption">
+The log expected number of cases at time
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+reported with delay
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mo>ℓ</mo><mrow><mi>t</mi><mo>,</mo><mi>d</mi></mrow></msub><annotation encoding="application/x-tex">\ell_{t,d}</annotation></semantics></math>
+is a function of a <strong>time-dependent</strong> process
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>μ</mi><mi>t</mi></msub><annotation encoding="application/x-tex">\mu_t</annotation></semantics></math>
+and a <strong>delay-time-dependent</strong> process
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>ν</mi><mrow><mi>t</mi><mo>,</mo><mi>d</mi></mrow></msub><annotation encoding="application/x-tex">\nu_{t,d}</annotation></semantics></math>.
+</p>
+</div>
 <p>The main variable of the model is the (log) expected number of cases
 at time
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
@@ -108,7 +131,7 @@ time-dependent process as the process that drives the epidemic curve
 while the delay-time-dependent process is the process that drives the
 testing (or changes in the testing).</p>
 <div class="figure" style="text-align: center">
-<img src="Nowcasting-methods_files/figure-html/unnamed-chunk-3-1.png" alt="The log expected number of cases at time $t$ reported with delay $d$, $\ell_{t,d}$ is a function of a **time-dependent** process $\mu_t$ and a **delay-time-dependent** process $\nu_{t,d}$." width="700"><p class="caption">
+<img src="Nowcasting-methods_files/figure-html/unnamed-chunk-4-1.png" alt="The log expected number of cases at time $t$ reported with delay $d$, $\ell_{t,d}$ is a function of a **time-dependent** process $\mu_t$ and a **delay-time-dependent** process $\nu_{t,d}$." width="700"><p class="caption">
 The log expected number of cases at time
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
 reported with delay
@@ -123,6 +146,17 @@ and a <strong>delay-time-dependent</strong> process
 <p>Each of the processes can be further decomposed into a
 <strong>trend</strong>, a <strong>season</strong> (or multiple seasons),
 and a cycle:</p>
+<div class="figure" style="text-align: center">
+<img src="Nowcasting-methods_files/figure-html/unnamed-chunk-5-1.png" alt="The decomposition of the **time-dependent** process $\mu_t$. The **delay-time-dependent** process $\nu_{t,d}$ is decomposed in a similar fashion." width="700"><p class="caption">
+The decomposition of the <strong>time-dependent</strong> process
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>μ</mi><mi>t</mi></msub><annotation encoding="application/x-tex">\mu_t</annotation></semantics></math>.
+The <strong>delay-time-dependent</strong> process
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>ν</mi><mrow><mi>t</mi><mo>,</mo><mi>d</mi></mrow></msub><annotation encoding="application/x-tex">\nu_{t,d}</annotation></semantics></math>
+is decomposed in a similar fashion.
+</p>
+</div>
+<p>The model thus captures seasonality both for the epidemic curve and
+for the delay curve as well as their own trends and noise.</p>
 </div>
 <div class="section level2">
 <h2 id="mathematical-explanation">Mathematical explanation<a class="anchor" aria-label="anchor" href="#mathematical-explanation"></a>
@@ -177,10 +211,10 @@ the delay-dependent latent process. The system is defined for
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>0</mn><mo>,</mo><mi>…</mi><mo>,</mo><mi>D</mi></mrow><annotation encoding="application/x-tex">d = 0,\dots, D</annotation></semantics></math>
 (delays) and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>=</mo><mn>1</mn><mo>,</mo><mi>…</mi><mo>,</mo><mi>S</mi></mrow><annotation encoding="application/x-tex">s = 1,\dots,S</annotation></semantics></math>
-(strata). Table <span class="citation">(<strong>tbl-dimensions?</strong>)</span> describes
-each of the variables and their dimensions.</p>
+(strata). Table 1 describes each of the variables and their
+dimensions.</p>
 <table class="table">
-<caption>Dimensions of variables. {#tbl-dimensions}</caption>
+<caption>Dimensions of variables.</caption>
 <thead><tr class="header">
 <th>Variable(s)</th>
 <th>Dimension</th>
