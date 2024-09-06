@@ -60,7 +60,6 @@
 // Should add zero-inflation for cases when people stratify too much
 
 #include /include/license.stan
-// #include /include/timetrends.stan
 
 data {
 

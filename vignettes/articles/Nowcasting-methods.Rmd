@@ -120,18 +120,17 @@ ggplot(df) +
   scale_fill_manual("", values = c("black", met.brewer("Juarez", 5)[c(2,1)]), na.value = "white") 
   
 ```
-
-The main variable of the model is the (log) expected number of cases at time $t$ that will be reported with delay $d$: $\ell_{t,d}$. The average of this variable is driven by a process composed of two elements: a **time-dependent** process and a **delay-time-dependent** process. You can think of the time-dependent process as the process that drives the epidemic curve while the delay-time-dependent process is the process that drives the testing (or changes in the testing). 
+The main objective is then to model $n_{t,d}$, the number of cases at time $t$ that will appear with delay $d$. What we actually model is the log expected value of $n_{t,d}$, denoted $\ell_{t,d}$. The average of this variable is driven by a process composed of two elements: a **time-dependent** process and a **delay-time-dependent** process. You can think of the time-dependent process as the process that drives the epidemic curve while the delay-time-dependent process is the process that drives the testing (or changes in the testing). 
 
 ```{r, echo=FALSE, fig.height=1, fig.align='center', fig.cap="The log expected number of cases at time $t$ reported with delay $d$, $\\ell_{t,d}$ is a function of a **time-dependent** process $\\mu_t$ and a **delay-time-dependent** process $\\nu_{t,d}$."}
 df <- tibble(x = c(1,2,3,4,5), 
              y = c(1,1,1,1,1), 
              fill_col = c("n",NA_character_,"mu",NA_character_,"nu"),
-             z = c(TeX(r'($l_{t,d}$)', output = "character"), 
+             z = c(TeX(r'($l(t,d)$)', output = "character"), 
                    TeX(r'($\approx$)', output = "character"), 
-                   TeX(r'($\mu_t$)', output = "character"),
+                   TeX(r'($\mu(t)$)', output = "character"),
                    TeX("+", output = "character"),
-                   TeX(r'($\nu_{t,d}$)', output = "character")))
+                   TeX(r'($\nu(t,d)$)', output = "character")))
 
 ggplot(df) +
   geom_tile(aes(x = x, y = y, fill = fill_col)) +
@@ -236,7 +235,7 @@ noise <- ggplot(df) +
 df <- tibble(x = c(1), 
              y = c(1), 
              fill_col = c("n"),
-             z = c(TeX(r'($\mu_{t}$)', output = "character")))
+             z = c(TeX(r'($\mu(t)$)', output = "character")))
 
 tdmu <- ggplot(df) +
   geom_tile(aes(x = x, y = y, fill = fill_col)) +
@@ -380,11 +379,11 @@ where $\Delta \alpha_{t+1} = \alpha_{t+1} - \alpha_{t}$ and in general $\Delta^k
 where $\alpha_{t,d}^{s,\text{Trend}} = (\alpha_t^s,\alpha_{t-1}^s,\dots,\alpha_{t-(k-1)}^s)^{\top}$, $R_d^{\text{Trend}} = \textrm{diag}(1,0,0,\dots,0)$, $L_{d}^{\text{Trend}} = (1, 0, 0, \dots, 0)^{\top}$ is a vector of zeroes with a one in the first entry, and 
 $$
 A_{d}^{\text{Trend}} = \begin{pmatrix}
-0 & \binom{k}{1} &  -\binom{k}{2} & \dots & (-1)^{j + 1} \binom{k}{j} & \dots & (-1)^{k} \binom{k}{k-1} & (-1)^{k + 1} \binom{k}{k} \\
-1 & 0 & 0 & \dots & 0 & \dots & 0 & 0\\
-0 & 1 & 0 & \dots & 0 & \dots & 0 & 0\\
+\binom{k}{1} &  -\binom{k}{2} & \dots & (-1)^{j + 1} \binom{k}{j} & \dots & (-1)^{k} \binom{k}{k-1} & (-1)^{k + 1} \binom{k}{k} \\
+1 &  0 & \dots & 0 & \dots & 0 & 0\\
+0 & 1 & \dots & 0 & \dots & 0 & 0\\
 \vdots & & & \\
-0 & 0 & 0 & \dots & 0 & \dots & 1 & 0\\
+0 & 0 & \dots & 0 & \dots & 1 & 0\\
 \end{pmatrix}
 $$
 :::

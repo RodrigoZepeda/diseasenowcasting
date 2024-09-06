@@ -63,5 +63,5 @@ data(denguedat)
 now <- as.Date("1990-10-01")
 
 # Run a nowcast with very few iterations
-nowcast(denguedat, "onset_week", "report_week", iter = 10)
+nowcast(denguedat, "onset_week", "report_week", iter = 10, init = 0)
 }
