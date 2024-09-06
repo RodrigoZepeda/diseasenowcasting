@@ -1,6 +1,4 @@
 #File for testing all of the stan functions
-stanfuns <- stan_function_tester()
-
 test_that("Checking `create_block_diagonal`", {
 
   #Checks the function to generate block diagonal matrices
