@@ -106,17 +106,18 @@ already observed
 and the cases we haven’t yet observed
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mover><mi>n</mi><mo accent="true">̃</mo></mover><mrow><mi>t</mi><mo>,</mo><mi>d</mi></mrow></msub><annotation encoding="application/x-tex">\tilde{n}_{t,d}</annotation></semantics></math>.</p>
 <div class="figure" style="text-align: center">
-<img src="Nowcasting-methods_files/figure-html/unnamed-chunk-3-1.png" alt="The log expected number of cases at time $t$ reported with delay $d$, $\ell_{t,d}$ is a function of a **time-dependent** process $\mu_t$ and a **delay-time-dependent** process $\nu_{t,d}$." width="700"><p class="caption">
-The log expected number of cases at time
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
-reported with delay
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mo>ℓ</mo><mrow><mi>t</mi><mo>,</mo><mi>d</mi></mrow></msub><annotation encoding="application/x-tex">\ell_{t,d}</annotation></semantics></math>
-is a function of a <strong>time-dependent</strong> process
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>μ</mi><mi>t</mi></msub><annotation encoding="application/x-tex">\mu_t</annotation></semantics></math>
-and a <strong>delay-time-dependent</strong> process
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>ν</mi><mrow><mi>t</mi><mo>,</mo><mi>d</mi></mrow></msub><annotation encoding="application/x-tex">\nu_{t,d}</annotation></semantics></math>.
-</p>
+<img src="Nowcasting-methods_files/figure-html/unnamed-chunk-3-1.png" alt="The number of cases at time $t$, $n_t$ can be decomposed into those observed with delays $0$ (no delay), and $1,2,3$, $n_{t,0},n_{t,1},n_{t,2},n_{t,3}$ and those predicted for delays $4,5,6$:  $n_{t,4},n_{t,5},n_{t,6}$ " width="700"><p class="caption">
+The number of cases at time
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>n</mi><mi>t</mi></msub><annotation encoding="application/x-tex">n_t</annotation></semantics></math>
+can be decomposed into those observed with delays
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+(no delay), and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">1,2,3</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>n</mi><mrow><mi>t</mi><mo>,</mo><mn>0</mn></mrow></msub><mo>,</mo><msub><mi>n</mi><mrow><mi>t</mi><mo>,</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>n</mi><mrow><mi>t</mi><mo>,</mo><mn>2</mn></mrow></msub><mo>,</mo><msub><mi>n</mi><mrow><mi>t</mi><mo>,</mo><mn>3</mn></mrow></msub></mrow><annotation encoding="application/x-tex">n_{t,0},n_{t,1},n_{t,2},n_{t,3}</annotation></semantics></math>
+and those predicted for delays
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>,</mo><mn>5</mn><mo>,</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">4,5,6</annotation></semantics></math>:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>n</mi><mrow><mi>t</mi><mo>,</mo><mn>4</mn></mrow></msub><mo>,</mo><msub><mi>n</mi><mrow><mi>t</mi><mo>,</mo><mn>5</mn></mrow></msub><mo>,</mo><msub><mi>n</mi><mrow><mi>t</mi><mo>,</mo><mn>6</mn></mrow></msub></mrow><annotation encoding="application/x-tex">n_{t,4},n_{t,5},n_{t,6}</annotation></semantics></math></p>
 </div>
 <p>The main objective is then to model
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>n</mi><mrow><mi>t</mi><mo>,</mo><mi>d</mi></mrow></msub><annotation encoding="application/x-tex">n_{t,d}</annotation></semantics></math>,
