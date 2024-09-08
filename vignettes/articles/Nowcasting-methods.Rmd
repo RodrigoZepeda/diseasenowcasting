@@ -80,15 +80,19 @@ Figure 1 shows this idea where we assume that the maximum delay corresponds to $
 
 The idea of the model is to predict the number of cases that will be seen at time $t$ denoted $n_{t}$ as the sum of the delayed cases. This includes both the cases we've already observed $n_{t,d}$ and the cases we haven't yet observed $\tilde{n}_{t,d}$. 
 
-```{r, echo=FALSE, fig.height=1, fig.align='center', fig.cap="The log expected number of cases at time $t$ reported with delay $d$, $\\ell_{t,d}$ is a function of a **time-dependent** process $\\mu_t$ and a **delay-time-dependent** process $\\nu_{t,d}$."}
-df <- tibble(x = 1:13, 
-             y = rep(1, 13), 
+```{r, echo=FALSE, fig.height=1, fig.align='center', fig.cap="The number of cases at time $t$, $n_t$ can be decomposed into those observed with delays $0$ (no delay), and $1,2,3$, $n_{t,0},n_{t,1},n_{t,2},n_{t,3}$ and those predicted for delays $4,5,6$:  $n_{t,4},n_{t,5},n_{t,6}$ "}
+df <- tibble(x = 1:15, 
+             y = rep(1, 15), 
              fill_col = c("infered", NA_character_,
                           "Observed",NA_character_, "Observed",NA_character_,
-                           "Observed",NA_character_, "Predicted",NA_character_,
+                           "Observed",NA_character_,
+                           "Observed",NA_character_,
+                          "Predicted",NA_character_,
                           "Predicted",NA_character_,"Predicted"),
              z = c(TeX(r'($n_{t}$)', output = "character"), 
                    TeX(r'($=$)', output = "character"), 
+                   TeX(r'($n_{t,0}$)', output = "character"),
+                   TeX("+", output = "character"),
                    TeX(r'($n_{t,1}$)', output = "character"),
                    TeX("+", output = "character"),
                    TeX(r'($\n_{t,2}$)', output = "character"),
@@ -105,12 +109,12 @@ df <- tibble(x = 1:13,
 ggplot(df) +
   geom_tile(aes(x = x, y = y, fill = fill_col)) +
   geom_text(aes(x = x, y = y, label = z), parse = T, size = 5, color = "black",
-            data = df |> filter(x %in% seq(0,14, by = 2))) +
+            data = df |> filter(x %in% seq(0,16, by = 2))) +
   geom_text(aes(x = x, y = y, label = z), parse = T, size = 5, color = "white",
-            data = df |> filter(x %in% seq(1,13, by = 2))) +
-  annotate("text", x = 5, y = 2, size = 5,
+            data = df |> filter(x %in% seq(1,15, by = 2))) +
+  annotate("text", x = 6, y = 2, size = 5,
            label = "Observed", color = met.brewer("Juarez", 5)[2]) +
-  annotate("text", x = 11, y = 2, size = 5,
+  annotate("text", x = 13, y = 2, size = 5,
            label = "Predicted (unobserved)", color = met.brewer("Juarez", 5)[1]) +
   theme_void() +
   scale_y_continuous(expand = c(0.5,0.5)) +
