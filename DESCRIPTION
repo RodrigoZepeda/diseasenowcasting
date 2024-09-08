@@ -22,7 +22,7 @@ Imports:
     tidyr
 Depends: 
     R (>= 4.2.0)
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Suggests: 
     NobBS,
     testthat (>= 3.0.0)
