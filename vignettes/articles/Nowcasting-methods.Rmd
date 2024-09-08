@@ -126,11 +126,11 @@ The main objective is then to model $n_{t,d}$, the number of cases at time $t$ t
 df <- tibble(x = c(1,2,3,4,5), 
              y = c(1,1,1,1,1), 
              fill_col = c("n",NA_character_,"mu",NA_character_,"nu"),
-             z = c(TeX(r'($l(t,d)$)', output = "character"), 
+             z = c(TeX(r'($l_{t,d}$)', output = "character"), 
                    TeX(r'($\approx$)', output = "character"), 
-                   TeX(r'($\mu(t)$)', output = "character"),
+                   TeX(r'($\mu_t$)', output = "character"),
                    TeX("+", output = "character"),
-                   TeX(r'($\nu(t,d)$)', output = "character")))
+                   TeX(r'($\nu_{t,d}$)', output = "character")))
 
 ggplot(df) +
   geom_tile(aes(x = x, y = y, fill = fill_col)) +

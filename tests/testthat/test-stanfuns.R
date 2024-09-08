@@ -1,5 +1,7 @@
 #File for testing all of the stan functions
-
+#The functions are created automatically from the stan file
+#after calling rstantools::rstan_config() and then
+#devtools::document()
 #Matrix for the examples
 Amat <- matrix(c(1,2,3,4), nrow = 2, byrow = TRUE)
 lvec <- c(1,2,3,4)
