@@ -9,8 +9,8 @@ rep_diagonal_mat <- function(A, k, pstream__ = 0L) {
     .Call(`_diseasenowcasting_rep_diagonal_mat`, A, k, pstream__)
 }
 
-rep_diagonal_vec <- function(A, k, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_rep_diagonal_vec`, A, k, pstream__)
+rep_vec <- function(A, k, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_rep_vec`, A, k, pstream__)
 }
 
 create_trend_matrix_block_A <- function(k, pstream__ = 0L) {

@@ -13,7 +13,7 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // create_block_diagonal
-Eigen::Matrix<double,-1,-1> create_block_diagonal(const Eigen::Matrix<double,-1,-1>& A, const Eigen::Matrix<double,-1,-1>& B, std::ostream* pstream__);
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>,                 stan::base_type_t<double>>,-1,-1> create_block_diagonal(const Eigen::Matrix<double,-1,-1>& A, const Eigen::Matrix<double,-1,-1>& B, std::ostream* pstream__);
 RcppExport SEXP _diseasenowcasting_create_block_diagonal(SEXP ASEXP, SEXP BSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -26,7 +26,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // rep_diagonal_mat
-Eigen::Matrix<double,-1,-1> rep_diagonal_mat(const Eigen::Matrix<double,-1,-1>& A, const int& k, std::ostream* pstream__);
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>>,-1,-1> rep_diagonal_mat(const Eigen::Matrix<double,-1,-1>& A, const int& k, std::ostream* pstream__);
 RcppExport SEXP _diseasenowcasting_rep_diagonal_mat(SEXP ASEXP, SEXP kSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -38,16 +38,16 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// rep_diagonal_vec
-Eigen::Matrix<double,-1,1> rep_diagonal_vec(const Eigen::Matrix<double,-1,1>& A, const int& k, std::ostream* pstream__);
-RcppExport SEXP _diseasenowcasting_rep_diagonal_vec(SEXP ASEXP, SEXP kSEXP, SEXP pstream__SEXP) {
+// rep_vec
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>>,-1,1> rep_vec(const Eigen::Matrix<double,-1,1>& A, const int& k, std::ostream* pstream__);
+RcppExport SEXP _diseasenowcasting_rep_vec(SEXP ASEXP, SEXP kSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type A(ASEXP);
     Rcpp::traits::input_parameter< const int& >::type k(kSEXP);
     Rcpp::traits::input_parameter< std::ostream* >::type pstream__(pstream__SEXP);
-    rcpp_result_gen = Rcpp::wrap(rep_diagonal_vec(A, k, pstream__));
+    rcpp_result_gen = Rcpp::wrap(rep_vec(A, k, pstream__));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -89,7 +89,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // create_initial_trend_vector_block_alpha
-Eigen::Matrix<double,-1,1> create_initial_trend_vector_block_alpha(const Eigen::Matrix<double,-1,1>& alpha, std::ostream* pstream__);
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>>,-1,1> create_initial_trend_vector_block_alpha(const Eigen::Matrix<double,-1,1>& alpha, std::ostream* pstream__);
 RcppExport SEXP _diseasenowcasting_create_initial_trend_vector_block_alpha(SEXP alphaSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -141,7 +141,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // create_trend_vector_alpha
-Eigen::Matrix<double,-1,1> create_trend_vector_alpha(const Eigen::Matrix<double,-1,1>& alpha, std::ostream* pstream__);
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>>,-1,1> create_trend_vector_alpha(const Eigen::Matrix<double,-1,1>& alpha, std::ostream* pstream__);
 RcppExport SEXP _diseasenowcasting_create_trend_vector_alpha(SEXP alphaSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -171,7 +171,7 @@ RcppExport SEXP _rcpp_module_boot_stan_fit4nowcast_mod();
 static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_create_block_diagonal", (DL_FUNC) &_diseasenowcasting_create_block_diagonal, 3},
     {"_diseasenowcasting_rep_diagonal_mat", (DL_FUNC) &_diseasenowcasting_rep_diagonal_mat, 3},
-    {"_diseasenowcasting_rep_diagonal_vec", (DL_FUNC) &_diseasenowcasting_rep_diagonal_vec, 3},
+    {"_diseasenowcasting_rep_vec", (DL_FUNC) &_diseasenowcasting_rep_vec, 3},
     {"_diseasenowcasting_create_trend_matrix_block_A", (DL_FUNC) &_diseasenowcasting_create_trend_matrix_block_A, 2},
     {"_diseasenowcasting_create_trend_vector_block_L", (DL_FUNC) &_diseasenowcasting_create_trend_vector_block_L, 2},
     {"_diseasenowcasting_create_trend_matrix_block_R", (DL_FUNC) &_diseasenowcasting_create_trend_matrix_block_R, 3},
