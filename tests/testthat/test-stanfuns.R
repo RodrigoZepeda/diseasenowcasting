@@ -51,3 +51,20 @@ test_that("Checking `rep_vec`", {
   mvec  <- rep_vec(lvec, 1, pstream__ = rstan::get_stream())
   expect_equal(lvec, mvec)
 })
+
+
+test_that("Checking `rep_vec_piecewise`", {
+  #Checks the function to generate repeated vectors by repeating vector
+  # lvec k times
+  mvec  <- rep_vec_piecewise(lvec, 10, pstream__ = rstan::get_stream())
+  mvec2 <- c()
+  for (k in 1:length(lvec)){
+    mvec2 <- c(mvec2, rep(lvec[k], 10))
+  }
+  expect_equal(mvec, mvec2)
+
+  #Checks that when 1 repetition is established then it only creates the
+  #same vector
+  mvec  <- rep_vec_piecewise(lvec, 1, pstream__ = rstan::get_stream())
+  expect_equal(lvec, mvec)
+})
