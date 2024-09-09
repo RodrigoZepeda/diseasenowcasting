@@ -13,39 +13,91 @@ rep_vec <- function(A, k, pstream__ = 0L) {
     .Call(`_diseasenowcasting_rep_vec`, A, k, pstream__)
 }
 
-create_trend_matrix_block_A <- function(k, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_create_trend_matrix_block_A`, k, pstream__)
+rep_vec_piecewise <- function(A, k, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_rep_vec_piecewise`, A, k, pstream__)
 }
 
-create_trend_vector_block_L <- function(k, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_create_trend_vector_block_L`, k, pstream__)
+create_trend_matrix_block_A <- function(degree, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_trend_matrix_block_A`, degree, pstream__)
 }
 
-create_trend_matrix_block_R <- function(k, is_constant, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_create_trend_matrix_block_R`, k, is_constant, pstream__)
+create_trend_vector_block_L <- function(degree, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_trend_vector_block_L`, degree, pstream__)
 }
 
-create_initial_trend_vector_block_alpha <- function(alpha, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_create_initial_trend_vector_block_alpha`, alpha, pstream__)
+create_trend_matrix_block_R <- function(degree, is_constant, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_trend_matrix_block_R`, degree, is_constant, pstream__)
 }
 
-create_trend_matrix_A <- function(k, d, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_create_trend_matrix_A`, k, d, pstream__)
+create_initial_trend_vector_block_alpha <- function(alpha_params, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_initial_trend_vector_block_alpha`, alpha_params, pstream__)
 }
 
-create_trend_matrix_R <- function(k, is_constant, d, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_create_trend_matrix_R`, k, is_constant, d, pstream__)
+create_trend_matrix_A <- function(degree, num_delays, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_trend_matrix_A`, degree, num_delays, pstream__)
 }
 
-create_trend_vector_L <- function(k, d, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_create_trend_vector_L`, k, d, pstream__)
+create_trend_matrix_R <- function(degree, is_constant, num_delays, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_trend_matrix_R`, degree, is_constant, num_delays, pstream__)
 }
 
-create_trend_vector_alpha <- function(alpha, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_create_trend_vector_alpha`, alpha, pstream__)
+create_trend_vector_L <- function(degree, num_delays, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_trend_vector_L`, degree, num_delays, pstream__)
 }
 
-get_num_elements_alpha_trend <- function(k, d, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_get_num_elements_alpha_trend`, k, d, pstream__)
+create_trend_vector_alpha <- function(alpha_params, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_trend_vector_alpha`, alpha_params, pstream__)
+}
+
+get_num_elements_alpha_trend <- function(degree, num_delays, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_get_num_elements_alpha_trend`, degree, num_delays, pstream__)
+}
+
+create_seasonal_discrete_matrix_block_A <- function(num_seasons, season_duration, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_seasonal_discrete_matrix_block_A`, num_seasons, season_duration, pstream__)
+}
+
+create_seasonal_discrete_vector_block_L <- function(num_seasons, season_duration, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_seasonal_discrete_vector_block_L`, num_seasons, season_duration, pstream__)
+}
+
+create_seasonal_discrete_matrix_block_R <- function(num_seasons, season_duration, time, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_seasonal_discrete_matrix_block_R`, num_seasons, season_duration, time, pstream__)
+}
+
+create_initial_seasonal_discrete_vector_block_alpha <- function(season_params, season_duration, error_term, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_initial_seasonal_discrete_vector_block_alpha`, season_params, season_duration, error_term, pstream__)
+}
+
+create_seasonal_discrete_matrix_A <- function(num_seasons, season_duration, num_delays, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_seasonal_discrete_matrix_A`, num_seasons, season_duration, num_delays, pstream__)
+}
+
+create_seasonal_discrete_matrix_R <- function(num_seasons, season_duration, time, num_delays, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_seasonal_discrete_matrix_R`, num_seasons, season_duration, time, num_delays, pstream__)
+}
+
+create_seasonal_discrete_vector_L <- function(num_seasons, season_duration, num_delays, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_seasonal_discrete_vector_L`, num_seasons, season_duration, num_delays, pstream__)
+}
+
+create_seasonal_discrete_vector_alpha <- function(alpha_params, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_create_seasonal_discrete_vector_alpha`, alpha_params, pstream__)
+}
+
+get_num_elements_alpha_seasonal_discrete <- function(num_seasons, season_duration, num_delays, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_get_num_elements_alpha_seasonal_discrete`, num_seasons, season_duration, num_delays, pstream__)
+}
+
+state_space_process <- function(num_steps, lsize, L_mu, L_nu, B_cnt, X_cnt, B_t, X_t, mu, nu, epsilon, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_state_space_process`, num_steps, lsize, L_mu, L_nu, B_cnt, X_cnt, B_t, X_t, mu, nu, epsilon, pstream__)
+}
+
+time_dependent_process <- function(num_steps, A_mu, R_mu, mu_0, xi_mu, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_time_dependent_process`, num_steps, A_mu, R_mu, mu_0, xi_mu, pstream__)
+}
+
+time_delay_dependent_process <- function(num_steps, A_nu, R_nu, nu_0, xi_nu, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_time_delay_dependent_process`, num_steps, A_nu, R_nu, nu_0, xi_nu, pstream__)
 }
 

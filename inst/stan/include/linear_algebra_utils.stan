@@ -1,3 +1,5 @@
+#include include/license.stan
+
 matrix create_block_diagonal(matrix A, matrix B){
   //Creates a block diagonal matrix from matrix A and matrix B
   //
@@ -40,6 +42,25 @@ vector rep_vec(vector A, int k){
   //Fill with A values
   for (l in 1:k){
     C[((l-1)*num_elements(A) + 1):(l*num_elements(A))] = A;
+  }
+
+  return C;
+}
+
+vector rep_vec_piecewise(vector A, int k){
+  //Creates a vector repeating each element of A k-times
+  //
+  //Given A = (a1, a2, a3, ..., an) returns the vector of k*n length
+  //specified as:
+  //(a1, a1, a1, ..., a1, a2, a2, a2, ..., a2, a3, a3, ..., a3, ..., an, an, ..., an)
+  //where each element of A is repeated k times
+
+  int n = num_elements(A);
+  vector[n*k] C;
+
+  //Fill with A values
+  for (j in 1:n){
+    C[((j - 1)*k + 1):(k*j)] = rep_vector(A[j], k);
   }
 
   return C;
