@@ -40,7 +40,7 @@ df <- df |>
   mutate(report_date = factor(as.character(format(report_date,"%b %d")), ordered = TRUE)) |>
   mutate(date = fct_rev(date))
 
-ggplot(df) +
+plt2 <- ggplot(df) +
   geom_vline(aes(xintercept = 10), linetype = "dashed") +
   annotate("label", x = 10, y = 10, label = "Today") +
   geom_tile(
@@ -74,6 +74,7 @@ ggplot(df) +
   ) +
   scale_fill_manual("", values = met.brewer("Juarez", 5)[c(2,4)]) 
 
+print(plt2)
 ```
 
 Figure 1 shows this idea where we assume that the maximum delay corresponds to $6$ days. We can see that by **today**, April 11th, all of the data for April the 2nd has already arrived: the data that arrived with zero delay (report Apr. 2) as well as the data that arrived with a delay of $1$ (report Apr. 3), $2$ (report Apr. 4), $3$ (report Apr. 5), etc until the data that was reported on April 8th with the maximum delay of 6. For other dates not all data has yet arrived. We can see that for April 9th we only see the data with delay 0 up till 3 (corresponding to April 11th). Data with delay larger than 3 will be seen in the future. 
@@ -135,7 +136,7 @@ df <- tibble(x = c(1,2,3,4,5),
                    TeX("+", output = "character"),
                    TeX(r'($\nu_{t,d}$)', output = "character")))
 
-ggplot(df) +
+plt <- ggplot(df) +
   geom_tile(aes(x = x, y = y, fill = fill_col)) +
   geom_text(aes(x = x, y = y, label = z), parse = T, size = 7, color = "black",
             data = df |> filter(x %in% c(2,4))) +
@@ -149,8 +150,10 @@ ggplot(df) +
   theme(
     legend.position = "none"
   ) +
-  scale_fill_manual("", values = met.brewer("Juarez", 5)[c(1,2,5)], na.value = "white") 
-  
+  scale_fill_manual("", values = met.brewer("Juarez", 5)[c(1,2,5)], na.value = "white")
+
+#Print plot
+print(plt)
 ```
 
 Each of the processes can be further decomposed into a **trend**, a **season** (or multiple seasons), and a cycle:

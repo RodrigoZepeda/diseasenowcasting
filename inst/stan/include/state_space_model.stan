@@ -1,43 +1,43 @@
 #include include/license.stan
 //Functions for running the state space model
 
-array[] vector state_space_process(int num_steps, int lsize, matrix L_mu,
-  matrix L_nu, vector B_cnt, matrix X_cnt, vector B_t, array[] matrix X_t,
-  array[] vector mu, array[] vector nu, array[] vector epsilon){
+array[,,] vector state_space_process(int num_steps, int num_delays, int num_strata,
+  matrix A_mu, matrix A_nu, matrix R_mu, matrix R_nu, row_vector L_mu, row_vector L_nu,
+  array[,] vector mu_0, array[,,] vector xi_mu, array[,] vector nu_0, array[,,] vector xi_nu,
+   vector B_cnt, matrix X_cnt,
+   //vector B_t, array[] matrix X_t,
+   array[,,] vector epsilon){
 
-    //Instantiate vector
-    array[num_steps] vector[lsize] l;
+    //Initialize the vectors
+    array[num_steps, num_delays, num_strata] vector[1] l;
+
+    array[num_steps, num_delays, num_strata] vector[num_elements(mu_0[1,1])] mu;
+    mu[1,:,:] = mu_0;
+
+    array[num_steps, num_delays, num_strata] vector[num_elements(nu_0[1,1])] nu;
+    nu[1,:,:] = nu_0;
 
     //Calculate the constant coefficient vector
     vector[cols(X_cnt)] constant_coef = X_cnt*B_cnt;
 
     //Loop through the rest of the vectors
-    for (t in 1:num_steps)
-      l[t] = L_mu*mu[t] + L_nu*nu[t] + constant_coef + X_t[t]*B_t + epsilon[t];
+
+    for (s in 1:num_strata){
+      for (d in 1:num_delays){
+        for (t in 1:(num_steps - 1)){
+          //l[t,d,s] = L_mu*mu[t,d,s] + L_nu*nu[t,d,s] + constant_coef + X_t[t,d,s]*B_t + epsilon[t,d,s];
+          l[t,d,s]    = L_mu*mu[t,d,s] + L_nu*nu[t,d,s] + constant_coef + epsilon[t,d,s];
+          mu[t+1,d,s] = A_mu*mu[t,d,s] + R_mu*xi_mu[t+1,d,s];
+          nu[t+1,d,s] = A_nu*nu[t,d,s] + R_nu*xi_nu[t+1,d,s];
+        }
+
+        //Last step of loop
+        //l[num_steps,d,s] = L_mu*mu[num_steps,d,s] + L_nu*nu[num_steps,d,s] + constant_coef + X_t[num_steps,d,s]*B_t + epsilon[num_steps,d,s];
+        l[num_steps,d,s] = L_mu*mu[num_steps,d,s] + L_nu*nu[num_steps,d,s] + constant_coef + epsilon[num_steps,d,s];
+      }
+    }
+
 
     return l;
 
-}
-
-array[] vector time_dependent_process(int num_steps, matrix A_mu, matrix R_mu, vector mu_0, array[] vector xi_mu){
-  //Initialize the vector
-  array[num_steps] vector[num_elements(mu_0)] mu;
-  mu[1] = mu_0;
-
-  //Loop through time
-  for (t in 2:num_steps)
-    mu[t] = A_mu*mu[t-1] + R_mu*xi_mu[t];
-
-  return mu;
-}
-
-array[] vector time_delay_dependent_process(int num_steps, matrix A_nu, matrix R_nu, vector nu_0, array[] vector xi_nu){
-  //Initialize the vector
-  array[num_steps] vector[num_elements(nu_0)] nu;
-  nu[1] = nu_0;
-
-  for (t in 2:num_steps)
-    nu[t] = A_nu*nu[t-1] + R_nu*xi_nu[t];
-
-  return nu;
 }

@@ -94,3 +94,36 @@ infer_data_type <- function(.disease_data, data_type) {
 
   return(data_type)
 }
+
+
+#' Transforms an array into a list of lists
+#'
+#' Function that takes an array and transforms it into lists of lists
+#' this is mainly for interacting with [Rcpp::cppFunction()].
+#'
+#' @param last_dim_as_vector `TRUE` if the last dimension of the array should be a vector
+#' and 0 otherwise.
+#' @param my_array The array to transform
+#'
+#' @return A list of lists with the same structure as the array
+#'
+#' @keywords internal
+array_to_list <- function(my_array, last_dim_as_vector = T){
+
+  #Get array dimensions
+  dims <- dim(my_array)
+
+  # Dynamically build the nested lapply structure based on the number of dimensions
+  expr_1 <- ""
+  expr_2 <- "["
+  for (i in 1:(length(dims) - last_dim_as_vector)) {
+    expr_1 <- paste0(expr_1, "\nlapply(1:", dims[i], ", function(x_", i, "){")
+    expr_2 <- paste0(expr_2, "x_",i, ifelse(i == length(dims), "", ","))
+  }
+  expr_2 <- paste0("\n\tas.vector(my_array",expr_2, "])")
+  expr   <- paste0(expr_1, expr_2, "\n", paste0(rep("})", (length(dims) - last_dim_as_vector)), collapse = ""))
+
+  # Evaluate the generated expression
+  eval(parse(text = expr))
+
+}
