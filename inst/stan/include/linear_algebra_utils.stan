@@ -11,7 +11,7 @@ matrix create_block_diagonal(matrix A, matrix B){
   C[1:rows(A),1:cols(A)] = A;
 
   //Fill with B values
-  C[(rows(A) + 1):rows(C),(cols(A) + 1):cols(C)] = B;
+  C[(rows(A) + 1):(rows(A) + rows(B)),(cols(A) + 1):(cols(A) + cols(B))] = B;
 
   return C;
 

@@ -76,6 +76,7 @@ vector create_initial_seasonal_discrete_vector_block_alpha(vector season_params,
 //COMPLETE MATRICES-------
 //The seasonal_discrete matrix is constructed by blocks for each delay d.
 //Here we bind all the blocks.
+/*
 matrix create_seasonal_discrete_matrix_A(int num_seasons, int season_duration, int num_delays){
   int k = num_seasons*season_duration + 1;
   matrix[k, k] A = create_seasonal_discrete_matrix_block_A(num_seasons, season_duration);
@@ -103,4 +104,4 @@ vector create_seasonal_discrete_vector_alpha(vector alpha_params){
 int get_num_elements_alpha_seasonal_discrete(int num_seasons, int season_duration, int num_delays){
   return (season_duration*num_seasons)*num_delays;
 }
-
+*/

@@ -56,6 +56,7 @@ vector create_initial_trend_vector_block_alpha(vector alpha_params){
   return alpha_params;
 }
 
+/*
 //COMPLETE MATRICES-------
 //The trend matrix is constructed by blocks for each delay d.
 //Here we bind all the blocks.
@@ -83,3 +84,4 @@ vector create_trend_vector_alpha(vector alpha_params){
 int get_num_elements_alpha_trend(int degree, int num_delays){
   return degree*num_delays;
 }
+*/
