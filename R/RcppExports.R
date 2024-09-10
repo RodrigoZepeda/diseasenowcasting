@@ -29,8 +29,28 @@ create_trend_matrix_block_R <- function(degree, is_constant, pstream__ = 0L) {
     .Call(`_diseasenowcasting_create_trend_matrix_block_R`, degree, is_constant, pstream__)
 }
 
-create_initial_trend_vector_block_alpha <- function(alpha_params, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_create_initial_trend_vector_block_alpha`, alpha_params, pstream__)
+get_num_elements_alpha_trend <- function(degree, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_get_num_elements_alpha_trend`, degree, pstream__)
+}
+
+get_num_cols_A_trend <- function(degree, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_get_num_cols_A_trend`, degree, pstream__)
+}
+
+get_num_rows_A_trend <- function(degree, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_get_num_rows_A_trend`, degree, pstream__)
+}
+
+get_num_elements_L_trend <- function(degree, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_get_num_elements_L_trend`, degree, pstream__)
+}
+
+get_num_cols_R_trend <- function(degree, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_get_num_cols_R_trend`, degree, pstream__)
+}
+
+get_num_rows_R_trend <- function(degree, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_get_num_rows_R_trend`, degree, pstream__)
 }
 
 create_seasonal_discrete_matrix_block_A <- function(num_seasons, season_duration, pstream__ = 0L) {
@@ -49,7 +69,7 @@ create_initial_seasonal_discrete_vector_block_alpha <- function(season_params, s
     .Call(`_diseasenowcasting_create_initial_seasonal_discrete_vector_block_alpha`, season_params, season_duration, error_term, pstream__)
 }
 
-state_space_process <- function(num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, epsilon, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_state_space_process`, num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, epsilon, pstream__)
+state_space_process_v2 <- function(num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, epsilon, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_state_space_process_v2`, num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, epsilon, pstream__)
 }
 

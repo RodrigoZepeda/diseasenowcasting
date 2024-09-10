@@ -13,15 +13,18 @@ matrix create_trend_matrix_block_A(int degree) {
   // A[i,j] = 0 otherwise
 
   //Create the matrix
-  matrix[degree, degree] A = rep_matrix(0, degree, degree);
+  int ncols = get_num_cols_A_trend(degree);
+  int nrows = get_num_rows_A_trend(degree);
+
+  matrix[nrows, ncols] A = rep_matrix(0, nrows, ncols);
 
   // Fill the first row using binomial coefficients with alternating signs
-  for (j in 1:degree) {
+  for (j in 1:ncols) {
     A[1, j] = (-1)^(j+1) * choose(degree, j);
   }
 
   // Fill the lower triangular part with the identity matrix shifted by 1 row
-  for (i in 2:degree) {
+  for (i in 2:nrows) {
     A[i, i-1] = 1.0;
   }
 
@@ -33,8 +36,9 @@ vector create_trend_vector_block_L(int degree){
   //
   // The trend vector L is a degree length vector of zeroes except for the
   // first entry which is 1
+  int nsize = get_num_elements_L_trend(degree);
 
-  vector[degree] L = rep_vector(0.0, degree);
+  vector[nsize] L = rep_vector(0.0, nsize);
   L[1] = 1.0;
 
   return L;
@@ -46,14 +50,14 @@ matrix create_trend_matrix_block_R(int degree, int is_constant){
   // The trend matrix R is a degree x degree matrix with 0's except in the
   // first entry where it can be 1 if it is constant and 0 if not.
 
-  matrix[degree,degree] R = rep_matrix(0.0, degree, degree);
+  //Create the matrix
+  int ncols = get_num_cols_R_trend(degree);
+  int nrows = get_num_rows_R_trend(degree);
+
+  matrix[nrows,ncols] R = rep_matrix(0.0, nrows, ncols);
   R[1,1] = 1.0 - is_constant;
 
   return R;
-}
-
-vector create_initial_trend_vector_block_alpha(vector alpha_params){
-  return alpha_params;
 }
 
 /*
@@ -78,10 +82,30 @@ vector create_trend_vector_L(int degree, int num_delays){
 vector create_trend_vector_alpha(vector alpha_params){
   return alpha_params;
 }
+*/
 
 //Returns the number of elements in vector alpha for a trend with degree degree
 //with d delays
-int get_num_elements_alpha_trend(int degree, int num_delays){
-  return degree*num_delays;
+int get_num_elements_alpha_trend(int degree){
+  return degree;
 }
-*/
+
+int get_num_cols_A_trend(int degree){
+  return degree;
+}
+
+int get_num_rows_A_trend(int degree){
+  return degree;
+}
+
+int get_num_elements_L_trend(int degree){
+  return degree;
+}
+
+int get_num_cols_R_trend(int degree){
+  return degree;
+}
+
+int get_num_rows_R_trend(int degree){
+  return degree;
+}

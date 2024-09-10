@@ -4,21 +4,29 @@ now <- as.Date("1990-10-01")
 
 disease_data <- denguedat
 disease_data <- preprocess_for_nowcast(disease_data, "onset_week", "report_week",
-                                       strata = "gender",
-                                       now = now, units = "weeks")
+                                       now = now, units = "weeks")|>
+  dplyr::mutate(.delay = .delay + 1)
 
 # Nmatrix
-Nmat <- disease_data |>
+N_cases <- disease_data |>
   dplyr::select(-onset_week, -report_week) |>
-  dplyr::select(n, .tval, -.delay, tidyr::everything())
+  dplyr::select(n, .tval, -.delay, tidyr::everything()) |>
+  dplyr::mutate(strata = 1)
 
 stan_data <- list(
-  max_time   = max(disease_data$.tval),
-  max_delays = max(disease_data$.delay),
+  num_steps  = max(disease_data$.tval),
+  num_delays = max(disease_data$.delay),
   num_strata = 1,
-  num_covariates = 0,
-  nobs = nrow(Nmat),
-  Nmat = as.matrix(Nmat),
+  n_rows = nrow(N_cases),
+  N_cases = as.matrix(N_cases),
+
+  #Trend specification
+  mu_degree = 2,
+  nu_degree = 1,
+  mu_is_constant = FALSE,
+  nu_is_constant = TRUE,
+
+  #Priors and other specifications
   is_negative_binomial = F,
   prior_only = F,
   dispersion_prior_shape = 0.001,
