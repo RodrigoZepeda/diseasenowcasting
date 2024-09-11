@@ -1,9 +1,8 @@
-//Filefor checking all of the functions in stan
-#include include/license.stan
-
+//File including the functions to export into R
 functions {
   #include include/linear_algebra_utils.stan
   #include include/trend.stan
   #include include/seasonal_discrete.stan
   #include include/state_space_model.stan
+  #include include/priors.stan
 }

@@ -14,8 +14,9 @@ nowcast(
   units = NULL,
   max_delay = Inf,
   prior_only = FALSE,
-  init = 0,
   proportion_reported = 1,
+  refresh = 10 * interactive(),
+  control = control_default(),
   ...
 )
 }
@@ -41,9 +42,7 @@ to perform the nowcast.}
 \item{max_delay}{Maximum possible delay observed or considered for estimation
 of the delay distribution (numeric). Default: `Inf`}
 
-\item{prior_only}{Boolean variable indicating whether to compute only the prior}
-
-\item{init}{Initial values for [rstan::sampling()]}
+\item{prior_only}{Boolean variable indicating whether to compute only the prior distribution}
 
 \item{proportion_reported}{A decimal greater than 0 and less than or equal to
 1 representing the proportion of all cases expected to be reported.
@@ -63,5 +62,12 @@ data(denguedat)
 now <- as.Date("1990-10-01")
 
 # Run a nowcast with very few iterations
-nowcast(denguedat, "onset_week", "report_week", iter = 10, init = 0)
+# change to 4 chains and 2000 iter when doing inference
+# or just run the command without the `iter = 10`, `chains = 1` thing.
+nowcast(denguedat, "onset_week", "report_week",
+          iter = 100, chains = 1, seed = 12334)
+
+# You can also run the nowcast stratifying by several variables
+nowcast(denguedat, "onset_week", "report_week", strata = c("gender"),
+          iter = 100, chains = 1, seed = 12334)
 }

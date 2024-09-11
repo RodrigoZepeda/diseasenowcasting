@@ -28,7 +28,7 @@ matrix create_trend_matrix_block_A(int degree) {
     A[i, i-1] = 1.0;
   }
 
-  return A;
+  return A';
 }
 
 vector create_trend_vector_block_L(int degree){
@@ -57,7 +57,7 @@ matrix create_trend_matrix_block_R(int degree, int is_constant){
   matrix[nrows,ncols] R = rep_matrix(0.0, nrows, ncols);
   R[1,1] = 1.0 - is_constant;
 
-  return R;
+  return R';
 }
 
 /*

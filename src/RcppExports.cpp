@@ -227,9 +227,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// state_space_process_v2
-std::vector<std::vector<Eigen::Matrix<double,-1,1>>> state_space_process_v2(const int& num_steps, const int& num_delays, const int& num_strata, const Eigen::Matrix<double,-1,-1>& A_mu, const Eigen::Matrix<double,-1,-1>& A_nu, const Eigen::Matrix<double,-1,-1>& R_mu, const Eigen::Matrix<double,-1,-1>& R_nu, const Eigen::Matrix<double,-1,1>& L_mu, const Eigen::Matrix<double,-1,1>& L_nu, const std::vector<Eigen::Matrix<double,-1,-1>>& mu_0, const std::vector<                                std::vector<Eigen::Matrix<double,-1,-1>>>& xi_mu, const std::vector<Eigen::Matrix<double,-1,-1>>& nu_0, const std::vector<                                std::vector<Eigen::Matrix<double,-1,-1>>>& xi_nu, const Eigen::Matrix<double,-1,1>& B_cnt, const Eigen::Matrix<double,-1,-1>& X_cnt, const std::vector<                                std::vector<Eigen::Matrix<double,-1,1>>>& epsilon, std::ostream* pstream__);
-RcppExport SEXP _diseasenowcasting_state_space_process_v2(SEXP num_stepsSEXP, SEXP num_delaysSEXP, SEXP num_strataSEXP, SEXP A_muSEXP, SEXP A_nuSEXP, SEXP R_muSEXP, SEXP R_nuSEXP, SEXP L_muSEXP, SEXP L_nuSEXP, SEXP mu_0SEXP, SEXP xi_muSEXP, SEXP nu_0SEXP, SEXP xi_nuSEXP, SEXP B_cntSEXP, SEXP X_cntSEXP, SEXP epsilonSEXP, SEXP pstream__SEXP) {
+// state_space_process_v3
+Eigen::Matrix<double,-1,-1> state_space_process_v3(const int& num_steps, const int& num_delays, const int& num_strata, const Eigen::Matrix<double,-1,-1>& A_mu, const Eigen::Matrix<double,-1,-1>& A_nu, const Eigen::Matrix<double,-1,-1>& R_mu, const Eigen::Matrix<double,-1,-1>& R_nu, const Eigen::Matrix<double,-1,1>& L_mu, const Eigen::Matrix<double,-1,1>& L_nu, const Eigen::Matrix<double,-1,-1>& mu_0, const std::vector<Eigen::Matrix<double,-1,-1>>& xi_mu, const Eigen::Matrix<double,-1,-1>& nu_0, const std::vector<Eigen::Matrix<double,-1,-1>>& xi_nu, const Eigen::Matrix<double,-1,1>& B_cnt, const Eigen::Matrix<double,-1,-1>& X_cnt, std::ostream* pstream__);
+RcppExport SEXP _diseasenowcasting_state_space_process_v3(SEXP num_stepsSEXP, SEXP num_delaysSEXP, SEXP num_strataSEXP, SEXP A_muSEXP, SEXP A_nuSEXP, SEXP R_muSEXP, SEXP R_nuSEXP, SEXP L_muSEXP, SEXP L_nuSEXP, SEXP mu_0SEXP, SEXP xi_muSEXP, SEXP nu_0SEXP, SEXP xi_nuSEXP, SEXP B_cntSEXP, SEXP X_cntSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -242,20 +242,34 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,-1>& >::type R_nu(R_nuSEXP);
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type L_mu(L_muSEXP);
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type L_nu(L_nuSEXP);
-    Rcpp::traits::input_parameter< const std::vector<Eigen::Matrix<double,-1,-1>>& >::type mu_0(mu_0SEXP);
-    Rcpp::traits::input_parameter< const std::vector<                                std::vector<Eigen::Matrix<double,-1,-1>>>& >::type xi_mu(xi_muSEXP);
-    Rcpp::traits::input_parameter< const std::vector<Eigen::Matrix<double,-1,-1>>& >::type nu_0(nu_0SEXP);
-    Rcpp::traits::input_parameter< const std::vector<                                std::vector<Eigen::Matrix<double,-1,-1>>>& >::type xi_nu(xi_nuSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,-1>& >::type mu_0(mu_0SEXP);
+    Rcpp::traits::input_parameter< const std::vector<Eigen::Matrix<double,-1,-1>>& >::type xi_mu(xi_muSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,-1>& >::type nu_0(nu_0SEXP);
+    Rcpp::traits::input_parameter< const std::vector<Eigen::Matrix<double,-1,-1>>& >::type xi_nu(xi_nuSEXP);
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type B_cnt(B_cntSEXP);
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,-1>& >::type X_cnt(X_cntSEXP);
-    Rcpp::traits::input_parameter< const std::vector<                                std::vector<Eigen::Matrix<double,-1,1>>>& >::type epsilon(epsilonSEXP);
     Rcpp::traits::input_parameter< std::ostream* >::type pstream__(pstream__SEXP);
-    rcpp_result_gen = Rcpp::wrap(state_space_process_v2(num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, epsilon, pstream__));
+    rcpp_result_gen = Rcpp::wrap(state_space_process_v3(num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, pstream__));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dist_lpdf
+double dist_lpdf(const Eigen::Matrix<double,-1,1>& x, const double& param_1, const double& param_2, const int& prior_spec, std::ostream* pstream__);
+RcppExport SEXP _diseasenowcasting_dist_lpdf(SEXP xSEXP, SEXP param_1SEXP, SEXP param_2SEXP, SEXP prior_specSEXP, SEXP pstream__SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const double& >::type param_1(param_1SEXP);
+    Rcpp::traits::input_parameter< const double& >::type param_2(param_2SEXP);
+    Rcpp::traits::input_parameter< const int& >::type prior_spec(prior_specSEXP);
+    Rcpp::traits::input_parameter< std::ostream* >::type pstream__(pstream__SEXP);
+    rcpp_result_gen = Rcpp::wrap(dist_lpdf(x, param_1, param_2, prior_spec, pstream__));
     return rcpp_result_gen;
 END_RCPP
 }
 
-RcppExport SEXP _rcpp_module_boot_stan_fit4nowcast_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4nowcast_v2_mod();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_create_block_diagonal", (DL_FUNC) &_diseasenowcasting_create_block_diagonal, 3},
@@ -275,8 +289,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_create_seasonal_discrete_vector_block_L", (DL_FUNC) &_diseasenowcasting_create_seasonal_discrete_vector_block_L, 3},
     {"_diseasenowcasting_create_seasonal_discrete_matrix_block_R", (DL_FUNC) &_diseasenowcasting_create_seasonal_discrete_matrix_block_R, 4},
     {"_diseasenowcasting_create_initial_seasonal_discrete_vector_block_alpha", (DL_FUNC) &_diseasenowcasting_create_initial_seasonal_discrete_vector_block_alpha, 4},
-    {"_diseasenowcasting_state_space_process_v2", (DL_FUNC) &_diseasenowcasting_state_space_process_v2, 17},
-    {"_rcpp_module_boot_stan_fit4nowcast_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nowcast_mod, 0},
+    {"_diseasenowcasting_state_space_process_v3", (DL_FUNC) &_diseasenowcasting_state_space_process_v3, 16},
+    {"_diseasenowcasting_dist_lpdf", (DL_FUNC) &_diseasenowcasting_dist_lpdf, 5},
+    {"_rcpp_module_boot_stan_fit4nowcast_v2_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nowcast_v2_mod, 0},
     {NULL, NULL, 0}
 };
 

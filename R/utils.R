@@ -122,6 +122,15 @@ array_to_list <- function(my_array, last_dim_as = "vector"){
                    vector = 1,
                    matrix = 2)
 
+  #Check whether the array warrants it
+  if (length(dims) < lagval){
+    cli::cli_abort("Cannot convert array of dimensions {length(dims)} to {.last_dim_as}")
+  } else if (length(dims) == 1 & lagval == 1){
+    return(as.vector(my_array))
+  } else if (length(dims) == 2 & lagval == 2){
+    return(as.matrix(my_array))
+  }
+
   # Dynamically build the nested lapply structure based on the number of dimensions
   expr_1 <- ""
   expr_2 <- "["
@@ -140,6 +149,6 @@ array_to_list <- function(my_array, last_dim_as = "vector"){
   expr   <- paste0(expr_1, expr_2, "\n", paste0(rep("})", (length(dims) - lagval)), collapse = ""))
 
   # Evaluate the generated expression
-  eval(parse(text = expr))
+  return(eval(parse(text = expr)))
 
 }

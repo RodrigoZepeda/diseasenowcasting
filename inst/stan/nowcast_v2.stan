@@ -56,11 +56,17 @@
 // 1. Negative Binomial
 //
 // Additional notes:
-// Currentlty strata and covariates are not programmed.
 // Should add zero-inflation for cases when people stratify too much
 
 #include /include/license.stan
-#include allfunctions.stan
+
+functions {
+  #include include/linear_algebra_utils.stan
+  #include include/trend.stan
+  #include include/seasonal_discrete.stan
+  #include include/state_space_model.stan
+  #include include/priors.stan
+}
 
 data {
 
@@ -87,14 +93,22 @@ data {
     real<lower=0> dispersion_prior_shape;
     real<lower=0> dispersion_prior_rate;
 
-    real alpha_mean_prior;
-    real<lower=0> alpha_sd_prior;
+    real<lower=0> mu_shape_prior;
+    real<lower=0> mu_rate_prior;
 
-    real<lower=0> alphat_shape_prior;
-    real<lower=0> alphat_rate_prior;
+    real<lower=0> nu_shape_prior;
+    real<lower=0> nu_rate_prior;
 
-    real beta_mean_prior;
-    real<lower=0> beta_sd_prior;
+    int<lower=1,upper=14> mu_prior;
+    int<lower=1,upper=14> nu_prior;
+    int<lower=1,upper=14> r_prior;
+
+    //Prior values for the initial mu_0 and nu_0
+    real mean_mu_0_prior;
+    real mean_nu_0_prior;
+    real<lower=0> sigma_mu_0_prior;
+    real<lower=0> sigma_nu_0_prior;
+
 }
 
 transformed data {
@@ -136,7 +150,6 @@ transformed data {
   int nu_0_size = num_elements_nu_L;
 
   //Get initial vector sizes for the errors
-  int epsilon_size = 1;
   int xi_mu_size = nrows_mu_trend_R;
   int xi_nu_size = nrows_nu_trend_R;
 
@@ -149,41 +162,87 @@ transformed data {
 }
 
 parameters {
-  //Initial values for mu and nu
-  array[num_strata] matrix[num_delays, mu_0_size] mu_0;
-  array[num_strata] matrix[num_delays, nu_0_size] nu_0;
+  //Initial values for mu and nu with centered Gaussian parametrizations
+  matrix[num_strata*num_delays, mu_0_size] mu_0_centered;
+  matrix[num_strata*num_delays, nu_0_size] nu_0_centered;
 
   //Normalized errors
-  array[num_steps, num_strata] vector[num_delays] epsilon;
-  array[num_steps, num_strata] matrix[num_delays, xi_mu_size] xi_mu;
-  array[num_steps, num_strata] matrix[num_delays, xi_nu_size] xi_nu;
+  array[num_steps - 1] matrix[num_strata*num_delays, xi_mu_size] xi_mu;
+  array[num_steps - 1] matrix[num_strata*num_delays, xi_nu_size] xi_nu;
 
-  //Variance
-  real<lower=0> sigma;
+  //Precision parameter for negative binomial
+  vector<lower=0>[is_negative_binomial ? 1 : 0] r;
+  vector<lower=0>[1] sigma_mu;
+  vector<lower=0>[1] sigma_nu;
+
 }
 
 transformed parameters {
+
+  //Values for mu and nu without centering
+  matrix[num_strata*num_delays, mu_0_size] mu_0 = rep_matrix(mean_mu_0_prior, num_strata*num_delays, mu_0_size) + sigma_mu_0_prior*mu_0_centered;
+  matrix[num_strata*num_delays, nu_0_size] nu_0 = rep_matrix(mean_nu_0_prior, num_strata*num_delays, nu_0_size) + sigma_nu_0_prior*nu_0_centered;
+
   //Get the state space process simulations
-  array[num_steps, num_strata] vector[num_delays] lambda = state_space_process_v2(
-    num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0,
-    xi_mu, nu_0, xi_nu, B_cnt, X_cnt, epsilon);
+  matrix[num_delays*num_strata, num_steps] lambda = state_space_process_v3(
+        num_steps, num_delays, num_strata, A_mu, A_nu, sigma_mu[1]*R_mu, sigma_nu[1]*R_nu,
+        L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt);
+
+  //Create a vectorized version of the lambda
+  //The lambda function is organized by delays and then strata so
+  //
+  //   Strata      |    Delay    |    Lambda    |
+  //---------------------------------------------
+  //      1        |      1      |      1       |
+  //      2        |      1      |      2       |
+  //      1        |      2      |      3       |
+  //      2        |      2      |      4       |
+  //      1        |      3      |      5       |
+  //      2        |      3      |      6       |
+  //      1        |      4      |      7       |
+  //      2        |      4      |      8       |
+  //---------------------------------------------
+  //
+  vector[n_rows] lambda_mean;
+  for (n in 1:n_rows)
+    lambda_mean[n] = lambda[num_strata*(N_cases[n,d_col] - 1) + N_cases[n,s_col], N_cases[n,t_col]];
+
+  //Priors
+  // ------------------------------------------------------------------------------------------------
+  real lprior = 0;
+  lprior += std_normal_lpdf(to_vector(mu_0_centered));
+  lprior += std_normal_lpdf(to_vector(nu_0_centered));
+
+  for (t in 1:(num_steps - 1)){
+    lprior += std_normal_lpdf(to_vector(xi_mu[t]));
+    lprior += std_normal_lpdf(to_vector(xi_nu[t]));
+  }
+
+  //Priors for the mu and the nu
+  lprior += dist_lpdf(sigma_mu| mu_shape_prior, mu_rate_prior, mu_prior); //Prior for sigma_mu
+  lprior += dist_lpdf(sigma_nu| nu_shape_prior, nu_rate_prior, nu_prior); //Prior for sigma_nu
+
+  //Add prior to the negative binomial precision
+  if (is_negative_binomial)
+    lprior += dist_lpdf(r| dispersion_prior_shape, dispersion_prior_rate, r_prior);
+
 }
 
 model {
+  //Don't calculate posterior if user only wants prior
+  if (!prior_only){
 
-  for (s in 1:num_strata){
-    to_vector(mu_0[s]) ~ std_normal();
-    to_vector(nu_0[s]) ~ std_normal();
-
-    for (t in 1:num_steps){
-      epsilon[t,s] ~ std_normal();
-      to_vector(xi_mu[t,s]) ~ std_normal();
-      to_vector(xi_nu[t,s]) ~ std_normal();
+    //Evaluate the model whether its negative binomial
+    if (is_negative_binomial){
+      target += neg_binomial_2_log_lpmf(N_cases[,n_col] | lambda_mean, rep_vector(r[1], num_elements(lambda_mean)));
+    } else {
+      target += poisson_log_lpmf(N_cases[,n_col] | lambda_mean);
     }
+
   }
 
-  for (n in 1:n_rows)
-    N_cases[n,n_col] ~ normal(lambda[N_cases[n,t_col], N_cases[n,s_col], N_cases[n,d_col]], sigma);
-}
+  // Add the priors
+  target += lprior;
 
+}
 

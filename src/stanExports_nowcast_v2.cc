@@ -2,12 +2,12 @@
 
 #include <Rcpp.h>
 using namespace Rcpp ;
-#include "stanExports_nowcast.h"
+#include "stanExports_nowcast_v2.h"
 
-RCPP_MODULE(stan_fit4nowcast_mod) {
+RCPP_MODULE(stan_fit4nowcast_v2_mod) {
 
 
-    class_<rstan::stan_fit<stan_model, stan::rng_t> >("rstantools_model_nowcast")
+    class_<rstan::stan_fit<stan_model, stan::rng_t> >("rstantools_model_nowcast_v2")
 
     .constructor<SEXP,SEXP,SEXP>()
 
