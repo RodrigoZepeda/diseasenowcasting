@@ -9,6 +9,9 @@ check_units(units)
 \arguments{
 \item{units}{Time scale of reporting. Options: "1 day", "1 week".}
 }
+\value{
+(invisibly) `TRUE` if the units are valid
+}
 \description{
 Check the `units` argument among the options
 }

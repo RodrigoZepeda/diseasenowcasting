@@ -15,7 +15,7 @@ nowcast(
   max_delay = Inf,
   prior_only = FALSE,
   proportion_reported = 1,
-  refresh = 10 * interactive(),
+  refresh = 250 * interactive(),
   control = control_default(),
   ...
 )
@@ -51,6 +51,10 @@ For asymptomatic diseases where not all cases will ever be reported,
 or for outbreaks in which severe under-reporting is expected, change this
  to less than 1.}
 
+\item{refresh}{Refresh parameter for [rstan::sampling()]}
+
+\item{control}{Control parameter for [rstan::sampling()]}
+
 \item{...}{Additional arguments to pass to [rstan::sampling()]}
 }
 \description{
@@ -63,11 +67,8 @@ now <- as.Date("1990-10-01")
 
 # Run a nowcast with very few iterations
 # change to 4 chains and 2000 iter when doing inference
-# or just run the command without the `iter = 10`, `chains = 1` thing.
-nowcast(denguedat, "onset_week", "report_week",
-          iter = 100, chains = 1, seed = 12334)
-
-# You can also run the nowcast stratifying by several variables
-nowcast(denguedat, "onset_week", "report_week", strata = c("gender"),
-          iter = 100, chains = 1, seed = 12334)
+# or just run the command without the `iter = 50`, `chains = 1` thing.
+nowcast(denguedat, "onset_week", "report_week", strata = c("gender"), now = now,
+          #The following is specified as to run fast for the example;
+          iter = 50, chains = 1, seed = 2524)
 }

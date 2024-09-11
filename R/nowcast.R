@@ -32,6 +32,10 @@
 #'
 #' @param prior_only Boolean variable indicating whether to compute only the prior distribution
 #'
+#' @param control Control parameter for [rstan::sampling()]
+#'
+#' @param refresh Refresh parameter for [rstan::sampling()]
+#'
 #' @param ... Additional arguments to pass to [rstan::sampling()]
 #'
 #' @examples
@@ -41,13 +45,10 @@
 #'
 #' # Run a nowcast with very few iterations
 #' # change to 4 chains and 2000 iter when doing inference
-#' # or just run the command without the `iter = 10`, `chains = 1` thing.
-#' nowcast(denguedat, "onset_week", "report_week",
-#'           iter = 100, chains = 1, seed = 12334)
-#'
-#' # You can also run the nowcast stratifying by several variables
-#' nowcast(denguedat, "onset_week", "report_week", strata = c("gender"),
-#'           iter = 100, chains = 1, seed = 12334)
+#' # or just run the command without the `iter = 50`, `chains = 1` thing.
+#' nowcast(denguedat, "onset_week", "report_week", strata = c("gender"), now = now,
+#'           #The following is specified as to run fast for the example;
+#'           iter = 50, chains = 1, seed = 2524)
 #' @export
 nowcast <- function(.disease_data, onset_date, report_date,
                     strata = NULL,
@@ -57,7 +58,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
                     max_delay = Inf,
                     prior_only = FALSE,
                     proportion_reported = 1,
-                    refresh = 10*interactive(),
+                    refresh = 250*interactive(),
                     control = control_default(),
                     ...) {
 
@@ -134,13 +135,13 @@ nowcast.rstan <- function(.disease_data, onset_date,
 
   # Get maximum time for model
   num_steps <- .disease_data |>
-    dplyr::summarise(max_time = max(!!as.symbol(".tval"))) |>
-    dplyr::pull(max_time)
+    dplyr::summarise(num_steps = max(!!as.symbol(".tval"))) |>
+    dplyr::pull(num_steps)
 
   # Get maximum delay for model
   num_delays <- .disease_data |>
-    dplyr::summarise(max_delays = 1 + max(!!as.symbol(".delay"))) |>
-    dplyr::pull(max_delays)
+    dplyr::summarise(num_delays = 1 + max(!!as.symbol(".delay"))) |>
+    dplyr::pull(num_delays)
 
   # Number of covariates
   num_covariates <- 0

@@ -36,10 +36,7 @@ get_prior_code_stan <- function(prior_name){
 #' Takes a prior from one of the listed in `priors.stan` and
 #' returns a function for generating random numbers from it
 #'
-#' @param prior_name (character) The name of the prior distribution. Can be one of
-#' the following: `standard_normal`, `normal`, `student_t`, `cauchy`, `exponential`,
-#' `gamma`, `inverse_gamma`, `lognormal`, `weibull`, `frechet`,
-#' `double_exponential`, `rayleigh`, `loglogistic`, `gumbel`.
+#' @inheritParams get_prior_code_stan
 #'
 #' @keywords internal
 get_prior_code_sim_R <- function(prior_name){
@@ -53,7 +50,7 @@ get_prior_code_sim_R <- function(prior_name){
          "cauchy"             = rcauchy,
          "exponential"        = function(x, param1, param2) rexp(x, param1),
          "gamma"              = rgamma,
-         #"inverse_gamma"      = 7,
+         "inverse_gamma"      = function(x, param1, param2) 1/rgamma(x, param1, param2),
          "lognormal"          = rlnorm,
          "weibull"            = rweibull,
          #"frechet"            = 10,

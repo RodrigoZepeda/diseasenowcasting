@@ -3,7 +3,7 @@
 #' Check the onset and report dates
 #'
 #' @inheritParams nowcast
-#'
+#' @return The `.disease_data` data.frame filtered for reports after onset.
 #' @keywords internal
 check_date_columns <- function(.disease_data, onset_date, report_date) {
   # Check that columns are in data
@@ -46,7 +46,7 @@ check_date_columns <- function(.disease_data, onset_date, report_date) {
 #' Check the `now` argument to be date
 #'
 #' @inheritParams nowcast
-#'
+#' @return (invisibly) TRUE if the `now` date is achievable
 #' @keywords internal
 check_now <- function(.disease_data, now, onset_date) {
   # Check that now is a date
@@ -64,12 +64,13 @@ check_now <- function(.disease_data, now, onset_date) {
       )
     }
   }
+  invisible(TRUE)
 }
 
 #' Check the `units` argument among the options
 #'
 #' @inheritParams nowcast
-#'
+#' @return (invisibly) `TRUE` if the units are valid
 #' @keywords internal
 check_units <- function(units) {
   valid_units <- c("days", "weeks")
@@ -80,11 +81,15 @@ check_units <- function(units) {
       "Ivalid {.code units = {.val {units}}}. Specify one of the following: {.val {valid_units}}",
     )
   }
+
+  invisible(TRUE)
 }
 
 #' Check the `proportion_reported` argument
 #'
 #' @inheritParams nowcast
+#'
+#' @return (invisibly) `TRUE` if the proportion is valid
 #'
 #' @keywords internal
 check_proportion_reported <- function(proportion_reported) {
@@ -94,4 +99,6 @@ check_proportion_reported <- function(proportion_reported) {
       "{.code proportion_reported = {.val {proportion_reported}}} is not a value in (0,1]"
     )
   }
+
+  invisible(TRUE)
 }

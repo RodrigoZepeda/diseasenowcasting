@@ -16,6 +16,10 @@ to perform the nowcast.}
 \item{onset_date}{In quotations, the name of the column of datatype
 \code{Date} designating the date of case onset. e.g. "onset_week"}
 }
+\value{
+The `now` value for the [nowcasting()] which can be the last date of the data
+or specified by the user
+}
 \description{
 Function returns the maximum onset date of `.disease_data` if `now = NULL`. Else
 it check whether now is possible in the data.

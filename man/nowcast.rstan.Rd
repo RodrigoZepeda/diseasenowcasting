@@ -49,6 +49,10 @@ such that each row has a column for onset date, report date, and}
 
 \item{prior_only}{Boolean variable indicating whether to compute only the prior distribution}
 
+\item{control}{Control parameter for [rstan::sampling()]}
+
+\item{refresh}{Refresh parameter for [rstan::sampling()]}
+
 \item{...}{Additional arguments to pass to [rstan::sample()]}
 }
 \description{

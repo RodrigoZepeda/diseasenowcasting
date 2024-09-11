@@ -52,4 +52,5 @@ model <- rstan::stan_model("inst/stan/nowcast.stan")
 out   <- rstan::sampling(model, data = stan_data, cores = 4,
                          control = list(adapt_delta = 0.95, max_treedepth = 12))
 
-nowcast(denguedat, "onset_week", "report_week", cores = 4, chains = 4)
+nowcast(denguedat, "onset_week", "report_week",
+        cores = 4, chains = 4, now = now, iter = 100)

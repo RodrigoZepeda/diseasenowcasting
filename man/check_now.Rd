@@ -16,6 +16,9 @@ to perform the nowcast.}
 \item{onset_date}{In quotations, the name of the column of datatype
 \code{Date} designating the date of case onset. e.g. "onset_week"}
 }
+\value{
+(invisibly) TRUE if the `now` date is achievable
+}
 \description{
 Check the `now` argument to be date
 }

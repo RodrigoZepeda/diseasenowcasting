@@ -5,6 +5,9 @@
 #'
 #' @inheritParams nowcast
 #'
+#' @return The `now` value for the [nowcasting()] which can be the last date of the data
+#' or specified by the user
+#'
 #' @keywords internal
 infer_now <- function(.disease_data, now, onset_date) {
   # Check now
@@ -26,6 +29,7 @@ infer_now <- function(.disease_data, now, onset_date) {
 #' @inheritParams nowcast
 #' @param date_column Name of a column of `.disease_data` that contains the dates.
 #'
+#' @return Whether the data's units are `days` or `weeks`
 #' @keywords internal
 infer_units <- function(.disease_data, units, date_column) {
   # Check units
@@ -65,6 +69,8 @@ infer_units <- function(.disease_data, units, date_column) {
 #' a column named `n`
 #'
 #' @inheritParams preprocess_for_nowcast
+#'
+#' @return Whether the data is `count` or `linelist`
 #'
 #' @keywords internal
 infer_data_type <- function(.disease_data, data_type) {

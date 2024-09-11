@@ -19,6 +19,7 @@ Imports:
     rlang,
     rstan (>= 2.18.1),
     rstantools (>= 2.4.0.9000),
+    stats,
     tidyr
 Depends: 
     R (>= 4.2.0)
