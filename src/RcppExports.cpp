@@ -13,7 +13,7 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // create_block_diagonal
-Eigen::Matrix<double,-1,-1> create_block_diagonal(const Eigen::Matrix<double,-1,-1>& A, const Eigen::Matrix<double,-1,-1>& B, std::ostream* pstream__);
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>,                 stan::base_type_t<double>>,-1,-1> create_block_diagonal(const Eigen::Matrix<double,-1,-1>& A, const Eigen::Matrix<double,-1,-1>& B, std::ostream* pstream__);
 RcppExport SEXP _diseasenowcasting_create_block_diagonal(SEXP ASEXP, SEXP BSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -26,7 +26,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // rep_diagonal_mat
-Eigen::Matrix<double,-1,-1> rep_diagonal_mat(const Eigen::Matrix<double,-1,-1>& A, const int& k, std::ostream* pstream__);
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>>,-1,-1> rep_diagonal_mat(const Eigen::Matrix<double,-1,-1>& A, const int& k, std::ostream* pstream__);
 RcppExport SEXP _diseasenowcasting_rep_diagonal_mat(SEXP ASEXP, SEXP kSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -39,7 +39,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // rep_vec
-Eigen::Matrix<double,-1,1> rep_vec(const Eigen::Matrix<double,-1,1>& A, const int& k, std::ostream* pstream__);
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>>,-1,1> rep_vec(const Eigen::Matrix<double,-1,1>& A, const int& k, std::ostream* pstream__);
 RcppExport SEXP _diseasenowcasting_rep_vec(SEXP ASEXP, SEXP kSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -52,7 +52,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // rep_vec_piecewise
-Eigen::Matrix<double,-1,1> rep_vec_piecewise(const Eigen::Matrix<double,-1,1>& A, const int& k, std::ostream* pstream__);
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>>,-1,1> rep_vec_piecewise(const Eigen::Matrix<double,-1,1>& A, const int& k, std::ostream* pstream__);
 RcppExport SEXP _diseasenowcasting_rep_vec_piecewise(SEXP ASEXP, SEXP kSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -200,7 +200,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // create_seasonal_discrete_matrix_block_R
-Eigen::Matrix<double,-1,-1> create_seasonal_discrete_matrix_block_R(const int& num_seasons, const int& season_duration, const double& time, std::ostream* pstream__);
+Eigen::Matrix<stan::promote_args_t<double>,-1,-1> create_seasonal_discrete_matrix_block_R(const int& num_seasons, const int& season_duration, const double& time, std::ostream* pstream__);
 RcppExport SEXP _diseasenowcasting_create_seasonal_discrete_matrix_block_R(SEXP num_seasonsSEXP, SEXP season_durationSEXP, SEXP timeSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -214,7 +214,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // create_initial_seasonal_discrete_vector_block_alpha
-Eigen::Matrix<double,-1,1> create_initial_seasonal_discrete_vector_block_alpha(const Eigen::Matrix<double,-1,1>& season_params, const int& season_duration, const double& error_term, std::ostream* pstream__);
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>, double>,-1,1> create_initial_seasonal_discrete_vector_block_alpha(const Eigen::Matrix<double,-1,1>& season_params, const int& season_duration, const double& error_term, std::ostream* pstream__);
 RcppExport SEXP _diseasenowcasting_create_initial_seasonal_discrete_vector_block_alpha(SEXP season_paramsSEXP, SEXP season_durationSEXP, SEXP error_termSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -228,7 +228,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // state_space_process_v3
-Eigen::Matrix<double,-1,-1> state_space_process_v3(const int& num_steps, const int& num_delays, const int& num_strata, const Eigen::Matrix<double,-1,-1>& A_mu, const Eigen::Matrix<double,-1,-1>& A_nu, const Eigen::Matrix<double,-1,-1>& R_mu, const Eigen::Matrix<double,-1,-1>& R_nu, const Eigen::Matrix<double,-1,1>& L_mu, const Eigen::Matrix<double,-1,1>& L_nu, const Eigen::Matrix<double,-1,-1>& mu_0, const std::vector<Eigen::Matrix<double,-1,-1>>& xi_mu, const Eigen::Matrix<double,-1,-1>& nu_0, const std::vector<Eigen::Matrix<double,-1,-1>>& xi_nu, const Eigen::Matrix<double,-1,1>& B_cnt, const Eigen::Matrix<double,-1,-1>& X_cnt, std::ostream* pstream__);
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>,                 stan::base_type_t<double>, stan::base_type_t<double>,                 stan::base_type_t<double>, stan::base_type_t<double>,                 stan::promote_args_t<stan::base_type_t<double>,                   stan::base_type_t<double>, double, stan::base_type_t<double>,                   double,                   stan::promote_args_t<stan::base_type_t<double>,                     stan::base_type_t<double>>>>,-1,-1> state_space_process_v3(const int& num_steps, const int& num_delays, const int& num_strata, const Eigen::Matrix<double,-1,-1>& A_mu, const Eigen::Matrix<double,-1,-1>& A_nu, const Eigen::Matrix<double,-1,-1>& R_mu, const Eigen::Matrix<double,-1,-1>& R_nu, const Eigen::Matrix<double,-1,1>& L_mu, const Eigen::Matrix<double,-1,1>& L_nu, const Eigen::Matrix<double,-1,-1>& mu_0, const std::vector<Eigen::Matrix<double,-1,-1>>& xi_mu, const Eigen::Matrix<double,-1,-1>& nu_0, const std::vector<Eigen::Matrix<double,-1,-1>>& xi_nu, const Eigen::Matrix<double,-1,1>& B_cnt, const Eigen::Matrix<double,-1,-1>& X_cnt, std::ostream* pstream__);
 RcppExport SEXP _diseasenowcasting_state_space_process_v3(SEXP num_stepsSEXP, SEXP num_delaysSEXP, SEXP num_strataSEXP, SEXP A_muSEXP, SEXP A_nuSEXP, SEXP R_muSEXP, SEXP R_nuSEXP, SEXP L_muSEXP, SEXP L_nuSEXP, SEXP mu_0SEXP, SEXP xi_muSEXP, SEXP nu_0SEXP, SEXP xi_nuSEXP, SEXP B_cntSEXP, SEXP X_cntSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;

@@ -15,7 +15,9 @@ infer_now <- function(.disease_data, now, onset_date) {
 
   # Now should be the last observed moment in time
   if (is.null(now)) {
-    now <- max(.disease_data[, onset_date])
+    now <- .disease_data |>
+      dplyr::summarise(now = max(!!as.symbol(onset_date))) |>
+      dplyr::pull(now)
   }
 
   return(now)
@@ -37,9 +39,10 @@ infer_units <- function(.disease_data, units, date_column) {
 
   if (is.null(units)) {
     # Calculate the differences between consecutive dates
-    date_diffs <- .disease_data[, date_column] |>
-      unique() |>
-      sort() |>
+    date_diffs <- .disease_data |>
+      dplyr::distinct(!!as.symbol(date_column)) |>
+      dplyr::arrange(!!as.symbol(date_column)) |>
+      dplyr::pull(!!as.symbol(date_column)) |>
       diff()
 
     # Convert the differences to a period (days)

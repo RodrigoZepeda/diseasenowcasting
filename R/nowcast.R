@@ -36,19 +36,56 @@
 #'
 #' @param refresh Refresh parameter for [rstan::sampling()]
 #'
+#' @param mu_degree Integer. Degree of the epidemic trend. Default is 2.
+#'
+#' @param nu_degree Integer. Degree of the delay trend. Default is 1.
+#'
+#' @param mu_is_constant Logical. Indicates whether the epidemic trend is constant. Default is FALSE.
+#'
+#' @param nu_is_constant Logical. Indicates whether the delay trend is constant. Default is TRUE.
+#'
+#' @param mu_error_prior Character. Prior for the epidemic trend error. Default is "normal".
+#'
+#' @param nu_error_prior Character. Prior for the delay trend error. Default is "normal".
+#'
+#' @param mu_param_1 Numeric. First parameter for the epidemic trend error. Default is 0.0.
+#'
+#' @param mu_param_2 Numeric. Second parameter for the epidemic trend error. Default is 1.0.
+#'
+#' @param nu_param_1 Numeric. First parameter for the delay trend error. Default is 0.0.
+#'
+#' @param nu_param_2 Numeric. Second parameter for the delay trend error. Default is 1.0.
+#'
+#' @param mu_0_prior Character. Prior for the initial epidemic trend distribution. Default is "normal".
+#'
+#' @param nu_0_prior Character. Prior for the initial delay trend distribution. Default is "normal".
+#'
+#' @param mu_0_param_1 Numeric. First parameter for the initial epidemic trend distribution. Default is 0.0.
+#'
+#' @param mu_0_param_2 Numeric. Second parameter for the initial epidemic trend distribution. Default is 1.0.
+#'
+#' @param nu_0_param_1 Numeric. First parameter for the initial delay trend distribution. Default is 0.0.
+#'
+#' @param nu_0_param_2 Numeric. Second parameter for the initial delay trend distribution. Default is 1.0.
+#'
+#' @param r_prior Character. Prior for the negative binomial precision parameter. Default is "normal".
+#'
+#' @param r_param_1 Numeric. First parameter for the dispersion prior if negative binomial. Default is 0.0.
+#'
+#' @param r_param_2 Numeric. Second parameter for the dispersion prior if negative binomial. Default is 1.0.
+#'
 #' @param ... Additional arguments to pass to [rstan::sampling()]
 #'
 #' @examples
 #' # Load the data
 #' data(denguedat)
-#' now <- as.Date("1990-10-01")
+#'
+#' # Create a fake disease process
+#' sims <- simulate_process_for_testing()
 #'
 #' # Run a nowcast with very few iterations
 #' # change to 4 chains and 2000 iter when doing inference
-#' # or just run the command without the `iter = 50`, `chains = 1` thing.
-#' nowcast(denguedat, "onset_week", "report_week", strata = c("gender"), now = now,
-#'           #The following is specified as to run fast for the example;
-#'           iter = 50, chains = 1, seed = 2524)
+#' nowcast(sims, "onset_date", "report_date", iter = 100, chains = 1, seed = 2524)
 #' @export
 nowcast <- function(.disease_data, onset_date, report_date,
                     strata = NULL,
@@ -60,6 +97,25 @@ nowcast <- function(.disease_data, onset_date, report_date,
                     proportion_reported = 1,
                     refresh = 250*interactive(),
                     control = control_default(),
+                    mu_degree = 2,               #Trend degree specification for epidemic
+                    nu_degree = 1,               #Trend degree specification for delays (1 = constant)
+                    mu_is_constant = FALSE,      #Whether epidemic pattern is constant
+                    nu_is_constant = TRUE,       #Whether delay pattern is constant
+                    mu_error_prior = "normal",   #Prior for the epidemic trend error
+                    nu_error_prior = "normal",   #Prior for the delay trend error
+                    mu_param_1 = 0.0,            #First parameter for degree error in epidemic trend
+                    mu_param_2 = 0.1,            #Second parameter for degree error in epidemic trend
+                    nu_param_1 = 0.0,            #First parameter for degree error in delay trend
+                    nu_param_2 = 0.1,            #Second parameter for degree error in delay trend
+                    mu_0_prior = "normal",       #Prior for the initial epidemic distribution
+                    nu_0_prior = "normal",       #Prior for the initial delay distribution
+                    mu_0_param_1 = "auto", #First parameter for degree error in epidemic trend
+                    mu_0_param_2 = 0.01,          #Second parameter for degree error in epidemic trend
+                    nu_0_param_1 = 0.0,          #First parameter for degree error in delay trend
+                    nu_0_param_2 = 0.01,          #Second parameter for degree error in delay trend
+                    r_prior  = "normal",         #Prior for the negative binomial precision
+                    r_param_1 = 0.0,             #First parameter for dispersion prior if negative binomial
+                    r_param_2 = 1.0,             #Second parameter for dispersion prior if negative binomial
                     ...) {
 
   # Check that the columns of onset and report are columns of data and are dates
@@ -92,8 +148,38 @@ nowcast <- function(.disease_data, onset_date, report_date,
     max_delay = max_delay
   )
 
+  #Get the log mean of disease data and the sd
+  log_mean <- .disease_data |>
+    dplyr::summarise(log_mean = mean(log1p(!!as.symbol("n")), na.rm = T)) |>
+    dplyr::pull(log_mean)
+
+  #Get the log mean of disease data and the sd
+  log_sd <- .disease_data |>
+    dplyr::summarise(log_sd = sd(log1p(!!as.symbol("n")), na.rm = T)) |>
+    dplyr::pull(log_sd)
+
   nowcast.rstan(.disease_data, onset_date, report_date, strata = strata, dist = dist,
-                prior_only = prior_only, refresh = refresh, control = control, ...)
+                prior_only = prior_only, refresh = refresh, control = control,
+                mu_degree = mu_degree,
+                nu_degree = nu_degree,
+                mu_is_constant = mu_is_constant,
+                nu_is_constant = nu_is_constant,
+                mu_error_prior = mu_error_prior,
+                nu_error_prior = nu_error_prior,
+                mu_param_1 = mu_param_1,
+                mu_param_2 = mu_param_2,
+                nu_param_1 = nu_param_1,
+                nu_param_2 = nu_param_2,
+                mu_0_prior = mu_0_prior,
+                nu_0_prior = nu_0_prior,
+                mu_0_param_1 = ifelse(mu_0_param_1 == "auto", log_mean, mu_0_param_1),
+                mu_0_param_2 = mu_0_param_2,
+                nu_0_param_1 = nu_0_param_1,
+                nu_0_param_2 = nu_0_param_2,
+                r_prior  = r_prior,
+                r_param_1 = r_param_1,
+                r_param_2 = r_param_2,
+                ...)
 }
 
 #' Nowcasting with the `rstan` engine
@@ -106,32 +192,44 @@ nowcast.rstan <- function(.disease_data, onset_date,
                           report_date,
                           strata = NULL,
                           dist = c("NegativeBinomial", "Poisson"),
-                          mu_degree = 2,
-                          nu_degree = 1,
-                          mu_is_constant = FALSE,
-                          nu_is_constant = TRUE,
                           prior_only = FALSE,
-                          mu_shape_prior = 0.0,
-                          mu_rate_prior = 1.0,
-                          nu_shape_prior = 0.0,
-                          nu_rate_prior = 1.0,
-                          dispersion_prior_shape = 0.0,
-                          dispersion_prior_rate = 0.001,
-                          mean_mu_0_prior = log(mean(.disease_data$n, na.rm = T)),
-                          mean_nu_0_prior = 0.0,
-                          sigma_mu_0_prior = 0.01,
-                          sigma_nu_0_prior = 0.01,
-                          mu_prior_name = "standard_normal",
-                          nu_prior_name = "standard_normal",
-                          r_prior_name  = "normal",
                           control = control_default(),
                           refresh = 250,
+                          mu_degree = 2,               #Trend degree specification for epidemic
+                          nu_degree = 1,               #Trend degree specification for delays (1 = constant)
+                          mu_is_constant = FALSE,      #Whether epidemic pattern is constant
+                          nu_is_constant = TRUE,       #Whether delay pattern is constant
+                          mu_error_prior = "normal",   #Prior for the epidemic trend error
+                          nu_error_prior = "normal",   #Prior for the delay trend error
+                          mu_param_1 = 0.0,            #First parameter for degree error in epidemic trend
+                          mu_param_2 = 1.0,            #Second parameter for degree error in epidemic trend
+                          nu_param_1 = 0.0,            #First parameter for degree error in delay trend
+                          nu_param_2 = 1.0,            #Second parameter for degree error in delay trend
+                          mu_0_prior = "normal",       #Prior for the initial epidemic distribution
+                          nu_0_prior = "normal",       #Prior for the initial delay distribution
+                          mu_0_param_1 = log(mean(.disease_data$n, na.rm = T)), #First parameter for degree error in epidemic trend
+                          mu_0_param_2 = 0.01,          #Second parameter for degree error in epidemic trend
+                          nu_0_param_1 = 0.0,          #First parameter for degree error in delay trend
+                          nu_0_param_2 = 0.01,          #Second parameter for degree error in delay trend
+                          r_prior  = "normal",         #Prior for the negative binomial precision
+                          r_param_1 = 0.0,             #First parameter for dispersion prior if negative binomial
+                          r_param_2 = 1.0,             #Second parameter for dispersion prior if negative binomial
                           ...) {
 
+
+  #FIXME: Implement
+  if (mu_0_prior != "normal"){
+    cli::cli_alert_warning("This functionality has not yet been implemented defaulting to {.code mu_0_prior = {.val normal}}")
+  }
+
+  if (nu_0_prior != "normal"){
+    cli::cli_alert_warning("This functionality has not yet been implemented defaulting to {.code nu_0_prior = {.val normal}}")
+  }
+
   #Get the specified prior distributions
-  mu_prior <- get_prior_code_stan(mu_prior_name)
-  nu_prior <- get_prior_code_stan(nu_prior_name)
-  r_prior  <- get_prior_code_stan(r_prior_name)
+  mu_prior <- get_prior_code_stan(mu_error_prior)
+  nu_prior <- get_prior_code_stan(nu_error_prior)
+  r_prior  <- get_prior_code_stan(r_prior)
 
   # Get maximum time for model
   num_steps <- .disease_data |>
@@ -197,17 +295,17 @@ nowcast.rstan <- function(.disease_data, onset_date,
     r_prior  = r_prior,
 
     #Prior parameters
-    dispersion_prior_shape = dispersion_prior_shape,
-    dispersion_prior_rate = dispersion_prior_rate,
-    mu_shape_prior = mu_shape_prior,
-    mu_rate_prior  = mu_rate_prior,
-    nu_shape_prior = nu_shape_prior,
-    nu_rate_prior  = nu_rate_prior,
+    dispersion_prior_shape = r_param_1,
+    dispersion_prior_rate = r_param_2,
+    mu_shape_prior = mu_param_1,
+    mu_rate_prior  = mu_param_2,
+    nu_shape_prior = nu_param_1,
+    nu_rate_prior  = nu_param_2,
 
-    mean_mu_0_prior  = mean_mu_0_prior,
-    mean_nu_0_prior  = mean_nu_0_prior,
-    sigma_mu_0_prior = sigma_mu_0_prior,
-    sigma_nu_0_prior = sigma_nu_0_prior
+    mean_mu_0_prior  = mu_0_param_1,
+    mean_nu_0_prior  = nu_0_param_1,
+    sigma_mu_0_prior = mu_0_param_2,
+    sigma_nu_0_prior = nu_0_param_2
   )
 
   # model <- rstan::stan_model("inst/stan/nowcast.stan")

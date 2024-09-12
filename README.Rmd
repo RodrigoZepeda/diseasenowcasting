@@ -26,18 +26,19 @@ knitr::opts_chunk$set(
 ```{r}
 library(diseasenowcasting)
 
-data(denguedat)
+# Create a fake disease process
+set.seed(265824)
+sims <- simulate_process_for_testing()
 
-# Change to more iterations
-predictions <- nowcast(denguedat, "onset_week", "report_week",
-  now = as.Date("1990-10-01"),
-  dist = "NegativeBinomial", cores = 4, iter = 1000
-)
+# Run a nowcast with very few iterations
+predictions <- nowcast(sims, "onset_date", "report_date", cores = 4)
 
 #Get the predicted values
 preds <- predictions |> 
   posterior::as_draws() |> 
   posterior::subset_draws("N_predict") |> 
   posterior::summarise_draws()
+
+preds
 ```
 

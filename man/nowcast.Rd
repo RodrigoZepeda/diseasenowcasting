@@ -17,6 +17,25 @@ nowcast(
   proportion_reported = 1,
   refresh = 250 * interactive(),
   control = control_default(),
+  mu_degree = 2,
+  nu_degree = 1,
+  mu_is_constant = FALSE,
+  nu_is_constant = TRUE,
+  mu_error_prior = "normal",
+  nu_error_prior = "normal",
+  mu_param_1 = 0,
+  mu_param_2 = 0.1,
+  nu_param_1 = 0,
+  nu_param_2 = 0.1,
+  mu_0_prior = "normal",
+  nu_0_prior = "normal",
+  mu_0_param_1 = "auto",
+  mu_0_param_2 = 0.01,
+  nu_0_param_1 = 0,
+  nu_0_param_2 = 0.01,
+  r_prior = "normal",
+  r_param_1 = 0,
+  r_param_2 = 1,
   ...
 )
 }
@@ -55,6 +74,44 @@ or for outbreaks in which severe under-reporting is expected, change this
 
 \item{control}{Control parameter for [rstan::sampling()]}
 
+\item{mu_degree}{Integer. Degree of the epidemic trend. Default is 2.}
+
+\item{nu_degree}{Integer. Degree of the delay trend. Default is 1.}
+
+\item{mu_is_constant}{Logical. Indicates whether the epidemic trend is constant. Default is FALSE.}
+
+\item{nu_is_constant}{Logical. Indicates whether the delay trend is constant. Default is TRUE.}
+
+\item{mu_error_prior}{Character. Prior for the epidemic trend error. Default is "normal".}
+
+\item{nu_error_prior}{Character. Prior for the delay trend error. Default is "normal".}
+
+\item{mu_param_1}{Numeric. First parameter for the epidemic trend error. Default is 0.0.}
+
+\item{mu_param_2}{Numeric. Second parameter for the epidemic trend error. Default is 1.0.}
+
+\item{nu_param_1}{Numeric. First parameter for the delay trend error. Default is 0.0.}
+
+\item{nu_param_2}{Numeric. Second parameter for the delay trend error. Default is 1.0.}
+
+\item{mu_0_prior}{Character. Prior for the initial epidemic trend distribution. Default is "normal".}
+
+\item{nu_0_prior}{Character. Prior for the initial delay trend distribution. Default is "normal".}
+
+\item{mu_0_param_1}{Numeric. First parameter for the initial epidemic trend distribution. Default is 0.0.}
+
+\item{mu_0_param_2}{Numeric. Second parameter for the initial epidemic trend distribution. Default is 1.0.}
+
+\item{nu_0_param_1}{Numeric. First parameter for the initial delay trend distribution. Default is 0.0.}
+
+\item{nu_0_param_2}{Numeric. Second parameter for the initial delay trend distribution. Default is 1.0.}
+
+\item{r_prior}{Character. Prior for the negative binomial precision parameter. Default is "normal".}
+
+\item{r_param_1}{Numeric. First parameter for the dispersion prior if negative binomial. Default is 0.0.}
+
+\item{r_param_2}{Numeric. Second parameter for the dispersion prior if negative binomial. Default is 1.0.}
+
 \item{...}{Additional arguments to pass to [rstan::sampling()]}
 }
 \description{
@@ -63,12 +120,11 @@ Function that uses the [rstan::sampling()] engine to generate nowcasts.
 \examples{
 # Load the data
 data(denguedat)
-now <- as.Date("1990-10-01")
+
+# Create a fake disease process
+sims <- simulate_process_for_testing()
 
 # Run a nowcast with very few iterations
 # change to 4 chains and 2000 iter when doing inference
-# or just run the command without the `iter = 50`, `chains = 1` thing.
-nowcast(denguedat, "onset_week", "report_week", strata = c("gender"), now = now,
-          #The following is specified as to run fast for the example;
-          iter = 50, chains = 1, seed = 2524)
+nowcast(sims, "onset_date", "report_date", iter = 100, chains = 1, seed = 2524)
 }
