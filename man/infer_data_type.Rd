@@ -13,6 +13,9 @@ such that each row has a column for onset date, report date, and}
 \item{data_type}{Either `linedata` if each row represents a test or `counts` if there
 is a column named `n` with counts of how many tests had that onset and report dates}
 }
+\value{
+Whether the data is `count` or `linelist`
+}
 \description{
 Infers whether the data is line-data or count-data whether it has (or has not)
 a column named `n`

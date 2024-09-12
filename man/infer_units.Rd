@@ -14,6 +14,9 @@ such that each row has a column for onset date, report date, and}
 
 \item{date_column}{Name of a column of `.disease_data` that contains the dates.}
 }
+\value{
+Whether the data's units are `days` or `weeks`
+}
 \description{
 Function returns whether data is daily, weekly, monthly or yearly by
 `date_column`.

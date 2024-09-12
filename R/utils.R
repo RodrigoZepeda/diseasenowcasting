@@ -5,6 +5,9 @@
 #'
 #' @inheritParams nowcast
 #'
+#' @return The `now` value for the [nowcasting()] which can be the last date of the data
+#' or specified by the user
+#'
 #' @keywords internal
 infer_now <- function(.disease_data, now, onset_date) {
   # Check now
@@ -26,6 +29,7 @@ infer_now <- function(.disease_data, now, onset_date) {
 #' @inheritParams nowcast
 #' @param date_column Name of a column of `.disease_data` that contains the dates.
 #'
+#' @return Whether the data's units are `days` or `weeks`
 #' @keywords internal
 infer_units <- function(.disease_data, units, date_column) {
   # Check units
@@ -66,6 +70,8 @@ infer_units <- function(.disease_data, units, date_column) {
 #'
 #' @inheritParams preprocess_for_nowcast
 #'
+#' @return Whether the data is `count` or `linelist`
+#'
 #' @keywords internal
 infer_data_type <- function(.disease_data, data_type) {
   # Get the data type
@@ -101,29 +107,54 @@ infer_data_type <- function(.disease_data, data_type) {
 #' Function that takes an array and transforms it into lists of lists
 #' this is mainly for interacting with [Rcpp::cppFunction()].
 #'
-#' @param last_dim_as_vector `TRUE` if the last dimension of the array should be a vector
-#' and 0 otherwise.
+#' @param last_dim_as Either 'vector', 'matrix'  or 'scalar'  depending on what
+#' we want for the last dimension
+#'
 #' @param my_array The array to transform
 #'
 #' @return A list of lists with the same structure as the array
 #'
 #' @keywords internal
-array_to_list <- function(my_array, last_dim_as_vector = T){
+array_to_list <- function(my_array, last_dim_as = "vector"){
+
+  #Match argument
+  .last_dim_as <- match.arg(last_dim_as, c("vector","scalar","matrix"))
 
   #Get array dimensions
   dims <- dim(my_array)
 
+  lagval <- switch(.last_dim_as,
+                   scalar = 0,
+                   vector = 1,
+                   matrix = 2)
+
+  #Check whether the array warrants it
+  if (length(dims) < lagval){
+    cli::cli_abort("Cannot convert array of dimensions {length(dims)} to {.last_dim_as}")
+  } else if (length(dims) == 1 & lagval == 1){
+    return(as.vector(my_array))
+  } else if (length(dims) == 2 & lagval == 2){
+    return(as.matrix(my_array))
+  }
+
   # Dynamically build the nested lapply structure based on the number of dimensions
   expr_1 <- ""
   expr_2 <- "["
-  for (i in 1:(length(dims) - last_dim_as_vector)) {
+  for (i in 1:(length(dims) - lagval)) {
     expr_1 <- paste0(expr_1, "\nlapply(1:", dims[i], ", function(x_", i, "){")
     expr_2 <- paste0(expr_2, "x_",i, ifelse(i == length(dims), "", ","))
   }
-  expr_2 <- paste0("\n\tas.vector(my_array",expr_2, "])")
-  expr   <- paste0(expr_1, expr_2, "\n", paste0(rep("})", (length(dims) - last_dim_as_vector)), collapse = ""))
+
+  if (.last_dim_as == "vector"){
+    expr_2 <- paste0("\n\tas.vector(my_array",expr_2, "])")
+  } else if (.last_dim_as == "matrix") {
+    expr_2 <- paste0("\n\tas.matrix(my_array",expr_2, ",])")
+  } else {
+    expr_2 <- paste0("\n\tmy_array",expr_2, "]")
+  }
+  expr   <- paste0(expr_1, expr_2, "\n", paste0(rep("})", (length(dims) - lagval)), collapse = ""))
 
   # Evaluate the generated expression
-  eval(parse(text = expr))
+  return(eval(parse(text = expr)))
 
 }

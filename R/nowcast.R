@@ -30,9 +30,12 @@
 #' or for outbreaks in which severe under-reporting is expected, change this
 #'  to less than 1.
 #'
-#'@param prior_only Boolean variable indicating whether to compute only the prior
+#' @param prior_only Boolean variable indicating whether to compute only the prior distribution
 #'
-#' @param init Initial values for [rstan::sampling()]
+#' @param control Control parameter for [rstan::sampling()]
+#'
+#' @param refresh Refresh parameter for [rstan::sampling()]
+#'
 #' @param ... Additional arguments to pass to [rstan::sampling()]
 #'
 #' @examples
@@ -41,7 +44,11 @@
 #' now <- as.Date("1990-10-01")
 #'
 #' # Run a nowcast with very few iterations
-#' nowcast(denguedat, "onset_week", "report_week", iter = 10, init = 0)
+#' # change to 4 chains and 2000 iter when doing inference
+#' # or just run the command without the `iter = 50`, `chains = 1` thing.
+#' nowcast(denguedat, "onset_week", "report_week", strata = c("gender"), now = now,
+#'           #The following is specified as to run fast for the example;
+#'           iter = 50, chains = 1, seed = 2524)
 #' @export
 nowcast <- function(.disease_data, onset_date, report_date,
                     strata = NULL,
@@ -50,8 +57,10 @@ nowcast <- function(.disease_data, onset_date, report_date,
                     units = NULL,
                     max_delay = Inf,
                     prior_only = FALSE,
-                    init = 0,
-                    proportion_reported = 1, ...) {
+                    proportion_reported = 1,
+                    refresh = 250*interactive(),
+                    control = control_default(),
+                    ...) {
 
   # Check that the columns of onset and report are columns of data and are dates
   .disease_data <- check_date_columns(.disease_data, onset_date = onset_date, report_date = report_date)
@@ -70,7 +79,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
 
   # Print message to user
   cli::cli_alert_info(
-    "Computing a nowcast for {.emph {now}} per {.emph {units}}"
+    "Computing a nowcast for {.val {now}} per {.val {units}}"
   )
 
   # Get the data for processing
@@ -83,7 +92,8 @@ nowcast <- function(.disease_data, onset_date, report_date,
     max_delay = max_delay
   )
 
-  nowcast.rstan(.disease_data, onset_date, report_date, strata = strata, dist = dist, init = init, ...)
+  nowcast.rstan(.disease_data, onset_date, report_date, strata = strata, dist = dist,
+                prior_only = prior_only, refresh = refresh, control = control, ...)
 }
 
 #' Nowcasting with the `rstan` engine
@@ -96,30 +106,42 @@ nowcast.rstan <- function(.disease_data, onset_date,
                           report_date,
                           strata = NULL,
                           dist = c("NegativeBinomial", "Poisson"),
+                          mu_degree = 2,
+                          nu_degree = 1,
+                          mu_is_constant = FALSE,
+                          nu_is_constant = TRUE,
                           prior_only = FALSE,
-                          init = 0,
-                          dispersion_prior_shape = 0.001,
+                          mu_shape_prior = 0.0,
+                          mu_rate_prior = 1.0,
+                          nu_shape_prior = 0.0,
+                          nu_rate_prior = 1.0,
+                          dispersion_prior_shape = 0.0,
                           dispersion_prior_rate = 0.001,
-                          beta_mean_prior = 0,
-                          beta_sd_prior = 1,
-                          alpha_mean_prior = 0,
-                          alpha_sd_prior = 31,
-                          alphat_shape_prior = 0.001,
-                          alphat_rate_prior = 0.001,
+                          mean_mu_0_prior = log(mean(.disease_data$n, na.rm = T)),
+                          mean_nu_0_prior = 0.0,
+                          sigma_mu_0_prior = 0.01,
+                          sigma_nu_0_prior = 0.01,
+                          mu_prior_name = "standard_normal",
+                          nu_prior_name = "standard_normal",
+                          r_prior_name  = "normal",
+                          control = control_default(),
+                          refresh = 250,
                           ...) {
 
+  #Get the specified prior distributions
+  mu_prior <- get_prior_code_stan(mu_prior_name)
+  nu_prior <- get_prior_code_stan(nu_prior_name)
+  r_prior  <- get_prior_code_stan(r_prior_name)
+
   # Get maximum time for model
-  max_time <- .disease_data |>
-    dplyr::summarise(max_time = max(!!as.symbol(".tval"))) |>
-    dplyr::pull(max_time)
+  num_steps <- .disease_data |>
+    dplyr::summarise(num_steps = max(!!as.symbol(".tval"))) |>
+    dplyr::pull(num_steps)
 
   # Get maximum delay for model
-  max_delays <- .disease_data |>
-    dplyr::summarise(max_delays = max(!!as.symbol(".delay"))) |>
-    dplyr::pull(max_delays)
-
-  # Number of strata
-  num_strata <- length(strata)
+  num_delays <- .disease_data |>
+    dplyr::summarise(num_delays = 1 + max(!!as.symbol(".delay"))) |>
+    dplyr::pull(num_delays)
 
   # Number of covariates
   num_covariates <- 0
@@ -129,6 +151,22 @@ nowcast.rstan <- function(.disease_data, onset_date,
     dplyr::select(-!!as.symbol(report_date), -!!as.symbol(onset_date)) |>
     dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), tidyr::everything())
 
+  #Create the strata column
+  if (ncol(Nmat) == 3){
+    Nmat <- Nmat |>
+      dplyr::mutate(!!as.symbol(".strata") := "No strata")
+  }
+  Nmat <- Nmat |>
+    tidyr::unite(col = ".strata", 4:dplyr::last_col(), sep = " - ") |>
+    dplyr::mutate_at(".strata", function(x) as.numeric(as.factor(x))) |>
+    dplyr::mutate_at(".delay", function(x) x + 1)
+
+  #Return the number of strata
+  num_strata <- Nmat |>
+    dplyr::distinct(!!as.symbol(".strata")) |>
+    dplyr::tally() |>
+    dplyr::pull()
+
   # Distribution
   is_negative_binomial <- as.numeric(dist == "NegativeBinomial")
 
@@ -136,26 +174,47 @@ nowcast.rstan <- function(.disease_data, onset_date,
   prior_only <- as.numeric(prior_only)
 
   stan_data <- list(
-    max_time   = max_time,
-    max_delays = max_delays,
+    #Data information
+    num_steps  = num_steps,
+    num_delays = num_delays,
     num_strata = num_strata,
-    num_covariates = num_covariates,
-    nobs = nrow(Nmat),
-    Nmat = as.matrix(Nmat),
-    is_negative_binomial = is_negative_binomial,
+    n_rows  = nrow(Nmat),
+    N_cases = as.matrix(Nmat),
+
+    #Whether to compute only the prior
     prior_only = prior_only,
+
+    #Trend specification
+    mu_degree = mu_degree,
+    nu_degree = nu_degree,
+    mu_is_constant = mu_is_constant,
+    nu_is_constant = nu_is_constant,
+
+    #Distribution information
+    is_negative_binomial = is_negative_binomial,
+    mu_prior = mu_prior,
+    nu_prior = nu_prior,
+    r_prior  = r_prior,
+
+    #Prior parameters
     dispersion_prior_shape = dispersion_prior_shape,
     dispersion_prior_rate = dispersion_prior_rate,
-    beta_mean_prior = beta_mean_prior,
-    beta_sd_prior = beta_sd_prior,
-    alpha_mean_prior = alpha_mean_prior,
-    alpha_sd_prior = alpha_sd_prior,
-    alphat_shape_prior = alphat_shape_prior,
-    alphat_rate_prior = alphat_rate_prior
+    mu_shape_prior = mu_shape_prior,
+    mu_rate_prior  = mu_rate_prior,
+    nu_shape_prior = nu_shape_prior,
+    nu_rate_prior  = nu_rate_prior,
+
+    mean_mu_0_prior  = mean_mu_0_prior,
+    mean_nu_0_prior  = mean_nu_0_prior,
+    sigma_mu_0_prior = sigma_mu_0_prior,
+    sigma_nu_0_prior = sigma_nu_0_prior
   )
 
   # model <- rstan::stan_model("inst/stan/nowcast.stan")
-  out <- rstan::sampling(stanmodels$nowcast, data = stan_data, ...)
+  out <- rstan::sampling(stanmodels$nowcast_v2, data = stan_data,
+                         control = control,
+                         refresh = refresh,
+                         ...)
 
   return(out)
 }

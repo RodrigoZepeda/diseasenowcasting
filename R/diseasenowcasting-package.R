@@ -5,10 +5,17 @@
 #' @references
 #' Stan Development Team (2024). RStan: the R interface to Stan. R package version 2.32.6. https://mc-stan.org
 ## usethis namespace: start
+#' @importFrom methods new
 #' @importFrom RcppParallel RcppParallelLibs
 #' @importFrom rlang :=
 #' @importFrom rstan sampling
 #' @importFrom rstantools rstan_config
-#' @importFrom methods new
+#' @importFrom stats rcauchy
+#' @importFrom stats rexp
+#' @importFrom stats rgamma
+#' @importFrom stats rlnorm
+#' @importFrom stats rnorm
+#' @importFrom stats rt
+#' @importFrom stats rweibull
 ## usethis namespace: end
 NULL

@@ -14,6 +14,9 @@ For asymptomatic diseases where not all cases will ever be reported,
 or for outbreaks in which severe under-reporting is expected, change this
  to less than 1.}
 }
+\value{
+(invisibly) `TRUE` if the proportion is valid
+}
 \description{
 Check the `proportion_reported` argument
 }

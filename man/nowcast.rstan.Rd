@@ -10,16 +10,26 @@ nowcast.rstan(
   report_date,
   strata = NULL,
   dist = c("NegativeBinomial", "Poisson"),
+  mu_degree = 2,
+  nu_degree = 1,
+  mu_is_constant = FALSE,
+  nu_is_constant = TRUE,
   prior_only = FALSE,
-  init = 0,
-  dispersion_prior_shape = 0.001,
+  mu_shape_prior = 0,
+  mu_rate_prior = 1,
+  nu_shape_prior = 0,
+  nu_rate_prior = 1,
+  dispersion_prior_shape = 0,
   dispersion_prior_rate = 0.001,
-  beta_mean_prior = 0,
-  beta_sd_prior = 1,
-  alpha_mean_prior = 0,
-  alpha_sd_prior = 31,
-  alphat_shape_prior = 0.001,
-  alphat_rate_prior = 0.001,
+  mean_mu_0_prior = log(mean(.disease_data$n, na.rm = T)),
+  mean_nu_0_prior = 0,
+  sigma_mu_0_prior = 0.01,
+  sigma_nu_0_prior = 0.01,
+  mu_prior_name = "standard_normal",
+  nu_prior_name = "standard_normal",
+  r_prior_name = "normal",
+  control = control_default(),
+  refresh = 250,
   ...
 )
 }
@@ -37,9 +47,11 @@ such that each row has a column for onset date, report date, and}
 
 \item{dist}{Distribution. Either "NegativeBinomial"  or "Poisson"}
 
-\item{prior_only}{Boolean variable indicating whether to compute only the prior}
+\item{prior_only}{Boolean variable indicating whether to compute only the prior distribution}
 
-\item{init}{Initial values for [rstan::sampling()]}
+\item{control}{Control parameter for [rstan::sampling()]}
+
+\item{refresh}{Refresh parameter for [rstan::sampling()]}
 
 \item{...}{Additional arguments to pass to [rstan::sample()]}
 }
