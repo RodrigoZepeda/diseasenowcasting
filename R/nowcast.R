@@ -295,17 +295,17 @@ nowcast.rstan <- function(.disease_data, onset_date,
     r_prior  = r_prior,
 
     #Prior parameters
-    dispersion_prior_shape = r_param_1,
-    dispersion_prior_rate = r_param_2,
-    mu_shape_prior = mu_param_1,
-    mu_rate_prior  = mu_param_2,
-    nu_shape_prior = nu_param_1,
-    nu_rate_prior  = nu_param_2,
+    r_param_1 = r_param_1,
+    r_param_2 = r_param_2,
+    mu_param_1 = mu_param_1,
+    mu_param_2  = mu_param_2,
+    nu_param_1 = nu_param_1,
+    nu_param_2  = nu_param_2,
 
-    mean_mu_0_prior  = mu_0_param_1,
-    mean_nu_0_prior  = nu_0_param_1,
-    sigma_mu_0_prior = mu_0_param_2,
-    sigma_nu_0_prior = nu_0_param_2
+    mu_0_param_1  = mu_0_param_1,
+    nu_0_param_1  = nu_0_param_1,
+    mu_0_param_2 = mu_0_param_2,
+    nu_0_param_2 = nu_0_param_2
   )
 
   # model <- rstan::stan_model("inst/stan/nowcast.stan")
