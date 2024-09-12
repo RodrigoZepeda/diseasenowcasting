@@ -182,17 +182,17 @@ report dates, strata, delays, and the number of observed cases per time step.</p
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">simulate_process_for_testing</span><span class="op">(</span>num_steps <span class="op">=</span> <span class="fl">20</span>, num_delays <span class="op">=</span> <span class="fl">5</span>, num_strata <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 300 × 7</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    .strata .delay .tval     n lambda onset_date report_date</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>     </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span>       0      1     1  6.40   600. 2024-08-23 2024-08-23 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span>       0      1     2  6.48   655. 2024-08-24 2024-08-24 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span>       0      1     3  6.54   695. 2024-08-25 2024-08-25 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span>     393      1     4  6.82   915. 2024-08-26 2024-08-26 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span>       0      1     5  7.20  <span style="text-decoration: underline;">1</span>345. 2024-08-27 2024-08-27 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span>       0      1     6  7.66  <span style="text-decoration: underline;">2</span>128. 2024-08-28 2024-08-28 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span>       0      1     7  8.00  <span style="text-decoration: underline;">2</span>985. 2024-08-29 2024-08-29 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span>       0      1     8  8.37  <span style="text-decoration: underline;">4</span>325. 2024-08-30 2024-08-30 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span>       0      1     9  8.69  <span style="text-decoration: underline;">5</span>942. 2024-08-31 2024-08-31 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span>       0      1    10  9.14  <span style="text-decoration: underline;">9</span>282. 2024-09-01 2024-09-01 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>     </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span>       1      1     1   928   605. 2024-08-23 2024-08-23 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span>       1      1     2   353   661. 2024-08-24 2024-08-24 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span>       1      1     3   216   656. 2024-08-25 2024-08-25 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span>       1      1     4  <span style="text-decoration: underline;">1</span>733   618. 2024-08-26 2024-08-26 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span>       1      1     5   187   530. 2024-08-27 2024-08-27 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span>       1      1     6  <span style="text-decoration: underline;">1</span>714   392. 2024-08-28 2024-08-28 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span>       1      1     7    31   285. 2024-08-29 2024-08-29 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span>       1      1     8   231   243. 2024-08-30 2024-08-30 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span>       1      1     9   344   229. 2024-08-31 2024-08-31 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span>       1      1    10    31   193. 2024-09-01 2024-09-01 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 290 more rows</span></span>
 </code></pre></div>
     </div>
