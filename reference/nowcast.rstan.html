@@ -48,16 +48,26 @@
 <span>  <span class="va">report_date</span>,</span>
 <span>  strata <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  dist <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"NegativeBinomial"</span>, <span class="st">"Poisson"</span><span class="op">)</span>,</span>
+<span>  mu_degree <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  nu_degree <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  mu_is_constant <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  nu_is_constant <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  prior_only <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  init <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  dispersion_prior_shape <span class="op">=</span> <span class="fl">0.001</span>,</span>
+<span>  mu_shape_prior <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  mu_rate_prior <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  nu_shape_prior <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  nu_rate_prior <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  dispersion_prior_shape <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  dispersion_prior_rate <span class="op">=</span> <span class="fl">0.001</span>,</span>
-<span>  beta_mean_prior <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  beta_sd_prior <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  alpha_mean_prior <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  alpha_sd_prior <span class="op">=</span> <span class="fl">31</span>,</span>
-<span>  alphat_shape_prior <span class="op">=</span> <span class="fl">0.001</span>,</span>
-<span>  alphat_rate_prior <span class="op">=</span> <span class="fl">0.001</span>,</span>
+<span>  mean_mu_0_prior <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">.disease_data</span><span class="op">$</span><span class="va">n</span>, na.rm <span class="op">=</span> <span class="cn">T</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  mean_nu_0_prior <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  sigma_mu_0_prior <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  sigma_nu_0_prior <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  mu_prior_name <span class="op">=</span> <span class="st">"standard_normal"</span>,</span>
+<span>  nu_prior_name <span class="op">=</span> <span class="st">"standard_normal"</span>,</span>
+<span>  r_prior_name <span class="op">=</span> <span class="st">"normal"</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="control_default.html">control_default</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  refresh <span class="op">=</span> <span class="fl">250</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -90,11 +100,15 @@ such that each row has a column for onset date, report date, and</p></dd>
 
 
 <dt id="arg-prior-only">prior_only<a class="anchor" aria-label="anchor" href="#arg-prior-only"></a></dt>
-<dd><p>Boolean variable indicating whether to compute only the prior</p></dd>
+<dd><p>Boolean variable indicating whether to compute only the prior distribution</p></dd>
 
 
-<dt id="arg-init">init<a class="anchor" aria-label="anchor" href="#arg-init"></a></dt>
-<dd><p>Initial values for [rstan::sampling()]</p></dd>
+<dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>
+<dd><p>Control parameter for [rstan::sampling()]</p></dd>
+
+
+<dt id="arg-refresh">refresh<a class="anchor" aria-label="anchor" href="#arg-refresh"></a></dt>
+<dd><p>Refresh parameter for [rstan::sampling()]</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
