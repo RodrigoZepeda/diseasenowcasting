@@ -110,7 +110,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
                     mu_0_prior = "normal",       #Prior for the initial epidemic distribution
                     nu_0_prior = "normal",       #Prior for the initial delay distribution
                     mu_0_param_1 = "auto", #First parameter for degree error in epidemic trend
-                    mu_0_param_2 = 0.01,          #Second parameter for degree error in epidemic trend
+                    mu_0_param_2 = "auto",          #Second parameter for degree error in epidemic trend
                     nu_0_param_1 = 0.0,          #First parameter for degree error in delay trend
                     nu_0_param_2 = 0.01,          #Second parameter for degree error in delay trend
                     r_prior  = "normal",         #Prior for the negative binomial precision
@@ -173,7 +173,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
                 mu_0_prior = mu_0_prior,
                 nu_0_prior = nu_0_prior,
                 mu_0_param_1 = ifelse(mu_0_param_1 == "auto", log_mean, mu_0_param_1),
-                mu_0_param_2 = mu_0_param_2,
+                mu_0_param_2 = ifelse(mu_0_param_2 == "auto", log_sd, mu_0_param_2),
                 nu_0_param_1 = nu_0_param_1,
                 nu_0_param_2 = nu_0_param_2,
                 r_prior  = r_prior,
@@ -202,9 +202,9 @@ nowcast.rstan <- function(.disease_data, onset_date,
                           mu_error_prior = "normal",   #Prior for the epidemic trend error
                           nu_error_prior = "normal",   #Prior for the delay trend error
                           mu_param_1 = 0.0,            #First parameter for degree error in epidemic trend
-                          mu_param_2 = 1.0,            #Second parameter for degree error in epidemic trend
+                          mu_param_2 = 0.1,            #Second parameter for degree error in epidemic trend
                           nu_param_1 = 0.0,            #First parameter for degree error in delay trend
-                          nu_param_2 = 1.0,            #Second parameter for degree error in delay trend
+                          nu_param_2 = 0.1,            #Second parameter for degree error in delay trend
                           mu_0_prior = "normal",       #Prior for the initial epidemic distribution
                           nu_0_prior = "normal",       #Prior for the initial delay distribution
                           mu_0_param_1 = log(mean(.disease_data$n, na.rm = T)), #First parameter for degree error in epidemic trend
@@ -217,19 +217,12 @@ nowcast.rstan <- function(.disease_data, onset_date,
                           ...) {
 
 
-  #FIXME: Implement
-  if (mu_0_prior != "normal"){
-    cli::cli_alert_warning("This functionality has not yet been implemented defaulting to {.code mu_0_prior = {.val normal}}")
-  }
-
-  if (nu_0_prior != "normal"){
-    cli::cli_alert_warning("This functionality has not yet been implemented defaulting to {.code nu_0_prior = {.val normal}}")
-  }
-
   #Get the specified prior distributions
-  mu_prior <- get_prior_code_stan(mu_error_prior)
-  nu_prior <- get_prior_code_stan(nu_error_prior)
-  r_prior  <- get_prior_code_stan(r_prior)
+  mu_prior   <- get_prior_code_stan(mu_error_prior)
+  nu_prior   <- get_prior_code_stan(nu_error_prior)
+  mu_0_prior <- get_prior_code_stan(mu_error_prior)
+  nu_0_prior <- get_prior_code_stan(nu_error_prior)
+  r_prior    <- get_prior_code_stan(r_prior)
 
   # Get maximum time for model
   num_steps <- .disease_data |>
@@ -293,6 +286,8 @@ nowcast.rstan <- function(.disease_data, onset_date,
     mu_prior = mu_prior,
     nu_prior = nu_prior,
     r_prior  = r_prior,
+    mu_0_prior = mu_0_prior,
+    nu_0_prior = nu_0_prior,
 
     #Prior parameters
     r_param_1 = r_param_1,
