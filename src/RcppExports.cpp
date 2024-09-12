@@ -253,21 +253,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// dist_lpdf
-double dist_lpdf(const Eigen::Matrix<double,-1,1>& x, const double& param_1, const double& param_2, const int& prior_spec, std::ostream* pstream__);
-RcppExport SEXP _diseasenowcasting_dist_lpdf(SEXP xSEXP, SEXP param_1SEXP, SEXP param_2SEXP, SEXP prior_specSEXP, SEXP pstream__SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< const double& >::type param_1(param_1SEXP);
-    Rcpp::traits::input_parameter< const double& >::type param_2(param_2SEXP);
-    Rcpp::traits::input_parameter< const int& >::type prior_spec(prior_specSEXP);
-    Rcpp::traits::input_parameter< std::ostream* >::type pstream__(pstream__SEXP);
-    rcpp_result_gen = Rcpp::wrap(dist_lpdf(x, param_1, param_2, prior_spec, pstream__));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 RcppExport SEXP _rcpp_module_boot_stan_fit4nowcast_v2_mod();
 
@@ -290,7 +275,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_create_seasonal_discrete_matrix_block_R", (DL_FUNC) &_diseasenowcasting_create_seasonal_discrete_matrix_block_R, 4},
     {"_diseasenowcasting_create_initial_seasonal_discrete_vector_block_alpha", (DL_FUNC) &_diseasenowcasting_create_initial_seasonal_discrete_vector_block_alpha, 4},
     {"_diseasenowcasting_state_space_process_v3", (DL_FUNC) &_diseasenowcasting_state_space_process_v3, 16},
-    {"_diseasenowcasting_dist_lpdf", (DL_FUNC) &_diseasenowcasting_dist_lpdf, 5},
     {"_rcpp_module_boot_stan_fit4nowcast_v2_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nowcast_v2_mod, 0},
     {NULL, NULL, 0}
 };

@@ -73,7 +73,3 @@ state_space_process_v3 <- function(num_steps, num_delays, num_strata, A_mu, A_nu
     .Call(`_diseasenowcasting_state_space_process_v3`, num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, pstream__)
 }
 
-dist_lpdf <- function(x, param_1, param_2, prior_spec, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_dist_lpdf`, x, param_1, param_2, prior_spec, pstream__)
-}
-

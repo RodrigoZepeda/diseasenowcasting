@@ -4,5 +4,4 @@ functions {
   #include include/trend.stan
   #include include/seasonal_discrete.stan
   #include include/state_space_model.stan
-  #include include/priors.stan
 }
