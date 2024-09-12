@@ -26,7 +26,7 @@ simulate_process_for_testing <- function(num_steps  = 10, num_delays = 8, num_st
                                          nu_error_prior = "normal",   #Prior for the delay trend error
                                          mu_param_1 = 0.0,            #First parameter for degree error in epidemic trend
                                          mu_param_2 = 0.1,            #Second parameter for degree error in epidemic trend
-                                         nu_param_1 = 0.1,            #First parameter for degree error in delay trend
+                                         nu_param_1 = 0.0,            #First parameter for degree error in delay trend
                                          nu_param_2 = 0.1,            #Second parameter for degree error in delay trend
                                          mu_0_prior = "normal",       #Prior for the initial epidemic distribution
                                          nu_0_prior = "normal",       #Prior for the initial delay distribution
@@ -99,14 +99,14 @@ simulate_process_for_testing <- function(num_steps  = 10, num_delays = 8, num_st
                  function(param_1, param_2) rpois(1, lambda = param_1))
 
   #Create the simulation tibble
-  sim <- tibble::as_tibble(ss_process, .name_repair = "unique") |>
-    dplyr::mutate(.strata = rep(1:num_strata, num_delays)) |>
-    dplyr::mutate(.delay = rep(1:num_delays, each = num_strata)) |>
-    tidyr::pivot_longer(cols = c(dplyr::everything(), -.delay, -.strata),
+  sim <- dplyr::as_tibble(ss_process, .name_repair = "unique") |>
+    dplyr::mutate(!!as.symbol(".strata") := rep(1:num_strata, num_delays)) |>
+    dplyr::mutate(!!as.symbol(".delay") := rep(1:num_delays, each = num_strata)) |>
+    tidyr::pivot_longer(cols = c(dplyr::everything(), -!!as.symbol(".delay"), -!!as.symbol(".strata")),
                         names_to = ".tval", values_to = "n", names_transform = as.numeric) |>
-    dplyr::mutate(lambda = exp(n)) |>
+    dplyr::mutate(!!as.symbol("lambda")  := exp(!!as.symbol("n"))) |>
     dplyr::rowwise() |>
-    dplyr::mutate(n = nfun(lambda, !!rval)) |>
+    dplyr::mutate(!!as.symbol(".strata") := nfun(!!as.symbol("lambda"), !!rval)) |>
     dplyr::ungroup() |>
     dplyr::mutate(!!as.symbol("onset_date") := as.Date(Sys.time()) - max(!!as.symbol(".tval")) + !!as.symbol(".tval") - 1) |>
     dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("onset_date") + !!as.symbol(".delay") - 1)

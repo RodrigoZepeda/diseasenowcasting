@@ -38,5 +38,7 @@ preds <- predictions |>
   posterior::as_draws() |> 
   posterior::subset_draws("N_predict") |> 
   posterior::summarise_draws()
+
+preds
 ```
 

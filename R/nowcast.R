@@ -70,8 +70,6 @@
 #'
 #' @param r_prior Character. Prior for the negative binomial precision parameter. Default is "normal".
 #'
-#' @param is_negative_binomial Logical. Indicates whether the data is modeled using a negative binomial distribution. Default is TRUE.
-#'
 #' @param r_param_1 Numeric. First parameter for the dispersion prior if negative binomial. Default is 0.0.
 #'
 #' @param r_param_2 Numeric. Second parameter for the dispersion prior if negative binomial. Default is 1.0.
@@ -106,15 +104,15 @@ nowcast <- function(.disease_data, onset_date, report_date,
                     mu_error_prior = "normal",   #Prior for the epidemic trend error
                     nu_error_prior = "normal",   #Prior for the delay trend error
                     mu_param_1 = 0.0,            #First parameter for degree error in epidemic trend
-                    mu_param_2 = 1.0,            #Second parameter for degree error in epidemic trend
+                    mu_param_2 = 0.1,            #Second parameter for degree error in epidemic trend
                     nu_param_1 = 0.0,            #First parameter for degree error in delay trend
-                    nu_param_2 = 1.0,            #Second parameter for degree error in delay trend
+                    nu_param_2 = 0.1,            #Second parameter for degree error in delay trend
                     mu_0_prior = "normal",       #Prior for the initial epidemic distribution
                     nu_0_prior = "normal",       #Prior for the initial delay distribution
                     mu_0_param_1 = "auto", #First parameter for degree error in epidemic trend
-                    mu_0_param_2 = "auto",          #Second parameter for degree error in epidemic trend
-                    nu_0_param_1 = "auto",          #First parameter for degree error in delay trend
-                    nu_0_param_2 = "auto",          #Second parameter for degree error in delay trend
+                    mu_0_param_2 = 0.01,          #Second parameter for degree error in epidemic trend
+                    nu_0_param_1 = 0.0,          #First parameter for degree error in delay trend
+                    nu_0_param_2 = 0.01,          #Second parameter for degree error in delay trend
                     r_prior  = "normal",         #Prior for the negative binomial precision
                     r_param_1 = 0.0,             #First parameter for dispersion prior if negative binomial
                     r_param_2 = 1.0,             #Second parameter for dispersion prior if negative binomial
@@ -152,12 +150,12 @@ nowcast <- function(.disease_data, onset_date, report_date,
 
   #Get the log mean of disease data and the sd
   log_mean <- .disease_data |>
-    dplyr::summarise(log_mean = mean(log1p(n), na.rm = T)) |>
+    dplyr::summarise(log_mean = mean(log1p(!!as.symbol("n")), na.rm = T)) |>
     dplyr::pull(log_mean)
 
   #Get the log mean of disease data and the sd
   log_sd <- .disease_data |>
-    dplyr::summarise(log_sd = sd(log1p(n), na.rm = T)) |>
+    dplyr::summarise(log_sd = sd(log1p(!!as.symbol("n")), na.rm = T)) |>
     dplyr::pull(log_sd)
 
   nowcast.rstan(.disease_data, onset_date, report_date, strata = strata, dist = dist,
@@ -175,9 +173,9 @@ nowcast <- function(.disease_data, onset_date, report_date,
                 mu_0_prior = mu_0_prior,
                 nu_0_prior = nu_0_prior,
                 mu_0_param_1 = ifelse(mu_0_param_1 == "auto", log_mean, mu_0_param_1),
-                mu_0_param_2 = ifelse(mu_0_param_2 == "auto", log_sd, mu_0_param_2),
-                nu_0_param_1 = ifelse(nu_0_param_1 == "auto", log_mean/10, nu_0_param_1),
-                nu_0_param_2 = ifelse(nu_0_param_2 == "auto", log_sd/10, nu_0_param_2),
+                mu_0_param_2 = mu_0_param_2,
+                nu_0_param_1 = nu_0_param_1,
+                nu_0_param_2 = nu_0_param_2,
                 r_prior  = r_prior,
                 r_param_1 = r_param_1,
                 r_param_2 = r_param_2,
@@ -210,9 +208,9 @@ nowcast.rstan <- function(.disease_data, onset_date,
                           mu_0_prior = "normal",       #Prior for the initial epidemic distribution
                           nu_0_prior = "normal",       #Prior for the initial delay distribution
                           mu_0_param_1 = log(mean(.disease_data$n, na.rm = T)), #First parameter for degree error in epidemic trend
-                          mu_0_param_2 = 1.0,          #Second parameter for degree error in epidemic trend
+                          mu_0_param_2 = 0.01,          #Second parameter for degree error in epidemic trend
                           nu_0_param_1 = 0.0,          #First parameter for degree error in delay trend
-                          nu_0_param_2 = 1.0,          #Second parameter for degree error in delay trend
+                          nu_0_param_2 = 0.01,          #Second parameter for degree error in delay trend
                           r_prior  = "normal",         #Prior for the negative binomial precision
                           r_param_1 = 0.0,             #First parameter for dispersion prior if negative binomial
                           r_param_2 = 1.0,             #Second parameter for dispersion prior if negative binomial

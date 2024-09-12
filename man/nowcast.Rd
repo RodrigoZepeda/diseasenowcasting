@@ -24,15 +24,15 @@ nowcast(
   mu_error_prior = "normal",
   nu_error_prior = "normal",
   mu_param_1 = 0,
-  mu_param_2 = 1,
+  mu_param_2 = 0.1,
   nu_param_1 = 0,
-  nu_param_2 = 1,
+  nu_param_2 = 0.1,
   mu_0_prior = "normal",
   nu_0_prior = "normal",
-  mu_0_param_1 = log(mean(.disease_data$n, na.rm = T)),
-  mu_0_param_2 = 1,
+  mu_0_param_1 = "auto",
+  mu_0_param_2 = 0.01,
   nu_0_param_1 = 0,
-  nu_0_param_2 = 1,
+  nu_0_param_2 = 0.01,
   r_prior = "normal",
   r_param_1 = 0,
   r_param_2 = 1,
@@ -113,8 +113,6 @@ or for outbreaks in which severe under-reporting is expected, change this
 \item{r_param_2}{Numeric. Second parameter for the dispersion prior if negative binomial. Default is 1.0.}
 
 \item{...}{Additional arguments to pass to [rstan::sampling()]}
-
-\item{is_negative_binomial}{Logical. Indicates whether the data is modeled using a negative binomial distribution. Default is TRUE.}
 }
 \description{
 Function that uses the [rstan::sampling()] engine to generate nowcasts.
@@ -122,12 +120,11 @@ Function that uses the [rstan::sampling()] engine to generate nowcasts.
 \examples{
 # Load the data
 data(denguedat)
-now <- as.Date("1990-10-01")
+
+# Create a fake disease process
+sims <- simulate_process_for_testing()
 
 # Run a nowcast with very few iterations
 # change to 4 chains and 2000 iter when doing inference
-# or just run the command without the `iter = 50`, `chains = 1` thing.
-nowcast(denguedat, "onset_week", "report_week", strata = c("gender"), now = now,
-          #The following is specified as to run fast for the example;
-          iter = 50, chains = 1, seed = 2524)
+nowcast(sims, "onset_date", "report_date", iter = 100, chains = 1, seed = 2524)
 }

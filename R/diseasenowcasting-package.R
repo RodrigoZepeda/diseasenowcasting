@@ -14,8 +14,11 @@
 #' @importFrom stats rexp
 #' @importFrom stats rgamma
 #' @importFrom stats rlnorm
+#' @importFrom stats rnbinom
 #' @importFrom stats rnorm
+#' @importFrom stats rpois
 #' @importFrom stats rt
 #' @importFrom stats rweibull
+#' @importFrom stats sd
 ## usethis namespace: end
 NULL

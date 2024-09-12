@@ -16,7 +16,7 @@ simulate_process_for_testing(
   nu_error_prior = "normal",
   mu_param_1 = 0,
   mu_param_2 = 0.1,
-  nu_param_1 = 0.1,
+  nu_param_1 = 0,
   nu_param_2 = 0.1,
   mu_0_prior = "normal",
   nu_0_prior = "normal",
