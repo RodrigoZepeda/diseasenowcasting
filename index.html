@@ -62,41 +62,35 @@
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rodrigozepeda.github.io/diseasenowcasting/">diseasenowcasting</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">denguedat</span><span class="op">)</span></span>
+<span><span class="co"># Create a fake disease process</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">265824</span><span class="op">)</span></span>
+<span><span class="va">sims</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/simulate_process_for_testing.html">simulate_process_for_testing</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Change to more iterations</span></span>
-<span><span class="va">predictions</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">denguedat</span>, <span class="st">"onset_week"</span>, <span class="st">"report_week"</span>,</span>
-<span>  now <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990-10-01"</span><span class="op">)</span>,</span>
-<span>  dist <span class="op">=</span> <span class="st">"NegativeBinomial"</span>, cores <span class="op">=</span> <span class="fl">4</span>, iter <span class="op">=</span> <span class="fl">1000</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; ℹ Computing a nowcast for 1990-10-01 per weeks</span></span>
-<span><span class="co">#&gt; ℹ Assuming data is linelist-data where each observation is a test. If you are working with count-data set `data_type = "count"`</span></span>
-<span><span class="co">#&gt; Warning in .local(object, ...): some chains had errors; consider specifying</span></span>
-<span><span class="co">#&gt; chains = 1 to debug</span></span>
-<span><span class="co">#&gt; here are whatever error messages were returned</span></span>
-<span><span class="co">#&gt; [[1]]</span></span>
-<span><span class="co">#&gt; Stan model 'nowcast' does not contain samples.</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [[2]]</span></span>
-<span><span class="co">#&gt; Stan model 'nowcast' does not contain samples.</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [[3]]</span></span>
-<span><span class="co">#&gt; Stan model 'nowcast' does not contain samples.</span></span>
-<span><span class="co">#&gt; Warning: The largest R-hat is NA, indicating chains have not mixed.</span></span>
-<span><span class="co">#&gt; Running the chains for more iterations may help. See</span></span>
-<span><span class="co">#&gt; https://mc-stan.org/misc/warnings.html#r-hat</span></span>
-<span><span class="co">#&gt; Warning: Bulk Effective Samples Size (ESS) is too low, indicating posterior means and medians may be unreliable.</span></span>
-<span><span class="co">#&gt; Running the chains for more iterations may help. See</span></span>
-<span><span class="co">#&gt; https://mc-stan.org/misc/warnings.html#bulk-ess</span></span>
-<span><span class="co">#&gt; Warning: Tail Effective Samples Size (ESS) is too low, indicating posterior variances and tail quantiles may be unreliable.</span></span>
-<span><span class="co">#&gt; Running the chains for more iterations may help. See</span></span>
-<span><span class="co">#&gt; https://mc-stan.org/misc/warnings.html#tail-ess</span></span>
+<span><span class="co"># Run a nowcast with very few iterations</span></span>
+<span><span class="va">predictions</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">sims</span>, <span class="st">"onset_date"</span>, <span class="st">"report_date"</span>, cores <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ℹ Computing a nowcast for 2024-09-11 per "days"</span></span>
+<span><span class="co">#&gt; ℹ Assuming data is count-data where counts are in column `n`. To change this set `data_type = "linelist"`</span></span>
 <span></span>
 <span><span class="co">#Get the predicted values</span></span>
 <span><span class="va">preds</span> <span class="op">&lt;-</span> <span class="va">predictions</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu">posterior</span><span class="fu">::</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws.html" class="external-link">as_draws</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu">posterior</span><span class="fu">::</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/subset_draws.html" class="external-link">subset_draws</a></span><span class="op">(</span><span class="st">"N_predict"</span><span class="op">)</span> <span class="op">|&gt;</span> </span>
-<span>  <span class="fu">posterior</span><span class="fu">::</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">summarise_draws</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu">posterior</span><span class="fu">::</span><span class="fu"><a href="https://mc-stan.org/posterior/reference/draws_summary.html" class="external-link">summarise_draws</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">preds</span></span>
+<span><span class="co">#&gt; # A tibble: 10 × 10</span></span>
+<span><span class="co">#&gt;    variable          mean median    sd   mad    q5   q95  rhat ess_bulk ess_tail</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;            &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 N_predict[1,1]   7485    7485  0     0     7485  7485 NA         NA       NA </span></span>
+<span><span class="co">#&gt;  2 N_predict[2,1]   7178    7178  0     0     7178  7178 NA         NA       NA </span></span>
+<span><span class="co">#&gt;  3 N_predict[3,1]  16581   16581  0     0    16581 16581 NA         NA       NA </span></span>
+<span><span class="co">#&gt;  4 N_predict[4,1]  28006.  28005  3.03  2.97 28003 28012  1.00    4071.    3860.</span></span>
+<span><span class="co">#&gt;  5 N_predict[5,1]  16233.  16232  4.51  4.45 16228 16242  1.00    3983.    3990.</span></span>
+<span><span class="co">#&gt;  6 N_predict[6,1]  14445.  14444  5.56  4.45 14438 14456  1.00    4214.    3982.</span></span>
+<span><span class="co">#&gt;  7 N_predict[7,1]   6076.   6075  6.31  5.93  6068  6088  1.00    3934.    3805.</span></span>
+<span><span class="co">#&gt;  8 N_predict[8,1]   2219.   2218  7.10  7.41  2209  2232  1.00    3404.    3965.</span></span>
+<span><span class="co">#&gt;  9 N_predict[9,1]   3486.   3485  7.90  7.41  3476  3501  1.00    4076.    3876.</span></span>
+<span><span class="co">#&gt; 10 N_predict[10,1] 56870.  56869  8.46  8.90 56859 56885  1.00    3726.    3897.</span></span></code></pre></div>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="license">
