@@ -106,7 +106,7 @@ simulate_process_for_testing <- function(num_steps  = 10, num_delays = 8, num_st
                         names_to = ".tval", values_to = "n", names_transform = as.numeric) |>
     dplyr::mutate(!!as.symbol("lambda")  := exp(!!as.symbol("n"))) |>
     dplyr::rowwise() |>
-    dplyr::mutate(!!as.symbol(".strata") := nfun(!!as.symbol("lambda"), !!rval)) |>
+    dplyr::mutate(!!as.symbol("n") := nfun(!!as.symbol("lambda"), !!rval)) |>
     dplyr::ungroup() |>
     dplyr::mutate(!!as.symbol("onset_date") := as.Date(Sys.time()) - max(!!as.symbol(".tval")) + !!as.symbol(".tval") - 1) |>
     dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("onset_date") + !!as.symbol(".delay") - 1)

@@ -90,24 +90,24 @@ data {
     int<lower=0, upper=1> prior_only;   //Set to 1 to sample only from the prior
 
     //Priors ---------------------------------------------------------------------------------------
-    real<lower=0> dispersion_prior_shape;
-    real<lower=0> dispersion_prior_rate;
+    real<lower=0> r_param_1;
+    real<lower=0> r_param_2;
 
-    real<lower=0> mu_shape_prior;
-    real<lower=0> mu_rate_prior;
+    real<lower=0> mu_param_1;
+    real<lower=0> mu_param_2;
 
-    real<lower=0> nu_shape_prior;
-    real<lower=0> nu_rate_prior;
+    real<lower=0> nu_param_1;
+    real<lower=0> nu_param_2;
 
     int<lower=1,upper=14> mu_prior;
     int<lower=1,upper=14> nu_prior;
     int<lower=1,upper=14> r_prior;
 
     //Prior values for the initial mu_0 and nu_0
-    real mean_mu_0_prior;
-    real mean_nu_0_prior;
-    real<lower=0> sigma_mu_0_prior;
-    real<lower=0> sigma_nu_0_prior;
+    real mu_0_param_1;
+    real nu_0_param_1;
+    real<lower=0> mu_0_param_2;
+    real<lower=0> nu_0_param_2;
 
 }
 
@@ -172,20 +172,18 @@ parameters {
 
   //Precision parameter for negative binomial
   vector<lower=0>[is_negative_binomial ? 1 : 0] r;
-  vector<lower=0>[1] sigma_mu;
-  vector<lower=0>[1] sigma_nu;
 
 }
 
 transformed parameters {
 
   //Values for mu and nu without centering
-  matrix[num_strata*num_delays, mu_0_size] mu_0 = rep_matrix(mean_mu_0_prior, num_strata*num_delays, mu_0_size) + sigma_mu_0_prior*mu_0_centered;
-  matrix[num_strata*num_delays, nu_0_size] nu_0 = rep_matrix(mean_nu_0_prior, num_strata*num_delays, nu_0_size) + sigma_nu_0_prior*nu_0_centered;
+  matrix[num_strata*num_delays, mu_0_size] mu_0 = rep_matrix(mu_0_param_1, num_strata*num_delays, mu_0_size) + mu_0_param_2*mu_0_centered;
+  matrix[num_strata*num_delays, nu_0_size] nu_0 = rep_matrix(nu_0_param_1, num_strata*num_delays, nu_0_size) + nu_0_param_2*nu_0_centered;
 
   //Get the state space process simulations
   matrix[num_delays*num_strata, num_steps] lambda = state_space_process_v3(
-        num_steps, num_delays, num_strata, A_mu, A_nu, sigma_mu[1]*R_mu, sigma_nu[1]*R_nu,
+        num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu,
         L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt);
 
   //Create a vectorized version of the lambda
@@ -219,12 +217,12 @@ transformed parameters {
   }
 
   //Priors for the mu and the nu
-  lprior += dist_lpdf(sigma_mu| mu_shape_prior, mu_rate_prior, mu_prior); //Prior for sigma_mu
-  lprior += dist_lpdf(sigma_nu| nu_shape_prior, nu_rate_prior, nu_prior); //Prior for sigma_nu
+  //lprior += dist_lpdf(sigma_mu| mu_param_1, mu_param_2, mu_prior); //Prior for sigma_mu
+  //lprior += dist_lpdf(sigma_nu| nu_param_1, nu_param_2, nu_prior); //Prior for sigma_nu
 
   //Add prior to the negative binomial precision
   if (is_negative_binomial)
-    lprior += dist_lpdf(r| dispersion_prior_shape, dispersion_prior_rate, r_prior);
+    lprior += dist_lpdf(r| r_param_1, r_param_2, r_prior);
 
 }
 
@@ -257,10 +255,14 @@ generated quantities {
       if (is_negative_binomial){
           N_mat_predict[t,:] =
           neg_binomial_2_log_rng(
+            //lambda[:, t]',
             rep_vector(1.0, num_delays*num_strata),
-          rep_vector(1.0, num_delays*num_strata));
+            rep_vector(1.0, num_delays*num_strata));
       } else {
-          N_mat_predict[t,:] = poisson_log_rng(rep_vector(1.0, num_delays*num_strata));
+          N_mat_predict[t,:] = poisson_log_rng(
+            //lambda[:, t]'
+            rep_vector(1.0, num_delays*num_strata)
+          );
       }
   }
 
