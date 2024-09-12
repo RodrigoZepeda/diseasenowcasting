@@ -254,6 +254,7 @@ BEGIN_RCPP
 END_RCPP
 }
 
+RcppExport SEXP _rcpp_module_boot_stan_fit4generated_quantities_mod();
 RcppExport SEXP _rcpp_module_boot_stan_fit4nowcast_v2_mod();
 
 static const R_CallMethodDef CallEntries[] = {
@@ -275,6 +276,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_create_seasonal_discrete_matrix_block_R", (DL_FUNC) &_diseasenowcasting_create_seasonal_discrete_matrix_block_R, 4},
     {"_diseasenowcasting_create_initial_seasonal_discrete_vector_block_alpha", (DL_FUNC) &_diseasenowcasting_create_initial_seasonal_discrete_vector_block_alpha, 4},
     {"_diseasenowcasting_state_space_process_v3", (DL_FUNC) &_diseasenowcasting_state_space_process_v3, 16},
+    {"_rcpp_module_boot_stan_fit4generated_quantities_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4generated_quantities_mod, 0},
     {"_rcpp_module_boot_stan_fit4nowcast_v2_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nowcast_v2_mod, 0},
     {NULL, NULL, 0}
 };

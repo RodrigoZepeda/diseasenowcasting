@@ -1,65 +1,3 @@
-// nowcast.stan
-//
-// Model that generates a prediction of current number of cases given historical trends
-// and historical delays controlling by strata and covariates.
-//
-// Data:
-// ------------------------------------------------------------------------------------------------
-// Data consists of a matrix Nmat of nobs × (3 + num_covariates)
-// where
-// num_covariates .- Number of covariates included in the model.
-// nobs           .- The number of observations is bounded by (max_time × max_delays × num_strata)
-//
-// with:
-// max_time       .- Length of the time frame under consideration.
-// max_delays     .- Maximum number of delays to consider.
-// num_strata     .- Number of variables to stratify by.
-//
-// Here is an example of what the Nmat should look like:
-//
-// | Number of Cases | Time | Delay | Covariate 1 | Covariate 2 | Covariate 3 |
-// |-----------------|------|-------|-------------|-------------|-------------|
-// | 5               | 1    | 1     | 0.1         | 0.3         | 0.5         |
-// | 7               | 1    | 2     | 0.2         | 0.4         | 0.6         |
-// | 4               | 2    | 1     | 0.1         | 0.3         | 0.5         |
-// | 6               | 2    | 2     | 0.2         | 0.4         | 0.6         |
-// | 8               | 3    | 1     | 0.1         | 0.3         | 0.5         |
-// | 9               | 3    | 2     | 0.2         | 0.4         | 0.6         |
-// | 10              | 1    | 1     | 0.2         | 0.5         | 0.7         |
-// | 11              | 1    | 2     | 0.3         | 0.6         | 0.8         |
-// | 8               | 2    | 1     | 0.2         | 0.5         | 0.7         |
-// | 7               | 2    | 2     | 0.3         | 0.6         | 0.8         |
-// | 12              | 3    | 1     | 0.2         | 0.5         | 0.7         |
-// | 14              | 3    | 2     | 0.3         | 0.6         | 0.8         |
-//
-// Model:
-// ------------------------------------------------------------------------------------------------
-// The model infers the total number of cases by time t that will be observed with delay d
-// for strata s (n_{t,d}^{s}) assuming:
-//
-// n_{t,d}^{s} ~ F(lambda_{t,d}^{s}, theta) for a discrete distribution F (either Poisson or NegBinomial)
-//
-// where:
-// log(lambda_{t,d}^{s}) = alpha_t^{s} + beta_d^{s} + Beta^{s}*Covariates
-//
-// and the dynamic priors:
-// alpha_t - alpha_{t-1} ~ Normal(0, sigma_alpha)
-//
-// and the priors:
-// alpha_0 ~ Normal(alpha_mean_prior, alpha_sd_prior)
-// beta_d  ~ Normal(mu, sigma_beta)
-//
-// Distribution options:
-// ------------------------------------------------------------------------------------------------
-// The following discrete distributions are implemented:
-// 0. Poisson
-// 1. Negative Binomial
-//
-// Additional notes:
-// Should add zero-inflation for cases when people stratify too much
-
-#include /include/license.stan
-
 functions {
   #include include/linear_algebra_utils.stan
   #include include/trend.stan
@@ -228,20 +166,33 @@ transformed parameters {
 
 }
 
-model {
-  //Don't calculate posterior if user only wants prior
-  if (!prior_only){
+generated quantities {
+  array[num_steps, num_delays*num_strata] int N_mat_predict;
 
-    //Evaluate the model whether its negative binomial
-    if (is_negative_binomial){
-      target += neg_binomial_2_log_lpmf(N_cases[,n_col] | lambda_mean, rep_vector(r[1], num_elements(lambda_mean)));
-    } else {
-      target += poisson_log_lpmf(N_cases[,n_col] | lambda_mean);
-    }
+  //Prediction of overall cases at time t
+  array[num_steps, num_strata] int N_predict;
 
+  //Get a matrix of all of the predictions
+  for (t in 1:num_steps){
+      if (is_negative_binomial){
+          N_mat_predict[t,:] =
+          neg_binomial_2_log_rng(
+            lambda[:, t],
+          rep_vector(r[1], num_delays*num_strata));
+      } else {
+          N_mat_predict[t,:] = poisson_log_rng(lambda[:, t]);
+      }
   }
 
-  // Add the priors
-  target += lprior;
+  /*
+  //Substitute back those values we do know
+  for (k in 1:nobs){
+    Nmat_predict[Nmat[k,2], Nmat[k,3] + 1] = Nmat[k,1];
+  }
 
+  //Get the overall total (rowsums)
+  for (t in 1:max_time){
+    N_predict[t] = sum(Nmat_predict[t,:]);
+  }
+  */
 }

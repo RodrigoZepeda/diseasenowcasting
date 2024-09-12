@@ -14,11 +14,11 @@ check_date_columns <- function(.disease_data, onset_date, report_date) {
   }
 
   # Check that they are dates
-  if (!lubridate::is.Date(.disease_data[, onset_date])) {
+  if (!lubridate::is.Date(.disease_data |> dplyr::pull(!!as.symbol(onset_date)))) {
     cli::cli_abort(
       "{.code onset_date = {.val {onset_date}}} is not a {.emph Date}. Use {.code as.Date} to transform it."
     )
-  } else if (!lubridate::is.Date(.disease_data[, report_date])) {
+  } else if (!lubridate::is.Date(.disease_data |> dplyr::pull(!!as.symbol(report_date)))) {
     cli::cli_abort(
       "{.code report_date = {.val {report_date}}} is not a {.emph Date}. Use {.code as.Date} to transform it."
     )

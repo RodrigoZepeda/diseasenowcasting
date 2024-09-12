@@ -2,6 +2,7 @@
 
 export(nowcast)
 export(preprocess_for_nowcast)
+export(simulate_process_for_testing)
 importFrom(RcppParallel,RcppParallelLibs)
 importFrom(methods,new)
 importFrom(rlang,":=")
