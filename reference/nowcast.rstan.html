@@ -51,22 +51,29 @@
 <span>  prior_only <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  control <span class="op">=</span> <span class="fu"><a href="control_default.html">control_default</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  refresh <span class="op">=</span> <span class="fl">250</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sampling"</span>, <span class="st">"variational"</span><span class="op">)</span>,</span>
 <span>  mu_degree <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>  nu_degree <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  mu_is_constant <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  nu_is_constant <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  mu_error_prior <span class="op">=</span> <span class="st">"normal"</span>,</span>
-<span>  nu_error_prior <span class="op">=</span> <span class="st">"normal"</span>,</span>
-<span>  mu_param_1 <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  mu_param_2 <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  nu_param_1 <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  nu_param_2 <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  mu_0_prior <span class="op">=</span> <span class="st">"normal"</span>,</span>
-<span>  nu_0_prior <span class="op">=</span> <span class="st">"normal"</span>,</span>
-<span>  mu_0_param_1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">.disease_data</span><span class="op">$</span><span class="va">n</span>, na.rm <span class="op">=</span> <span class="cn">T</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  mu_0_param_2 <span class="op">=</span> <span class="fl">0.01</span>,</span>
-<span>  nu_0_param_1 <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  nu_0_param_2 <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  mu_sd_prior <span class="op">=</span> <span class="st">"normal"</span>,</span>
+<span>  nu_sd_prior <span class="op">=</span> <span class="st">"normal"</span>,</span>
+<span>  mu_sd_param_1 <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  mu_sd_param_2 <span class="op">=</span> <span class="fl">0.1</span>,</span>
+<span>  nu_sd_param_1 <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  nu_sd_param_2 <span class="op">=</span> <span class="fl">0.1</span>,</span>
+<span>  mu_0_mean_param_1 <span class="op">=</span> <span class="st">"auto"</span>,</span>
+<span>  mu_0_mean_param_2 <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  mu_0_sd_param_1 <span class="op">=</span> <span class="st">"auto"</span>,</span>
+<span>  mu_0_sd_param_2 <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  nu_0_mean_param_1 <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  nu_0_mean_param_2 <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  nu_0_sd_param_1 <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  nu_0_sd_param_2 <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  mu_0_mean_hyperprior <span class="op">=</span> <span class="st">"normal"</span>,</span>
+<span>  nu_0_mean_hyperprior <span class="op">=</span> <span class="st">"normal"</span>,</span>
+<span>  mu_0_sd_hyperprior <span class="op">=</span> <span class="st">"normal"</span>,</span>
+<span>  nu_0_sd_hyperprior <span class="op">=</span> <span class="st">"normal"</span>,</span>
 <span>  r_prior <span class="op">=</span> <span class="st">"normal"</span>,</span>
 <span>  r_param_1 <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  r_param_2 <span class="op">=</span> <span class="fl">1</span>,</span>
@@ -113,8 +120,14 @@ such that each row has a column for onset date, report date, and</p></dd>
 <dd><p>Refresh parameter for [rstan::sampling()]</p></dd>
 
 
+<dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
+<dd><p>Fitting method either `sampling` (recommended for inference) or `variational`
+(recommended for testing). The `sampling` method calls [rstan::sampling()] while the
+`variational` calls [rstan::vb()]</p></dd>
+
+
 <dt id="arg-mu-degree">mu_degree<a class="anchor" aria-label="anchor" href="#arg-mu-degree"></a></dt>
-<dd><p>Integer. Degree of the epidemic trend. Default is 2.</p></dd>
+<dd><p>Integer. Degree of the epidemic trend. Default is 1.</p></dd>
 
 
 <dt id="arg-nu-degree">nu_degree<a class="anchor" aria-label="anchor" href="#arg-nu-degree"></a></dt>
@@ -129,52 +142,76 @@ such that each row has a column for onset date, report date, and</p></dd>
 <dd><p>Logical. Indicates whether the delay trend is constant. Default is TRUE.</p></dd>
 
 
-<dt id="arg-mu-error-prior">mu_error_prior<a class="anchor" aria-label="anchor" href="#arg-mu-error-prior"></a></dt>
+<dt id="arg-mu-sd-prior">mu_sd_prior<a class="anchor" aria-label="anchor" href="#arg-mu-sd-prior"></a></dt>
 <dd><p>Character. Prior for the epidemic trend error. Default is "normal".</p></dd>
 
 
-<dt id="arg-nu-error-prior">nu_error_prior<a class="anchor" aria-label="anchor" href="#arg-nu-error-prior"></a></dt>
+<dt id="arg-nu-sd-prior">nu_sd_prior<a class="anchor" aria-label="anchor" href="#arg-nu-sd-prior"></a></dt>
 <dd><p>Character. Prior for the delay trend error. Default is "normal".</p></dd>
 
 
-<dt id="arg-mu-param-">mu_param_1<a class="anchor" aria-label="anchor" href="#arg-mu-param-"></a></dt>
+<dt id="arg-mu-sd-param-">mu_sd_param_1<a class="anchor" aria-label="anchor" href="#arg-mu-sd-param-"></a></dt>
 <dd><p>Numeric. First parameter for the epidemic trend error. Default is 0.0.</p></dd>
 
 
-<dt id="arg-mu-param-">mu_param_2<a class="anchor" aria-label="anchor" href="#arg-mu-param-"></a></dt>
+<dt id="arg-mu-sd-param-">mu_sd_param_2<a class="anchor" aria-label="anchor" href="#arg-mu-sd-param-"></a></dt>
 <dd><p>Numeric. Second parameter for the epidemic trend error. Default is 1.0.</p></dd>
 
 
-<dt id="arg-nu-param-">nu_param_1<a class="anchor" aria-label="anchor" href="#arg-nu-param-"></a></dt>
+<dt id="arg-nu-sd-param-">nu_sd_param_1<a class="anchor" aria-label="anchor" href="#arg-nu-sd-param-"></a></dt>
 <dd><p>Numeric. First parameter for the delay trend error. Default is 0.0.</p></dd>
 
 
-<dt id="arg-nu-param-">nu_param_2<a class="anchor" aria-label="anchor" href="#arg-nu-param-"></a></dt>
+<dt id="arg-nu-sd-param-">nu_sd_param_2<a class="anchor" aria-label="anchor" href="#arg-nu-sd-param-"></a></dt>
 <dd><p>Numeric. Second parameter for the delay trend error. Default is 1.0.</p></dd>
 
 
-<dt id="arg-mu-prior">mu_0_prior<a class="anchor" aria-label="anchor" href="#arg-mu-prior"></a></dt>
-<dd><p>Character. Prior for the initial epidemic trend distribution. Default is "normal".</p></dd>
+<dt id="arg-mu-mean-param-">mu_0_mean_param_1<a class="anchor" aria-label="anchor" href="#arg-mu-mean-param-"></a></dt>
+<dd><p>Character. Prior for the initial epidemic trend mean's first parameter.</p></dd>
 
 
-<dt id="arg-nu-prior">nu_0_prior<a class="anchor" aria-label="anchor" href="#arg-nu-prior"></a></dt>
-<dd><p>Character. Prior for the initial delay trend distribution. Default is "normal".</p></dd>
+<dt id="arg-mu-mean-param-">mu_0_mean_param_2<a class="anchor" aria-label="anchor" href="#arg-mu-mean-param-"></a></dt>
+<dd><p>Character. Prior for the initial epidemic trend mean's second parameter.</p></dd>
 
 
-<dt id="arg-mu-param-">mu_0_param_1<a class="anchor" aria-label="anchor" href="#arg-mu-param-"></a></dt>
-<dd><p>Numeric. First parameter for the initial epidemic trend distribution. Default is 0.0.</p></dd>
+<dt id="arg-mu-sd-param-">mu_0_sd_param_1<a class="anchor" aria-label="anchor" href="#arg-mu-sd-param-"></a></dt>
+<dd><p>Character. Prior for the initial epidemic trend standard deviation's first parameter.</p></dd>
 
 
-<dt id="arg-mu-param-">mu_0_param_2<a class="anchor" aria-label="anchor" href="#arg-mu-param-"></a></dt>
-<dd><p>Numeric. Second parameter for the initial epidemic trend distribution. Default is 1.0.</p></dd>
+<dt id="arg-mu-sd-param-">mu_0_sd_param_2<a class="anchor" aria-label="anchor" href="#arg-mu-sd-param-"></a></dt>
+<dd><p>Character. Prior for the initial epidemic trend standard deviation's second parameter.</p></dd>
 
 
-<dt id="arg-nu-param-">nu_0_param_1<a class="anchor" aria-label="anchor" href="#arg-nu-param-"></a></dt>
-<dd><p>Numeric. First parameter for the initial delay trend distribution. Default is 0.0.</p></dd>
+<dt id="arg-nu-mean-param-">nu_0_mean_param_1<a class="anchor" aria-label="anchor" href="#arg-nu-mean-param-"></a></dt>
+<dd><p>Character. Prior for the initial delay trend mean's first parameter.</p></dd>
 
 
-<dt id="arg-nu-param-">nu_0_param_2<a class="anchor" aria-label="anchor" href="#arg-nu-param-"></a></dt>
-<dd><p>Numeric. Second parameter for the initial delay trend distribution. Default is 1.0.</p></dd>
+<dt id="arg-nu-mean-param-">nu_0_mean_param_2<a class="anchor" aria-label="anchor" href="#arg-nu-mean-param-"></a></dt>
+<dd><p>Character. Prior for the initial delay trend mean's second parameter.</p></dd>
+
+
+<dt id="arg-nu-sd-param-">nu_0_sd_param_1<a class="anchor" aria-label="anchor" href="#arg-nu-sd-param-"></a></dt>
+<dd><p>Character. Prior for the initial delay trend standard deviation's first parameter.</p></dd>
+
+
+<dt id="arg-nu-sd-param-">nu_0_sd_param_2<a class="anchor" aria-label="anchor" href="#arg-nu-sd-param-"></a></dt>
+<dd><p>Character. Prior for the initial delay trend standard deviation's second parameter.</p></dd>
+
+
+<dt id="arg-mu-mean-hyperprior">mu_0_mean_hyperprior<a class="anchor" aria-label="anchor" href="#arg-mu-mean-hyperprior"></a></dt>
+<dd><p>Prior distribution for the mean of the epidemic trend. Default is normal.</p></dd>
+
+
+<dt id="arg-nu-mean-hyperprior">nu_0_mean_hyperprior<a class="anchor" aria-label="anchor" href="#arg-nu-mean-hyperprior"></a></dt>
+<dd><p>Prior distribution for the mean of the delay trend. Default is normal.</p></dd>
+
+
+<dt id="arg-mu-sd-hyperprior">mu_0_sd_hyperprior<a class="anchor" aria-label="anchor" href="#arg-mu-sd-hyperprior"></a></dt>
+<dd><p>Prior distribution for the standard deviation of the epidemic trend. Default is normal (truncated).</p></dd>
+
+
+<dt id="arg-nu-sd-hyperprior">nu_0_sd_hyperprior<a class="anchor" aria-label="anchor" href="#arg-nu-sd-hyperprior"></a></dt>
+<dd><p>Prior distribution for the standard deviation of the delay trend. Default is normal (truncated).</p></dd>
 
 
 <dt id="arg-r-prior">r_prior<a class="anchor" aria-label="anchor" href="#arg-r-prior"></a></dt>
@@ -203,7 +240,7 @@ such that each row has a column for onset date, report date, and</p></dd>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
 </div>
 
     </footer></div>
