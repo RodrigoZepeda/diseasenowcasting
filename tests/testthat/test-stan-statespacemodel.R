@@ -30,9 +30,9 @@ for (t in 1:(num_steps - 1)){
   }
 }
 
-test_that("The `state_space_process_v3` works", {
+test_that("The `state_space_process` works", {
   #Compute the process in stan and compare with R
-  ss_process <- state_space_process_v3(
+  ss_process <- state_space_process(
      num_steps  = num_steps,
      num_delays = num_delays,
      num_strata = num_strata,

@@ -19,23 +19,28 @@ knitr::opts_chunk$set(
 [![CRAN status](https://www.r-pkg.org/badges/version/diseasenowcasting)](https://CRAN.R-project.org/package=diseasenowcasting)
 [![Codecov test coverage](https://codecov.io/gh/RodrigoZepeda/diseasenowcasting/graph/badge.svg)](https://app.codecov.io/gh/RodrigoZepeda/diseasenowcasting)
 [![R-CMD-check](https://github.com/RodrigoZepeda/diseasenowcasting/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RodrigoZepeda/diseasenowcasting/actions/workflows/R-CMD-check.yaml)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
 ## Example
 
-```{r}
+```{r, message=FALSE}
 library(diseasenowcasting)
+set.seed(32658235)
 
 # Create a fake disease process
+num_steps  <- 15
 num_strata <- 2
-num_delays <- 8
-sims       <- simulate_process_for_testing(num_strata = num_strata, num_delays = num_delays)
+num_delays <- 10
+sims       <- simulate_process_for_testing(num_steps = num_steps, 
+                                           num_strata = num_strata, num_delays = num_delays)
 
 # Now use model to predict disease process. If no strata is required omit the strata option
-predictions <- nowcast(sims, "onset_date", "report_date", cores = 4, strata = ".strata")
+predictions <- nowcast(sims, "onset_date", "report_date", strata = ".strata",
+                       method = "variational")
 
 #Get the predicted values in a nice format
-predicted_values <- predictions |>
+predicted_values <- predictions$generated_quantities |>
   posterior::as_draws() |>
   posterior::subset_draws("N_predict") |>
   posterior::summarise_draws() |>
@@ -57,6 +62,12 @@ ggplot(data_delays) +
   geom_line(aes(x = .tval, y = n, color = as.character(.strata))) +
   geom_line(aes(x = .tval, y = mean, color = as.character(.strata)), 
             data = predicted_values, linetype = "dotted") +
-  theme_bw()
+  theme_bw() +
+  scale_color_manual("Strata", values = c("tomato3", "forestgreen")) +
+  scale_fill_manual("Strata", values = c("tomato3", "forestgreen")) +
+  labs(
+    x = "Time",
+    y = "Cases"
+  )
 ```
 

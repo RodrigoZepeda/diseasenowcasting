@@ -69,7 +69,7 @@ create_initial_seasonal_discrete_vector_block_alpha <- function(season_params, s
     .Call(`_diseasenowcasting_create_initial_seasonal_discrete_vector_block_alpha`, season_params, season_duration, error_term, pstream__)
 }
 
-state_space_process_v3 <- function(num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_state_space_process_v3`, num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, pstream__)
+state_space_process <- function(num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_state_space_process`, num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, pstream__)
 }
 

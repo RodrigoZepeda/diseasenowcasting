@@ -1,40 +1,50 @@
-set.seed(265824)
+set.seed(425)
+library(ggplot2)
 
 data("denguedat")
 # Run a nowcast with very few iterations
 #sims <- simulate_process_for_testing()
+num_steps  <- 50
 num_strata <- 2
 num_delays <- 8
-sims <- simulate_process_for_testing(num_strata = num_strata, num_delays = num_delays,
-  mu_0_param_1 = log(4.2), nu_0_param_1 = log(5.4))
-predictions <- nowcast(sims, "onset_date", "report_date", cores = 4, strata = ".strata",
-                       mu_0_param_1 = log(4.2), nu_0_param_1 = log(5.4), r_param_2 = 100)
+sims <- simulate_process_for_testing(num_steps = num_steps,
+                                     num_strata = num_strata, num_delays = num_delays)
+
+# Sum over all delays
+data_delays <- sims |>
+  dplyr::group_by(.tval, .strata) |>
+  dplyr::summarise(n = sum(n))
+
+ggplot(data_delays) +
+  geom_line(aes(x = .tval, y = n, color = as.character(.strata))) +
+  theme_bw()
+#Check the data
+#FIXME: Method variational doesn't generate error when creating
+predictions <- nowcast(sims, "onset_date", "report_date",
+                       strata = ".strata", method = "variational")
 
 
-#Get the predicted values
-divifs <- predictions |>
+#Get the predicted values in a nice format
+predicted_values <- predictions$generated_quantities |>
   posterior::as_draws() |>
   posterior::subset_draws("N_predict") |>
   posterior::summarise_draws() |>
   dplyr::mutate(.strata = as.numeric(stringr::str_remove_all(variable,".*\\[.*,|\\]"))) |>
   dplyr::mutate(.tval = as.numeric(stringr::str_remove_all(variable,".*\\[|,.*\\]")))
 
-library(ggplot2)
-sims |>
-  dplyr::group_by(.tval, .strata) |>
-  dplyr::summarise(n = sum(n)) |>
-  ggplot() +
-  geom_ribbon(aes(x = .tval, ymin = q5, ymax = q95, fill = as.character(.strata)), data = divifs, linetype = "dotted", alpha = 0.5) +
+# Sum over all delays
+data_delays <- denguedat |>
+  dplyr::mutate(.tval = 1 + as.numeric(onset_week - min(onset_week))/7) |>
+  dplyr::count(.tval, gender) |>
+  dplyr::rename(.strata = gender)
+
+# Create plot
+ggplot(data_delays) +
+  geom_ribbon(aes(x = .tval, ymin = q5, ymax = q95, fill = as.character(.strata)),
+              data = predicted_values, linetype = "dotted", alpha = 0.5) +
   geom_line(aes(x = .tval, y = n, color = as.character(.strata))) +
-  geom_line(aes(x = .tval, y = mean, color = as.character(.strata)), data = divifs, linetype = "dotted") +
-  theme_bw()
+  geom_line(aes(x = .tval, y = mean, color = as.character(.strata)),
+            data = predicted_values, linetype = "dotted") +
+  theme_bw() +
+  coord_cartesian(xlim = c(1080, 1100))
 
-
-
-# # Change to more iterations
-# predictions <- nowcast(denguedat, "onset_week", "report_week",
-#                        now = as.Date("1990-10-01"),
-#                        dist = "NegativeBinomial", cores = 4)
-#
-# generated_qs <- rstan::stan_model("inst/stan/generated_quantities.stan")
-# generated_quantities <- rstan::gqs(generated_qs, data = predictions$stan_data, draws = as.matrix(predictions$model))

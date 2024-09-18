@@ -227,9 +227,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// state_space_process_v3
-Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>,                 stan::base_type_t<double>, stan::base_type_t<double>,                 stan::base_type_t<double>, stan::base_type_t<double>,                 stan::promote_args_t<stan::base_type_t<double>,                   stan::base_type_t<double>, double, stan::base_type_t<double>,                   double,                   stan::promote_args_t<stan::base_type_t<double>,                     stan::base_type_t<double>>>>,-1,-1> state_space_process_v3(const int& num_steps, const int& num_delays, const int& num_strata, const Eigen::Matrix<double,-1,-1>& A_mu, const Eigen::Matrix<double,-1,-1>& A_nu, const Eigen::Matrix<double,-1,-1>& R_mu, const Eigen::Matrix<double,-1,-1>& R_nu, const Eigen::Matrix<double,-1,1>& L_mu, const Eigen::Matrix<double,-1,1>& L_nu, const Eigen::Matrix<double,-1,-1>& mu_0, const std::vector<Eigen::Matrix<double,-1,-1>>& xi_mu, const Eigen::Matrix<double,-1,-1>& nu_0, const std::vector<Eigen::Matrix<double,-1,-1>>& xi_nu, const Eigen::Matrix<double,-1,1>& B_cnt, const Eigen::Matrix<double,-1,-1>& X_cnt, std::ostream* pstream__);
-RcppExport SEXP _diseasenowcasting_state_space_process_v3(SEXP num_stepsSEXP, SEXP num_delaysSEXP, SEXP num_strataSEXP, SEXP A_muSEXP, SEXP A_nuSEXP, SEXP R_muSEXP, SEXP R_nuSEXP, SEXP L_muSEXP, SEXP L_nuSEXP, SEXP mu_0SEXP, SEXP xi_muSEXP, SEXP nu_0SEXP, SEXP xi_nuSEXP, SEXP B_cntSEXP, SEXP X_cntSEXP, SEXP pstream__SEXP) {
+// state_space_process
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>,                 stan::base_type_t<double>, stan::base_type_t<double>,                 stan::base_type_t<double>, stan::base_type_t<double>,                 stan::promote_args_t<stan::base_type_t<double>,                   stan::base_type_t<double>, double, stan::base_type_t<double>,                   double,                   stan::promote_args_t<stan::base_type_t<double>,                     stan::base_type_t<double>>>>,-1,-1> state_space_process(const int& num_steps, const int& num_delays, const int& num_strata, const Eigen::Matrix<double,-1,-1>& A_mu, const Eigen::Matrix<double,-1,-1>& A_nu, const Eigen::Matrix<double,-1,-1>& R_mu, const Eigen::Matrix<double,-1,-1>& R_nu, const Eigen::Matrix<double,-1,1>& L_mu, const Eigen::Matrix<double,-1,1>& L_nu, const Eigen::Matrix<double,-1,-1>& mu_0, const std::vector<Eigen::Matrix<double,-1,-1>>& xi_mu, const Eigen::Matrix<double,-1,-1>& nu_0, const std::vector<Eigen::Matrix<double,-1,-1>>& xi_nu, const Eigen::Matrix<double,-1,1>& B_cnt, const Eigen::Matrix<double,-1,-1>& X_cnt, std::ostream* pstream__);
+RcppExport SEXP _diseasenowcasting_state_space_process(SEXP num_stepsSEXP, SEXP num_delaysSEXP, SEXP num_strataSEXP, SEXP A_muSEXP, SEXP A_nuSEXP, SEXP R_muSEXP, SEXP R_nuSEXP, SEXP L_muSEXP, SEXP L_nuSEXP, SEXP mu_0SEXP, SEXP xi_muSEXP, SEXP nu_0SEXP, SEXP xi_nuSEXP, SEXP B_cntSEXP, SEXP X_cntSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -249,12 +249,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type B_cnt(B_cntSEXP);
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,-1>& >::type X_cnt(X_cntSEXP);
     Rcpp::traits::input_parameter< std::ostream* >::type pstream__(pstream__SEXP);
-    rcpp_result_gen = Rcpp::wrap(state_space_process_v3(num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, pstream__));
+    rcpp_result_gen = Rcpp::wrap(state_space_process(num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, pstream__));
     return rcpp_result_gen;
 END_RCPP
 }
 
-RcppExport SEXP _rcpp_module_boot_stan_fit4nowcast_v2_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4generated_quantities_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4nowcast_mod();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_create_block_diagonal", (DL_FUNC) &_diseasenowcasting_create_block_diagonal, 3},
@@ -274,8 +275,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_create_seasonal_discrete_vector_block_L", (DL_FUNC) &_diseasenowcasting_create_seasonal_discrete_vector_block_L, 3},
     {"_diseasenowcasting_create_seasonal_discrete_matrix_block_R", (DL_FUNC) &_diseasenowcasting_create_seasonal_discrete_matrix_block_R, 4},
     {"_diseasenowcasting_create_initial_seasonal_discrete_vector_block_alpha", (DL_FUNC) &_diseasenowcasting_create_initial_seasonal_discrete_vector_block_alpha, 4},
-    {"_diseasenowcasting_state_space_process_v3", (DL_FUNC) &_diseasenowcasting_state_space_process_v3, 16},
-    {"_rcpp_module_boot_stan_fit4nowcast_v2_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nowcast_v2_mod, 0},
+    {"_diseasenowcasting_state_space_process", (DL_FUNC) &_diseasenowcasting_state_space_process, 16},
+    {"_rcpp_module_boot_stan_fit4generated_quantities_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4generated_quantities_mod, 0},
+    {"_rcpp_module_boot_stan_fit4nowcast_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nowcast_mod, 0},
     {NULL, NULL, 0}
 };
 
