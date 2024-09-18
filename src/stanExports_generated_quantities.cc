@@ -2,12 +2,12 @@
 
 #include <Rcpp.h>
 using namespace Rcpp ;
-#include "stanExports_nowcast_v2.h"
+#include "stanExports_generated_quantities.h"
 
-RCPP_MODULE(stan_fit4nowcast_v2_mod) {
+RCPP_MODULE(stan_fit4generated_quantities_mod) {
 
 
-    class_<rstan::stan_fit<stan_model, boost::random::ecuyer1988> >("rstantools_model_nowcast_v2")
+    class_<rstan::stan_fit<stan_model, boost::random::ecuyer1988> >("rstantools_model_generated_quantities")
 
     .constructor<SEXP,SEXP,SEXP>()
 

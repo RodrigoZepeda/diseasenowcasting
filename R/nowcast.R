@@ -36,7 +36,11 @@
 #'
 #' @param refresh Refresh parameter for [rstan::sampling()]
 #'
-#' @param mu_degree Integer. Degree of the epidemic trend. Default is 2.
+#' @param method Fitting method either `sampling` (recommended for inference) or `variational`
+#' (recommended for testing). The `sampling` method calls [rstan::sampling()] while the
+#' `variational` calls [rstan::vb()]
+#'
+#' @param mu_degree Integer. Degree of the epidemic trend. Default is 1.
 #'
 #' @param nu_degree Integer. Degree of the delay trend. Default is 1.
 #'
@@ -44,29 +48,41 @@
 #'
 #' @param nu_is_constant Logical. Indicates whether the delay trend is constant. Default is TRUE.
 #'
-#' @param mu_error_prior Character. Prior for the epidemic trend error. Default is "normal".
+#' @param mu_sd_prior Character. Prior for the epidemic trend error. Default is "normal".
 #'
-#' @param nu_error_prior Character. Prior for the delay trend error. Default is "normal".
+#' @param nu_sd_prior Character. Prior for the delay trend error. Default is "normal".
 #'
-#' @param mu_param_1 Numeric. First parameter for the epidemic trend error. Default is 0.0.
+#' @param mu_sd_param_1 Numeric. First parameter for the epidemic trend error. Default is 0.0.
 #'
-#' @param mu_param_2 Numeric. Second parameter for the epidemic trend error. Default is 1.0.
+#' @param mu_sd_param_2 Numeric. Second parameter for the epidemic trend error. Default is 1.0.
 #'
-#' @param nu_param_1 Numeric. First parameter for the delay trend error. Default is 0.0.
+#' @param nu_sd_param_1 Numeric. First parameter for the delay trend error. Default is 0.0.
 #'
-#' @param nu_param_2 Numeric. Second parameter for the delay trend error. Default is 1.0.
+#' @param nu_sd_param_2 Numeric. Second parameter for the delay trend error. Default is 1.0.
 #'
-#' @param mu_0_prior Character. Prior for the initial epidemic trend distribution. Default is "normal".
+#' @param mu_0_mean_hyperprior Prior distribution for the mean of the epidemic trend. Default is normal.
 #'
-#' @param nu_0_prior Character. Prior for the initial delay trend distribution. Default is "normal".
+#' @param mu_0_sd_hyperprior Prior distribution for the standard deviation of the epidemic trend. Default is normal (truncated).
 #'
-#' @param mu_0_param_1 Numeric. First parameter for the initial epidemic trend distribution. Default is 0.0.
+#' @param mu_0_mean_param_1 Character. Prior for the initial epidemic trend mean's first parameter.
 #'
-#' @param mu_0_param_2 Numeric. Second parameter for the initial epidemic trend distribution. Default is 1.0.
+#' @param mu_0_mean_param_2 Character. Prior for the initial epidemic trend mean's second parameter.
 #'
-#' @param nu_0_param_1 Numeric. First parameter for the initial delay trend distribution. Default is 0.0.
+#' @param mu_0_sd_param_1 Character. Prior for the initial epidemic trend standard deviation's first parameter.
 #'
-#' @param nu_0_param_2 Numeric. Second parameter for the initial delay trend distribution. Default is 1.0.
+#' @param mu_0_sd_param_2 Character. Prior for the initial epidemic trend standard deviation's second parameter.
+#'
+#' @param nu_0_mean_hyperprior Prior distribution for the mean of the delay trend. Default is normal.
+#'
+#' @param nu_0_sd_hyperprior Prior distribution for the standard deviation of the delay trend. Default is normal (truncated).
+#'
+#' @param nu_0_mean_param_1 Character. Prior for the initial delay trend mean's first parameter.
+#'
+#' @param nu_0_mean_param_2 Character. Prior for the initial delay trend mean's second parameter.
+#'
+#' @param nu_0_sd_param_1 Character. Prior for the initial delay trend standard deviation's first parameter.
+#'
+#' @param nu_0_sd_param_2 Character. Prior for the initial delay trend standard deviation's second parameter.
 #'
 #' @param r_prior Character. Prior for the negative binomial precision parameter. Default is "normal".
 #'
@@ -97,31 +113,39 @@ nowcast <- function(.disease_data, onset_date, report_date,
                     proportion_reported = 1,
                     refresh = 250*interactive(),
                     control = control_default(),
-                    mu_degree = 2,               #Trend degree specification for epidemic
-                    nu_degree = 1,               #Trend degree specification for delays (1 = constant)
-                    mu_is_constant = FALSE,      #Whether epidemic pattern is constant
-                    nu_is_constant = TRUE,       #Whether delay pattern is constant
-                    mu_error_prior = "normal",   #Prior for the epidemic trend error
-                    nu_error_prior = "normal",   #Prior for the delay trend error
-                    mu_param_1 = 0.0,            #First parameter for degree error in epidemic trend
-                    mu_param_2 = 0.1,            #Second parameter for degree error in epidemic trend
-                    nu_param_1 = 0.0,            #First parameter for degree error in delay trend
-                    nu_param_2 = 0.1,            #Second parameter for degree error in delay trend
-                    mu_0_prior = "normal",       #Prior for the initial epidemic distribution
-                    nu_0_prior = "normal",       #Prior for the initial delay distribution
-                    mu_0_param_1 = "auto", #First parameter for degree error in epidemic trend
-                    mu_0_param_2 = 0.01,          #Second parameter for degree error in epidemic trend
-                    nu_0_param_1 = 0.0,          #First parameter for degree error in delay trend
-                    nu_0_param_2 = 0.01,          #Second parameter for degree error in delay trend
-                    r_prior  = "normal",         #Prior for the negative binomial precision
-                    r_param_1 = 0.0,             #First parameter for dispersion prior if negative binomial
-                    r_param_2 = 1.0,             #Second parameter for dispersion prior if negative binomial
+                    method  = c("sampling","variational"),
+                    mu_degree = 1,
+                    nu_degree = 1,
+                    mu_is_constant = FALSE,
+                    nu_is_constant = TRUE,
+                    mu_sd_prior = "standard_normal",
+                    nu_sd_prior = "standard_normal",
+                    mu_sd_param_1 = 0.0,
+                    mu_sd_param_2 = 0.1,
+                    nu_sd_param_1 = 0.0,
+                    nu_sd_param_2 = 0.1,
+                    mu_0_mean_param_1 = "auto",
+                    mu_0_mean_param_2 = 0.01,
+                    mu_0_sd_param_1 = "auto",
+                    mu_0_sd_param_2 = 0.01,
+                    nu_0_mean_param_1 = 0.0,
+                    nu_0_mean_param_2 = 0.01,
+                    nu_0_sd_param_1 = 0.00,
+                    nu_0_sd_param_2 = 0.01,
+                    mu_0_mean_hyperprior = "standard_normal",
+                    nu_0_mean_hyperprior = "standard_normal",
+                    mu_0_sd_hyperprior = "standard_normal",
+                    nu_0_sd_hyperprior = "standard_normal",
+                    r_prior  = "standard_normal",
+                    r_param_1 = 0.0,
+                    r_param_2 = 1.0,
                     ...) {
 
   # Check that the columns of onset and report are columns of data and are dates
   .disease_data <- check_date_columns(.disease_data, onset_date = onset_date, report_date = report_date)
 
   # Check proportion reported
+  # FIXME: The proportion reported currently doesn't do anything
   check_proportion_reported(proportion_reported)
 
   # Get `now` as the last date by default
@@ -132,6 +156,9 @@ nowcast <- function(.disease_data, onset_date, report_date,
 
   # Match the distribution whether negative binomial or poisson
   dist <- match.arg(dist, c("NegativeBinomial", "Poisson"))
+
+  # Method
+  method <- match.arg(method, c("sampling", "variational"))
 
   # Print message to user
   cli::cli_alert_info(
@@ -148,38 +175,81 @@ nowcast <- function(.disease_data, onset_date, report_date,
     max_delay = max_delay
   )
 
-  #Get the log mean of disease data and the sd
-  log_mean <- .disease_data |>
-    dplyr::summarise(log_mean = mean(log1p(!!as.symbol("n")), na.rm = T)) |>
-    dplyr::pull(log_mean)
-
-  #Get the log mean of disease data and the sd
-  log_sd <- .disease_data |>
-    dplyr::summarise(log_sd = sd(log1p(!!as.symbol("n")), na.rm = T)) |>
-    dplyr::pull(log_sd)
-
-  nowcast.rstan(.disease_data, onset_date, report_date, strata = strata, dist = dist,
-                prior_only = prior_only, refresh = refresh, control = control,
+  stan_list <- nowcast.rstan(.disease_data,
+                onset_date,
+                report_date,
+                strata = strata,
+                dist = dist,
+                prior_only = prior_only,
+                refresh = refresh,
+                control = control,
+                method = method,
                 mu_degree = mu_degree,
                 nu_degree = nu_degree,
                 mu_is_constant = mu_is_constant,
                 nu_is_constant = nu_is_constant,
-                mu_error_prior = mu_error_prior,
-                nu_error_prior = nu_error_prior,
-                mu_param_1 = mu_param_1,
-                mu_param_2 = mu_param_2,
-                nu_param_1 = nu_param_1,
-                nu_param_2 = nu_param_2,
-                mu_0_prior = mu_0_prior,
-                nu_0_prior = nu_0_prior,
-                mu_0_param_1 = ifelse(mu_0_param_1 == "auto", log_mean, mu_0_param_1),
-                mu_0_param_2 = mu_0_param_2,
-                nu_0_param_1 = nu_0_param_1,
-                nu_0_param_2 = nu_0_param_2,
+                mu_sd_prior = mu_sd_prior,
+                nu_sd_prior = nu_sd_prior,
+                mu_sd_param_1 = mu_sd_param_1,
+                mu_sd_param_2 = mu_sd_param_2,
+                nu_sd_param_1 = nu_sd_param_1,
+                nu_sd_param_2 = nu_sd_param_2,
                 r_prior  = r_prior,
                 r_param_1 = r_param_1,
                 r_param_2 = r_param_2,
+                mu_0_mean_param_1 = mu_0_mean_param_1,
+                mu_0_mean_param_2 = mu_0_mean_param_2,
+                mu_0_sd_param_1 = mu_0_sd_param_1,
+                mu_0_sd_param_2 = mu_0_sd_param_2,
+                nu_0_mean_param_1 = nu_0_mean_param_1,
+                nu_0_mean_param_2 = nu_0_mean_param_2,
+                nu_0_sd_param_1 = nu_0_sd_param_1,
+                nu_0_sd_param_2 = nu_0_sd_param_2,
+                mu_0_mean_hyperprior = mu_0_mean_hyperprior,
+                nu_0_mean_hyperprior = nu_0_mean_hyperprior,
+                mu_0_sd_hyperprior = mu_0_sd_hyperprior,
+                nu_0_sd_hyperprior = nu_0_sd_hyperprior,
                 ...)
+
+  #Get the strata dictionary
+  if (!is.null(strata)){
+    .strata_dict <- .disease_data |> dplyr::distinct(!!as.symbol(strata), !!as.symbol(".strata"))
+  } else {
+    .strata_dict <- NULL
+  }
+
+  #Get the tval dictionary
+  .tval_dict <- .disease_data |> dplyr::distinct(!!as.symbol(onset_date), !!as.symbol(".tval"))
+
+  #Get the call values
+  call_parameters = list(
+    onset_date = onset_date,
+    report_date = report_date,
+    strata = strata,
+    now = now,
+    units = units,
+    max_delay = max_delay
+  )
+
+  # Add to stan list
+  stan_list$data <- stan_list$data |>
+    append(
+      list(
+        preprocessed_data = .disease_data,
+        call_parameters   = call_parameters
+      )
+    )
+
+  #Add dictionaries
+  stan_list$dict <- stan_list$dict |>
+    append(
+      list(
+        .tval_dict   = .tval_dict
+      )
+    )
+
+ return(stan_list)
+
 }
 
 #' Nowcasting with the `rstan` engine
@@ -195,41 +265,43 @@ nowcast.rstan <- function(.disease_data, onset_date,
                           prior_only = FALSE,
                           control = control_default(),
                           refresh = 250,
+                          method  = c("sampling","variational"),
                           mu_degree = 2,               #Trend degree specification for epidemic
                           nu_degree = 1,               #Trend degree specification for delays (1 = constant)
                           mu_is_constant = FALSE,      #Whether epidemic pattern is constant
                           nu_is_constant = TRUE,       #Whether delay pattern is constant
-                          mu_error_prior = "normal",   #Prior for the epidemic trend error
-                          nu_error_prior = "normal",   #Prior for the delay trend error
-                          mu_param_1 = 0.0,            #First parameter for degree error in epidemic trend
-                          mu_param_2 = 1.0,            #Second parameter for degree error in epidemic trend
-                          nu_param_1 = 0.0,            #First parameter for degree error in delay trend
-                          nu_param_2 = 1.0,            #Second parameter for degree error in delay trend
-                          mu_0_prior = "normal",       #Prior for the initial epidemic distribution
-                          nu_0_prior = "normal",       #Prior for the initial delay distribution
-                          mu_0_param_1 = log(mean(.disease_data$n, na.rm = T)), #First parameter for degree error in epidemic trend
-                          mu_0_param_2 = 0.01,          #Second parameter for degree error in epidemic trend
-                          nu_0_param_1 = 0.0,          #First parameter for degree error in delay trend
-                          nu_0_param_2 = 0.01,          #Second parameter for degree error in delay trend
+                          mu_sd_prior = "normal",   #Prior for the epidemic trend error
+                          nu_sd_prior = "normal",   #Prior for the delay trend error
+                          mu_sd_param_1 = 0.0,            #First parameter for degree error in epidemic trend
+                          mu_sd_param_2 = 0.1,            #Second parameter for degree error in epidemic trend
+                          nu_sd_param_1 = 0.0,            #First parameter for degree error in delay trend
+                          nu_sd_param_2 = 0.1,            #Second parameter for degree error in delay trend
+                          mu_0_mean_param_1 = "auto",
+                          mu_0_mean_param_2 = 0.01,
+                          mu_0_sd_param_1 = "auto",
+                          mu_0_sd_param_2 = 0.01,
+                          nu_0_mean_param_1 = 0.0,
+                          nu_0_mean_param_2 = 0.01,
+                          nu_0_sd_param_1 = 0.00,
+                          nu_0_sd_param_2 = 0.01,
+                          mu_0_mean_hyperprior = "normal",
+                          nu_0_mean_hyperprior = "normal",
+                          mu_0_sd_hyperprior = "normal",
+                          nu_0_sd_hyperprior = "normal",
                           r_prior  = "normal",         #Prior for the negative binomial precision
                           r_param_1 = 0.0,             #First parameter for dispersion prior if negative binomial
                           r_param_2 = 1.0,             #Second parameter for dispersion prior if negative binomial
                           ...) {
 
 
-  #FIXME: Implement
-  if (mu_0_prior != "normal"){
-    cli::cli_alert_warning("This functionality has not yet been implemented defaulting to {.code mu_0_prior = {.val normal}}")
-  }
-
-  if (nu_0_prior != "normal"){
-    cli::cli_alert_warning("This functionality has not yet been implemented defaulting to {.code nu_0_prior = {.val normal}}")
-  }
-
   #Get the specified prior distributions
-  mu_prior <- get_prior_code_stan(mu_error_prior)
-  nu_prior <- get_prior_code_stan(nu_error_prior)
-  r_prior  <- get_prior_code_stan(r_prior)
+  mu_sd_prior             <- get_prior_code_stan(mu_sd_prior)
+  nu_sd_prior             <- get_prior_code_stan(nu_sd_prior)
+  mu_0_mean_hyperprior <- get_prior_code_stan(mu_0_mean_hyperprior)
+  nu_0_mean_hyperprior <- get_prior_code_stan(nu_0_mean_hyperprior)
+  mu_0_sd_hyperprior   <- get_prior_code_stan(mu_0_sd_hyperprior)
+  nu_0_sd_hyperprior   <- get_prior_code_stan(nu_0_sd_hyperprior)
+  r_prior              <- get_prior_code_stan(r_prior)
 
   # Get maximum time for model
   num_steps <- .disease_data |>
@@ -255,9 +327,16 @@ nowcast.rstan <- function(.disease_data, onset_date,
       dplyr::mutate(!!as.symbol(".strata") := "No strata")
   }
   Nmat <- Nmat |>
-    tidyr::unite(col = ".strata", 4:dplyr::last_col(), sep = " - ") |>
-    dplyr::mutate_at(".strata", function(x) as.numeric(as.factor(x))) |>
+    tidyr::unite(col = ".strata_unified", 4:dplyr::last_col(), sep = " - ") |>
+    dplyr::mutate(!!as.symbol(".strata") := as.numeric(as.factor(!!as.symbol(".strata_unified")))) |>
     dplyr::mutate_at(".delay", function(x) x + 1)
+
+  #Get the strata dictionary
+  strata_dict <- Nmat |>
+    dplyr::distinct(!!as.symbol(".strata_unified"),!!as.symbol(".strata"))
+
+  Nmat <- Nmat |>
+    dplyr::select(-!!as.symbol(".strata_unified"))
 
   #Return the number of strata
   num_strata <- Nmat |>
@@ -270,6 +349,16 @@ nowcast.rstan <- function(.disease_data, onset_date,
 
   # Sample only from the prior
   prior_only <- as.numeric(prior_only)
+
+  #Get the log mean of disease data and the sd
+  log_mean <- .disease_data |>
+    dplyr::summarise(log_mean = mean(log1p(!!as.symbol("n")), na.rm = T)) |>
+    dplyr::pull(log_mean)
+
+  #Get the log mean of disease data and the sd
+  log_sd <- .disease_data |>
+    dplyr::summarise(log_sd = sd(log1p(!!as.symbol("n")), na.rm = T)) |>
+    dplyr::pull(log_sd)
 
   stan_data <- list(
     #Data information
@@ -290,29 +379,53 @@ nowcast.rstan <- function(.disease_data, onset_date,
 
     #Distribution information
     is_negative_binomial = is_negative_binomial,
-    mu_prior = mu_prior,
-    nu_prior = nu_prior,
+    mu_sd_prior = mu_sd_prior,
+    nu_sd_prior = nu_sd_prior,
     r_prior  = r_prior,
 
     #Prior parameters
     r_param_1 = r_param_1,
     r_param_2 = r_param_2,
-    mu_param_1 = mu_param_1,
-    mu_param_2  = mu_param_2,
-    nu_param_1 = nu_param_1,
-    nu_param_2  = nu_param_2,
+    mu_sd_param_1 = mu_sd_param_1,
+    mu_sd_param_2  = mu_sd_param_2,
+    nu_sd_param_1 = nu_sd_param_1,
+    nu_sd_param_2  = nu_sd_param_2,
 
-    mu_0_param_1  = mu_0_param_1,
-    nu_0_param_1  = nu_0_param_1,
-    mu_0_param_2 = mu_0_param_2,
-    nu_0_param_2 = nu_0_param_2
+    mu_0_mean_param_1 = ifelse(mu_0_mean_param_1 == "auto", log_mean, mu_0_mean_param_1),
+    mu_0_mean_param_2 = mu_0_mean_param_2,
+    mu_0_sd_param_1 = ifelse(mu_0_sd_param_1 == "auto", log_sd, mu_0_sd_param_1),
+    mu_0_sd_param_2 = mu_0_sd_param_2,
+    nu_0_mean_param_1 = nu_0_mean_param_1,
+    nu_0_mean_param_2 = nu_0_mean_param_2,
+    nu_0_sd_param_1 = nu_0_sd_param_1,
+    nu_0_sd_param_2 = nu_0_sd_param_2,
+    mu_0_mean_hyperprior = mu_0_mean_hyperprior,
+    nu_0_mean_hyperprior = nu_0_mean_hyperprior,
+    mu_0_sd_hyperprior = mu_0_sd_hyperprior,
+    nu_0_sd_hyperprior = nu_0_sd_hyperprior
   )
 
-  # model <- rstan::stan_model("inst/stan/nowcast.stan")
-  out <- rstan::sampling(stanmodels$nowcast_v2, data = stan_data,
-                         control = control,
-                         refresh = refresh,
-                         ...)
+  if (method[1] == "sampling"){
+    stan_fit <- rstan::sampling(stanmodels$nowcast, data = stan_data,
+                           control = control,
+                           refresh = refresh,
+                           ...)
+  } else if (method[1] == "variational") {
+    stan_fit <- rstan::vb(stanmodels$nowcast, data = stan_data, ...)
+  } else {
+    cli::cli_abort("Invalid method. Please select between {.val {c('sampling', 'variational')}}")
+  }
 
-  return(out)
+  #Get the generated quantities
+  generated_quantities <- rstan::gqs(stanmodels$generated_quantities,
+                                     data = stan_data, draws = as.matrix(stan_fit))
+
+  return(
+    list(
+      data         = list(stan_data = stan_data),
+      dict         = list(strata_dict = strata_dict),
+      generated_quantities  = generated_quantities,
+      model        = stan_fit
+    )
+  )
 }

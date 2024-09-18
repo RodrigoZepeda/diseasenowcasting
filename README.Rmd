@@ -19,26 +19,55 @@ knitr::opts_chunk$set(
 [![CRAN status](https://www.r-pkg.org/badges/version/diseasenowcasting)](https://CRAN.R-project.org/package=diseasenowcasting)
 [![Codecov test coverage](https://codecov.io/gh/RodrigoZepeda/diseasenowcasting/graph/badge.svg)](https://app.codecov.io/gh/RodrigoZepeda/diseasenowcasting)
 [![R-CMD-check](https://github.com/RodrigoZepeda/diseasenowcasting/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RodrigoZepeda/diseasenowcasting/actions/workflows/R-CMD-check.yaml)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
 ## Example
 
-```{r}
+```{r, message=FALSE}
 library(diseasenowcasting)
+set.seed(32658235)
 
 # Create a fake disease process
-set.seed(265824)
-sims <- simulate_process_for_testing()
+num_steps  <- 15
+num_strata <- 2
+num_delays <- 10
+sims       <- simulate_process_for_testing(num_steps = num_steps, 
+                                           num_strata = num_strata, num_delays = num_delays)
 
-# Run a nowcast with very few iterations
-predictions <- nowcast(sims, "onset_date", "report_date", cores = 4)
+# Now use model to predict disease process. If no strata is required omit the strata option
+predictions <- nowcast(sims, "onset_date", "report_date", strata = ".strata",
+                       method = "variational")
 
-#Get the predicted values
-preds <- predictions |> 
-  posterior::as_draws() |> 
-  posterior::subset_draws("N_predict") |> 
-  posterior::summarise_draws()
+#Get the predicted values in a nice format
+predicted_values <- predictions$generated_quantities |>
+  posterior::as_draws() |>
+  posterior::subset_draws("N_predict") |>
+  posterior::summarise_draws() |>
+  dplyr::mutate(.strata = as.numeric(stringr::str_remove_all(variable,".*\\[.*,|\\]"))) |>
+  dplyr::mutate(.tval = as.numeric(stringr::str_remove_all(variable,".*\\[|,.*\\]")))
 
-preds
+# Plot everything
+library(ggplot2)
+
+# Sum over all delays
+data_delays <- sims |>
+  dplyr::group_by(.tval, .strata) |>
+  dplyr::summarise(n = sum(n)) 
+
+# Create plot
+ggplot(data_delays) +
+  geom_ribbon(aes(x = .tval, ymin = q5, ymax = q95, fill = as.character(.strata)), 
+              data = predicted_values, linetype = "dotted", alpha = 0.5) +
+  geom_line(aes(x = .tval, y = n, color = as.character(.strata))) +
+  geom_line(aes(x = .tval, y = mean, color = as.character(.strata)), 
+            data = predicted_values, linetype = "dotted") +
+  theme_bw() +
+  scale_color_manual("Strata", values = c("tomato3", "forestgreen")) +
+  scale_fill_manual("Strata", values = c("tomato3", "forestgreen")) +
+  labs(
+    x = "Time",
+    y = "Cases"
+  )
 ```
 

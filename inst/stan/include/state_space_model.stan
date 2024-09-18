@@ -1,6 +1,7 @@
-matrix state_space_process_v3(int num_steps, int num_delays, int num_strata,
+matrix state_space_process(int num_steps, int num_delays, int num_strata,
   matrix A_mu, matrix A_nu, matrix R_mu, matrix R_nu, vector L_mu, vector L_nu,
   matrix mu_0, array[] matrix xi_mu, matrix nu_0, array[] matrix xi_nu,
+  //array[] matrix epsilon,
    vector B_cnt, matrix X_cnt
    //vector B_t, array[] matrix X_t
    ){
