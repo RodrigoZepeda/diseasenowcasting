@@ -211,16 +211,6 @@ nowcast <- function(.disease_data, onset_date, report_date,
                 nu_0_sd_hyperprior = nu_0_sd_hyperprior,
                 ...)
 
-  #Get the strata dictionary
-  if (!is.null(strata)){
-    .strata_dict <- .disease_data |> dplyr::distinct(!!as.symbol(strata), !!as.symbol(".strata"))
-  } else {
-    .strata_dict <- NULL
-  }
-
-  #Get the tval dictionary
-  .tval_dict <- .disease_data |> dplyr::distinct(!!as.symbol(onset_date), !!as.symbol(".tval"))
-
   #Get the call values
   call_parameters = list(
     onset_date = onset_date,
@@ -237,14 +227,6 @@ nowcast <- function(.disease_data, onset_date, report_date,
       list(
         preprocessed_data = .disease_data,
         call_parameters   = call_parameters
-      )
-    )
-
-  #Add dictionaries
-  stan_list$dict <- stan_list$dict |>
-    append(
-      list(
-        .tval_dict   = .tval_dict
       )
     )
 
