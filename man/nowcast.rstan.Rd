@@ -8,37 +8,13 @@ nowcast.rstan(
   .disease_data,
   onset_date,
   report_date,
-  strata = NULL,
-  dist = c("NegativeBinomial", "Poisson"),
-  prior_only = FALSE,
-  control = control_default(),
-  refresh = 250,
-  method = c("sampling", "variational"),
-  mu_degree = 2,
-  nu_degree = 1,
-  mu_is_constant = FALSE,
-  nu_is_constant = TRUE,
-  mu_sd_prior = "normal",
-  nu_sd_prior = "normal",
-  mu_sd_param_1 = 0,
-  mu_sd_param_2 = 0.1,
-  nu_sd_param_1 = 0,
-  nu_sd_param_2 = 0.1,
-  mu_0_mean_param_1 = "auto",
-  mu_0_mean_param_2 = 0.01,
-  mu_0_sd_param_1 = "auto",
-  mu_0_sd_param_2 = 0.01,
-  nu_0_mean_param_1 = 0,
-  nu_0_mean_param_2 = 0.01,
-  nu_0_sd_param_1 = 0,
-  nu_0_sd_param_2 = 0.01,
-  mu_0_mean_hyperprior = "normal",
-  nu_0_mean_hyperprior = "normal",
-  mu_0_sd_hyperprior = "normal",
-  nu_0_sd_hyperprior = "normal",
-  r_prior = "normal",
-  r_param_1 = 0,
-  r_param_2 = 1,
+  strata,
+  dist,
+  prior_only,
+  control,
+  refresh,
+  method,
+  priors,
   ...
 )
 }
@@ -62,59 +38,12 @@ such that each row has a column for onset date, report date, and}
 
 \item{refresh}{Refresh parameter for [rstan::sampling()]}
 
-\item{method}{Fitting method either `sampling` (recommended for inference) or `variational`
-(recommended for testing). The `sampling` method calls [rstan::sampling()] while the
-`variational` calls [rstan::vb()]}
+\item{method}{Fitting method either `sampling` (recommended for inference), `variational`
+(recommended for testing) or `optimization`. The `sampling` method calls [rstan::sampling()] while the
+`variational` calls [rstan::vb()] and `optimization` calls [rstan::optimizing()]}
 
-\item{mu_degree}{Integer. Degree of the epidemic trend. Default is 1.}
-
-\item{nu_degree}{Integer. Degree of the delay trend. Default is 1.}
-
-\item{mu_is_constant}{Logical. Indicates whether the epidemic trend is constant. Default is FALSE.}
-
-\item{nu_is_constant}{Logical. Indicates whether the delay trend is constant. Default is TRUE.}
-
-\item{mu_sd_prior}{Character. Prior for the epidemic trend error. Default is "normal".}
-
-\item{nu_sd_prior}{Character. Prior for the delay trend error. Default is "normal".}
-
-\item{mu_sd_param_1}{Numeric. First parameter for the epidemic trend error. Default is 0.0.}
-
-\item{mu_sd_param_2}{Numeric. Second parameter for the epidemic trend error. Default is 1.0.}
-
-\item{nu_sd_param_1}{Numeric. First parameter for the delay trend error. Default is 0.0.}
-
-\item{nu_sd_param_2}{Numeric. Second parameter for the delay trend error. Default is 1.0.}
-
-\item{mu_0_mean_param_1}{Character. Prior for the initial epidemic trend mean's first parameter.}
-
-\item{mu_0_mean_param_2}{Character. Prior for the initial epidemic trend mean's second parameter.}
-
-\item{mu_0_sd_param_1}{Character. Prior for the initial epidemic trend standard deviation's first parameter.}
-
-\item{mu_0_sd_param_2}{Character. Prior for the initial epidemic trend standard deviation's second parameter.}
-
-\item{nu_0_mean_param_1}{Character. Prior for the initial delay trend mean's first parameter.}
-
-\item{nu_0_mean_param_2}{Character. Prior for the initial delay trend mean's second parameter.}
-
-\item{nu_0_sd_param_1}{Character. Prior for the initial delay trend standard deviation's first parameter.}
-
-\item{nu_0_sd_param_2}{Character. Prior for the initial delay trend standard deviation's second parameter.}
-
-\item{mu_0_mean_hyperprior}{Prior distribution for the mean of the epidemic trend. Default is normal.}
-
-\item{nu_0_mean_hyperprior}{Prior distribution for the mean of the delay trend. Default is normal.}
-
-\item{mu_0_sd_hyperprior}{Prior distribution for the standard deviation of the epidemic trend. Default is normal (truncated).}
-
-\item{nu_0_sd_hyperprior}{Prior distribution for the standard deviation of the delay trend. Default is normal (truncated).}
-
-\item{r_prior}{Character. Prior for the negative binomial precision parameter. Default is "normal".}
-
-\item{r_param_1}{Numeric. First parameter for the dispersion prior if negative binomial. Default is 0.0.}
-
-\item{r_param_2}{Numeric. Second parameter for the dispersion prior if negative binomial. Default is 1.0.}
+\item{priors}{A list of all of the nowcast priors. You can use [set_priors()] to change
+the priors of the function (see details)}
 
 \item{...}{Additional arguments to pass to [rstan::sample()]}
 }

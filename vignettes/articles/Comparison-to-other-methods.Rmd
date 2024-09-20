@@ -1,22 +1,50 @@
-set.seed(425)
-library(ggplot2)
-library(NobBS)
+---
+title: "Comparison to other methods"
+---
 
+```{r, include = FALSE}
+set.seed(4357)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+In this article we compare our package against the results from:
+
++ The [NobBS](https://github.com/sarahhbellum/NobBS) package.
++ The [nowcaster](https://covid19br.github.io/nowcaster/index.html) package.
++ The [nowcasting](https://github.com/nmecsys/nowcasting) package.
++ The [epinowcast](https://package.epinowcast.org/articles/model.html) package.
+
+## NobBS
+
+Here we reproduce the example from the `README.md` file:
+
+```{r}
+library(NobBS)
 data("denguedat")
 now <- as.Date("1990-10-01")
 
-test_nowcast <- NobBS(data=denguedat, units="1 week", now = now,
-                      onset_date="onset_week", report_date="report_week")
+test_nowcast <- NobBS(data = denguedat, units = "1 week", now = now,
+                      onset_date = "onset_week", report_date = "report_week")
+```
 
-#Check the data
-#FIXME: Method variational doesn't generate error when creating
+and compare against the `diseasenowcasting` package:
+
+```{r}
+library(diseasenowcasting)
+library(posterior)
+library(tidyverse)
+
 predictions <- nowcast(denguedat, "onset_week", "report_week",
-                       method = "variational",
-                       now = now,
+                       now = now, method = "variational",
                        priors = set_priors(nu_is_constant = F))
+```
 
+which, after formating, 
 
-
+```{r}
 #Get the predicted values in a nice format
 predicted_values <- predictions$generated_quantities |>
   posterior::as_draws() |>
@@ -32,7 +60,11 @@ predicted_values <- predictions$generated_quantities |>
 obs <- predictions$data$preprocessed_data |>
   dplyr::group_by(onset_week) |>
   dplyr::summarise(n = sum(n))
+```
 
+Result in a better prediction than the `NobBS` default one:
+
+```{r, warning=FALSE}
 # Create plot
 ggplot() +
   geom_ribbon(aes(x = onset_week, ymin = q5, ymax = q95, fill = "diseasenowcasting"),
@@ -57,4 +89,6 @@ ggplot() +
         values = c("NobBS" = "#3B9AB2", "diseasenowcasting" = "#E1AF00",
                    "All data" = "#F21A00",
                    "Train data" = "black"))
+```
+
 
