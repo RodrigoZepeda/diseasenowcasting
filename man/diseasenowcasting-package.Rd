@@ -4,14 +4,31 @@
 \name{diseasenowcasting-package}
 \alias{diseasenowcasting}
 \alias{diseasenowcasting-package}
-\title{diseasenowcasting: What the Package Does (Title Case)}
+\title{diseasenowcasting: Nowcasting disease onset cases given report dates}
 \description{
-More about what it does (maybe more than one line) Use four spaces when indenting paragraphs within the Description.
+Implements bayesian state-space models to nowcast incident cases for any disease given report dates while controlling by strata and covariates.
 }
 \seealso{
 Useful links:
 \itemize{
   \item \url{https://rodrigozepeda.github.io/diseasenowcasting/}
+}
+
+}
+\author{
+\strong{Maintainer}: Rodrigo Zepeda-Tello \email{rzepeda17@gmail.com} (\href{https://orcid.org/0000-0003-4471-5270}{ORCID})
+
+Authors:
+\itemize{
+  \item Rami Yaari
+  \item Matteo Perini
+}
+
+Other contributors:
+\itemize{
+  \item Tal Robin [contributor]
+  \item Teresa Yamana [contributor]
+  \item Columbia University in the City of New York [copyright holder, funder]
 }
 
 }

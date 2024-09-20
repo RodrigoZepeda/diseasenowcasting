@@ -1,11 +1,17 @@
 Package: diseasenowcasting
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Nowcasting disease onset cases given report dates
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Authors@R: 
+    c(person("Rodrigo", "Zepeda-Tello", , "rzepeda17@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-4471-5270")),
+      person("Rami", "Yaari", role = c("aut")),
+      person("Matteo", "Perini", role = c("aut")),
+      person("Tal", "Robin", role = c("ctb")),
+      person("Teresa", "Yamana", role = c("ctb")),
+      person(given = "Columbia University in the City of New York", role = c("cph", "fnd")))
+Description: Implements bayesian state-space models to nowcast incident cases for any 
+  disease given report dates while controlling by strata and covariates.  
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -25,7 +31,6 @@ Depends:
     R (>= 4.2.0)
 RoxygenNote: 7.3.2
 Suggests: 
-    NobBS,
     testthat (>= 3.0.0)
 Biarch: true
 LinkingTo: 
