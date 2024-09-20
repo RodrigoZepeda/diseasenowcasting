@@ -12,17 +12,15 @@ sims <- simulate_process_for_testing(num_steps = num_steps,
 
 # Sum over all delays
 data_delays <- sims |>
-  dplyr::group_by(.tval, .strata) |>
+  dplyr::group_by(.tval) |>
   dplyr::summarise(n = sum(n))
 
 ggplot(data_delays) +
-  geom_line(aes(x = .tval, y = n, color = as.character(.strata))) +
+  geom_line(aes(x = .tval, y = n)) +
   theme_bw()
 
 #Check the data
-predictions <- nowcast(sims, "onset_date", "report_date", method = "optimization", verbose = TRUE,
-                       priors = set_priors(mu_degree = 1))
-
+predictions <- nowcast(sims, "onset_date", "report_date", method = "optimization")
 
 #Get the predicted values in a nice format
 predicted_values <- predictions$generated_quantities |>
