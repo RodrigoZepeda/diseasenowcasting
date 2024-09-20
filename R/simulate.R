@@ -19,32 +19,8 @@
 simulate_process_for_testing <- function(num_steps  = 10,
                                          num_delays = 8,
                                          num_strata = 2,
-                                         dist = c("NegativeBinomial", "Poisson"),
-                                         mu_degree = 1,
-                                         nu_degree = 1,
-                                         mu_is_constant = FALSE,
-                                         nu_is_constant = TRUE,
-                                         mu_sd_prior = "normal",
-                                         nu_sd_prior = "normal",
-                                         mu_sd_param_1 = 0.0,
-                                         mu_sd_param_2 = 0.1,
-                                         nu_sd_param_1 = 0.0,
-                                         nu_sd_param_2 = 0.1,
-                                         mu_0_mean_param_1 = log(100),
-                                         mu_0_mean_param_2 = 0.01,
-                                         mu_0_sd_param_1 = 0.01,
-                                         mu_0_sd_param_2 = 0.01,
-                                         nu_0_mean_param_1 = 0.0,
-                                         nu_0_mean_param_2 = 0.01,
-                                         nu_0_sd_param_1 = 0.00,
-                                         nu_0_sd_param_2 = 0.01,
-                                         mu_0_mean_hyperprior = "normal",
-                                         nu_0_mean_hyperprior = "normal",
-                                         mu_0_sd_hyperprior = "normal",
-                                         nu_0_sd_hyperprior = "normal",
-                                         r_prior  = "normal",
-                                         r_param_1 = 0.0,
-                                         r_param_2 = 1.0
+                                         dist   = c("NegativeBinomial", "Poisson"),
+                                         priors = set_priors()
 ){
 
   # Match the distribution whether negative binomial or poisson
@@ -52,29 +28,29 @@ simulate_process_for_testing <- function(num_steps  = 10,
   is_negative_binomial <- (dist == "NegativeBinomial")
 
   #Get the trend matrices using the Stan functions
-  A_mu       <- create_trend_matrix_block_A(mu_degree, rstan::get_stream())
-  A_nu       <- create_trend_matrix_block_A(nu_degree, rstan::get_stream())
-  L_mu       <- create_trend_vector_block_L(mu_degree, rstan::get_stream())
-  L_nu       <- create_trend_vector_block_L(nu_degree, rstan::get_stream())
-  R_mu       <- create_trend_matrix_block_R(mu_degree, FALSE, rstan::get_stream())
-  R_nu       <- create_trend_matrix_block_R(nu_degree, TRUE, rstan::get_stream())
+  A_mu       <- create_trend_matrix_block_A(priors$mu_degree, rstan::get_stream())
+  A_nu       <- create_trend_matrix_block_A(priors$nu_degree, rstan::get_stream())
+  L_mu       <- create_trend_vector_block_L(priors$mu_degree, rstan::get_stream())
+  L_nu       <- create_trend_vector_block_L(priors$nu_degree, rstan::get_stream())
+  R_mu       <- create_trend_matrix_block_R(priors$mu_degree, FALSE, rstan::get_stream())
+  R_nu       <- create_trend_matrix_block_R(priors$nu_degree, TRUE, rstan::get_stream())
 
   #Function for simulating
-  rmu_0_mean <- get_prior_code_sim_R(mu_0_mean_hyperprior)
-  rmu_0_sd   <- get_prior_code_sim_R(mu_0_sd_hyperprior)
+  rmu_0_mean <- get_prior_code_sim_R(priors$mu_0_mean_hyperprior)
+  rmu_0_sd   <- get_prior_code_sim_R(priors$mu_0_sd_hyperprior)
 
   #Generate arrays of means and standard deviations for mu_0 and nu_0
-  mu_0_mean  <- rmu_0_mean(1, mu_0_mean_param_1, mu_0_mean_param_2)
-  mu_0_sd    <- rmu_0_sd(1, mu_0_sd_param_1, mu_0_sd_param_2) |> abs()
+  mu_0_mean  <- rmu_0_mean(1, priors$mu_0_mean_param_1, priors$mu_0_mean_param_2)
+  mu_0_sd    <- rmu_0_sd(1, priors$mu_0_sd_param_1, priors$mu_0_sd_param_2) |> abs()
   mu_0       <- array(rnorm(num_delays*num_strata*nrow(A_mu), mu_0_mean, mu_0_sd),
                       dim = c(num_strata, num_delays, nrow(A_mu)))
 
   #Repeat process with nu
-  rnu_0_mean <- get_prior_code_sim_R(nu_0_mean_hyperprior)
-  rnu_0_sd   <- get_prior_code_sim_R(nu_0_sd_hyperprior)
+  rnu_0_mean <- get_prior_code_sim_R(priors$nu_0_mean_hyperprior)
+  rnu_0_sd   <- get_prior_code_sim_R(priors$nu_0_sd_hyperprior)
 
-  nu_0_mean  <- rnu_0_mean(1, nu_0_mean_param_1, nu_0_mean_param_2)
-  nu_0_sd    <- rnu_0_sd(1, nu_0_sd_param_1, nu_0_sd_param_2) |> abs()
+  nu_0_mean  <- rnu_0_mean(1, priors$nu_0_mean_param_1, priors$nu_0_mean_param_2)
+  nu_0_sd    <- rnu_0_sd(1, priors$nu_0_sd_param_1, priors$nu_0_sd_param_2) |> abs()
   nu_0       <- array(rnorm(num_delays*num_strata*nrow(A_nu), nu_0_mean, nu_0_sd),
                       dim = c(num_strata, num_delays, nrow(A_nu)))
 
@@ -83,11 +59,11 @@ simulate_process_for_testing <- function(num_steps  = 10,
   X_cnt <- matrix(0, nrow = 1, ncol = 1)
 
   #Get the simulations for the errors
-  rmu_sd <- get_prior_code_sim_R(mu_sd_prior)
-  mu_sd  <- rmu_sd(1, mu_sd_param_1, mu_sd_param_2)  |> abs()
+  rmu_sd <- get_prior_code_sim_R(priors$mu_sd_prior)
+  mu_sd  <- rmu_sd(1, priors$mu_sd_param_1, priors$mu_sd_param_2)  |> abs()
 
-  rnu_sd <- get_prior_code_sim_R(nu_sd_prior)
-  nu_sd  <- rnu_sd(1, nu_sd_param_1, nu_sd_param_2) |> abs()
+  rnu_sd <- get_prior_code_sim_R(priors$nu_sd_prior)
+  nu_sd  <- rnu_sd(1, priors$nu_sd_param_1, priors$nu_sd_param_2) |> abs()
 
   #Create the error matrices
   xi_mu  <- array(rnorm(num_delays*num_strata*(num_steps - 1)*ncol((R_mu)), 0.0, mu_sd),
@@ -118,8 +94,8 @@ simulate_process_for_testing <- function(num_steps  = 10,
   colnames(ss_process) <- 1:num_steps
 
   #Get the function to simulate R
-  rfun <- get_prior_code_sim_R(r_prior)
-  rval <- dplyr::if_else(is_negative_binomial, abs(rfun(1, r_param_1, r_param_2)), 0.0)
+  rfun <- get_prior_code_sim_R(priors$r_prior)
+  rval <- dplyr::if_else(is_negative_binomial, abs(rfun(1, priors$r_param_1, priors$r_param_2)), 0.0)
 
   #Get the function for simulating the data
   nfun <- ifelse(is_negative_binomial,

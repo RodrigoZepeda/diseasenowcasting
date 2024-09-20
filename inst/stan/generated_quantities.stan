@@ -34,15 +34,9 @@ generated quantities {
   for (t in 1:num_steps){
       if (is_negative_binomial){
           N_mat_predict[t,:] =
-          neg_binomial_2_log_rng(
-            lambda[:, t]',
-            //rep_vector(1.0, num_delays*num_strata),
-          rep_vector(1.0, num_delays*num_strata));
+          neg_binomial_2_log_rng(lambda[:, t]', rep_vector(r[1], num_delays*num_strata));
       } else {
-          N_mat_predict[t,:] = poisson_log_rng(
-            //rep_vector(1.0, num_delays*num_strata)
-            lambda[:, t]'
-          );
+          N_mat_predict[t,:] = poisson_log_rng(lambda[:, t]');
       }
   }
 
