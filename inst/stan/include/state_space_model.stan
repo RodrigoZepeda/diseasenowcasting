@@ -49,7 +49,7 @@ matrix state_space_process(
 
     for (t in 1:(num_steps - 1)){
       //l[t,d,s] = L_mu*mu[t,d,s] + L_nu*nu[t,d,s] + constant_coef + X_t[t,d,s]*B_t + epsilon[t,d,s];
-      l[,t]   = mu[t]*L_mu + nu[t]*L_nu + AR(l, phi, p);
+      l[,t]   = mu[t]*L_mu + nu[t]*L_nu + AR(l, phi, t);
       mu[t+1] = mu[t]*A_mu + xi_mu_sd[t]*xi_mu_centered[t]*R_mu;
       nu[t+1] = nu[t]*A_nu + xi_nu_sd[t]*xi_nu_centered[t]*R_nu;
     }

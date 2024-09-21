@@ -9,11 +9,10 @@ test_nowcast <- NobBS(data=denguedat, units="1 week", now = now,
                       onset_date="onset_week", report_date="report_week")
 
 #Check the data
-#FIXME: Method variational doesn't generate error when creating
 predictions <- nowcast(denguedat, "onset_week", "report_week",
                        method = "variational",
                        now = now,
-                       priors = set_priors(p = 4))
+                       priors = set_priors(p = 8))
 
 
 #Get the predicted values in a nice format

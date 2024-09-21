@@ -4,16 +4,17 @@
 #' returns the number that codes it
 #'
 #' @param prior_name (character) The name of the prior distribution. Can be one of
-#' the following: `standard_normal`, `normal`, `student_t`, `cauchy`, `exponential`,
-#' `gamma`, `inverse_gamma`, `lognormal`, `weibull`, `frechet`,
+#' the following: `jeffreys` (non-informative), `standard_normal`, `normal`, `student_t`,
+#' `cauchy`, `exponential`, `gamma`, `inverse_gamma`, `lognormal`, `weibull`, `frechet`,
 #' `double_exponential`, `rayleigh`, `loglogistic`, `gumbel`.
 #'
 #' @keywords internal
 get_prior_code_stan <- function(prior_name){
-  dist_list <- c("standard_normal", "normal", "student_t", "cauchy", "exponential",
+  dist_list <- c("jeffreys", "standard_normal", "normal", "student_t", "cauchy", "exponential",
                  "gamma", "inverse_gamma", "lognormal", "weibull", "frechet",
                  "double_exponential", "rayleigh", "loglogistic", "gumbel")
   switch(tolower(prior_name),
+         "jeffreys"           = 0,
          "standard_normal"    = 1,
          "normal"             = 2,
          "student_t"          = 3,

@@ -125,7 +125,10 @@ vector AR(matrix y, vector phi, int t){
   /*
   Calculate the autoregresive AR(p) component of a vector y at time t
 
-  The AR(p) component is given by 0*y_t + phi_p*y_{t-1} + phi_{p-1}*y_{t-2} + ... + phi_1*y_{t-p}
+  @details The AR(p) component is given by:
+
+  0*y_t + phi_p*y_{t-1} + phi_{p-1}*y_{t-2} + ... + phi_1*y_{t-p}
+
   which in matrix form is coded as:
 
   y[,(t + 1 - min_int(t, p)):(t + 1)]*phi[((p + 1) - min_int(t, p)):(p + 1)]
