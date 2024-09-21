@@ -17,6 +17,18 @@ rep_vec_piecewise <- function(A, k, pstream__ = 0L) {
     .Call(`_diseasenowcasting_rep_vec_piecewise`, A, k, pstream__)
 }
 
+max_int <- function(a, b, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_max_int`, a, b, pstream__)
+}
+
+min_int <- function(a, b, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_min_int`, a, b, pstream__)
+}
+
+AR <- function(y, phi, t, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_AR`, y, phi, t, pstream__)
+}
+
 create_trend_matrix_block_A <- function(degree, pstream__ = 0L) {
     .Call(`_diseasenowcasting_create_trend_matrix_block_A`, degree, pstream__)
 }
@@ -69,7 +81,7 @@ create_initial_seasonal_discrete_vector_block_alpha <- function(season_params, s
     .Call(`_diseasenowcasting_create_initial_seasonal_discrete_vector_block_alpha`, season_params, season_duration, error_term, pstream__)
 }
 
-state_space_process <- function(num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_state_space_process`, num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt, pstream__)
+state_space_process <- function(num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, xi_mu_centered, xi_nu_centered, xi_mu_sd, xi_nu_sd, mu_0_centered, nu_0_centered, mu_0_sd, nu_0_sd, mu_0_mean, nu_0_mean, B_cnt, X_cnt, phi_AR, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_state_space_process`, num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, xi_mu_centered, xi_nu_centered, xi_mu_sd, xi_nu_sd, mu_0_centered, nu_0_centered, mu_0_sd, nu_0_sd, mu_0_mean, nu_0_mean, B_cnt, X_cnt, phi_AR, pstream__)
 }
 

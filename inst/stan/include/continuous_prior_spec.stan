@@ -1,4 +1,5 @@
-if (prior_spec == 1) return std_normal_lpdf(x);
+if (prior_spec == 0) return 0.0;
+else if (prior_spec == 1) return std_normal_lpdf(x);
 else if (prior_spec == 2) return normal_lpdf(x | param_1, param_2);  // Normal (general)
 else if (prior_spec == 3) return student_t_lpdf(x | param_1, 0.0, param_2);   // Student (general)
 else if (prior_spec == 4) return cauchy_lpdf(x | param_1, param_2);   // Cauchy

@@ -7,6 +7,8 @@
 #'
 #' @param nu_degree Integer. Degree of the delay trend.
 #'
+#' @param p Integer. The number of lags to consider for an autocorrelated AR(p) model
+#'
 #' @param mu_is_constant Logical. Indicates whether the epidemic trend is constant.
 #'
 #' @param nu_is_constant Logical. Indicates whether the delay trend is constant.
@@ -63,16 +65,20 @@
 #' set_priors(nu_degree = 2, mu_sd_prior = "cauchy")
 #'
 #' @export
-set_priors <- function(mu_degree = 1,
-                       nu_degree = 1,
+set_priors <- function(mu_degree      = 1,
+                       nu_degree      = 1,
+                       p              = 0,
                        mu_is_constant = FALSE,
                        nu_is_constant = TRUE,
-                       mu_sd_prior = "standard_normal",
-                       nu_sd_prior = "standard_normal",
-                       mu_sd_param_1 = 0.0,
-                       mu_sd_param_2 = 0.1,
-                       nu_sd_param_1 = 0.0,
-                       nu_sd_param_2 = 0.1,
+                       mu_sd_prior    = "standard_normal",
+                       nu_sd_prior    = "standard_normal",
+                       mu_sd_param_1  = 0.0,
+                       mu_sd_param_2  = 0.1,
+                       nu_sd_param_1  = 0.0,
+                       nu_sd_param_2  = 0.1,
+                       phi_AR_param_1 = 0.0,
+                       phi_AR_param_2 = 1.0,
+                       phi_AR_prior   = "cauchy",
                        mu_0_mean_param_1 = "auto",
                        mu_0_mean_param_2 = 0.01,
                        mu_0_sd_param_1 = "auto",
@@ -91,6 +97,7 @@ set_priors <- function(mu_degree = 1,
   list(
     mu_degree            = mu_degree,
     nu_degree            = nu_degree,
+    p                    = p,
     mu_is_constant       = mu_is_constant,
     nu_is_constant       = nu_is_constant,
     mu_sd_prior          = mu_sd_prior,
@@ -99,6 +106,9 @@ set_priors <- function(mu_degree = 1,
     mu_sd_param_2        = mu_sd_param_2,
     nu_sd_param_1        = nu_sd_param_1,
     nu_sd_param_2        = nu_sd_param_2,
+    phi_AR_param_1       = phi_AR_param_1,
+    phi_AR_param_2       = phi_AR_param_2,
+    phi_AR_prior         = phi_AR_prior,
     mu_0_mean_param_1    = mu_0_mean_param_1,
     mu_0_mean_param_2    = mu_0_mean_param_2,
     mu_0_sd_param_1      = mu_0_sd_param_1,

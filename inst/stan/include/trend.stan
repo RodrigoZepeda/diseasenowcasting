@@ -1,9 +1,6 @@
 #include include/license.stan
 //Functions for creating the trend matrices for the process
 
-//BLOCK MATRICES-------
-//The trend matrix is constructed by blocks for each delay d. First we construct each
-//of the blocks.
 matrix create_trend_matrix_block_A(int degree) {
   // Create the trend matrix A for a trend with degree `degree`
   //
@@ -59,30 +56,6 @@ matrix create_trend_matrix_block_R(int degree, int is_constant){
 
   return R';
 }
-
-/*
-//COMPLETE MATRICES-------
-//The trend matrix is constructed by blocks for each delay d.
-//Here we bind all the blocks.
-matrix create_trend_matrix_A(int degree, int num_delays){
-  matrix[degree, degree] A = create_trend_matrix_block_A(degree);
-  return rep_diagonal_mat(A, num_delays);
-}
-
-matrix create_trend_matrix_R(int degree, int is_constant, int num_delays){
-  matrix[degree, degree] R = create_trend_matrix_block_R(degree, is_constant);
-  return rep_diagonal_mat(R, num_delays);
-}
-
-vector create_trend_vector_L(int degree, int num_delays){
-  vector[degree] L = create_trend_vector_block_L(degree);
-  return rep_vec(L, num_delays);
-}
-
-vector create_trend_vector_alpha(vector alpha_params){
-  return alpha_params;
-}
-*/
 
 //Returns the number of elements in vector alpha for a trend with degree degree
 //with d delays

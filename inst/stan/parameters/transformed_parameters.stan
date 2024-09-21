@@ -1,20 +1,9 @@
-//Uncentered variables
-matrix[num_strata*num_delays, mu_0_size] mu_0 =
-  rep_matrix(mu_0_mean, num_strata*num_delays, mu_0_size) + mu_0_sd*mu_0_centered;
-matrix[num_strata*num_delays, nu_0_size] nu_0 =
-  rep_matrix(nu_0_mean, num_strata*num_delays, nu_0_size) + nu_0_sd*nu_0_centered;
-
-array[num_steps - 1] matrix[num_strata*num_delays, xi_mu_size] xi_mu;
-array[num_steps - 1] matrix[num_strata*num_delays, xi_nu_size] xi_nu;
-for (t in 1:(num_steps - 1)){
-  xi_mu[t] = mu_sd*xi_mu_centered[t];
-  xi_nu[t] = nu_sd*xi_nu_centered[t];
-}
-
 //Get the state space process simulations
 matrix[num_delays*num_strata, num_steps] lambda = state_space_process(
-      num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu,
-      L_mu, L_nu, mu_0, xi_mu, nu_0, xi_nu, B_cnt, X_cnt);
+      num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, xi_mu_centered,
+      xi_nu_centered, rep_vector(xi_mu_sd[1], num_steps), rep_vector(xi_nu_sd[1], num_steps),
+      mu_0_centered, nu_0_centered, mu_0_sd, nu_0_sd, mu_0_mean, nu_0_mean, B_cnt, X_cnt,
+      phi_AR);
 
 //Create a vectorized version of the lambda
 //The lambda function is organized by delays and then strata so
@@ -50,13 +39,16 @@ for (t in 1:(num_steps - 1)){
   lprior += std_normal_lpdf(to_vector(xi_nu_centered[t]));
 }
 
+//AR component
+lprior += dist_lpdf(phi_AR | phi_AR_param_1, phi_AR_param_2, phi_AR_prior);
+
 //Hyperparameter priors
 lprior += dist_lpdf(mu_0_mean | mu_0_mean_param_1, mu_0_mean_param_2, mu_0_mean_hyperprior);
-lprior += dist_lpdf(mu_0_sd | mu_0_sd_param_1, mu_0_sd_param_2, mu_0_sd_hyperprior);
+lprior += dist_lpdf(mu_0_sd   | mu_0_sd_param_1, mu_0_sd_param_2, mu_0_sd_hyperprior);
 lprior += dist_lpdf(nu_0_mean | nu_0_mean_param_1, nu_0_mean_param_2, nu_0_mean_hyperprior);
-lprior += dist_lpdf(nu_0_sd | nu_0_sd_param_1, nu_0_sd_param_2, nu_0_sd_hyperprior);
-lprior += dist_lpdf(mu_sd | mu_sd_param_1, mu_sd_param_2, mu_sd_prior);
-lprior += dist_lpdf(nu_sd | nu_sd_param_1, nu_sd_param_2, nu_sd_prior);
+lprior += dist_lpdf(nu_0_sd   | nu_0_sd_param_1, nu_0_sd_param_2, nu_0_sd_hyperprior);
+lprior += dist_lpdf(xi_mu_sd  | mu_sd_param_1, mu_sd_param_2, mu_sd_prior);
+lprior += dist_lpdf(xi_nu_sd  | nu_sd_param_1, nu_sd_param_2, nu_sd_prior);
 
 //Add prior to the negative binomial precision
 if (is_negative_binomial)

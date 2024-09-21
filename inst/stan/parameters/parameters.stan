@@ -2,14 +2,17 @@
 matrix[num_strata*num_delays, mu_0_size] mu_0_centered;
 matrix[num_strata*num_delays, nu_0_size] nu_0_centered;
 
+//Centered values for the AR component
+vector<lower=-1,upper=1>[p] phi_AR; //To ensure stationary
+
 //Priors for the parameters 1 and 2 of mu and nu
 real mu_0_mean;
 real nu_0_mean;
 real<lower=0> mu_0_sd;
 real<lower=0> nu_0_sd;
 
-real<lower=0> mu_sd;
-real<lower=0> nu_sd;
+vector<lower=0>[1] xi_mu_sd;
+vector<lower=0>[1] xi_nu_sd;
 
 //Normalized errors
 array[num_steps - 1] matrix[num_strata*num_delays, xi_mu_size] xi_mu_centered;

@@ -7,6 +7,7 @@
 set_priors(
   mu_degree = 1,
   nu_degree = 1,
+  p = 3,
   mu_is_constant = FALSE,
   nu_is_constant = TRUE,
   mu_sd_prior = "standard_normal",
@@ -36,6 +37,8 @@ set_priors(
 \item{mu_degree}{Integer. Degree of the epidemic trend.}
 
 \item{nu_degree}{Integer. Degree of the delay trend.}
+
+\item{p}{Integer. The number of lags to consider for an autocorrelated AR(p) model}
 
 \item{mu_is_constant}{Logical. Indicates whether the epidemic trend is constant.}
 

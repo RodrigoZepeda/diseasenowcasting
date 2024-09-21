@@ -157,6 +157,7 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, strata, dist,
   priors$mu_0_sd_hyperprior   <- get_prior_code_stan(priors$mu_0_sd_hyperprior)
   priors$nu_0_sd_hyperprior   <- get_prior_code_stan(priors$nu_0_sd_hyperprior)
   priors$r_prior              <- get_prior_code_stan(priors$r_prior)
+  priors$phi_AR_prior         <- get_prior_code_stan(priors$phi_AR_prior)
 
   # Get maximum time for model
   num_steps <- .disease_data |>
@@ -221,17 +222,23 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, strata, dist,
     num_steps  = num_steps,
     num_delays = num_delays,
     num_strata = num_strata,
-    n_rows  = nrow(Nmat),
-    N_cases = as.matrix(Nmat),
+    n_rows     = nrow(Nmat),
+    N_cases    = as.matrix(Nmat),
 
     #Whether to compute only the prior
-    prior_only = prior_only,
+    prior_only     = prior_only,
 
     #Trend specification
-    mu_degree = priors$mu_degree,
-    nu_degree = priors$nu_degree,
+    mu_degree      = priors$mu_degree,
+    nu_degree      = priors$nu_degree,
     mu_is_constant = priors$mu_is_constant,
     nu_is_constant = priors$nu_is_constant,
+
+    #ARMA specification
+    p              = priors$p,
+    phi_AR_param_1 = priors$phi_AR_param_1,
+    phi_AR_param_2 = priors$phi_AR_param_2,
+    phi_AR_prior   = priors$phi_AR_prior,
 
     #Distribution information
     is_negative_binomial = is_negative_binomial,

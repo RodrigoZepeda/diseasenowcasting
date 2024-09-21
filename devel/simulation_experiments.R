@@ -13,8 +13,7 @@ test_nowcast <- NobBS(data=denguedat, units="1 week", now = now,
 predictions <- nowcast(denguedat, "onset_week", "report_week",
                        method = "variational",
                        now = now,
-                       priors = set_priors(nu_is_constant = F))
-
+                       priors = set_priors(p = 4))
 
 
 #Get the predicted values in a nice format
