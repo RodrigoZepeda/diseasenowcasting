@@ -8,8 +8,8 @@ get_prior_code_sim_R(prior_name)
 }
 \arguments{
 \item{prior_name}{(character) The name of the prior distribution. Can be one of
-the following: `standard_normal`, `normal`, `student_t`, `cauchy`, `exponential`,
-`gamma`, `inverse_gamma`, `lognormal`, `weibull`, `frechet`,
+the following: `jeffreys` (non-informative), `standard_normal`, `normal`, `student_t`,
+`cauchy`, `exponential`, `gamma`, `inverse_gamma`, `lognormal`, `weibull`, `frechet`,
 `double_exponential`, `rayleigh`, `loglogistic`, `gumbel`.}
 }
 \description{

@@ -8,11 +8,11 @@ now <- as.Date("1990-10-01")
 test_nowcast <- NobBS(data=denguedat, units="1 week", now = now,
                       onset_date="onset_week", report_date="report_week")
 
+#FIXME: Should add this to testthat
 #Check the data
 predictions <- nowcast(denguedat, "onset_week", "report_week",
-                       method = "variational",
-                       now = now,
-                       priors = set_priors(p = 8))
+                       now = now, chains = 2, cores = 8,
+                       priors = set_priors(), iter = 25)
 
 
 #Get the predicted values in a nice format

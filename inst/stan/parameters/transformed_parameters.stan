@@ -1,9 +1,12 @@
+//Uncenter the xi parameter
+matrix[num_delays*num_strata, num_steps] xi = xi_sd*xi_centered;
+
 //Get the state space process simulations
 matrix[num_delays*num_strata, num_steps] lambda = state_space_process(
       num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, xi_mu_centered,
       xi_nu_centered, rep_vector(xi_mu_sd[1], num_steps), rep_vector(xi_nu_sd[1], num_steps),
       mu_0_centered, nu_0_centered, mu_0_sd, nu_0_sd, mu_0_mean, nu_0_mean, B_cnt, X_cnt,
-      phi_AR);
+      phi_AR, theta_MA, xi);
 
 //Create a vectorized version of the lambda
 //The lambda function is organized by delays and then strata so
@@ -39,8 +42,12 @@ for (t in 1:(num_steps - 1)){
   lprior += std_normal_lpdf(to_vector(xi_nu_centered[t]));
 }
 
-//AR component
+//ARMA components
 lprior += dist_lpdf(phi_AR | phi_AR_param_1, phi_AR_param_2, phi_AR_prior);
+lprior += dist_lpdf(theta_MA | theta_MA_param_1, theta_MA_param_2, theta_MA_prior);
+
+lprior += std_normal_lpdf(to_vector(xi_centered));
+lprior += dist_lpdf(xi_sd | xi_sd_param_1, xi_sd_param_2, xi_sd_prior);
 
 //Hyperparameter priors
 lprior += dist_lpdf(mu_0_mean | mu_0_mean_param_1, mu_0_mean_param_2, mu_0_mean_hyperprior);

@@ -158,6 +158,8 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, strata, dist,
   priors$nu_0_sd_hyperprior   <- get_prior_code_stan(priors$nu_0_sd_hyperprior)
   priors$r_prior              <- get_prior_code_stan(priors$r_prior)
   priors$phi_AR_prior         <- get_prior_code_stan(priors$phi_AR_prior)
+  priors$theta_MA_prior       <- get_prior_code_stan(priors$theta_MA_prior)
+  priors$xi_sd_prior          <- get_prior_code_stan(priors$xi_sd_prior)
 
   # Get maximum time for model
   num_steps <- .disease_data |>
@@ -235,10 +237,17 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, strata, dist,
     nu_is_constant = priors$nu_is_constant,
 
     #ARMA specification
-    p              = priors$p,
-    phi_AR_param_1 = priors$phi_AR_param_1,
-    phi_AR_param_2 = priors$phi_AR_param_2,
-    phi_AR_prior   = priors$phi_AR_prior,
+    p                    = priors$p,
+    q                    = priors$q,
+    phi_AR_param_1       = priors$phi_AR_param_1,
+    phi_AR_param_2       = priors$phi_AR_param_2,
+    phi_AR_prior         = priors$phi_AR_prior,
+    theta_MA_param_1     = priors$theta_MA_param_1,
+    theta_MA_param_2     = priors$theta_MA_param_2,
+    theta_MA_prior       = priors$theta_MA_prior,
+    xi_sd_param_1        = priors$xi_sd_param_1,
+    xi_sd_param_2        = priors$xi_sd_param_2,
+    xi_sd_prior          = priors$xi_sd_prior,
 
     #Distribution information
     is_negative_binomial = is_negative_binomial,

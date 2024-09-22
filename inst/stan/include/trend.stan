@@ -1,5 +1,4 @@
 #include include/license.stan
-//Functions for creating the trend matrices for the process
 
 matrix create_trend_matrix_block_A(int degree) {
   // Create the trend matrix A for a trend with degree `degree`

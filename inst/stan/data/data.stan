@@ -15,8 +15,13 @@ int<lower=0,upper=1> nu_is_constant;    //Whether the delay effect is constant
 
 //ARMA component options ---------------------------------------------
 int<lower=0> p;
+int<lower=0> q;
 real phi_AR_param_1;
 real phi_AR_param_2;
+real theta_MA_param_1;
+real theta_MA_param_2;
+real xi_sd_param_1;
+real xi_sd_param_2;
 
 //Sampling options -----------------------------------------------------------------------------
 int<lower=0, upper=1> is_negative_binomial; //Either 0 = Poisson or 1 = NegativeBinomial
@@ -37,6 +42,8 @@ int<lower=0,upper=14> mu_sd_prior;
 int<lower=0,upper=14> nu_sd_prior;
 int<lower=0,upper=14> r_prior;
 int<lower=0,upper=14> phi_AR_prior;
+int<lower=0,upper=14> theta_MA_prior;
+int<lower=0,upper=14> xi_sd_prior;
 int<lower=0,upper=14> mu_0_mean_hyperprior;
 int<lower=0,upper=14> nu_0_mean_hyperprior;
 int<lower=0,upper=14> mu_0_sd_hyperprior;
