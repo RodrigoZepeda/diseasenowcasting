@@ -15,7 +15,7 @@ nowcast(
   max_delay = Inf,
   prior_only = FALSE,
   proportion_reported = 1,
-  refresh = 250 * interactive(),
+  refresh = 250 * rlang::is_interactive(),
   control = control_default(),
   method = c("sampling", "variational", "optimization"),
   priors = set_priors(),

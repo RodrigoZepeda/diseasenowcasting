@@ -10,9 +10,11 @@ test_nowcast <- NobBS(data=denguedat, units="1 week", now = now,
 
 #FIXME: Should add this to testthat
 #Check the data
+t1 <- Sys.time()
 predictions <- nowcast(denguedat, "onset_week", "report_week",
-                       method = "variational", now = now,
+                       method = "variational",
                        priors = set_priors())
+t2 <- Sys.time()
 
 #Get the predicted values in a nice format
 predicted_values <- predictions$generated_quantities |>
