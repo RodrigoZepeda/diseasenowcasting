@@ -168,5 +168,8 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, strat
     dplyr::filter(!!as.symbol(".delay") <= !!max_delay) |>
     dplyr::arrange(!!as.symbol(onset_date), !!as.symbol(".delay"))
 
+  all_delay_onsets <- all_delay_onsets |>
+    dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), tidyr::everything())
+
   return(all_delay_onsets)
 }

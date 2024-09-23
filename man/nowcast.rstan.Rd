@@ -8,7 +8,9 @@ nowcast.rstan(
   .disease_data,
   onset_date,
   report_date,
-  strata,
+  num_steps,
+  num_delays,
+  num_strata,
   dist,
   prior_only,
   control,
@@ -28,7 +30,11 @@ such that each row has a column for onset date, report date, and}
 \item{report_date}{In quotations, the name of the column of datatype
 \code{Date} designating the date of case report. e.g. "report_week"}
 
-\item{strata}{Character vector of names of the strata included in the data.}
+\item{num_steps}{Number of time steps to run in the model}
+
+\item{num_delays}{Number of delays to consider in the model}
+
+\item{num_strata}{Number of strata in the model}
 
 \item{dist}{Distribution. Either "NegativeBinomial"  or "Poisson"}
 
@@ -45,7 +51,7 @@ such that each row has a column for onset date, report date, and}
 \item{priors}{A list of all of the nowcast priors. You can use [set_priors()] to change
 the priors of the function (see details)}
 
-\item{...}{Additional arguments to pass to [rstan::sample()]}
+\item{...}{Additional arguments to pass to [rstan::sampling()]}
 }
 \description{
 Nowcasting with the `rstan` engine

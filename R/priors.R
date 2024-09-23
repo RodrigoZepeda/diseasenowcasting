@@ -7,6 +7,10 @@
 #'
 #' @param nu_degree Integer. Degree of the delay trend.
 #'
+#' @param p Integer. The number of lags to consider for an autocorrelated AR(p) model
+#'
+#' @param q Integer. The number of lags to consider for a moving average MA(q) model
+#'
 #' @param mu_is_constant Logical. Indicates whether the epidemic trend is constant.
 #'
 #' @param nu_is_constant Logical. Indicates whether the delay trend is constant.
@@ -53,6 +57,24 @@
 #'
 #' @param r_param_2 Numeric. Second parameter for the dispersion prior if negative binomial.
 #'
+#' @param phi_AR_param_1 Numeric. Prior for the AR coefficients' first parameter.
+#'
+#' @param phi_AR_param_2 Numeric. Prior for the AR coefficients' second parameter.
+#'
+#' @param phi_AR_prior String Prior distirbution name for the AR coefficients.
+#'
+#' @param theta_MA_param_1 Numeric. Prior for the MA coefficients' first parameter.
+#'
+#' @param theta_MA_param_2 Numeric. Prior for the MA coefficients' second parameter.
+#'
+#' @param theta_MA_prior String Prior distirbution name for the MA coefficients.
+#'
+#' @param xi_sd_param_1 Numeric. Prior for the error (in log-scale) first parameter
+#'
+#' @param xi_sd_param_2 Numeric. Prior for the error (in log-scale) second parameter
+#'
+#' @param xi_sd_prior String Prior distribution name for the errors
+#'
 #' @return A list with all the priors for the [nowcast()] function.
 #'
 #' @examples
@@ -63,56 +85,82 @@
 #' set_priors(nu_degree = 2, mu_sd_prior = "cauchy")
 #'
 #' @export
-set_priors <- function(mu_degree = 1,
-                       nu_degree = 1,
-                       mu_is_constant = FALSE,
-                       nu_is_constant = TRUE,
-                       mu_sd_prior = "standard_normal",
-                       nu_sd_prior = "standard_normal",
-                       mu_sd_param_1 = 0.0,
-                       mu_sd_param_2 = 0.1,
-                       nu_sd_param_1 = 0.0,
-                       nu_sd_param_2 = 0.1,
-                       mu_0_mean_param_1 = "auto",
-                       mu_0_mean_param_2 = 0.01,
-                       mu_0_sd_param_1 = "auto",
-                       mu_0_sd_param_2 = 0.01,
-                       nu_0_mean_param_1 = 0.0,
-                       nu_0_mean_param_2 = 0.01,
-                       nu_0_sd_param_1 = 0.00,
-                       nu_0_sd_param_2 = 0.01,
+set_priors <- function(mu_degree            = 1,
+                       nu_degree            = 1,
+                       p                    = 3,
+                       q                    = 2,
+                       mu_is_constant       = FALSE,
+                       nu_is_constant       = TRUE,
+                       mu_sd_prior          = "standard_normal",
+                       nu_sd_prior          = "standard_normal",
+                       mu_sd_param_1        = 0.0,
+                       mu_sd_param_2        = 0.1,
+                       nu_sd_param_1        = 0.0,
+                       nu_sd_param_2        = 0.1,
+                       phi_AR_param_1       = 0.0,
+                       phi_AR_param_2       = 1.0,
+                       phi_AR_prior         = "cauchy",
+                       theta_MA_param_1     = 0.0,
+                       theta_MA_param_2     = 1.0,
+                       theta_MA_prior       = "cauchy",
+                       xi_sd_param_1        = 0.0,
+                       xi_sd_param_2        = 1.0,
+                       xi_sd_prior          = "standard_normal",
+                       mu_0_mean_param_1    = "auto",
+                       mu_0_mean_param_2    = 0.01,
+                       mu_0_sd_param_1      = "auto",
+                       mu_0_sd_param_2      = 0.01,
+                       nu_0_mean_param_1    = 0.0,
+                       nu_0_mean_param_2    = 0.01,
+                       nu_0_sd_param_1      = 0.00,
+                       nu_0_sd_param_2      = 0.01,
                        mu_0_mean_hyperprior = "standard_normal",
                        nu_0_mean_hyperprior = "standard_normal",
-                       mu_0_sd_hyperprior = "standard_normal",
-                       nu_0_sd_hyperprior = "standard_normal",
-                       r_prior = "standard_normal",
-                       r_param_1 = 0.0,
-                       r_param_2 = 1.0) {
-  list(
-    mu_degree            = mu_degree,
-    nu_degree            = nu_degree,
-    mu_is_constant       = mu_is_constant,
-    nu_is_constant       = nu_is_constant,
-    mu_sd_prior          = mu_sd_prior,
-    nu_sd_prior          = nu_sd_prior,
-    mu_sd_param_1        = mu_sd_param_1,
-    mu_sd_param_2        = mu_sd_param_2,
-    nu_sd_param_1        = nu_sd_param_1,
-    nu_sd_param_2        = nu_sd_param_2,
-    mu_0_mean_param_1    = mu_0_mean_param_1,
-    mu_0_mean_param_2    = mu_0_mean_param_2,
-    mu_0_sd_param_1      = mu_0_sd_param_1,
-    mu_0_sd_param_2      = mu_0_sd_param_2,
-    nu_0_mean_param_1    = nu_0_mean_param_1,
-    nu_0_mean_param_2    = nu_0_mean_param_2,
-    nu_0_sd_param_1      = nu_0_sd_param_1,
-    nu_0_sd_param_2      = nu_0_sd_param_2,
-    mu_0_mean_hyperprior = mu_0_mean_hyperprior,
-    nu_0_mean_hyperprior = nu_0_mean_hyperprior,
-    mu_0_sd_hyperprior   = mu_0_sd_hyperprior,
-    nu_0_sd_hyperprior   = nu_0_sd_hyperprior,
-    r_prior              = r_prior,
-    r_param_1            = r_param_1,
-    r_param_2            = r_param_2
-  )
+                       mu_0_sd_hyperprior   = "standard_normal",
+                       nu_0_sd_hyperprior   = "standard_normal",
+                       r_prior              = "standard_normal",
+                       r_param_1            = 0.0,
+                       r_param_2            = 1.0) {
+
+  return(as.list(environment()))
+
+}
+
+
+#' Function for setting the priors to numeric
+#'
+#' @param priors A list of priors generated by `set_priors()`
+#'
+#' @return The same list of priors but with the numeric codes RStan requires for the distributions
+#' @keywords internal
+priors_to_numeric <- function(.disease_data, priors){
+
+  #1) SUBSTITUTE THE MU_0 MEAN AND SD PRIOR FOR THE AVERAGE NUMBER OF CASES
+  #Get the log mean of disease data and the sd
+  log_mean <- .disease_data |>
+    dplyr::summarise(log_mean = mean(log1p(!!as.symbol("n")), na.rm = T)) |>
+    dplyr::pull(log_mean)
+
+  #Get the log mean of disease data and the sd
+  log_sd <- .disease_data |>
+    dplyr::summarise(log_sd = sd(log1p(!!as.symbol("n")), na.rm = T)) |>
+    dplyr::pull(log_sd)
+
+  priors$mu_0_mean_param_1 <- ifelse(priors$mu_0_mean_param_1 == "auto", log_mean, priors$mu_0_mean_param_1)
+  priors$mu_0_sd_param_1   <- ifelse(priors$mu_0_sd_param_1 == "auto", log_sd, priors$mu_0_sd_param_1)
+
+  #1) SUBSTITUTE THE HYPERPRIOR DISTRIBUTIONS FROM WORDS TO NUMERIC
+  #Set the priors that are in words to numeric
+  priors$mu_sd_prior          <- get_prior_code_stan(priors$mu_sd_prior)
+  priors$nu_sd_prior          <- get_prior_code_stan(priors$nu_sd_prior)
+  priors$mu_0_mean_hyperprior <- get_prior_code_stan(priors$mu_0_mean_hyperprior)
+  priors$nu_0_mean_hyperprior <- get_prior_code_stan(priors$nu_0_mean_hyperprior)
+  priors$mu_0_sd_hyperprior   <- get_prior_code_stan(priors$mu_0_sd_hyperprior)
+  priors$nu_0_sd_hyperprior   <- get_prior_code_stan(priors$nu_0_sd_hyperprior)
+  priors$r_prior              <- get_prior_code_stan(priors$r_prior)
+  priors$phi_AR_prior         <- get_prior_code_stan(priors$phi_AR_prior)
+  priors$theta_MA_prior       <- get_prior_code_stan(priors$theta_MA_prior)
+  priors$xi_sd_prior          <- get_prior_code_stan(priors$xi_sd_prior)
+
+  return(priors)
 }

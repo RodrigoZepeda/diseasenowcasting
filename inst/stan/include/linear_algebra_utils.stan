@@ -1,9 +1,14 @@
 #include include/license.stan
 
 matrix create_block_diagonal(matrix A, matrix B){
-  //Creates a block diagonal matrix from matrix A and matrix B
-  //
-  //Creates the matrix C given by diag(A,B)
+  /*
+  * Create a block diagonal matrix from matrix A and matrix B
+  *
+  * @param A A matrix for the first block of the diagonal
+  * @param B A matrix for the second block of the diagonal
+  *
+  * @return The block-diagonal matrix C given by diag(A,B)
+  */
 
   matrix[rows(A) + rows(B), cols(A) + cols(B)] C = rep_matrix(0, rows(A) + rows(B), cols(A) + cols(B));
 
@@ -18,10 +23,14 @@ matrix create_block_diagonal(matrix A, matrix B){
 }
 
 matrix rep_diagonal_mat(matrix A, int k){
-  //Creates a block diagonal of matrix A repeated k times
-  //
-  //Creates the matrix C given by diag(A,A,A,A,A,...,A) with A repeated k times
-
+  /*
+  * Create a block diagonal matrix of A repeated k times
+  *
+  * @param A A matrix to be repeated as diagonal blocks
+  * @param k the number of times to repeat the matrix A
+  *
+  * @return The block-diagonal matrix C given by diag(A,A,A,A,A,...,A) with A repeated k times
+  */
   matrix[rows(A)*k, cols(A)*k] C = rep_matrix(0, rows(A)*k, cols(A)*k);
 
   //Fill with A values
@@ -33,10 +42,14 @@ matrix rep_diagonal_mat(matrix A, int k){
 }
 
 vector rep_vec(vector A, int k){
-  //Creates a vector pasting A with itself k times
-  //
-  //Creates the vector C given by c(A,A,A,A,A,...,A) with A repeated k times
-
+  /*
+  * Create a vector pasting A with itself k times
+  *
+  * @param A A vector to be repeated as in R's `rep`
+  * @param k the number of times to repeat the vector A
+  *
+  * @return The block-diagonal matrix C given by diag(A,A,A,A,A,...,A) with A repeated k times
+  */
   vector[num_elements(A)*k] C;
 
   //Fill with A values
@@ -48,12 +61,22 @@ vector rep_vec(vector A, int k){
 }
 
 vector rep_vec_piecewise(vector A, int k){
-  //Creates a vector repeating each element of A k-times
-  //
-  //Given A = (a1, a2, a3, ..., an) returns the vector of k*n length
-  //specified as:
-  //(a1, a1, a1, ..., a1, a2, a2, a2, ..., a2, a3, a3, ..., a3, ..., an, an, ..., an)
-  //where each element of A is repeated k times
+  /*
+  * Creates a vector repeating each element of A k-times
+  *
+  * @details Given A = (a1, a2, a3, ..., an) returns the vector of k*n length
+  * specified as:
+  *
+  * (a1, a1, a1, ..., a1, a2, a2, a2, ..., a2, a3, a3, ..., a3, ..., an, an, ..., an)
+  *
+  * where each element of A is repeated k times.
+  *
+  * @param A A vector of length n
+  * @param k the number of times to repeat the vector A
+  *
+  * @return A k*n vector with each element repeatd k times;
+  * (a1, a1, a1, ..., a1, a2, a2, a2, ..., a2, a3, a3, ..., a3, ..., an, an, ..., an)
+  */
 
   int n = num_elements(A);
   vector[n*k] C;
@@ -65,3 +88,53 @@ vector rep_vec_piecewise(vector A, int k){
 
   return C;
 }
+
+vector append_val_2_vec(vector A, real val){
+  /*
+  * Append a value to a vector (at the end)
+  *
+  * @details Given vector A = (a_1, a_2, ..., a_n) the function generates a vector of size n + 1
+  * given by: (a_1, a_2, ..., a_n, val)
+  *
+  * @param A The vector to which val will be appended
+  * @param val The value to append at the end of A
+  *
+  * @return The vector B given by B = (a_1, a_2, ..., a_n, val)
+  */
+  vector [num_elements(A) + 1] B;
+
+  //Append vector A
+  if (num_elements(A) > 0)
+    B[1:num_elements(A)] = A;
+
+  //Add val at the end
+  B[num_elements(B)] = val;
+
+  return B;
+}
+
+
+vector append_vec_2_val(real val, vector A){
+  /*
+  * Append a value to a vector (at the beginning)
+  *
+  * @details Given vector A = (a_1, a_2, ..., a_n) the function generates a vector of size n + 1
+  * given by: (val, a_1, a_2, ..., a_n)
+  *
+  * @param val The value to append at the beginning of A
+  * @param A The vector to which val will be appended
+  *
+  * @return The vector B given by B = (val, a_1, a_2, ..., a_n)
+  */
+  vector [num_elements(A) + 1] B;
+
+  //Append vector A
+  if (num_elements(A) > 0)
+    B[2:num_elements(B)] = A;
+
+  //Add val at the beginning
+  B[1] = val;
+
+  return B;
+}
+

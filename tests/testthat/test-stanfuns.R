@@ -68,3 +68,105 @@ test_that("Checking `rep_vec_piecewise`", {
   mvec  <- rep_vec_piecewise(lvec, 1, pstream__ = rstan::get_stream())
   expect_equal(lvec, mvec)
 })
+
+test_that("Checking `max_int` and `min_int`",{
+  expect_equal(max_int(10, 12, pstream__ = rstan::get_stream()), 12)
+  expect_equal(max_int(14, 12, pstream__ = rstan::get_stream()), 14)
+  expect_equal(min_int(10, 12, pstream__ = rstan::get_stream()), 10)
+  expect_equal(min_int(14, 12, pstream__ = rstan::get_stream()), 12)
+})
+
+test_that("Checking `AR`", {
+
+  ymat <- matrix(rnorm(25), ncol = 5, nrow = 5)
+  phi  <- c(rnorm(3),0)
+
+  #For t = 0
+  expect_error(
+    AR(ymat, phi = phi, t = 0, pstream__ = rstan::get_stream()),
+  )
+
+  #For t = 1
+  expect_equal(
+    AR(ymat, phi = phi, t = 1, pstream__ = rstan::get_stream()),
+    ymat[,1] * phi[length(phi)]
+  )
+
+  #For t = 2
+  expect_equal(
+    AR(ymat, phi = phi, t = 2, pstream__ = rstan::get_stream()),
+    as.vector(ymat[,1:2] %*% phi[3:length(phi)])
+  )
+
+  #For t = 3
+  expect_equal(
+    AR(ymat, phi = phi, t = 3, pstream__ = rstan::get_stream()),
+    as.vector(ymat[,1:3] %*% phi[2:length(phi)])
+  )
+
+  #For t = 4
+  expect_equal(
+    AR(ymat, phi = phi, t = 4, pstream__ = rstan::get_stream()),
+    as.vector(ymat[,1:4] %*% phi[1:length(phi)])
+  )
+
+  #For t = 5
+  expect_equal(
+    AR(ymat, phi = phi, t = 5, pstream__ = rstan::get_stream()),
+    as.vector(ymat[,2:5] %*% phi[1:length(phi)])
+  )
+
+  #For t = 6
+  expect_error(
+    AR(ymat, phi = phi, t = 6, pstream__ = rstan::get_stream()),
+  )
+
+})
+
+test_that("Checking `MA`", {
+
+  xi     <- matrix(rnorm(25), ncol = 5, nrow = 5)
+  theta  <- c(rnorm(3),1)
+
+  #For t = 0
+  expect_error(
+    MA(xi, theta = theta, t = 0, pstream__ = rstan::get_stream())
+  )
+
+  #For t = 1
+  expect_equal(
+    MA(xi, theta = theta, t = 1, pstream__ = rstan::get_stream()),
+    xi[,1] * theta[length(theta)]
+  )
+
+  #For t = 2
+  expect_equal(
+    MA(xi, theta = theta, t = 2, pstream__ = rstan::get_stream()),
+    as.vector(xi[,1:2] %*% theta[3:length(theta)])
+  )
+
+  #For t = 3
+  expect_equal(
+    MA(xi, theta = theta, t = 3, pstream__ = rstan::get_stream()),
+    as.vector(xi[,1:3] %*% theta[2:length(theta)])
+  )
+
+  #For t = 4
+  expect_equal(
+    MA(xi, theta = theta, t = 4, pstream__ = rstan::get_stream()),
+    as.vector(xi[,1:4] %*% theta[1:length(theta)])
+  )
+
+  #For t = 5
+  expect_equal(
+    MA(xi, theta = theta, t = 5, pstream__ = rstan::get_stream()),
+    as.vector(xi[,2:5] %*% theta[1:length(theta)])
+  )
+
+  #For t = 6
+  expect_error(
+    MA(xi, theta = theta, t = 6, pstream__ = rstan::get_stream())
+  )
+
+
+})
