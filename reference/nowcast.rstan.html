@@ -47,7 +47,9 @@
 <span>  <span class="va">.disease_data</span>,</span>
 <span>  <span class="va">onset_date</span>,</span>
 <span>  <span class="va">report_date</span>,</span>
-<span>  <span class="va">strata</span>,</span>
+<span>  <span class="va">num_steps</span>,</span>
+<span>  <span class="va">num_delays</span>,</span>
+<span>  <span class="va">num_strata</span>,</span>
 <span>  <span class="va">dist</span>,</span>
 <span>  <span class="va">prior_only</span>,</span>
 <span>  <span class="va">control</span>,</span>
@@ -77,8 +79,16 @@ such that each row has a column for onset date, report date, and</p></dd>
 <code>Date</code> designating the date of case report. e.g. "report_week"</p></dd>
 
 
-<dt id="arg-strata">strata<a class="anchor" aria-label="anchor" href="#arg-strata"></a></dt>
-<dd><p>Character vector of names of the strata included in the data.</p></dd>
+<dt id="arg-num-steps">num_steps<a class="anchor" aria-label="anchor" href="#arg-num-steps"></a></dt>
+<dd><p>Number of time steps to run in the model</p></dd>
+
+
+<dt id="arg-num-delays">num_delays<a class="anchor" aria-label="anchor" href="#arg-num-delays"></a></dt>
+<dd><p>Number of delays to consider in the model</p></dd>
+
+
+<dt id="arg-num-strata">num_strata<a class="anchor" aria-label="anchor" href="#arg-num-strata"></a></dt>
+<dd><p>Number of strata in the model</p></dd>
 
 
 <dt id="arg-dist">dist<a class="anchor" aria-label="anchor" href="#arg-dist"></a></dt>
@@ -109,7 +119,7 @@ the priors of the function (see details)</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional arguments to pass to [rstan::sample()]</p></dd>
+<dd><p>Additional arguments to pass to [rstan::sampling()]</p></dd>
 
 </dl></div>
 
