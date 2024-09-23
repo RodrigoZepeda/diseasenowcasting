@@ -31,7 +31,7 @@ namespace model_nowcast_namespace {
 using stan::model::model_base_crtp;
 using namespace stan::math;
 stan::math::profile_map profiles__;
-static constexpr std::array<const char*, 389> locations_array__ =
+static constexpr std::array<const char*, 387> locations_array__ =
   {" (found before start of program)",
   " (in 'nowcast', line 565, column 0 to column 55)",
   " (in 'nowcast', line 566, column 0 to column 55)",
@@ -42,44 +42,44 @@ static constexpr std::array<const char*, 389> locations_array__ =
   " (in 'nowcast', line 573, column 0 to column 22)",
   " (in 'nowcast', line 574, column 0 to column 22)",
   " (in 'nowcast', line 575, column 0 to column 11)",
-  " (in 'nowcast', line 576, column 0 to column 28)",
-  " (in 'nowcast', line 577, column 0 to column 28)",
+  " (in 'nowcast', line 576, column 0 to column 23)",
+  " (in 'nowcast', line 577, column 0 to column 23)",
   " (in 'nowcast', line 579, column 0 to column 53)",
   " (in 'nowcast', line 580, column 0 to column 78)",
   " (in 'nowcast', line 581, column 0 to column 78)",
   " (in 'nowcast', line 583, column 0 to column 48)",
   " (in 'nowcast', line 587, column 0 to column 64)",
-  " (in 'nowcast', line 589, column 0 to line 593, column 28)",
-  " (in 'nowcast', line 609, column 0 to column 27)",
-  " (in 'nowcast', line 616, column 0 to column 16)",
-  " (in 'nowcast', line 611, column 2 to column 98)",
-  " (in 'nowcast', line 610, column 0 to line 611, column 98)",
+  " (in 'nowcast', line 589, column 0 to line 592, column 64)",
+  " (in 'nowcast', line 608, column 0 to column 27)",
+  " (in 'nowcast', line 615, column 0 to column 16)",
+  " (in 'nowcast', line 610, column 2 to column 98)",
+  " (in 'nowcast', line 609, column 0 to line 610, column 98)",
+  " (in 'nowcast', line 616, column 0 to column 52)",
   " (in 'nowcast', line 617, column 0 to column 52)",
-  " (in 'nowcast', line 618, column 0 to column 52)",
+  " (in 'nowcast', line 619, column 2 to column 58)",
   " (in 'nowcast', line 620, column 2 to column 58)",
-  " (in 'nowcast', line 621, column 2 to column 58)",
-  " (in 'nowcast', line 619, column 28 to line 622, column 1)",
-  " (in 'nowcast', line 619, column 0 to line 622, column 1)",
-  " (in 'nowcast', line 624, column 0 to column 75)",
-  " (in 'nowcast', line 625, column 0 to column 83)",
-  " (in 'nowcast', line 626, column 0 to column 50)",
-  " (in 'nowcast', line 627, column 0 to column 71)",
-  " (in 'nowcast', line 629, column 0 to column 92)",
-  " (in 'nowcast', line 630, column 0 to column 84)",
-  " (in 'nowcast', line 631, column 0 to column 92)",
-  " (in 'nowcast', line 632, column 0 to column 84)",
+  " (in 'nowcast', line 618, column 28 to line 621, column 1)",
+  " (in 'nowcast', line 618, column 0 to line 621, column 1)",
+  " (in 'nowcast', line 623, column 0 to column 75)",
+  " (in 'nowcast', line 624, column 0 to column 83)",
+  " (in 'nowcast', line 625, column 0 to column 50)",
+  " (in 'nowcast', line 626, column 0 to column 71)",
+  " (in 'nowcast', line 628, column 0 to column 92)",
+  " (in 'nowcast', line 629, column 0 to column 84)",
+  " (in 'nowcast', line 630, column 0 to column 92)",
+  " (in 'nowcast', line 631, column 0 to column 84)",
+  " (in 'nowcast', line 632, column 0 to column 74)",
   " (in 'nowcast', line 633, column 0 to column 74)",
-  " (in 'nowcast', line 634, column 0 to column 74)",
-  " (in 'nowcast', line 637, column 2 to column 56)",
-  " (in 'nowcast', line 636, column 0 to line 637, column 56)",
-  " (in 'nowcast', line 646, column 6 to column 64)",
-  " (in 'nowcast', line 645, column 11 to line 647, column 5)",
-  " (in 'nowcast', line 644, column 6 to column 116)",
-  " (in 'nowcast', line 643, column 29 to line 645, column 5)",
-  " (in 'nowcast', line 643, column 4 to line 647, column 5)",
-  " (in 'nowcast', line 641, column 18 to line 648, column 3)",
-  " (in 'nowcast', line 641, column 2 to line 648, column 3)",
-  " (in 'nowcast', line 650, column 2 to column 19)",
+  " (in 'nowcast', line 636, column 2 to column 57)",
+  " (in 'nowcast', line 635, column 0 to line 636, column 57)",
+  " (in 'nowcast', line 645, column 6 to column 64)",
+  " (in 'nowcast', line 644, column 11 to line 646, column 5)",
+  " (in 'nowcast', line 643, column 6 to column 116)",
+  " (in 'nowcast', line 642, column 29 to line 644, column 5)",
+  " (in 'nowcast', line 642, column 4 to line 646, column 5)",
+  " (in 'nowcast', line 640, column 18 to line 647, column 3)",
+  " (in 'nowcast', line 640, column 2 to line 647, column 3)",
+  " (in 'nowcast', line 649, column 2 to column 19)",
   " (in 'nowcast', line 472, column 0 to column 23)",
   " (in 'nowcast', line 473, column 0 to column 24)",
   " (in 'nowcast', line 474, column 0 to column 24)",
@@ -168,8 +168,6 @@ static constexpr std::array<const char*, 389> locations_array__ =
   " (in 'nowcast', line 566, column 30 to column 39)",
   " (in 'nowcast', line 568, column 25 to column 26)",
   " (in 'nowcast', line 569, column 25 to column 26)",
-  " (in 'nowcast', line 576, column 16 to column 17)",
-  " (in 'nowcast', line 577, column 16 to column 17)",
   " (in 'nowcast', line 579, column 7 to column 28)",
   " (in 'nowcast', line 579, column 30 to column 39)",
   " (in 'nowcast', line 580, column 6 to column 19)",
@@ -183,7 +181,7 @@ static constexpr std::array<const char*, 389> locations_array__ =
   " (in 'nowcast', line 587, column 30 to column 39)",
   " (in 'nowcast', line 589, column 7 to column 28)",
   " (in 'nowcast', line 589, column 30 to column 39)",
-  " (in 'nowcast', line 609, column 7 to column 13)",
+  " (in 'nowcast', line 608, column 7 to column 13)",
   " (in 'nowcast', line 32, column 9 to column 26)",
   " (in 'nowcast', line 32, column 28 to column 45)",
   " (in 'nowcast', line 32, column 2 to column 103)",
@@ -344,8 +342,8 @@ static constexpr std::array<const char*, 389> locations_array__ =
   " (in 'nowcast', line 414, column 11 to column 37)",
   " (in 'nowcast', line 414, column 4 to column 73)",
   " (in 'nowcast', line 419, column 6 to column 73)",
-  " (in 'nowcast', line 420, column 6 to column 64)",
-  " (in 'nowcast', line 421, column 6 to column 64)",
+  " (in 'nowcast', line 420, column 6 to column 61)",
+  " (in 'nowcast', line 421, column 6 to column 61)",
   " (in 'nowcast', line 418, column 32 to line 422, column 5)",
   " (in 'nowcast', line 418, column 4 to line 422, column 5)",
   " (in 'nowcast', line 425, column 4 to line 426, column 55)",
@@ -547,10 +545,8 @@ template <typename T3__, typename T4__, typename T5__, typename T6__,
                               stan::is_vt_not_complex<T8__>,
                               stan::is_stan_scalar<T9__>,
                               stan::is_stan_scalar<T10__>,
-                              stan::is_col_vector<T11__>,
-                              stan::is_vt_not_complex<T11__>,
-                              stan::is_col_vector<T12__>,
-                              stan::is_vt_not_complex<T12__>,
+                              stan::is_stan_scalar<T11__>,
+                              stan::is_stan_scalar<T12__>,
                               stan::is_eigen_matrix_dynamic<T13__>,
                               stan::is_vt_not_complex<T13__>,
                               stan::is_eigen_matrix_dynamic<T14__>,
@@ -573,7 +569,7 @@ Eigen::Matrix<stan::promote_args_t<stan::base_type_t<T3__>,
                 stan::base_type_t<T4__>, stan::base_type_t<T5__>,
                 stan::base_type_t<T6__>, stan::base_type_t<T7__>,
                 stan::promote_args_t<stan::base_type_t<T8__>, T9__, T10__,
-                  stan::base_type_t<T11__>, stan::base_type_t<T12__>,
+                  T11__, T12__,
                   stan::promote_args_t<stan::base_type_t<T13__>,
                     stan::base_type_t<T14__>, T15__, T16__, T17__,
                     stan::promote_args_t<T18__, stan::base_type_t<T19__>,
@@ -587,14 +583,13 @@ state_space_process(const int& num_steps, const int& num_delays, const int&
                     L_nu_arg__, const std::vector<Eigen::Matrix<T9__,-1,-1>>&
                     xi_mu_centered,
                     const std::vector<Eigen::Matrix<T10__,-1,-1>>&
-                    xi_nu_centered, const T11__& xi_mu_sd_arg__, const T12__&
-                    xi_nu_sd_arg__, const T13__& mu_0_centered_arg__,
-                    const T14__& nu_0_centered_arg__, const T15__& mu_0_sd,
-                    const T16__& nu_0_sd, const T17__& mu_0_mean,
-                    const T18__& nu_0_mean, const T19__& B_cnt_arg__,
-                    const T20__& X_cnt_arg__, const T21__& phi_AR_arg__,
-                    const T22__& theta_MA_arg__, const T23__& xi_arg__,
-                    std::ostream* pstream__);
+                    xi_nu_centered, const T11__& xi_mu_sd, const T12__&
+                    xi_nu_sd, const T13__& mu_0_centered_arg__, const T14__&
+                    nu_0_centered_arg__, const T15__& mu_0_sd, const T16__&
+                    nu_0_sd, const T17__& mu_0_mean, const T18__& nu_0_mean,
+                    const T19__& B_cnt_arg__, const T20__& X_cnt_arg__,
+                    const T21__& phi_AR_arg__, const T22__& theta_MA_arg__,
+                    const T23__& xi_arg__, std::ostream* pstream__);
 template <bool propto__, typename T0__, typename T1__, typename T2__,
           stan::require_all_t<stan::is_col_vector<T0__>,
                               stan::is_vt_not_complex<T0__>,
@@ -631,31 +626,31 @@ create_block_diagonal(const T0__& A_arg__, const T1__& B_arg__, std::ostream*
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 152;
+    current_statement__ = 150;
     stan::math::validate_non_negative_index("C", "rows(A) + rows(B)",
       (stan::math::rows(A) + stan::math::rows(B)));
-    current_statement__ = 153;
+    current_statement__ = 151;
     stan::math::validate_non_negative_index("C", "cols(A) + cols(B)",
       (stan::math::cols(A) + stan::math::cols(B)));
     Eigen::Matrix<local_scalar_t__,-1,-1> C =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant((stan::math::rows(A) +
         stan::math::rows(B)), (stan::math::cols(A) + stan::math::cols(B)),
         DUMMY_VAR__);
-    current_statement__ = 154;
+    current_statement__ = 152;
     stan::model::assign(C,
       stan::math::rep_matrix(0, (stan::math::rows(A) + stan::math::rows(B)),
         (stan::math::cols(A) + stan::math::cols(B))), "assigning variable C");
-    current_statement__ = 155;
+    current_statement__ = 153;
     stan::model::assign(C, A, "assigning variable C",
       stan::model::index_min_max(1, stan::math::rows(A)),
       stan::model::index_min_max(1, stan::math::cols(A)));
-    current_statement__ = 156;
+    current_statement__ = 154;
     stan::model::assign(C, B, "assigning variable C",
       stan::model::index_min_max((stan::math::rows(A) + 1),
         (stan::math::rows(A) + stan::math::rows(B))),
       stan::model::index_min_max((stan::math::cols(A) + 1),
         (stan::math::cols(A) + stan::math::cols(B))));
-    current_statement__ = 157;
+    current_statement__ = 155;
     return C;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -676,29 +671,29 @@ rep_diagonal_mat(const T0__& A_arg__, const int& k, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 159;
+    current_statement__ = 157;
     stan::math::validate_non_negative_index("C", "rows(A) * k",
       (stan::math::rows(A) * k));
-    current_statement__ = 160;
+    current_statement__ = 158;
     stan::math::validate_non_negative_index("C", "cols(A) * k",
       (stan::math::cols(A) * k));
     Eigen::Matrix<local_scalar_t__,-1,-1> C =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant((stan::math::rows(A) *
         k), (stan::math::cols(A) * k), DUMMY_VAR__);
-    current_statement__ = 161;
+    current_statement__ = 159;
     stan::model::assign(C,
       stan::math::rep_matrix(0, (stan::math::rows(A) * k),
         (stan::math::cols(A) * k)), "assigning variable C");
-    current_statement__ = 164;
+    current_statement__ = 162;
     for (int l = 1; l <= k; ++l) {
-      current_statement__ = 162;
+      current_statement__ = 160;
       stan::model::assign(C, A, "assigning variable C",
         stan::model::index_min_max((((l - 1) * stan::math::rows(A)) + 1), (l
           * stan::math::rows(A))),
         stan::model::index_min_max((((l - 1) * stan::math::cols(A)) + 1), (l
           * stan::math::cols(A))));
     }
-    current_statement__ = 165;
+    current_statement__ = 163;
     return C;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -719,20 +714,20 @@ rep_vec(const T0__& A_arg__, const int& k, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 167;
+    current_statement__ = 165;
     stan::math::validate_non_negative_index("C", "num_elements(A) * k",
       (stan::math::num_elements(A) * k));
     Eigen::Matrix<local_scalar_t__,-1,1> C =
       Eigen::Matrix<local_scalar_t__,-1,1>::Constant((stan::math::num_elements(
                                                         A) * k), DUMMY_VAR__);
-    current_statement__ = 171;
+    current_statement__ = 169;
     for (int l = 1; l <= k; ++l) {
-      current_statement__ = 169;
+      current_statement__ = 167;
       stan::model::assign(C, A, "assigning variable C",
         stan::model::index_min_max((((l - 1) * stan::math::num_elements(A)) +
           1), (l * stan::math::num_elements(A))));
     }
-    current_statement__ = 172;
+    current_statement__ = 170;
     return C;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -754,22 +749,22 @@ rep_vec_piecewise(const T0__& A_arg__, const int& k, std::ostream* pstream__) {
   (void) DUMMY_VAR__;
   try {
     int n = std::numeric_limits<int>::min();
-    current_statement__ = 174;
+    current_statement__ = 172;
     n = stan::math::num_elements(A);
-    current_statement__ = 175;
+    current_statement__ = 173;
     stan::math::validate_non_negative_index("C", "n * k", (n * k));
     Eigen::Matrix<local_scalar_t__,-1,1> C =
       Eigen::Matrix<local_scalar_t__,-1,1>::Constant((n * k), DUMMY_VAR__);
-    current_statement__ = 179;
+    current_statement__ = 177;
     for (int j = 1; j <= n; ++j) {
-      current_statement__ = 177;
+      current_statement__ = 175;
       stan::model::assign(C,
         stan::math::rep_vector(
           stan::model::rvalue(A, "A", stan::model::index_uni(j)), k),
         "assigning variable C",
         stan::model::index_min_max((((j - 1) * k) + 1), (k * j)));
     }
-    current_statement__ = 180;
+    current_statement__ = 178;
     return C;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -793,22 +788,22 @@ append_val_2_vec(const T0__& A_arg__, const T1__& val, std::ostream*
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 182;
+    current_statement__ = 180;
     stan::math::validate_non_negative_index("B", "num_elements(A) + 1",
       (stan::math::num_elements(A) + 1));
     Eigen::Matrix<local_scalar_t__,-1,1> B =
       Eigen::Matrix<local_scalar_t__,-1,1>::Constant((stan::math::num_elements(
                                                         A) + 1), DUMMY_VAR__);
-    current_statement__ = 185;
+    current_statement__ = 183;
     if (stan::math::logical_gt(stan::math::num_elements(A), 0)) {
-      current_statement__ = 184;
+      current_statement__ = 182;
       stan::model::assign(B, A, "assigning variable B",
         stan::model::index_min_max(1, stan::math::num_elements(A)));
     }
-    current_statement__ = 186;
+    current_statement__ = 184;
     stan::model::assign(B, val, "assigning variable B",
       stan::model::index_uni(stan::math::num_elements(B)));
-    current_statement__ = 187;
+    current_statement__ = 185;
     return B;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -832,22 +827,22 @@ append_vec_2_val(const T0__& val, const T1__& A_arg__, std::ostream*
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 189;
+    current_statement__ = 187;
     stan::math::validate_non_negative_index("B", "num_elements(A) + 1",
       (stan::math::num_elements(A) + 1));
     Eigen::Matrix<local_scalar_t__,-1,1> B =
       Eigen::Matrix<local_scalar_t__,-1,1>::Constant((stan::math::num_elements(
                                                         A) + 1), DUMMY_VAR__);
-    current_statement__ = 192;
+    current_statement__ = 190;
     if (stan::math::logical_gt(stan::math::num_elements(A), 0)) {
-      current_statement__ = 191;
+      current_statement__ = 189;
       stan::model::assign(B, A, "assigning variable B",
         stan::model::index_min_max(2, stan::math::num_elements(B)));
     }
-    current_statement__ = 193;
+    current_statement__ = 191;
     stan::model::assign(B, val, "assigning variable B",
       stan::model::index_uni(1));
-    current_statement__ = 194;
+    current_statement__ = 192;
     return B;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -865,35 +860,35 @@ create_trend_matrix_block_A(const int& degree, std::ostream* pstream__) {
   (void) DUMMY_VAR__;
   try {
     int ncols = std::numeric_limits<int>::min();
-    current_statement__ = 196;
+    current_statement__ = 194;
     ncols = get_num_cols_A_trend(degree, pstream__);
     int nrows = std::numeric_limits<int>::min();
-    current_statement__ = 197;
+    current_statement__ = 195;
     nrows = get_num_rows_A_trend(degree, pstream__);
-    current_statement__ = 198;
+    current_statement__ = 196;
     stan::math::validate_non_negative_index("A", "nrows", nrows);
-    current_statement__ = 199;
+    current_statement__ = 197;
     stan::math::validate_non_negative_index("A", "ncols", ncols);
     Eigen::Matrix<local_scalar_t__,-1,-1> A =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(nrows, ncols,
         DUMMY_VAR__);
-    current_statement__ = 200;
+    current_statement__ = 198;
     stan::model::assign(A, stan::math::rep_matrix(0, nrows, ncols),
       "assigning variable A");
-    current_statement__ = 203;
+    current_statement__ = 201;
     for (int j = 1; j <= ncols; ++j) {
-      current_statement__ = 201;
+      current_statement__ = 199;
       stan::model::assign(A, (stan::math::pow(-1, (j + 1)) *
         stan::math::choose(degree, j)), "assigning variable A",
         stan::model::index_uni(1), stan::model::index_uni(j));
     }
-    current_statement__ = 206;
+    current_statement__ = 204;
     for (int i = 2; i <= nrows; ++i) {
-      current_statement__ = 204;
+      current_statement__ = 202;
       stan::model::assign(A, 1.0, "assigning variable A",
         stan::model::index_uni(i), stan::model::index_uni((i - 1)));
     }
-    current_statement__ = 207;
+    current_statement__ = 205;
     return stan::math::transpose(A);
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -911,19 +906,19 @@ create_trend_vector_block_L(const int& degree, std::ostream* pstream__) {
   (void) DUMMY_VAR__;
   try {
     int nsize = std::numeric_limits<int>::min();
-    current_statement__ = 209;
+    current_statement__ = 207;
     nsize = get_num_elements_L_trend(degree, pstream__);
-    current_statement__ = 210;
+    current_statement__ = 208;
     stan::math::validate_non_negative_index("L", "nsize", nsize);
     Eigen::Matrix<local_scalar_t__,-1,1> L =
       Eigen::Matrix<local_scalar_t__,-1,1>::Constant(nsize, DUMMY_VAR__);
-    current_statement__ = 211;
+    current_statement__ = 209;
     stan::model::assign(L, stan::math::rep_vector(0.0, nsize),
       "assigning variable L");
-    current_statement__ = 212;
+    current_statement__ = 210;
     stan::model::assign(L, 1.0, "assigning variable L",
       stan::model::index_uni(1));
-    current_statement__ = 213;
+    current_statement__ = 211;
     return L;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -942,25 +937,25 @@ create_trend_matrix_block_R(const int& degree, const int& is_constant,
   (void) DUMMY_VAR__;
   try {
     int ncols = std::numeric_limits<int>::min();
-    current_statement__ = 215;
+    current_statement__ = 213;
     ncols = get_num_cols_R_trend(degree, pstream__);
     int nrows = std::numeric_limits<int>::min();
-    current_statement__ = 216;
+    current_statement__ = 214;
     nrows = get_num_rows_R_trend(degree, pstream__);
-    current_statement__ = 217;
+    current_statement__ = 215;
     stan::math::validate_non_negative_index("R", "nrows", nrows);
-    current_statement__ = 218;
+    current_statement__ = 216;
     stan::math::validate_non_negative_index("R", "ncols", ncols);
     Eigen::Matrix<local_scalar_t__,-1,-1> R =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(nrows, ncols,
         DUMMY_VAR__);
-    current_statement__ = 219;
+    current_statement__ = 217;
     stan::model::assign(R, stan::math::rep_matrix(0.0, nrows, ncols),
       "assigning variable R");
-    current_statement__ = 220;
+    current_statement__ = 218;
     stan::model::assign(R, (1.0 - is_constant), "assigning variable R",
       stan::model::index_uni(1), stan::model::index_uni(1));
-    current_statement__ = 221;
+    current_statement__ = 219;
     return stan::math::transpose(R);
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -976,7 +971,7 @@ int get_num_elements_alpha_trend(const int& degree, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 223;
+    current_statement__ = 221;
     return degree;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -992,7 +987,7 @@ int get_num_cols_A_trend(const int& degree, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 225;
+    current_statement__ = 223;
     return degree;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1008,7 +1003,7 @@ int get_num_rows_A_trend(const int& degree, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 227;
+    current_statement__ = 225;
     return degree;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1024,7 +1019,7 @@ int get_num_elements_L_trend(const int& degree, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 229;
+    current_statement__ = 227;
     return degree;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1040,7 +1035,7 @@ int get_num_cols_R_trend(const int& degree, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 231;
+    current_statement__ = 229;
     return degree;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1056,7 +1051,7 @@ int get_num_rows_R_trend(const int& degree, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 233;
+    current_statement__ = 231;
     return degree;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1076,39 +1071,39 @@ create_seasonal_discrete_matrix_block_A(const int& num_seasons, const int&
   (void) DUMMY_VAR__;
   try {
     int k = std::numeric_limits<int>::min();
-    current_statement__ = 235;
+    current_statement__ = 233;
     k = ((num_seasons * season_duration) + 1);
-    current_statement__ = 236;
+    current_statement__ = 234;
     stan::math::validate_non_negative_index("A", "k", k);
-    current_statement__ = 237;
+    current_statement__ = 235;
     stan::math::validate_non_negative_index("A", "k", k);
     Eigen::Matrix<local_scalar_t__,-1,-1> A =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(k, k, DUMMY_VAR__);
-    current_statement__ = 238;
+    current_statement__ = 236;
     stan::model::assign(A, stan::math::rep_matrix(0.0, k, k),
       "assigning variable A");
-    current_statement__ = 243;
+    current_statement__ = 241;
     for (int j = 1; j <= ((k - season_duration) - 1); ++j) {
-      current_statement__ = 241;
+      current_statement__ = 239;
       if (stan::math::logical_eq(stan::math::modulus(j, season_duration), 0)) {
-        current_statement__ = 239;
+        current_statement__ = 237;
         stan::model::assign(A, -1.0, "assigning variable A",
           stan::model::index_uni(1), stan::model::index_uni(j));
       }
     }
-    current_statement__ = 244;
+    current_statement__ = 242;
     stan::model::assign(A, 1.0, "assigning variable A",
       stan::model::index_uni(1), stan::model::index_uni(k));
-    current_statement__ = 247;
+    current_statement__ = 245;
     for (int i = 2; i <= (k - 1); ++i) {
-      current_statement__ = 245;
+      current_statement__ = 243;
       stan::model::assign(A, 1.0, "assigning variable A",
         stan::model::index_uni(i), stan::model::index_uni((i - 1)));
     }
-    current_statement__ = 248;
+    current_statement__ = 246;
     stan::model::assign(A, 1.0, "assigning variable A",
       stan::model::index_uni(k), stan::model::index_uni(k));
-    current_statement__ = 249;
+    current_statement__ = 247;
     return A;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1128,19 +1123,19 @@ create_seasonal_discrete_vector_block_L(const int& num_seasons, const int&
   (void) DUMMY_VAR__;
   try {
     int k = std::numeric_limits<int>::min();
-    current_statement__ = 251;
+    current_statement__ = 249;
     k = ((num_seasons * season_duration) + 1);
-    current_statement__ = 252;
+    current_statement__ = 250;
     stan::math::validate_non_negative_index("L", "k", k);
     Eigen::Matrix<local_scalar_t__,-1,1> L =
       Eigen::Matrix<local_scalar_t__,-1,1>::Constant(k, DUMMY_VAR__);
-    current_statement__ = 253;
+    current_statement__ = 251;
     stan::model::assign(L, stan::math::rep_vector(0.0, k),
       "assigning variable L");
-    current_statement__ = 254;
+    current_statement__ = 252;
     stan::model::assign(L, 1.0, "assigning variable L",
       stan::model::index_uni(1));
-    current_statement__ = 255;
+    current_statement__ = 253;
     return L;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1161,25 +1156,25 @@ create_seasonal_discrete_matrix_block_R(const int& num_seasons, const int&
   (void) DUMMY_VAR__;
   try {
     int k = std::numeric_limits<int>::min();
-    current_statement__ = 257;
+    current_statement__ = 255;
     k = ((num_seasons * season_duration) + 1);
-    current_statement__ = 258;
+    current_statement__ = 256;
     stan::math::validate_non_negative_index("R", "k", k);
-    current_statement__ = 259;
+    current_statement__ = 257;
     stan::math::validate_non_negative_index("R", "k", k);
     Eigen::Matrix<local_scalar_t__,-1,-1> R =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(k, k, DUMMY_VAR__);
-    current_statement__ = 260;
+    current_statement__ = 258;
     stan::model::assign(R, stan::math::rep_matrix(0.0, k, k),
       "assigning variable R");
     local_scalar_t__ reminder = DUMMY_VAR__;
-    current_statement__ = 261;
+    current_statement__ = 259;
     reminder = (stan::math::ceil((time / season_duration)) -
       stan::math::floor((time / season_duration)));
-    current_statement__ = 262;
+    current_statement__ = 260;
     stan::model::assign(R, (1.0 - reminder), "assigning variable R",
       stan::model::index_uni(k), stan::model::index_uni(k));
-    current_statement__ = 263;
+    current_statement__ = 261;
     return R;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1208,20 +1203,20 @@ create_initial_seasonal_discrete_vector_block_alpha(const T0__&
   (void) DUMMY_VAR__;
   try {
     int k = std::numeric_limits<int>::min();
-    current_statement__ = 265;
+    current_statement__ = 263;
     k = ((stan::math::num_elements(season_params) * season_duration) + 1);
-    current_statement__ = 266;
+    current_statement__ = 264;
     stan::math::validate_non_negative_index("alpha", "k", k);
     Eigen::Matrix<local_scalar_t__,-1,1> alpha =
       Eigen::Matrix<local_scalar_t__,-1,1>::Constant(k, DUMMY_VAR__);
-    current_statement__ = 268;
+    current_statement__ = 266;
     stan::model::assign(alpha,
       rep_vec_piecewise(season_params, season_duration, pstream__),
       "assigning variable alpha", stan::model::index_min_max(1, (k - 1)));
-    current_statement__ = 269;
+    current_statement__ = 267;
     stan::model::assign(alpha, error_term, "assigning variable alpha",
       stan::model::index_uni(k));
-    current_statement__ = 270;
+    current_statement__ = 268;
     return alpha;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1237,15 +1232,15 @@ int max_int(const int& a, const int& b, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 276;
+    current_statement__ = 274;
     if (stan::math::logical_gt(a, b)) {
-      current_statement__ = 274;
+      current_statement__ = 272;
       return a;
     } else {
-      current_statement__ = 272;
+      current_statement__ = 270;
       return b;
     }
-    current_statement__ = 277;
+    current_statement__ = 275;
     return 1;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1261,15 +1256,15 @@ int min_int(const int& a, const int& b, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 283;
+    current_statement__ = 281;
     if (stan::math::logical_gt(a, b)) {
-      current_statement__ = 281;
+      current_statement__ = 279;
       return b;
     } else {
-      current_statement__ = 279;
+      current_statement__ = 277;
       return a;
     }
-    current_statement__ = 284;
+    current_statement__ = 282;
     return 1;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1296,7 +1291,7 @@ AR(const T0__& y_arg__, const T1__& phi_arg__, const int& t, std::ostream*
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 286;
+    current_statement__ = 284;
     return stan::math::multiply(
              stan::model::rvalue(y, "y", stan::model::index_omni(),
                stan::model::index_min_max(((t + 1) -
@@ -1330,7 +1325,7 @@ MA(const T0__& xi_arg__, const T1__& theta_arg__, const int& t, std::ostream*
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 288;
+    current_statement__ = 286;
     return AR(xi, theta, t, pstream__);
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1351,7 +1346,7 @@ create_phi_AR(const T0__& phi_arg__, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 290;
+    current_statement__ = 288;
     return append_val_2_vec(phi, 0.0, pstream__);
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1372,7 +1367,7 @@ create_theta_MA(const T0__& theta_arg__, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 292;
+    current_statement__ = 290;
     return append_val_2_vec(theta, 1.0, pstream__);
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1398,10 +1393,8 @@ template <typename T3__, typename T4__, typename T5__, typename T6__,
                               stan::is_vt_not_complex<T8__>,
                               stan::is_stan_scalar<T9__>,
                               stan::is_stan_scalar<T10__>,
-                              stan::is_col_vector<T11__>,
-                              stan::is_vt_not_complex<T11__>,
-                              stan::is_col_vector<T12__>,
-                              stan::is_vt_not_complex<T12__>,
+                              stan::is_stan_scalar<T11__>,
+                              stan::is_stan_scalar<T12__>,
                               stan::is_eigen_matrix_dynamic<T13__>,
                               stan::is_vt_not_complex<T13__>,
                               stan::is_eigen_matrix_dynamic<T14__>,
@@ -1424,7 +1417,7 @@ Eigen::Matrix<stan::promote_args_t<stan::base_type_t<T3__>,
                 stan::base_type_t<T4__>, stan::base_type_t<T5__>,
                 stan::base_type_t<T6__>, stan::base_type_t<T7__>,
                 stan::promote_args_t<stan::base_type_t<T8__>, T9__, T10__,
-                  stan::base_type_t<T11__>, stan::base_type_t<T12__>,
+                  T11__, T12__,
                   stan::promote_args_t<stan::base_type_t<T13__>,
                     stan::base_type_t<T14__>, T15__, T16__, T17__,
                     stan::promote_args_t<T18__, stan::base_type_t<T19__>,
@@ -1438,22 +1431,20 @@ state_space_process(const int& num_steps, const int& num_delays, const int&
                     L_nu_arg__, const std::vector<Eigen::Matrix<T9__,-1,-1>>&
                     xi_mu_centered,
                     const std::vector<Eigen::Matrix<T10__,-1,-1>>&
-                    xi_nu_centered, const T11__& xi_mu_sd_arg__, const T12__&
-                    xi_nu_sd_arg__, const T13__& mu_0_centered_arg__,
-                    const T14__& nu_0_centered_arg__, const T15__& mu_0_sd,
-                    const T16__& nu_0_sd, const T17__& mu_0_mean,
-                    const T18__& nu_0_mean, const T19__& B_cnt_arg__,
-                    const T20__& X_cnt_arg__, const T21__& phi_AR_arg__,
-                    const T22__& theta_MA_arg__, const T23__& xi_arg__,
-                    std::ostream* pstream__) {
+                    xi_nu_centered, const T11__& xi_mu_sd, const T12__&
+                    xi_nu_sd, const T13__& mu_0_centered_arg__, const T14__&
+                    nu_0_centered_arg__, const T15__& mu_0_sd, const T16__&
+                    nu_0_sd, const T17__& mu_0_mean, const T18__& nu_0_mean,
+                    const T19__& B_cnt_arg__, const T20__& X_cnt_arg__,
+                    const T21__& phi_AR_arg__, const T22__& theta_MA_arg__,
+                    const T23__& xi_arg__, std::ostream* pstream__) {
   using local_scalar_t__ = stan::promote_args_t<stan::base_type_t<T3__>,
                              stan::base_type_t<T4__>,
                              stan::base_type_t<T5__>,
                              stan::base_type_t<T6__>,
                              stan::base_type_t<T7__>,
                              stan::promote_args_t<stan::base_type_t<T8__>,
-                               T9__, T10__, stan::base_type_t<T11__>,
-                               stan::base_type_t<T12__>,
+                               T9__, T10__, T11__, T12__,
                                stan::promote_args_t<stan::base_type_t<T13__>,
                                  stan::base_type_t<T14__>, T15__, T16__,
                                  T17__,
@@ -1470,8 +1461,6 @@ state_space_process(const int& num_steps, const int& num_delays, const int&
   const auto& R_nu = stan::math::to_ref(R_nu_arg__);
   const auto& L_mu = stan::math::to_ref(L_mu_arg__);
   const auto& L_nu = stan::math::to_ref(L_nu_arg__);
-  const auto& xi_mu_sd = stan::math::to_ref(xi_mu_sd_arg__);
-  const auto& xi_nu_sd = stan::math::to_ref(xi_nu_sd_arg__);
   const auto& mu_0_centered = stan::math::to_ref(mu_0_centered_arg__);
   const auto& nu_0_centered = stan::math::to_ref(nu_0_centered_arg__);
   const auto& B_cnt = stan::math::to_ref(B_cnt_arg__);
@@ -1486,79 +1475,79 @@ state_space_process(const int& num_steps, const int& num_delays, const int&
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 294;
+    current_statement__ = 292;
     stan::math::validate_non_negative_index("l", "num_delays * num_strata",
       (num_delays * num_strata));
-    current_statement__ = 295;
+    current_statement__ = 293;
     stan::math::validate_non_negative_index("l", "num_steps", num_steps);
     Eigen::Matrix<local_scalar_t__,-1,-1> l =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant((num_delays *
         num_strata), num_steps, DUMMY_VAR__);
-    current_statement__ = 296;
+    current_statement__ = 294;
     stan::model::assign(l,
       stan::math::rep_matrix(0.0, (num_delays * num_strata), num_steps),
       "assigning variable l");
-    current_statement__ = 297;
+    current_statement__ = 295;
     stan::math::validate_non_negative_index("mu", "num_steps", num_steps);
-    current_statement__ = 298;
+    current_statement__ = 296;
     stan::math::validate_non_negative_index("mu", "num_delays * num_strata",
       (num_delays * num_strata));
-    current_statement__ = 299;
+    current_statement__ = 297;
     stan::math::validate_non_negative_index("mu", "num_elements(L_mu)",
       stan::math::num_elements(L_mu));
     std::vector<Eigen::Matrix<local_scalar_t__,-1,-1>> mu =
       std::vector<Eigen::Matrix<local_scalar_t__,-1,-1>>(num_steps,
         Eigen::Matrix<local_scalar_t__,-1,-1>::Constant((num_delays *
           num_strata), stan::math::num_elements(L_mu), DUMMY_VAR__));
-    current_statement__ = 301;
+    current_statement__ = 299;
     stan::model::assign(mu,
       stan::math::add(
         stan::math::rep_matrix(mu_0_mean, (num_strata * num_delays),
           stan::math::num_elements(L_mu)),
         stan::math::multiply(mu_0_sd, mu_0_centered)),
       "assigning variable mu", stan::model::index_uni(1));
-    current_statement__ = 302;
+    current_statement__ = 300;
     stan::math::validate_non_negative_index("nu", "num_steps", num_steps);
-    current_statement__ = 303;
+    current_statement__ = 301;
     stan::math::validate_non_negative_index("nu", "num_delays * num_strata",
       (num_delays * num_strata));
-    current_statement__ = 304;
+    current_statement__ = 302;
     stan::math::validate_non_negative_index("nu", "num_elements(L_nu)",
       stan::math::num_elements(L_nu));
     std::vector<Eigen::Matrix<local_scalar_t__,-1,-1>> nu =
       std::vector<Eigen::Matrix<local_scalar_t__,-1,-1>>(num_steps,
         Eigen::Matrix<local_scalar_t__,-1,-1>::Constant((num_delays *
           num_strata), stan::math::num_elements(L_nu), DUMMY_VAR__));
-    current_statement__ = 306;
+    current_statement__ = 304;
     stan::model::assign(nu,
       stan::math::add(
         stan::math::rep_matrix(nu_0_mean, (num_strata * num_delays),
           stan::math::num_elements(L_nu)),
         stan::math::multiply(nu_0_sd, nu_0_centered)),
       "assigning variable nu", stan::model::index_uni(1));
-    current_statement__ = 307;
+    current_statement__ = 305;
     stan::math::validate_non_negative_index("phi",
       "num_elements(phi_AR) + 1", (stan::math::num_elements(phi_AR) + 1));
     Eigen::Matrix<local_scalar_t__,-1,1> phi =
       Eigen::Matrix<local_scalar_t__,-1,1>::Constant((stan::math::num_elements(
                                                         phi_AR) + 1),
         DUMMY_VAR__);
-    current_statement__ = 308;
+    current_statement__ = 306;
     stan::model::assign(phi, create_phi_AR(phi_AR, pstream__),
       "assigning variable phi");
-    current_statement__ = 309;
+    current_statement__ = 307;
     stan::math::validate_non_negative_index("theta",
       "num_elements(theta_MA) + 1", (stan::math::num_elements(theta_MA) + 1));
     Eigen::Matrix<local_scalar_t__,-1,1> theta =
       Eigen::Matrix<local_scalar_t__,-1,1>::Constant((stan::math::num_elements(
                                                         theta_MA) + 1),
         DUMMY_VAR__);
-    current_statement__ = 310;
+    current_statement__ = 308;
     stan::model::assign(theta, create_theta_MA(theta_MA, pstream__),
       "assigning variable theta");
-    current_statement__ = 315;
+    current_statement__ = 313;
     for (int t = 1; t <= (num_steps - 1); ++t) {
-      current_statement__ = 311;
+      current_statement__ = 309;
       stan::model::assign(l,
         stan::math::add(
           stan::math::add(
@@ -1571,34 +1560,30 @@ state_space_process(const int& num_steps, const int& num_delays, const int&
                 L_nu)), AR(stan::model::deep_copy(l), phi, t, pstream__)),
           MA(xi, theta, t, pstream__)), "assigning variable l",
         stan::model::index_omni(), stan::model::index_uni(t));
-      current_statement__ = 312;
+      current_statement__ = 310;
       stan::model::assign(mu,
         stan::math::add(
           stan::math::multiply(
             stan::model::deep_copy(
               stan::model::rvalue(mu, "mu", stan::model::index_uni(t))), A_mu),
           stan::math::multiply(
-            stan::math::multiply(
-              stan::model::rvalue(xi_mu_sd, "xi_mu_sd",
-                stan::model::index_uni(t)),
+            stan::math::multiply(xi_mu_sd,
               stan::model::rvalue(xi_mu_centered, "xi_mu_centered",
                 stan::model::index_uni(t))), R_mu)), "assigning variable mu",
         stan::model::index_uni((t + 1)));
-      current_statement__ = 313;
+      current_statement__ = 311;
       stan::model::assign(nu,
         stan::math::add(
           stan::math::multiply(
             stan::model::deep_copy(
               stan::model::rvalue(nu, "nu", stan::model::index_uni(t))), A_nu),
           stan::math::multiply(
-            stan::math::multiply(
-              stan::model::rvalue(xi_nu_sd, "xi_nu_sd",
-                stan::model::index_uni(t)),
+            stan::math::multiply(xi_nu_sd,
               stan::model::rvalue(xi_nu_centered, "xi_nu_centered",
                 stan::model::index_uni(t))), R_nu)), "assigning variable nu",
         stan::model::index_uni((t + 1)));
     }
-    current_statement__ = 316;
+    current_statement__ = 314;
     stan::model::assign(l,
       stan::math::add(
         stan::math::add(
@@ -1612,7 +1597,7 @@ state_space_process(const int& num_steps, const int& num_delays, const int&
           AR(stan::model::deep_copy(l), phi, num_steps, pstream__)),
         MA(xi, theta, num_steps, pstream__)), "assigning variable l",
       stan::model::index_omni(), stan::model::index_uni(num_steps));
-    current_statement__ = 317;
+    current_statement__ = 315;
     return l;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1634,96 +1619,96 @@ dist_lpdf(const T0__& x_arg__, const T1__& param_1, const T2__& param_2,
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 351;
+    current_statement__ = 349;
     if (stan::math::logical_eq(prior_spec, 0)) {
-      current_statement__ = 350;
+      current_statement__ = 348;
       return 0.0;
     } else {
-      current_statement__ = 349;
+      current_statement__ = 347;
       if (stan::math::logical_eq(prior_spec, 1)) {
-        current_statement__ = 348;
+        current_statement__ = 346;
         return stan::math::std_normal_lpdf<false>(x);
       } else {
-        current_statement__ = 347;
+        current_statement__ = 345;
         if (stan::math::logical_eq(prior_spec, 2)) {
-          current_statement__ = 346;
+          current_statement__ = 344;
           return stan::math::normal_lpdf<false>(x, param_1, param_2);
         } else {
-          current_statement__ = 345;
+          current_statement__ = 343;
           if (stan::math::logical_eq(prior_spec, 3)) {
-            current_statement__ = 344;
+            current_statement__ = 342;
             return stan::math::student_t_lpdf<false>(x, param_1, 0.0, param_2);
           } else {
-            current_statement__ = 343;
+            current_statement__ = 341;
             if (stan::math::logical_eq(prior_spec, 4)) {
-              current_statement__ = 342;
+              current_statement__ = 340;
               return stan::math::cauchy_lpdf<false>(x, param_1, param_2);
             } else {
-              current_statement__ = 341;
+              current_statement__ = 339;
               if (stan::math::logical_eq(prior_spec, 4)) {
-                current_statement__ = 340;
+                current_statement__ = 338;
                 return stan::math::exponential_lpdf<false>(x, param_1);
               } else {
-                current_statement__ = 339;
+                current_statement__ = 337;
                 if (stan::math::logical_eq(prior_spec, 5)) {
-                  current_statement__ = 338;
+                  current_statement__ = 336;
                   return stan::math::gamma_lpdf<false>(x, param_1, param_2);
                 } else {
-                  current_statement__ = 337;
+                  current_statement__ = 335;
                   if (stan::math::logical_eq(prior_spec, 6)) {
-                    current_statement__ = 336;
+                    current_statement__ = 334;
                     return stan::math::inv_gamma_lpdf<false>(x, param_1,
                              param_2);
                   } else {
-                    current_statement__ = 335;
+                    current_statement__ = 333;
                     if (stan::math::logical_eq(prior_spec, 7)) {
-                      current_statement__ = 334;
+                      current_statement__ = 332;
                       return stan::math::lognormal_lpdf<false>(x, param_1,
                                param_2);
                     } else {
-                      current_statement__ = 333;
+                      current_statement__ = 331;
                       if (stan::math::logical_eq(prior_spec, 8)) {
-                        current_statement__ = 332;
+                        current_statement__ = 330;
                         return stan::math::weibull_lpdf<false>(x, param_1,
                                  param_2);
                       } else {
-                        current_statement__ = 331;
+                        current_statement__ = 329;
                         if (stan::math::logical_eq(prior_spec, 9)) {
-                          current_statement__ = 330;
+                          current_statement__ = 328;
                           return stan::math::frechet_lpdf<false>(x, param_1,
                                    param_2);
                         } else {
-                          current_statement__ = 329;
+                          current_statement__ = 327;
                           if (stan::math::logical_eq(prior_spec, 10)) {
-                            current_statement__ = 328;
+                            current_statement__ = 326;
                             return stan::math::double_exponential_lpdf<
                                      false>(x, param_1, param_2);
                           } else {
-                            current_statement__ = 327;
+                            current_statement__ = 325;
                             if (stan::math::logical_eq(prior_spec, 11)) {
-                              current_statement__ = 326;
+                              current_statement__ = 324;
                               return stan::math::logistic_lpdf<false>(x,
                                        param_1, param_2);
                             } else {
-                              current_statement__ = 325;
+                              current_statement__ = 323;
                               if (stan::math::logical_eq(prior_spec, 12)) {
-                                current_statement__ = 324;
+                                current_statement__ = 322;
                                 return stan::math::rayleigh_lpdf<false>(x,
                                          param_1);
                               } else {
-                                current_statement__ = 323;
+                                current_statement__ = 321;
                                 if (stan::math::logical_eq(prior_spec, 13)) {
-                                  current_statement__ = 322;
+                                  current_statement__ = 320;
                                   return stan::math::loglogistic_lpdf<false>(
                                            x, param_1, param_2);
                                 } else {
-                                  current_statement__ = 321;
+                                  current_statement__ = 319;
                                   if (stan::math::logical_eq(prior_spec, 14)) {
-                                    current_statement__ = 320;
+                                    current_statement__ = 318;
                                     return stan::math::gumbel_lpdf<false>(x,
                                              param_1, param_2);
                                   } else {
-                                    current_statement__ = 319;
+                                    current_statement__ = 317;
                                     std::stringstream errmsg_stream__;
                                     stan::math::stan_print(&errmsg_stream__,
                                       "invalid link");
@@ -1745,7 +1730,7 @@ dist_lpdf(const T0__& x_arg__, const T1__& param_1, const T2__& param_2,
         }
       }
     }
-    current_statement__ = 352;
+    current_statement__ = 350;
     return 0.0;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1764,96 +1749,96 @@ dist_lpdf(const T0__& x, const T1__& param_1, const T2__& param_2, const int&
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 386;
+    current_statement__ = 384;
     if (stan::math::logical_eq(prior_spec, 0)) {
-      current_statement__ = 385;
+      current_statement__ = 383;
       return 0.0;
     } else {
-      current_statement__ = 384;
+      current_statement__ = 382;
       if (stan::math::logical_eq(prior_spec, 1)) {
-        current_statement__ = 383;
+        current_statement__ = 381;
         return stan::math::std_normal_lpdf<false>(x);
       } else {
-        current_statement__ = 382;
+        current_statement__ = 380;
         if (stan::math::logical_eq(prior_spec, 2)) {
-          current_statement__ = 381;
+          current_statement__ = 379;
           return stan::math::normal_lpdf<false>(x, param_1, param_2);
         } else {
-          current_statement__ = 380;
+          current_statement__ = 378;
           if (stan::math::logical_eq(prior_spec, 3)) {
-            current_statement__ = 379;
+            current_statement__ = 377;
             return stan::math::student_t_lpdf<false>(x, param_1, 0.0, param_2);
           } else {
-            current_statement__ = 378;
+            current_statement__ = 376;
             if (stan::math::logical_eq(prior_spec, 4)) {
-              current_statement__ = 377;
+              current_statement__ = 375;
               return stan::math::cauchy_lpdf<false>(x, param_1, param_2);
             } else {
-              current_statement__ = 376;
+              current_statement__ = 374;
               if (stan::math::logical_eq(prior_spec, 4)) {
-                current_statement__ = 375;
+                current_statement__ = 373;
                 return stan::math::exponential_lpdf<false>(x, param_1);
               } else {
-                current_statement__ = 374;
+                current_statement__ = 372;
                 if (stan::math::logical_eq(prior_spec, 5)) {
-                  current_statement__ = 373;
+                  current_statement__ = 371;
                   return stan::math::gamma_lpdf<false>(x, param_1, param_2);
                 } else {
-                  current_statement__ = 372;
+                  current_statement__ = 370;
                   if (stan::math::logical_eq(prior_spec, 6)) {
-                    current_statement__ = 371;
+                    current_statement__ = 369;
                     return stan::math::inv_gamma_lpdf<false>(x, param_1,
                              param_2);
                   } else {
-                    current_statement__ = 370;
+                    current_statement__ = 368;
                     if (stan::math::logical_eq(prior_spec, 7)) {
-                      current_statement__ = 369;
+                      current_statement__ = 367;
                       return stan::math::lognormal_lpdf<false>(x, param_1,
                                param_2);
                     } else {
-                      current_statement__ = 368;
+                      current_statement__ = 366;
                       if (stan::math::logical_eq(prior_spec, 8)) {
-                        current_statement__ = 367;
+                        current_statement__ = 365;
                         return stan::math::weibull_lpdf<false>(x, param_1,
                                  param_2);
                       } else {
-                        current_statement__ = 366;
+                        current_statement__ = 364;
                         if (stan::math::logical_eq(prior_spec, 9)) {
-                          current_statement__ = 365;
+                          current_statement__ = 363;
                           return stan::math::frechet_lpdf<false>(x, param_1,
                                    param_2);
                         } else {
-                          current_statement__ = 364;
+                          current_statement__ = 362;
                           if (stan::math::logical_eq(prior_spec, 10)) {
-                            current_statement__ = 363;
+                            current_statement__ = 361;
                             return stan::math::double_exponential_lpdf<
                                      false>(x, param_1, param_2);
                           } else {
-                            current_statement__ = 362;
+                            current_statement__ = 360;
                             if (stan::math::logical_eq(prior_spec, 11)) {
-                              current_statement__ = 361;
+                              current_statement__ = 359;
                               return stan::math::logistic_lpdf<false>(x,
                                        param_1, param_2);
                             } else {
-                              current_statement__ = 360;
+                              current_statement__ = 358;
                               if (stan::math::logical_eq(prior_spec, 12)) {
-                                current_statement__ = 359;
+                                current_statement__ = 357;
                                 return stan::math::rayleigh_lpdf<false>(x,
                                          param_1);
                               } else {
-                                current_statement__ = 358;
+                                current_statement__ = 356;
                                 if (stan::math::logical_eq(prior_spec, 13)) {
-                                  current_statement__ = 357;
+                                  current_statement__ = 355;
                                   return stan::math::loglogistic_lpdf<false>(
                                            x, param_1, param_2);
                                 } else {
-                                  current_statement__ = 356;
+                                  current_statement__ = 354;
                                   if (stan::math::logical_eq(prior_spec, 14)) {
-                                    current_statement__ = 355;
+                                    current_statement__ = 353;
                                     return stan::math::gumbel_lpdf<false>(x,
                                              param_1, param_2);
                                   } else {
-                                    current_statement__ = 354;
+                                    current_statement__ = 352;
                                     std::stringstream errmsg_stream__;
                                     stan::math::stan_print(&errmsg_stream__,
                                       "invalid link");
@@ -1875,7 +1860,7 @@ dist_lpdf(const T0__& x, const T1__& param_1, const T2__& param_2, const int&
         }
       }
     }
-    current_statement__ = 387;
+    current_statement__ = 385;
     return 0.0;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2615,80 +2600,76 @@ public:
       current_statement__ = 135;
       stan::math::validate_non_negative_index("theta_MA", "q", q);
       current_statement__ = 136;
-      stan::math::validate_non_negative_index("xi_mu_sd", "1", 1);
-      current_statement__ = 137;
-      stan::math::validate_non_negative_index("xi_nu_sd", "1", 1);
-      current_statement__ = 138;
       xi_centered_1dim__ = std::numeric_limits<int>::min();
-      current_statement__ = 138;
+      current_statement__ = 136;
       xi_centered_1dim__ = (num_strata * num_delays);
-      current_statement__ = 138;
+      current_statement__ = 136;
       stan::math::validate_non_negative_index("xi_centered",
         "num_strata * num_delays", xi_centered_1dim__);
-      current_statement__ = 139;
+      current_statement__ = 137;
       stan::math::validate_non_negative_index("xi_centered", "num_steps",
         num_steps);
-      current_statement__ = 140;
+      current_statement__ = 138;
       xi_mu_centered_1dim__ = std::numeric_limits<int>::min();
-      current_statement__ = 140;
+      current_statement__ = 138;
       xi_mu_centered_1dim__ = (num_steps - 1);
-      current_statement__ = 140;
+      current_statement__ = 138;
       stan::math::validate_non_negative_index("xi_mu_centered",
         "num_steps - 1", xi_mu_centered_1dim__);
-      current_statement__ = 141;
+      current_statement__ = 139;
       xi_mu_centered_2dim__ = std::numeric_limits<int>::min();
-      current_statement__ = 141;
+      current_statement__ = 139;
       xi_mu_centered_2dim__ = (num_strata * num_delays);
-      current_statement__ = 141;
+      current_statement__ = 139;
       stan::math::validate_non_negative_index("xi_mu_centered",
         "num_strata * num_delays", xi_mu_centered_2dim__);
-      current_statement__ = 142;
+      current_statement__ = 140;
       stan::math::validate_non_negative_index("xi_mu_centered", "xi_mu_size",
         xi_mu_size);
-      current_statement__ = 143;
+      current_statement__ = 141;
       xi_nu_centered_1dim__ = std::numeric_limits<int>::min();
-      current_statement__ = 143;
+      current_statement__ = 141;
       xi_nu_centered_1dim__ = (num_steps - 1);
-      current_statement__ = 143;
+      current_statement__ = 141;
       stan::math::validate_non_negative_index("xi_nu_centered",
         "num_steps - 1", xi_nu_centered_1dim__);
-      current_statement__ = 144;
+      current_statement__ = 142;
       xi_nu_centered_2dim__ = std::numeric_limits<int>::min();
-      current_statement__ = 144;
+      current_statement__ = 142;
       xi_nu_centered_2dim__ = (num_strata * num_delays);
-      current_statement__ = 144;
+      current_statement__ = 142;
       stan::math::validate_non_negative_index("xi_nu_centered",
         "num_strata * num_delays", xi_nu_centered_2dim__);
-      current_statement__ = 145;
+      current_statement__ = 143;
       stan::math::validate_non_negative_index("xi_nu_centered", "xi_nu_size",
         xi_nu_size);
-      current_statement__ = 146;
+      current_statement__ = 144;
       r_1dim__ = std::numeric_limits<int>::min();
-      current_statement__ = 146;
+      current_statement__ = 144;
       r_1dim__ = (is_negative_binomial ? 1 : 0);
-      current_statement__ = 146;
+      current_statement__ = 144;
       stan::math::validate_non_negative_index("r",
         "is_negative_binomial ? 1 : 0", r_1dim__);
-      current_statement__ = 147;
+      current_statement__ = 145;
       xi_1dim__ = std::numeric_limits<int>::min();
-      current_statement__ = 147;
+      current_statement__ = 145;
       xi_1dim__ = (num_delays * num_strata);
-      current_statement__ = 147;
+      current_statement__ = 145;
       stan::math::validate_non_negative_index("xi",
         "num_delays * num_strata", xi_1dim__);
-      current_statement__ = 148;
+      current_statement__ = 146;
       stan::math::validate_non_negative_index("xi", "num_steps", num_steps);
-      current_statement__ = 149;
+      current_statement__ = 147;
       lambda_1dim__ = std::numeric_limits<int>::min();
-      current_statement__ = 149;
+      current_statement__ = 147;
       lambda_1dim__ = (num_delays * num_strata);
-      current_statement__ = 149;
+      current_statement__ = 147;
       stan::math::validate_non_negative_index("lambda",
         "num_delays * num_strata", lambda_1dim__);
-      current_statement__ = 150;
+      current_statement__ = 148;
       stan::math::validate_non_negative_index("lambda", "num_steps",
         num_steps);
-      current_statement__ = 151;
+      current_statement__ = 149;
       stan::math::validate_non_negative_index("lambda_mean", "n_rows", n_rows);
     } catch (const std::exception& e) {
       stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2769,18 +2750,14 @@ public:
       local_scalar_t__ xi_sd = DUMMY_VAR__;
       current_statement__ = 9;
       xi_sd = in__.template read<local_scalar_t__>();
-      Eigen::Matrix<local_scalar_t__,-1,1> xi_mu_sd =
-        Eigen::Matrix<local_scalar_t__,-1,1>::Constant(1, DUMMY_VAR__);
+      local_scalar_t__ xi_mu_sd = DUMMY_VAR__;
       current_statement__ = 10;
-      xi_mu_sd = in__.template read_constrain_lb<
-                   Eigen::Matrix<local_scalar_t__,-1,1>, jacobian__>(0, lp__,
-                   1);
-      Eigen::Matrix<local_scalar_t__,-1,1> xi_nu_sd =
-        Eigen::Matrix<local_scalar_t__,-1,1>::Constant(1, DUMMY_VAR__);
+      xi_mu_sd = in__.template read_constrain_lb<local_scalar_t__,
+                   jacobian__>(0, lp__);
+      local_scalar_t__ xi_nu_sd = DUMMY_VAR__;
       current_statement__ = 11;
-      xi_nu_sd = in__.template read_constrain_lb<
-                   Eigen::Matrix<local_scalar_t__,-1,1>, jacobian__>(0, lp__,
-                   1);
+      xi_nu_sd = in__.template read_constrain_lb<local_scalar_t__,
+                   jacobian__>(0, lp__);
       Eigen::Matrix<local_scalar_t__,-1,-1> xi_centered =
         Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(xi_centered_1dim__,
           num_steps, DUMMY_VAR__);
@@ -2822,15 +2799,9 @@ public:
       current_statement__ = 17;
       stan::model::assign(lambda,
         state_space_process(num_steps, num_delays, num_strata, A_mu, A_nu,
-          R_mu, R_nu, L_mu, L_nu, xi_mu_centered, xi_nu_centered,
-          stan::math::rep_vector(
-            stan::model::rvalue(xi_mu_sd, "xi_mu_sd",
-              stan::model::index_uni(1)), num_steps),
-          stan::math::rep_vector(
-            stan::model::rvalue(xi_nu_sd, "xi_nu_sd",
-              stan::model::index_uni(1)), num_steps), mu_0_centered,
-          nu_0_centered, mu_0_sd, nu_0_sd, mu_0_mean, nu_0_mean, B_cnt,
-          X_cnt, phi_AR, theta_MA, xi, pstream__),
+          R_mu, R_nu, L_mu, L_nu, xi_mu_centered, xi_nu_centered, xi_mu_sd,
+          xi_nu_sd, mu_0_centered, nu_0_centered, mu_0_sd, nu_0_sd,
+          mu_0_mean, nu_0_mean, B_cnt, X_cnt, phi_AR, theta_MA, xi, pstream__),
         "assigning variable lambda");
       Eigen::Matrix<local_scalar_t__,-1,1> lambda_mean =
         Eigen::Matrix<local_scalar_t__,-1,1>::Constant(n_rows, DUMMY_VAR__);
@@ -3028,20 +2999,14 @@ public:
       double xi_sd = std::numeric_limits<double>::quiet_NaN();
       current_statement__ = 9;
       xi_sd = in__.template read<local_scalar_t__>();
-      Eigen::Matrix<double,-1,1> xi_mu_sd =
-        Eigen::Matrix<double,-1,1>::Constant(1,
-          std::numeric_limits<double>::quiet_NaN());
+      double xi_mu_sd = std::numeric_limits<double>::quiet_NaN();
       current_statement__ = 10;
-      xi_mu_sd = in__.template read_constrain_lb<
-                   Eigen::Matrix<local_scalar_t__,-1,1>, jacobian__>(0, lp__,
-                   1);
-      Eigen::Matrix<double,-1,1> xi_nu_sd =
-        Eigen::Matrix<double,-1,1>::Constant(1,
-          std::numeric_limits<double>::quiet_NaN());
+      xi_mu_sd = in__.template read_constrain_lb<local_scalar_t__,
+                   jacobian__>(0, lp__);
+      double xi_nu_sd = std::numeric_limits<double>::quiet_NaN();
       current_statement__ = 11;
-      xi_nu_sd = in__.template read_constrain_lb<
-                   Eigen::Matrix<local_scalar_t__,-1,1>, jacobian__>(0, lp__,
-                   1);
+      xi_nu_sd = in__.template read_constrain_lb<local_scalar_t__,
+                   jacobian__>(0, lp__);
       Eigen::Matrix<double,-1,-1> xi_centered =
         Eigen::Matrix<double,-1,-1>::Constant(xi_centered_1dim__, num_steps,
           std::numeric_limits<double>::quiet_NaN());
@@ -3126,15 +3091,9 @@ public:
       current_statement__ = 17;
       stan::model::assign(lambda,
         state_space_process(num_steps, num_delays, num_strata, A_mu, A_nu,
-          R_mu, R_nu, L_mu, L_nu, xi_mu_centered, xi_nu_centered,
-          stan::math::rep_vector(
-            stan::model::rvalue(xi_mu_sd, "xi_mu_sd",
-              stan::model::index_uni(1)), num_steps),
-          stan::math::rep_vector(
-            stan::model::rvalue(xi_nu_sd, "xi_nu_sd",
-              stan::model::index_uni(1)), num_steps), mu_0_centered,
-          nu_0_centered, mu_0_sd, nu_0_sd, mu_0_mean, nu_0_mean, B_cnt,
-          X_cnt, phi_AR, theta_MA, xi, pstream__),
+          R_mu, R_nu, L_mu, L_nu, xi_mu_centered, xi_nu_centered, xi_mu_sd,
+          xi_nu_sd, mu_0_centered, nu_0_centered, mu_0_sd, nu_0_sd,
+          mu_0_mean, nu_0_mean, B_cnt, X_cnt, phi_AR, theta_MA, xi, pstream__),
         "assigning variable lambda");
       current_statement__ = 21;
       for (int n = 1; n <= n_rows; ++n) {
@@ -3303,19 +3262,13 @@ public:
       current_statement__ = 9;
       xi_sd = in__.read<local_scalar_t__>();
       out__.write(xi_sd);
-      Eigen::Matrix<local_scalar_t__,-1,1> xi_mu_sd =
-        Eigen::Matrix<local_scalar_t__,-1,1>::Constant(1, DUMMY_VAR__);
+      local_scalar_t__ xi_mu_sd = DUMMY_VAR__;
       current_statement__ = 10;
-      stan::model::assign(xi_mu_sd,
-        in__.read<Eigen::Matrix<local_scalar_t__,-1,1>>(1),
-        "assigning variable xi_mu_sd");
+      xi_mu_sd = in__.read<local_scalar_t__>();
       out__.write_free_lb(0, xi_mu_sd);
-      Eigen::Matrix<local_scalar_t__,-1,1> xi_nu_sd =
-        Eigen::Matrix<local_scalar_t__,-1,1>::Constant(1, DUMMY_VAR__);
+      local_scalar_t__ xi_nu_sd = DUMMY_VAR__;
       current_statement__ = 11;
-      stan::model::assign(xi_nu_sd,
-        in__.read<Eigen::Matrix<local_scalar_t__,-1,1>>(1),
-        "assigning variable xi_nu_sd");
+      xi_nu_sd = in__.read<local_scalar_t__>();
       out__.write_free_lb(0, xi_nu_sd);
       Eigen::Matrix<local_scalar_t__,-1,-1> xi_centered =
         Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(xi_centered_1dim__,
@@ -3420,10 +3373,10 @@ public:
         std::vector<size_t>{});
       current_statement__ = 10;
       context__.validate_dims("parameter initialization", "xi_mu_sd",
-        "double", std::vector<size_t>{static_cast<size_t>(1)});
+        "double", std::vector<size_t>{});
       current_statement__ = 11;
       context__.validate_dims("parameter initialization", "xi_nu_sd",
-        "double", std::vector<size_t>{static_cast<size_t>(1)});
+        "double", std::vector<size_t>{});
       current_statement__ = 12;
       context__.validate_dims("parameter initialization", "xi_centered",
         "double",
@@ -3548,41 +3501,13 @@ public:
       current_statement__ = 9;
       xi_sd = context__.vals_r("xi_sd")[(1 - 1)];
       out__.write(xi_sd);
-      Eigen::Matrix<local_scalar_t__,-1,1> xi_mu_sd =
-        Eigen::Matrix<local_scalar_t__,-1,1>::Constant(1, DUMMY_VAR__);
-      {
-        std::vector<local_scalar_t__> xi_mu_sd_flat__;
-        current_statement__ = 10;
-        xi_mu_sd_flat__ = context__.vals_r("xi_mu_sd");
-        current_statement__ = 10;
-        pos__ = 1;
-        current_statement__ = 10;
-        for (int sym1__ = 1; sym1__ <= 1; ++sym1__) {
-          current_statement__ = 10;
-          stan::model::assign(xi_mu_sd, xi_mu_sd_flat__[(pos__ - 1)],
-            "assigning variable xi_mu_sd", stan::model::index_uni(sym1__));
-          current_statement__ = 10;
-          pos__ = (pos__ + 1);
-        }
-      }
+      local_scalar_t__ xi_mu_sd = DUMMY_VAR__;
+      current_statement__ = 10;
+      xi_mu_sd = context__.vals_r("xi_mu_sd")[(1 - 1)];
       out__.write_free_lb(0, xi_mu_sd);
-      Eigen::Matrix<local_scalar_t__,-1,1> xi_nu_sd =
-        Eigen::Matrix<local_scalar_t__,-1,1>::Constant(1, DUMMY_VAR__);
-      {
-        std::vector<local_scalar_t__> xi_nu_sd_flat__;
-        current_statement__ = 11;
-        xi_nu_sd_flat__ = context__.vals_r("xi_nu_sd");
-        current_statement__ = 11;
-        pos__ = 1;
-        current_statement__ = 11;
-        for (int sym1__ = 1; sym1__ <= 1; ++sym1__) {
-          current_statement__ = 11;
-          stan::model::assign(xi_nu_sd, xi_nu_sd_flat__[(pos__ - 1)],
-            "assigning variable xi_nu_sd", stan::model::index_uni(sym1__));
-          current_statement__ = 11;
-          pos__ = (pos__ + 1);
-        }
-      }
+      local_scalar_t__ xi_nu_sd = DUMMY_VAR__;
+      current_statement__ = 11;
+      xi_nu_sd = context__.vals_r("xi_nu_sd")[(1 - 1)];
       out__.write_free_lb(0, xi_nu_sd);
       Eigen::Matrix<local_scalar_t__,-1,-1> xi_centered =
         Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(xi_centered_1dim__,
@@ -3719,9 +3644,8 @@ public:
                 std::vector<size_t>{static_cast<size_t>(q)},
                 std::vector<size_t>{}, std::vector<size_t>{},
                 std::vector<size_t>{}, std::vector<size_t>{},
+                std::vector<size_t>{}, std::vector<size_t>{},
                 std::vector<size_t>{},
-                std::vector<size_t>{static_cast<size_t>(1)},
-                std::vector<size_t>{static_cast<size_t>(1)},
                 std::vector<size_t>{static_cast<size_t>(xi_centered_1dim__),
                   static_cast<size_t>(num_steps)},
                 std::vector<size_t>{static_cast<size_t>(xi_mu_centered_1dim__),
@@ -3773,14 +3697,8 @@ public:
     param_names__.emplace_back(std::string() + "mu_0_sd");
     param_names__.emplace_back(std::string() + "nu_0_sd");
     param_names__.emplace_back(std::string() + "xi_sd");
-    for (int sym1__ = 1; sym1__ <= 1; ++sym1__) {
-      param_names__.emplace_back(std::string() + "xi_mu_sd" + '.' +
-        std::to_string(sym1__));
-    }
-    for (int sym1__ = 1; sym1__ <= 1; ++sym1__) {
-      param_names__.emplace_back(std::string() + "xi_nu_sd" + '.' +
-        std::to_string(sym1__));
-    }
+    param_names__.emplace_back(std::string() + "xi_mu_sd");
+    param_names__.emplace_back(std::string() + "xi_nu_sd");
     for (int sym1__ = 1; sym1__ <= num_steps; ++sym1__) {
       for (int sym2__ = 1; sym2__ <= xi_centered_1dim__; ++sym2__) {
         param_names__.emplace_back(std::string() + "xi_centered" + '.' +
@@ -3859,14 +3777,8 @@ public:
     param_names__.emplace_back(std::string() + "mu_0_sd");
     param_names__.emplace_back(std::string() + "nu_0_sd");
     param_names__.emplace_back(std::string() + "xi_sd");
-    for (int sym1__ = 1; sym1__ <= 1; ++sym1__) {
-      param_names__.emplace_back(std::string() + "xi_mu_sd" + '.' +
-        std::to_string(sym1__));
-    }
-    for (int sym1__ = 1; sym1__ <= 1; ++sym1__) {
-      param_names__.emplace_back(std::string() + "xi_nu_sd" + '.' +
-        std::to_string(sym1__));
-    }
+    param_names__.emplace_back(std::string() + "xi_mu_sd");
+    param_names__.emplace_back(std::string() + "xi_nu_sd");
     for (int sym1__ = 1; sym1__ <= num_steps; ++sym1__) {
       for (int sym2__ = 1; sym2__ <= xi_centered_1dim__; ++sym2__) {
         param_names__.emplace_back(std::string() + "xi_centered" + '.' +
@@ -3917,10 +3829,10 @@ public:
     if (emit_generated_quantities__) {}
   }
   inline std::string get_constrained_sizedtypes() const {
-    return std::string("[{\"name\":\"mu_0_centered\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(mu_0_centered_1dim__) + ",\"cols\":" + std::to_string(mu_0_size) + "},\"block\":\"parameters\"},{\"name\":\"nu_0_centered\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(nu_0_centered_1dim__) + ",\"cols\":" + std::to_string(nu_0_size) + "},\"block\":\"parameters\"},{\"name\":\"phi_AR\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(p) + "},\"block\":\"parameters\"},{\"name\":\"theta_MA\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(q) + "},\"block\":\"parameters\"},{\"name\":\"mu_0_mean\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"nu_0_mean\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"mu_0_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"nu_0_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"xi_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"xi_mu_sd\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(1) + "},\"block\":\"parameters\"},{\"name\":\"xi_nu_sd\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(1) + "},\"block\":\"parameters\"},{\"name\":\"xi_centered\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_centered_1dim__) + ",\"cols\":" + std::to_string(num_steps) + "},\"block\":\"parameters\"},{\"name\":\"xi_mu_centered\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(xi_mu_centered_1dim__) + ",\"element_type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_mu_centered_2dim__) + ",\"cols\":" + std::to_string(xi_mu_size) + "}},\"block\":\"parameters\"},{\"name\":\"xi_nu_centered\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(xi_nu_centered_1dim__) + ",\"element_type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_nu_centered_2dim__) + ",\"cols\":" + std::to_string(xi_nu_size) + "}},\"block\":\"parameters\"},{\"name\":\"r\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(r_1dim__) + "},\"block\":\"parameters\"},{\"name\":\"xi\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_1dim__) + ",\"cols\":" + std::to_string(num_steps) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lambda\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(lambda_1dim__) + ",\"cols\":" + std::to_string(num_steps) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lambda_mean\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(n_rows) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lprior\",\"type\":{\"name\":\"real\"},\"block\":\"transformed_parameters\"}]");
+    return std::string("[{\"name\":\"mu_0_centered\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(mu_0_centered_1dim__) + ",\"cols\":" + std::to_string(mu_0_size) + "},\"block\":\"parameters\"},{\"name\":\"nu_0_centered\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(nu_0_centered_1dim__) + ",\"cols\":" + std::to_string(nu_0_size) + "},\"block\":\"parameters\"},{\"name\":\"phi_AR\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(p) + "},\"block\":\"parameters\"},{\"name\":\"theta_MA\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(q) + "},\"block\":\"parameters\"},{\"name\":\"mu_0_mean\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"nu_0_mean\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"mu_0_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"nu_0_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"xi_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"xi_mu_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"xi_nu_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"xi_centered\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_centered_1dim__) + ",\"cols\":" + std::to_string(num_steps) + "},\"block\":\"parameters\"},{\"name\":\"xi_mu_centered\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(xi_mu_centered_1dim__) + ",\"element_type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_mu_centered_2dim__) + ",\"cols\":" + std::to_string(xi_mu_size) + "}},\"block\":\"parameters\"},{\"name\":\"xi_nu_centered\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(xi_nu_centered_1dim__) + ",\"element_type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_nu_centered_2dim__) + ",\"cols\":" + std::to_string(xi_nu_size) + "}},\"block\":\"parameters\"},{\"name\":\"r\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(r_1dim__) + "},\"block\":\"parameters\"},{\"name\":\"xi\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_1dim__) + ",\"cols\":" + std::to_string(num_steps) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lambda\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(lambda_1dim__) + ",\"cols\":" + std::to_string(num_steps) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lambda_mean\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(n_rows) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lprior\",\"type\":{\"name\":\"real\"},\"block\":\"transformed_parameters\"}]");
   }
   inline std::string get_unconstrained_sizedtypes() const {
-    return std::string("[{\"name\":\"mu_0_centered\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(mu_0_centered_1dim__) + ",\"cols\":" + std::to_string(mu_0_size) + "},\"block\":\"parameters\"},{\"name\":\"nu_0_centered\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(nu_0_centered_1dim__) + ",\"cols\":" + std::to_string(nu_0_size) + "},\"block\":\"parameters\"},{\"name\":\"phi_AR\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(p) + "},\"block\":\"parameters\"},{\"name\":\"theta_MA\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(q) + "},\"block\":\"parameters\"},{\"name\":\"mu_0_mean\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"nu_0_mean\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"mu_0_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"nu_0_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"xi_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"xi_mu_sd\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(1) + "},\"block\":\"parameters\"},{\"name\":\"xi_nu_sd\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(1) + "},\"block\":\"parameters\"},{\"name\":\"xi_centered\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_centered_1dim__) + ",\"cols\":" + std::to_string(num_steps) + "},\"block\":\"parameters\"},{\"name\":\"xi_mu_centered\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(xi_mu_centered_1dim__) + ",\"element_type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_mu_centered_2dim__) + ",\"cols\":" + std::to_string(xi_mu_size) + "}},\"block\":\"parameters\"},{\"name\":\"xi_nu_centered\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(xi_nu_centered_1dim__) + ",\"element_type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_nu_centered_2dim__) + ",\"cols\":" + std::to_string(xi_nu_size) + "}},\"block\":\"parameters\"},{\"name\":\"r\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(r_1dim__) + "},\"block\":\"parameters\"},{\"name\":\"xi\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_1dim__) + ",\"cols\":" + std::to_string(num_steps) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lambda\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(lambda_1dim__) + ",\"cols\":" + std::to_string(num_steps) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lambda_mean\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(n_rows) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lprior\",\"type\":{\"name\":\"real\"},\"block\":\"transformed_parameters\"}]");
+    return std::string("[{\"name\":\"mu_0_centered\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(mu_0_centered_1dim__) + ",\"cols\":" + std::to_string(mu_0_size) + "},\"block\":\"parameters\"},{\"name\":\"nu_0_centered\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(nu_0_centered_1dim__) + ",\"cols\":" + std::to_string(nu_0_size) + "},\"block\":\"parameters\"},{\"name\":\"phi_AR\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(p) + "},\"block\":\"parameters\"},{\"name\":\"theta_MA\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(q) + "},\"block\":\"parameters\"},{\"name\":\"mu_0_mean\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"nu_0_mean\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"mu_0_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"nu_0_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"xi_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"xi_mu_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"xi_nu_sd\",\"type\":{\"name\":\"real\"},\"block\":\"parameters\"},{\"name\":\"xi_centered\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_centered_1dim__) + ",\"cols\":" + std::to_string(num_steps) + "},\"block\":\"parameters\"},{\"name\":\"xi_mu_centered\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(xi_mu_centered_1dim__) + ",\"element_type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_mu_centered_2dim__) + ",\"cols\":" + std::to_string(xi_mu_size) + "}},\"block\":\"parameters\"},{\"name\":\"xi_nu_centered\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(xi_nu_centered_1dim__) + ",\"element_type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_nu_centered_2dim__) + ",\"cols\":" + std::to_string(xi_nu_size) + "}},\"block\":\"parameters\"},{\"name\":\"r\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(r_1dim__) + "},\"block\":\"parameters\"},{\"name\":\"xi\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(xi_1dim__) + ",\"cols\":" + std::to_string(num_steps) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lambda\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(lambda_1dim__) + ",\"cols\":" + std::to_string(num_steps) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lambda_mean\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(n_rows) + "},\"block\":\"transformed_parameters\"},{\"name\":\"lprior\",\"type\":{\"name\":\"real\"},\"block\":\"transformed_parameters\"}]");
   }
   // Begin method overload boilerplate
   template <typename RNG> inline void

@@ -4,9 +4,8 @@ matrix[num_delays*num_strata, num_steps] xi = xi_sd*xi_centered;
 //Get the state space process simulations
 matrix[num_delays*num_strata, num_steps] lambda = state_space_process(
       num_steps, num_delays, num_strata, A_mu, A_nu, R_mu, R_nu, L_mu, L_nu, xi_mu_centered,
-      xi_nu_centered, rep_vector(xi_mu_sd[1], num_steps), rep_vector(xi_nu_sd[1], num_steps),
-      mu_0_centered, nu_0_centered, mu_0_sd, nu_0_sd, mu_0_mean, nu_0_mean, B_cnt, X_cnt,
-      phi_AR, theta_MA, xi);
+      xi_nu_centered, xi_mu_sd, xi_nu_sd, mu_0_centered, nu_0_centered, mu_0_sd, nu_0_sd,
+      mu_0_mean, nu_0_mean, B_cnt, X_cnt, phi_AR, theta_MA, xi);
 
 //Create a vectorized version of the lambda
 //The lambda function is organized by delays and then strata so
@@ -59,4 +58,4 @@ lprior += dist_lpdf(xi_nu_sd  | nu_sd_param_1, nu_sd_param_2, nu_sd_prior);
 
 //Add prior to the negative binomial precision
 if (is_negative_binomial)
-  lprior += dist_lpdf(r| r_param_1, r_param_2, r_prior);
+  lprior += dist_lpdf(r | r_param_1, r_param_2, r_prior);

@@ -64,7 +64,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
                     max_delay = Inf,
                     prior_only = FALSE,
                     proportion_reported = 1,
-                    refresh = 250*interactive(),
+                    refresh = 250*rlang::is_interactive(),
                     control = control_default(),
                     method  = c("sampling","variational","optimization"),
                     priors  = set_priors(),
@@ -155,7 +155,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
       list(
         preprocessed_data = .disease_data,
         call_parameters   = call_parameters,
-        strata_dict       = strata_list$strata_dict
+        strata_dict       = strata_list$.strata_dict
       )
     )
 
@@ -174,7 +174,6 @@ nowcast <- function(.disease_data, onset_date, report_date,
 nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num_delays, num_strata,
                           dist, prior_only, control, refresh, method, priors, ...) {
 
-  #FIXME: Create the strata-delay matrix as input
   #Keep only the columns n, .tval, .delay, .strata
   .disease_data <- .disease_data |>
     dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), !!as.symbol(".strata"))
@@ -251,10 +250,10 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
                            ...)
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "variational") {
-    stan_fit <- rstan::vb(stanmodels$nowcast, data = stan_data, ...)
+    stan_fit <- rstan::vb(stanmodels$nowcast, data = stan_data, refresh = refresh,...)
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "optimization") {
-    stan_fit <- rstan::optimizing(stanmodels$nowcast, data = stan_data, ...)
+    stan_fit <- rstan::optimizing(stanmodels$nowcast, data = stan_data, refresh = refresh, ...)
 
     # Work around to get draws from the optimized params for gq
     draws           <- matrix(rep(stan_fit$par, 1000), ncol = length(stan_fit$par), byrow = TRUE)

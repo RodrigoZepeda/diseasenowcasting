@@ -13,8 +13,8 @@ real<lower=0> mu_0_sd;
 real<lower=0> nu_0_sd;
 
 real xi_sd;
-vector<lower=0>[1] xi_mu_sd;
-vector<lower=0>[1] xi_nu_sd;
+real<lower=0> xi_mu_sd;
+real<lower=0> xi_nu_sd;
 
 //Normalized errors
 matrix[num_strata*num_delays, num_steps] xi_centered;
