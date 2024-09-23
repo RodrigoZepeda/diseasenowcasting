@@ -54,7 +54,7 @@
 <span>  max_delay <span class="op">=</span> <span class="cn">Inf</span>,</span>
 <span>  prior_only <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  proportion_reported <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  refresh <span class="op">=</span> <span class="fl">250</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  refresh <span class="op">=</span> <span class="fl">250</span> <span class="op">*</span> <span class="fu">rlang</span><span class="fu">::</span><span class="fu"><a href="https://rlang.r-lib.org/reference/is_interactive.html" class="external-link">is_interactive</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  control <span class="op">=</span> <span class="fu"><a href="control_default.html">control_default</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sampling"</span>, <span class="st">"variational"</span>, <span class="st">"optimization"</span><span class="op">)</span>,</span>
 <span>  priors <span class="op">=</span> <span class="fu"><a href="set_priors.html">set_priors</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -392,7 +392,10 @@ the priors of the function (see details)</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $data$strata_dict</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 1 × 2</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   .strata_unified .strata</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> No strata             1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $generated_quantities</span>
@@ -745,7 +748,7 @@ the priors of the function (see details)</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> N_predict[9,1]                 1713.25 2010.25  1007 1.00</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> N_predict[10,1]                1741.25 2068.00   968 1.00</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Samples were drawn using  at Mon Sep 23 04:08:41 2024.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Samples were drawn using  at Mon Sep 23 20:28:10 2024.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> For each parameter, n_eff is a crude measure of effective sample size,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> and Rhat is the potential scale reduction factor on split chains (at </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> convergence, Rhat=1).</span>
@@ -768,9 +771,9 @@ the priors of the function (see details)</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         -9.999980e-01         -2.488439e-03         -1.651588e-03 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>             mu_0_mean             nu_0_mean               mu_0_sd </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>          2.617332e+00          2.617241e+00          2.689650e-02 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>               nu_0_sd                 xi_sd           xi_mu_sd[1] </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               nu_0_sd                 xi_sd              xi_mu_sd </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>          9.718561e-03          1.096011e-02          5.022596e+00 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           xi_nu_sd[1]      xi_centered[1,1]      xi_centered[2,1] </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>              xi_nu_sd      xi_centered[1,1]      xi_centered[2,1] </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>          4.536019e-02          1.944224e-03          2.928083e-03 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      xi_centered[3,1]      xi_centered[4,1]      xi_centered[5,1] </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>          3.095657e-03          2.159088e-03          2.610599e-03 </span>
@@ -1084,10 +1087,10 @@ the priors of the function (see details)</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1,]        0.003211583        0.003331721        0.003229173</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      nu_0_centered[8,1]  phi_AR[1]  phi_AR[2] phi_AR[3]  theta_MA[1]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1,]        0.003125566 -0.9998022 -0.9999941 -0.999998 -0.002488439</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       theta_MA[2] mu_0_mean nu_0_mean   mu_0_sd     nu_0_sd      xi_sd</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1,] -0.001651588  2.617332  2.617241 0.0268965 0.009718561 0.01096011</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      xi_mu_sd[1] xi_nu_sd[1] xi_centered[1,1] xi_centered[2,1] xi_centered[3,1]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]    5.022596  0.04536019      0.001944224      0.002928083      0.003095657</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       theta_MA[2] mu_0_mean nu_0_mean   mu_0_sd     nu_0_sd      xi_sd xi_mu_sd</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,] -0.001651588  2.617332  2.617241 0.0268965 0.009718561 0.01096011 5.022596</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        xi_nu_sd xi_centered[1,1] xi_centered[2,1] xi_centered[3,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,] 0.04536019      0.001944224      0.002928083      0.003095657</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      xi_centered[4,1] xi_centered[5,1] xi_centered[6,1] xi_centered[7,1]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1,]      0.002159088      0.002610599      0.002941288      0.002566306</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      xi_centered[8,1] xi_centered[1,2] xi_centered[2,2] xi_centered[3,2]</span>
