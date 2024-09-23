@@ -8,14 +8,11 @@ now <- as.Date("1990-10-01")
 test_nowcast <- NobBS(data=denguedat, units="1 week", now = now,
                       onset_date="onset_week", report_date="report_week")
 
+#FIXME: Should add this to testthat
 #Check the data
-#FIXME: Method variational doesn't generate error when creating
 predictions <- nowcast(denguedat, "onset_week", "report_week",
-                       method = "variational",
-                       now = now,
-                       priors = set_priors(nu_is_constant = F))
-
-
+                       method = "variational", now = now,
+                       priors = set_priors())
 
 #Get the predicted values in a nice format
 predicted_values <- predictions$generated_quantities |>
@@ -23,14 +20,10 @@ predicted_values <- predictions$generated_quantities |>
   posterior::subset_draws("N_predict") |>
   posterior::summarise_draws() |>
   dplyr::mutate(.strata = as.numeric(stringr::str_remove_all(variable,".*\\[.*,|\\]"))) |>
-  dplyr::mutate(.tval = as.numeric(stringr::str_remove_all(variable,".*\\[|,.*\\]"))) |>
-  dplyr::left_join(
-    predictions$data$preprocessed_data |>
-      dplyr::distinct(.tval, onset_week)
-  )
+  dplyr::mutate(.tval = as.numeric(stringr::str_remove_all(variable,".*\\[|,.*\\]")))
 
 obs <- predictions$data$preprocessed_data |>
-  dplyr::group_by(onset_week) |>
+  dplyr::group_by(.tval) |>
   dplyr::summarise(n = sum(n))
 
 # Create plot

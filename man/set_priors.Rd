@@ -7,6 +7,8 @@
 set_priors(
   mu_degree = 1,
   nu_degree = 1,
+  p = 3,
+  q = 2,
   mu_is_constant = FALSE,
   nu_is_constant = TRUE,
   mu_sd_prior = "standard_normal",
@@ -15,6 +17,15 @@ set_priors(
   mu_sd_param_2 = 0.1,
   nu_sd_param_1 = 0,
   nu_sd_param_2 = 0.1,
+  phi_AR_param_1 = 0,
+  phi_AR_param_2 = 1,
+  phi_AR_prior = "cauchy",
+  theta_MA_param_1 = 0,
+  theta_MA_param_2 = 1,
+  theta_MA_prior = "cauchy",
+  xi_sd_param_1 = 0,
+  xi_sd_param_2 = 1,
+  xi_sd_prior = "standard_normal",
   mu_0_mean_param_1 = "auto",
   mu_0_mean_param_2 = 0.01,
   mu_0_sd_param_1 = "auto",
@@ -37,6 +48,10 @@ set_priors(
 
 \item{nu_degree}{Integer. Degree of the delay trend.}
 
+\item{p}{Integer. The number of lags to consider for an autocorrelated AR(p) model}
+
+\item{q}{Integer. The number of lags to consider for a moving average MA(q) model}
+
 \item{mu_is_constant}{Logical. Indicates whether the epidemic trend is constant.}
 
 \item{nu_is_constant}{Logical. Indicates whether the delay trend is constant.}
@@ -52,6 +67,24 @@ set_priors(
 \item{nu_sd_param_1}{Numeric. First parameter for the delay trend error.}
 
 \item{nu_sd_param_2}{Numeric. Second parameter for the delay trend error.}
+
+\item{phi_AR_param_1}{Numeric. Prior for the AR coefficients' first parameter.}
+
+\item{phi_AR_param_2}{Numeric. Prior for the AR coefficients' second parameter.}
+
+\item{phi_AR_prior}{String Prior distirbution name for the AR coefficients.}
+
+\item{theta_MA_param_1}{Numeric. Prior for the MA coefficients' first parameter.}
+
+\item{theta_MA_param_2}{Numeric. Prior for the MA coefficients' second parameter.}
+
+\item{theta_MA_prior}{String Prior distirbution name for the MA coefficients.}
+
+\item{xi_sd_param_1}{Numeric. Prior for the error (in log-scale) first parameter}
+
+\item{xi_sd_param_2}{Numeric. Prior for the error (in log-scale) second parameter}
+
+\item{xi_sd_prior}{String Prior distribution name for the errors}
 
 \item{mu_0_mean_param_1}{Character. Prior for the initial epidemic trend mean's first parameter.}
 
