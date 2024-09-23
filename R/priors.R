@@ -57,6 +57,24 @@
 #'
 #' @param r_param_2 Numeric. Second parameter for the dispersion prior if negative binomial.
 #'
+#' @param phi_AR_param_1 Numeric. Prior for the AR coefficients' first parameter.
+#'
+#' @param phi_AR_param_2 Numeric. Prior for the AR coefficients' second parameter.
+#'
+#' @param phi_AR_prior String Prior distirbution name for the AR coefficients.
+#'
+#' @param theta_MA_param_1 Numeric. Prior for the MA coefficients' first parameter.
+#'
+#' @param theta_MA_param_2 Numeric. Prior for the MA coefficients' second parameter.
+#'
+#' @param theta_MA_prior String Prior distirbution name for the MA coefficients.
+#'
+#' @param xi_sd_param_1 Numeric. Prior for the error (in log-scale) first parameter
+#'
+#' @param xi_sd_param_2 Numeric. Prior for the error (in log-scale) second parameter
+#'
+#' @param xi_sd_prior String Prior distribution name for the errors
+#'
 #' @return A list with all the priors for the [nowcast()] function.
 #'
 #' @examples

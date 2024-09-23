@@ -27,6 +27,7 @@ Imports:
     rstan (>= 2.18),
     rstantools (>= 2.4.0),
     stats,
+    stringr,
     tidyr
 Depends: 
     R (>= 4.2.0)

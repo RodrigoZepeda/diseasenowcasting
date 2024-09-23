@@ -68,6 +68,24 @@ set_priors(
 
 \item{nu_sd_param_2}{Numeric. Second parameter for the delay trend error.}
 
+\item{phi_AR_param_1}{Numeric. Prior for the AR coefficients' first parameter.}
+
+\item{phi_AR_param_2}{Numeric. Prior for the AR coefficients' second parameter.}
+
+\item{phi_AR_prior}{String Prior distirbution name for the AR coefficients.}
+
+\item{theta_MA_param_1}{Numeric. Prior for the MA coefficients' first parameter.}
+
+\item{theta_MA_param_2}{Numeric. Prior for the MA coefficients' second parameter.}
+
+\item{theta_MA_prior}{String Prior distirbution name for the MA coefficients.}
+
+\item{xi_sd_param_1}{Numeric. Prior for the error (in log-scale) first parameter}
+
+\item{xi_sd_param_2}{Numeric. Prior for the error (in log-scale) second parameter}
+
+\item{xi_sd_prior}{String Prior distribution name for the errors}
+
 \item{mu_0_mean_param_1}{Character. Prior for the initial epidemic trend mean's first parameter.}
 
 \item{mu_0_mean_param_2}{Character. Prior for the initial epidemic trend mean's second parameter.}
