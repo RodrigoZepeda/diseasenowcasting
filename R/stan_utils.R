@@ -10,26 +10,35 @@
 #'
 #' @keywords internal
 get_prior_code_stan <- function(prior_name){
+
   dist_list <- c("jeffreys", "standard_normal", "normal", "student_t", "cauchy", "exponential",
                  "gamma", "inverse_gamma", "lognormal", "weibull", "frechet",
                  "double_exponential", "rayleigh", "loglogistic", "gumbel")
-  switch(tolower(prior_name),
-         "jeffreys"           = 0,
-         "standard_normal"    = 1,
-         "normal"             = 2,
-         "student_t"          = 3,
-         "cauchy"             = 4,
-         "exponential"        = 5,
-         "gamma"              = 6,
-         "inverse_gamma"      = 7,
-         "lognormal"          = 8,
-         "weibull"            = 9,
-         "frechet"            = 10,
-         "double_exponential" = 11,
-         "rayleigh"           = 12,
-         "loglogistic"        = 13,
-         "gumbel"             = 14,
-         cli::cli_abort("Distribution {.val {character}} not found. Choose one of the following: {.val {dist_list}}"))
+
+  if (!is.numeric(prior_name)){
+    return(
+      switch(
+        tolower(prior_name),
+           "jeffreys"           = 0,
+           "standard_normal"    = 1,
+           "normal"             = 2,
+           "student_t"          = 3,
+           "cauchy"             = 4,
+           "exponential"        = 5,
+           "gamma"              = 6,
+           "inverse_gamma"      = 7,
+           "lognormal"          = 8,
+           "weibull"            = 9,
+           "frechet"            = 10,
+           "double_exponential" = 11,
+           "rayleigh"           = 12,
+           "loglogistic"        = 13,
+           "gumbel"             = 14,
+           cli::cli_abort("Distribution {.val {character}} not found. Choose one of the following: {.val {dist_list}}"))
+    )
+  } else {
+    return(prior_name)
+  }
 }
 
 #' Function for mapping the priors to numbers

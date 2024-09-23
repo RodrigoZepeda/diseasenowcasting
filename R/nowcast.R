@@ -78,13 +78,13 @@ nowcast <- function(.disease_data, onset_date, report_date,
   check_proportion_reported(proportion_reported)
 
   # Get `now` as the last date by default
-  now <- infer_now(.disease_data, now = now, onset_date = onset_date)
+  now    <- infer_now(.disease_data, now = now, onset_date = onset_date)
 
   # Infer the units whether it is daily, weekly, monthly or yearly
-  units <- infer_units(.disease_data, units = units, date_column = onset_date)
+  units  <- infer_units(.disease_data, units = units, date_column = onset_date)
 
   # Match the distribution whether negative binomial or poisson
-  dist <- match.arg(dist, c("NegativeBinomial", "Poisson"))
+  dist   <- match.arg(dist, c("NegativeBinomial", "Poisson"))
 
   # Method
   method <- match.arg(method, c("sampling", "variational","optimization"))
@@ -104,63 +104,6 @@ nowcast <- function(.disease_data, onset_date, report_date,
     max_delay = max_delay
   )
 
-  stan_list <- nowcast.rstan(.disease_data,
-                onset_date,
-                report_date,
-                strata = strata,
-                dist = dist,
-                prior_only = prior_only,
-                refresh = refresh,
-                control = control,
-                method = method,
-                priors = priors,
-                ...)
-
-  #Get the call values
-  call_parameters = list(
-    onset_date = onset_date,
-    report_date = report_date,
-    strata = strata,
-    now = now,
-    units = units,
-    max_delay = max_delay
-  )
-
-  # Add to stan list
-  stan_list$data <- stan_list$data |>
-    append(
-      list(
-        preprocessed_data = .disease_data,
-        call_parameters   = call_parameters
-      )
-    )
-
- return(stan_list)
-
-}
-
-#' Nowcasting with the `rstan` engine
-#'
-#' @inheritParams nowcast
-#' @param ... Additional arguments to pass to [rstan::sample()]
-#'
-#' @keywords internal
-nowcast.rstan <- function(.disease_data, onset_date, report_date, strata, dist,
-                          prior_only, control, refresh, method, priors, ...) {
-
-
-  #Get the specified prior distributions
-  priors$mu_sd_prior          <- get_prior_code_stan(priors$mu_sd_prior)
-  priors$nu_sd_prior          <- get_prior_code_stan(priors$nu_sd_prior)
-  priors$mu_0_mean_hyperprior <- get_prior_code_stan(priors$mu_0_mean_hyperprior)
-  priors$nu_0_mean_hyperprior <- get_prior_code_stan(priors$nu_0_mean_hyperprior)
-  priors$mu_0_sd_hyperprior   <- get_prior_code_stan(priors$mu_0_sd_hyperprior)
-  priors$nu_0_sd_hyperprior   <- get_prior_code_stan(priors$nu_0_sd_hyperprior)
-  priors$r_prior              <- get_prior_code_stan(priors$r_prior)
-  priors$phi_AR_prior         <- get_prior_code_stan(priors$phi_AR_prior)
-  priors$theta_MA_prior       <- get_prior_code_stan(priors$theta_MA_prior)
-  priors$xi_sd_prior          <- get_prior_code_stan(priors$xi_sd_prior)
-
   # Get maximum time for model
   num_steps <- .disease_data |>
     dplyr::summarise(num_steps = max(!!as.symbol(".tval"))) |>
@@ -171,52 +114,73 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, strata, dist,
     dplyr::summarise(num_delays = 1 + max(!!as.symbol(".delay"))) |>
     dplyr::pull(num_delays)
 
-  # Number of covariates
-  num_covariates <- 0
+  #Get the specified prior distributions
+  priors        <- priors_to_numeric(.disease_data, priors)
 
-  # Nmatrix
-  Nmat <- .disease_data |>
-    dplyr::select(-!!as.symbol(report_date), -!!as.symbol(onset_date)) |>
-    dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), tidyr::everything())
+  #Get the strata
+  strata_list   <- preprocess_strata(.disease_data, strata)
+  .disease_data <- strata_list$.disease_data
+  num_strata    <- strata_list$num_strata
 
-  #Create the strata column
-  if (ncol(Nmat) == 3){
-    Nmat <- Nmat |>
-      dplyr::mutate(!!as.symbol(".strata") := "No strata")
-  }
-  Nmat <- Nmat |>
-    tidyr::unite(col = ".strata_unified", 4:dplyr::last_col(), sep = " - ") |>
-    dplyr::mutate(!!as.symbol(".strata") := as.numeric(as.factor(!!as.symbol(".strata_unified")))) |>
-    dplyr::mutate_at(".delay", function(x) x + 1)
+  stan_list <- nowcast.rstan(.disease_data,
+                onset_date,
+                report_date,
+                num_steps  = num_steps,
+                num_delays = num_delays,
+                num_strata = num_strata,
+                dist       = dist,
+                prior_only = prior_only,
+                refresh    = refresh,
+                control    = control,
+                method     = method,
+                priors     = priors,
+                ...)
 
-  #Get the strata dictionary
-  strata_dict <- Nmat |>
-    dplyr::distinct(!!as.symbol(".strata_unified"),!!as.symbol(".strata"))
+  #Get the call values
+  call_parameters = list(
+    onset_date  = onset_date,
+    report_date = report_date,
+    strata      = strata,
+    now         = now,
+    units       = units,
+    max_delay   = max_delay,
+    num_delays  = num_delays,
+    num_steps   = num_steps,
+    num_strata  = num_strata
+  )
 
-  Nmat <- Nmat |>
-    dplyr::select(-!!as.symbol(".strata_unified"))
+  # Add to stan list
+  stan_list$data <- stan_list$data |>
+    append(
+      list(
+        preprocessed_data = .disease_data,
+        call_parameters   = call_parameters,
+        strata_dict       = strata_list$strata_dict
+      )
+    )
 
-  #Return the number of strata
-  num_strata <- Nmat |>
-    dplyr::distinct(!!as.symbol(".strata")) |>
-    dplyr::tally() |>
-    dplyr::pull()
+ return(stan_list)
+
+}
+
+#' Nowcasting with the `rstan` engine
+#'
+#' @inheritParams nowcast
+#' @param num_steps  Number of time steps to run in the model
+#' @param num_delays Number of delays to consider in the model
+#' @param num_strata Number of strata in the model
+#'
+#' @keywords internal
+nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num_delays, num_strata,
+                          dist, prior_only, control, refresh, method, priors, ...) {
+
+  #FIXME: Create the strata-delay matrix as input
+  #Keep only the columns n, .tval, .delay, .strata
+  .disease_data <- .disease_data |>
+    dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), !!as.symbol(".strata"))
 
   # Distribution
   is_negative_binomial <- as.numeric(dist == "NegativeBinomial")
-
-  # Sample only from the prior
-  prior_only <- as.numeric(prior_only)
-
-  #Get the log mean of disease data and the sd
-  log_mean <- .disease_data |>
-    dplyr::summarise(log_mean = mean(log1p(!!as.symbol("n")), na.rm = T)) |>
-    dplyr::pull(log_mean)
-
-  #Get the log mean of disease data and the sd
-  log_sd <- .disease_data |>
-    dplyr::summarise(log_sd = sd(log1p(!!as.symbol("n")), na.rm = T)) |>
-    dplyr::pull(log_sd)
 
   stan_data <- list(
 
@@ -224,11 +188,11 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, strata, dist,
     num_steps  = num_steps,
     num_delays = num_delays,
     num_strata = num_strata,
-    n_rows     = nrow(Nmat),
-    N_cases    = as.matrix(Nmat),
+    n_rows     = nrow(.disease_data),
+    N_cases    = as.matrix(.disease_data),
 
     #Whether to compute only the prior
-    prior_only     = prior_only,
+    prior_only     = as.numeric(prior_only),
 
     #Trend specification
     mu_degree      = priors$mu_degree,
@@ -263,9 +227,9 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, strata, dist,
     nu_sd_param_1 = priors$nu_sd_param_1,
     nu_sd_param_2 = priors$nu_sd_param_2,
 
-    mu_0_mean_param_1    = ifelse(priors$mu_0_mean_param_1 == "auto", log_mean, priors$mu_0_mean_param_1),
+    mu_0_mean_param_1    = priors$mu_0_mean_param_1,
     mu_0_mean_param_2    = priors$mu_0_mean_param_2,
-    mu_0_sd_param_1      = ifelse(priors$mu_0_sd_param_1 == "auto", log_sd, priors$mu_0_sd_param_1),
+    mu_0_sd_param_1      = priors$mu_0_sd_param_1,
     mu_0_sd_param_2      = priors$mu_0_sd_param_2,
     nu_0_mean_param_1    = priors$nu_0_mean_param_1,
     nu_0_mean_param_2    = priors$nu_0_mean_param_2,
@@ -274,7 +238,10 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, strata, dist,
     mu_0_mean_hyperprior = priors$mu_0_mean_hyperprior,
     nu_0_mean_hyperprior = priors$nu_0_mean_hyperprior,
     mu_0_sd_hyperprior   = priors$mu_0_sd_hyperprior,
-    nu_0_sd_hyperprior   = priors$nu_0_sd_hyperprior
+    nu_0_sd_hyperprior   = priors$nu_0_sd_hyperprior,
+
+    max_log_tol_val      = 15,
+    precision_tol        = 1.e-3
   )
 
   if (method[1] == "sampling"){
@@ -300,10 +267,23 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, strata, dist,
   #Get the generated quantities
   generated_quantities <- rstan::gqs(stanmodels$generated_quantities, data = stan_data, draws = draws)
 
+
+  flag <- generated_quantities |>
+    posterior::as_draws() |>
+    posterior::subset_draws("lambda_higher_than_maxval_flag") |>
+    posterior::summarise_draws(max) |>
+    dplyr::pull(max)
+
+  if (flag > 0){
+    cli::cli_alert_warning(
+      "Some values of lambda have been truncated as they are too large. This might be attributed
+      to a high variance of your data or on the prior. Consider reducing the prior variance."
+    )
+  }
+
   return(
     list(
       data         = list(stan_data = stan_data),
-      dict         = list(strata_dict = strata_dict),
       generated_quantities  = generated_quantities,
       model        = stan_fit
     )

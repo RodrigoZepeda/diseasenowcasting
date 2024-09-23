@@ -7,8 +7,8 @@
 set_priors(
   mu_degree = 1,
   nu_degree = 1,
-  p = 0,
-  q = 0,
+  p = 3,
+  q = 2,
   mu_is_constant = FALSE,
   nu_is_constant = TRUE,
   mu_sd_prior = "standard_normal",
@@ -25,7 +25,7 @@ set_priors(
   theta_MA_prior = "cauchy",
   xi_sd_param_1 = 0,
   xi_sd_param_2 = 1,
-  xi_sd_prior = "cauchy",
+  xi_sd_prior = "standard_normal",
   mu_0_mean_param_1 = "auto",
   mu_0_mean_param_2 = 0.01,
   mu_0_sd_param_1 = "auto",
@@ -49,6 +49,8 @@ set_priors(
 \item{nu_degree}{Integer. Degree of the delay trend.}
 
 \item{p}{Integer. The number of lags to consider for an autocorrelated AR(p) model}
+
+\item{q}{Integer. The number of lags to consider for a moving average MA(q) model}
 
 \item{mu_is_constant}{Logical. Indicates whether the epidemic trend is constant.}
 

@@ -25,18 +25,34 @@ transformed parameters {
 }
 
 generated quantities {
-  array[num_steps, num_delays*num_strata] int N_mat_predict;
 
-  //Prediction of overall cases at time t
-  matrix[num_steps, num_strata] N_predict = rep_matrix(0, num_steps, num_strata);
+  //This flag is to flag to the user that we have capped the lambda
+  int lambda_higher_than_maxval_flag = 0;
+
+  //
+  array[num_steps, num_delays*num_strata] int N_mat_predict;
+  matrix[num_delays*num_strata, num_steps] lambda_transformed;
+  matrix[num_steps, num_strata] N_predict = rep_matrix(0, num_steps, num_strata);     //Prediction of overall cases at time t
+
+
+  //Caps the lambda so that if it explodes it doesn't destroy the poisson and binomial
+  for (t in 1:num_steps){
+    for (j in 1:(num_delays*num_strata))
+      if (lambda[j, t] >= max_log_tol_val){
+        lambda_higher_than_maxval_flag = 1;
+        lambda_transformed[j, t] = max_log_tol_val;
+      } else {
+        lambda_transformed[j, t] = lambda[j, t];
+      }
+  }
 
   //Get a matrix of all of the predictions
   for (t in 1:num_steps){
       if (is_negative_binomial){
           N_mat_predict[t,:] =
-          neg_binomial_2_log_rng(lambda[:, t]', rep_vector(r[1], num_delays*num_strata));
+          neg_binomial_2_log_rng(lambda_transformed[:, t]', rep_vector(r[1] + precision_tol, num_delays*num_strata));
       } else {
-          N_mat_predict[t,:] = poisson_log_rng(lambda[:, t]');
+          N_mat_predict[t,:] = poisson_log_rng(lambda_transformed[:, t]');
       }
   }
 
