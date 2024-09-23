@@ -13,8 +13,8 @@ matrix state_space_process(
   vector L_nu,          //Matrix for the latent delay process -> to the mean of cases
   array[] matrix xi_mu_centered, //Error parameters for the epidemic process (centered)
   array[] matrix xi_nu_centered, //Error parameters for the delay process (centered)
-  vector xi_mu_sd,      //Vector of standard deviation for xi_mu
-  vector xi_nu_sd,      //Vector of standard deviation for xi_nu
+  real xi_mu_sd,        //Standard deviation for xi_mu
+  real xi_nu_sd,        //Standard deviation for xi_nu
   matrix mu_0_centered, //Initial value of the latent epidemic process (centered)
   matrix nu_0_centered, //Initial value of the latent trend process (centered)
   real mu_0_sd,         //Scaling for mu_0 (for uncentering)
@@ -49,8 +49,8 @@ matrix state_space_process(
     //Loop through the rest of the vectors
     for (t in 1:(num_steps - 1)){
       l[,t]   = mu[t]*L_mu + nu[t]*L_nu + AR(l, phi, t) + MA(xi, theta, t);
-      mu[t+1] = mu[t]*A_mu + xi_mu_sd[t]*xi_mu_centered[t]*R_mu;
-      nu[t+1] = nu[t]*A_nu + xi_nu_sd[t]*xi_nu_centered[t]*R_nu;
+      mu[t+1] = mu[t]*A_mu + xi_mu_sd*xi_mu_centered[t]*R_mu;
+      nu[t+1] = nu[t]*A_nu + xi_nu_sd*xi_nu_centered[t]*R_nu;
     }
 
     //Last step of loop

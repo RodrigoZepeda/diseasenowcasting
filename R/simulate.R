@@ -83,7 +83,7 @@ simulate_disease <- function(num_steps  = 10, num_delays = 8, num_strata = 2,
   #Generate fake dataset
   ss_process <- nowcast(disease_data, onset_date = "onset_date", report_date = "report_date",
                         strata = ".strata", prior_only = TRUE, priors = priors,
-                        algorithm = "Fixed_param", dist = dist, chains = 1)
+                        algorithm = "Fixed_param", dist = dist, chains = 1, refresh = 0)
 
   #Create the simulation tibble
   simulations <- ss_process$generated_quantities |>
