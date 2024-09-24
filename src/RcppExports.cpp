@@ -367,8 +367,10 @@ BEGIN_RCPP
 END_RCPP
 }
 
-RcppExport SEXP _rcpp_module_boot_stan_fit4generated_quantities_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4nowcast_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4continuous_generated_quantities_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4discrete_generated_quantities_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4nowcast_continuous_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4nowcast_discrete_mod();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_create_block_diagonal", (DL_FUNC) &_diseasenowcasting_create_block_diagonal, 3},
@@ -397,8 +399,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_create_phi_AR", (DL_FUNC) &_diseasenowcasting_create_phi_AR, 2},
     {"_diseasenowcasting_create_theta_MA", (DL_FUNC) &_diseasenowcasting_create_theta_MA, 2},
     {"_diseasenowcasting_state_space_process", (DL_FUNC) &_diseasenowcasting_state_space_process, 25},
-    {"_rcpp_module_boot_stan_fit4generated_quantities_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4generated_quantities_mod, 0},
-    {"_rcpp_module_boot_stan_fit4nowcast_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nowcast_mod, 0},
+    {"_rcpp_module_boot_stan_fit4continuous_generated_quantities_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4continuous_generated_quantities_mod, 0},
+    {"_rcpp_module_boot_stan_fit4discrete_generated_quantities_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4discrete_generated_quantities_mod, 0},
+    {"_rcpp_module_boot_stan_fit4nowcast_continuous_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nowcast_continuous_mod, 0},
+    {"_rcpp_module_boot_stan_fit4nowcast_discrete_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nowcast_discrete_mod, 0},
     {NULL, NULL, 0}
 };
 

@@ -36,7 +36,7 @@ such that each row has a column for onset date, report date, and}
 
 \item{num_strata}{Number of strata in the model}
 
-\item{dist}{Distribution. Either "NegativeBinomial"  or "Poisson"}
+\item{dist}{Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"}
 
 \item{prior_only}{Boolean variable indicating whether to compute only the prior distribution}
 

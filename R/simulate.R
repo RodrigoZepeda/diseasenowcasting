@@ -1,43 +1,6 @@
 #' Simulate a process
 #'
 #' This function simulates a state-space process for testing purposes in a model with
-#' multiple delays and strata. It estimates the process over a specified number of steps,
-#'  with options for trend degrees, priors, and error distributions.
-#'
-#' @param num_steps Integer. Number of time steps to simulate. Default is 10.
-#' @param num_delays Integer. Number of delay strata. Default is 8.
-#' @param num_strata Integer. Number of strata for the population. Default is 2.
-#' @param initial_day Date. If the simulation is to start on a specific day.
-#' @param initial_n Real. The initial expected average value of cases.
-#' @param units Either `"daily"` (default) or `"weekly"`.
-#' @inheritParams nowcast
-#'
-#' @return A tibble with simulated state-space process results, including the onset and
-#' report dates, strata, delays, and the number of observed cases per time step.
-#'
-#' @export
-#'
-#' @examples
-#' simulate_process_for_testing(num_steps = 20, num_delays = 5, num_strata = 3,
-#'       priors = set_priors(p = 0, q = 0, mu_is_constant = TRUE))
-simulate_process_for_testing <- function(num_steps  = 10,
-                                         num_delays = 8,
-                                         num_strata = 2,
-                                         initial_day = NULL,
-                                         initial_n   = 100,
-                                         dist   = c("NegativeBinomial", "Poisson"),
-                                         units = c("daily", "weekly"),
-                                         priors = set_priors()){
-
-
-  cli::cli_alert_warning("This function will disappear in future versions please call `simulate_disease`")
-  simulate_disease(num_steps, num_delays, num_strata, initial_day, initial_n, dist, units, priors)
-
-}
-
-#' Simulate a process
-#'
-#' This function simulates a state-space process for testing purposes in a model with
 #' multiple delays and strata. It estimates the process over a spesupcified number of steps,
 #'  with options for trend degrees, priors, and error distributions.
 #'
@@ -47,6 +10,7 @@ simulate_process_for_testing <- function(num_steps  = 10,
 #' @param initial_day Date. If the simulation is to start on a specific day.
 #' @param units Either `"daily"` (default) or `"weekly"`.
 #' @param warmup_steps Initial steps on model (to discard)
+#' @param ... Additional arguments to pass to [nowcast()]
 #' @inheritParams nowcast
 #'
 #' @return A tibble with simulated state-space process results, including the onset and
@@ -62,9 +26,10 @@ simulate_disease <- function(num_steps  = 10,
                              num_strata = 2,
                              initial_day = NULL,
                              warmup_steps = 50,
-                             dist   = c("NegativeBinomial", "Poisson"),
+                             dist   = c("NegativeBinomial", "Poisson","Normal","Student"),
                              units  = c("daily", "weekly"),
-                             priors = set_priors()){
+                             priors = set_priors(),
+                             ...){
 
 
   warmup_steps <- ifelse(!is.numeric(warmup_steps) | warmup_steps < 0,
@@ -98,7 +63,8 @@ simulate_disease <- function(num_steps  = 10,
   #Generate fake dataset
   ss_process <- nowcast(disease_data, onset_date = "onset_date", report_date = "report_date",
                         strata = ".strata", prior_only = TRUE, priors = priors,
-                        algorithm = "Fixed_param", dist = dist, chains = 1, refresh = 0)
+                        algorithm = "Fixed_param", dist = dist, chains = 1, refresh = 0,
+                        ...)
 
   #Create the simulation tibble
   simulations <- ss_process$generated_quantities |>

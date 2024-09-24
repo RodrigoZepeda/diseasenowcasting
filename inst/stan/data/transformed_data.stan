@@ -40,6 +40,6 @@ int xi_nu_size = nrows_nu_trend_R;
 
 //Get the columns of ncases
 int n_col = 1;
-int t_col = 2;
-int d_col = 3;
-int s_col = 4;
+int t_col = 1;
+int d_col = 2;
+int s_col = 3;

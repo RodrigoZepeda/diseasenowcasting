@@ -18,6 +18,7 @@ functions {
 
 data {
   #include data/data.stan
+  #include data/data_continuous.stan
 }
 
 transformed data {
@@ -26,23 +27,17 @@ transformed data {
 
 parameters {
   #include parameters/parameters.stan
+  #include parameters/parameters_continuous.stan
 }
 
 transformed parameters {
   #include parameters/transformed_parameters.stan
+  #include parameters/transformed_parameters_continuous.stan
 }
 
 model {
-  //Don't calculate posterior if user only wants prior
-  if (!prior_only){
-
-    //Evaluate the model whether its negative binomial
-    if (is_negative_binomial){
-      target += neg_binomial_2_log_lpmf(N_cases[,n_col] | lambda_mean, rep_vector(r[1], num_elements(lambda_mean)));
-    } else {
-      target += poisson_log_lpmf(N_cases[,n_col] | lambda_mean);
-    }
-
+  if (!prior_only){ //Don't calculate posterior if user only wants prior
+    #include model/continuous_model.stan
   }
 
   // Add the priors

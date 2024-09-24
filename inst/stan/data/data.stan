@@ -4,8 +4,7 @@ int<lower=0> num_delays;     //Maximum number of unique delays considered
 int<lower=1> num_strata;     //Number of strata included in the model
 int<lower=1> n_rows;         //Number of rows in data Nmat
 
-//Data with time, delays, strata. Each entry is a case count -----------------------------------
-array[n_rows, 4] int N_cases; //Matrix with first entry = n, second = time, third = delay, fourth = strata
+array[n_rows, 3] int N_cases; //Matrix with first = time, second = delay, third = strata
 
 //Trend options --------------------------------------------------------------------------------
 int<lower=0> mu_degree;                 //Degree associated to the mu's trend

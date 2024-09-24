@@ -31,7 +31,7 @@ if (is_positive){
   if (prior_spec == 0)       return 0.0;                                                                                            // Jeffrey's prior adds nothing to target
   else if (prior_spec == 1)  return std_normal_lpdf(x);                                                                             // Normal
   else if (prior_spec == 2)  return normal_lpdf(x | param_1, param_2) - normal_lccdf(0 | param_1, param_2);                         // Normal
-  else if (prior_spec == 3)  return student_t_lpdf(x | param_1, 0.0, param_2) - student_t_lccdf(0 | param_1, 0.0, param_2);         // Student
+  else if (prior_spec == 3)  return student_t_lpdf(x | 3.0, param_1, param_2) - student_t_lccdf(0 | 3.0, param_1, param_2);         // Student
   else if (prior_spec == 4)  return cauchy_lpdf(x | param_1, param_2) - cauchy_lccdf(0 | param_1, param_2);                         // Cauchy
   else if (prior_spec == 5)  return exponential_lpdf(x | param_1);                                                                  // Exponential
   else if (prior_spec == 6)  return gamma_lpdf(x | param_1, param_2);                                                               // Gamma
@@ -52,7 +52,7 @@ if (is_positive){
   if (prior_spec == 0)       return 0.0;                                             //Jeffrey's prior adds nothing to target
   else if (prior_spec == 1)  return std_normal_lpdf(x);                              // Standard normal
   else if (prior_spec == 2)  return normal_lpdf(x | param_1, param_2);               // Normal
-  else if (prior_spec == 3)  return student_t_lpdf(x | param_1, 0.0, param_2);       // Student
+  else if (prior_spec == 3)  return student_t_lpdf(x | 3.0, param_1, param_2);       // Student
   else if (prior_spec == 4)  return cauchy_lpdf(x | param_1, param_2);               // Cauchy
   else if (prior_spec == 5)  return exponential_lpdf(x | param_1);                   // Exponential
   else if (prior_spec == 6)  return gamma_lpdf(x | param_1, param_2);                // Gamma
