@@ -1,42 +1,25 @@
-#rstantools::rstan_config()
-devtools::load_all()
-
-
-# Create a fake disease process
-#num_strata <- 5
-#num_delays <- 8
-#num_steps=15
-#sims  <- simulate_disease(num_steps=num_steps,num_strata = num_strata, num_delays = num_delays)
-#predictions_largelist <- nowcast(sims, "onset_week", "report_week", method="variational", strata = "gender")
-
-denguedat_sel=denguedat[denguedat$onset_week >= as.Date("1991-09-01") & denguedat$onset_week <= as.Date("1991-12-01"),]
-set.seed(122)  # Set seed for reproducibility
-n <- nrow(denguedat_sel)  # Total number of rowsß
-indices <- sample(1:n, size = ceiling(n / 4))  # Randomly select a third of the rows
-# Replace the selected indices in the gender column with "other"
-denguedat_sel$gender[indices] <- "Other"
-set.seed(211)  # Set seed for reproducibility
-n <- nrow(denguedat_sel)  # Total number of rowsß
-indices <- sample(1:n, size = ceiling(n / 4))  # Randomly select a third of the rows
-# Replace the selected indices in the gender column with "other"
-denguedat_sel$gender[indices] <- "uncertain"
-
-
-
-predictions_largelist <-
-  nowcast(denguedat_sel, "onset_week", "report_week", method="variational",
-          strata = "gender")
-
-
-# Define child class that inherits from ParentClass
-#setClass(
-#  "nowcast_stanfit",
-#  contains = "stanfit"
-#)
-#class(predictions_largelist) <- 'nowcast_stanfit'
-
-
-
+#' Makes a summary of nowcast() output
+#'
+#' Makes a tidy summary dataframe of the results of the function nowcast()
+#'
+#' @param nowcast_output the output of the nowcast() function
+#'
+#' @examples
+#' # Load the data
+#' data(denguedat)
+#'
+#' # Run a nowcast with very few iterations
+#' # change to method = "sampling" when working and remove the iter = 10 (or set to iter = 2000)
+#' now <- as.Date("1990-10-01")
+#'
+#' # perform nowcasting
+#' predictions <- nowcast(denguedat, "onset_week", "report_week", now = now, method = "optimization", seed = 2495624, iter = 10)
+#'
+#' # create summary dataframe
+#' summary_nowcast(predictions)
+#'
+#'
+#' @export
 summary_nowcast <- function(nowcast_output, ...) {
   #Get names from input data
   onset_date_name <- nowcast_output$data$call_parameters$onset_date
@@ -71,7 +54,28 @@ summary_nowcast <- function(nowcast_output, ...) {
 
 
 
-
+#' Create plots form the nowcast() output
+#'
+#' Plots the prediction of the function nowcast() of the observed value
+#'
+#' @param nowcast_output the output of the nowcast() function
+#'
+#' @examples
+#' # Load the data
+#' data(denguedat)
+#'
+#' # Run a nowcast with very few iterations
+#' # change to method = "sampling" when working and remove the iter = 10 (or set to iter = 2000)
+#' now <- as.Date("1990-10-01")
+#'
+#' # perform nowcasting
+#' predictions <- nowcast(denguedat, "onset_week", "report_week", now = now, method = "optimization", seed = 2495624, iter = 10)
+#'
+#' # create summary dataframe
+#' plot_nowcast(predictions)
+#'
+#'
+#' @export
 plot_nowcast <- function(nowcast_output, ...) {
   # Get names from input data
   onset_date_name <- nowcast_output$data$call_parameters$onset_date
@@ -137,5 +141,3 @@ plot_nowcast <- function(nowcast_output, ...) {
         legend.direction = "horizontal"
       )
 }
-
-plot_nowcast(predictions_largelist)
