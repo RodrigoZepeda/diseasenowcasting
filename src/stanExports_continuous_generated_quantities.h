@@ -41,7 +41,7 @@ static constexpr std::array<const char*, 512> locations_array__ =
   " (in 'continuous_generated_quantities', line 675, column 0 to column 15)",
   " (in 'continuous_generated_quantities', line 676, column 0 to column 22)",
   " (in 'continuous_generated_quantities', line 677, column 0 to column 22)",
-  " (in 'continuous_generated_quantities', line 678, column 0 to column 11)",
+  " (in 'continuous_generated_quantities', line 678, column 0 to column 20)",
   " (in 'continuous_generated_quantities', line 679, column 0 to column 23)",
   " (in 'continuous_generated_quantities', line 680, column 0 to column 23)",
   " (in 'continuous_generated_quantities', line 682, column 0 to column 53)",
@@ -3239,7 +3239,8 @@ public:
                   jacobian__>(0, lp__);
       local_scalar_t__ xi_sd = DUMMY_VAR__;
       current_statement__ = 9;
-      xi_sd = in__.template read<local_scalar_t__>();
+      xi_sd = in__.template read_constrain_lb<local_scalar_t__,
+                jacobian__>(0, lp__);
       local_scalar_t__ xi_mu_sd = DUMMY_VAR__;
       current_statement__ = 10;
       xi_mu_sd = in__.template read_constrain_lb<local_scalar_t__,
@@ -3459,7 +3460,8 @@ public:
                   jacobian__>(0, lp__);
       double xi_sd = std::numeric_limits<double>::quiet_NaN();
       current_statement__ = 9;
-      xi_sd = in__.template read<local_scalar_t__>();
+      xi_sd = in__.template read_constrain_lb<local_scalar_t__,
+                jacobian__>(0, lp__);
       double xi_mu_sd = std::numeric_limits<double>::quiet_NaN();
       current_statement__ = 10;
       xi_mu_sd = in__.template read_constrain_lb<local_scalar_t__,
@@ -3863,7 +3865,7 @@ public:
       local_scalar_t__ xi_sd = DUMMY_VAR__;
       current_statement__ = 9;
       xi_sd = in__.read<local_scalar_t__>();
-      out__.write(xi_sd);
+      out__.write_free_lb(0, xi_sd);
       local_scalar_t__ xi_mu_sd = DUMMY_VAR__;
       current_statement__ = 10;
       xi_mu_sd = in__.read<local_scalar_t__>();
@@ -4102,7 +4104,7 @@ public:
       local_scalar_t__ xi_sd = DUMMY_VAR__;
       current_statement__ = 9;
       xi_sd = context__.vals_r("xi_sd")[(1 - 1)];
-      out__.write(xi_sd);
+      out__.write_free_lb(0, xi_sd);
       local_scalar_t__ xi_mu_sd = DUMMY_VAR__;
       current_statement__ = 10;
       xi_mu_sd = context__.vals_r("xi_mu_sd")[(1 - 1)];

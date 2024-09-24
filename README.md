@@ -28,15 +28,12 @@ set.seed(32658235)
 num_steps  <- 15
 num_strata <- 2
 num_delays <- 10
-sims       <- simulate_process_for_testing(num_steps = num_steps, 
-                                           num_strata = num_strata, num_delays = num_delays)
+sims       <- simulate_disease(num_steps = num_steps, num_strata = num_strata,
+                               num_delays = num_delays)
 
 # Now use model to predict disease process. If no strata is required omit the strata option
-predictions <- nowcast(sims, "onset_date", "report_date", strata = ".strata",
-                       method = "variational")
-#> Warning: Pareto k diagnostic value is 2.11. Resampling is disabled. Decreasing
-#> tol_rel_obj may help if variational algorithm has terminated prematurely.
-#> Otherwise consider using sampling instead.
+predictions <- nowcast(sims, "onset_date", "report_date", strata = ".strata", 
+                       chains = 4, cores = 4)
 
 #Get the predicted values in a nice format
 predicted_values <- predictions$generated_quantities |>
@@ -53,7 +50,6 @@ predicted_values <- predictions$generated_quantities |>
   ) |> 
   mutate(.strata = .strata_unified)
   
-
 # Sum over all delays
 data_delays <- sims |>
   group_by(onset_date, .strata) |>
