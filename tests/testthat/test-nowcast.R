@@ -1,6 +1,7 @@
 #Simulate process
 set.seed(28753)
-sims <- simulate_process_for_testing(num_steps = 10, num_delays = 4, num_strata = 3)
+sims <- denguedat |>
+  dplyr::filter(onset_week <= lubridate::ymd("1990-03-30"))
 
 
 #File for testing that the nowcast function runs
@@ -14,7 +15,7 @@ test_that("Testing `nowcast.R`", {
   #Check sampling inference works
   suppressWarnings({
     expect_no_error(
-      nowcast(sims, onset_date = "onset_date", report_date = "report_date", chains = 1,
+      nowcast(sims, onset_date = "onset_week", report_date = "report_week", chains = 1,
             cores = 1, iter = 25)
     )
   })
@@ -22,7 +23,7 @@ test_that("Testing `nowcast.R`", {
   #Check variational inference works
   suppressWarnings({
     expect_no_error(
-      nowcast(sims, onset_date = "onset_date", report_date = "report_date",
+      nowcast(sims, onset_date = "onset_week", report_date = "report_week",
                    method = "variational")
     )
   })
@@ -30,7 +31,7 @@ test_that("Testing `nowcast.R`", {
   #Check optim inference works
   suppressWarnings({
     expect_no_error(
-      nowcast(sims, onset_date = "onset_date", report_date = "report_date",
+      nowcast(sims, onset_date = "onset_week", report_date = "report_week",
               method = "optimization")
     )
   })
@@ -40,23 +41,23 @@ test_that("Testing `nowcast.R`", {
   #Check sampling inference works
   suppressWarnings({
     expect_no_error(
-      nowcast(sims, onset_date = "onset_date", report_date = "report_date", chains = 1,
-                     cores = 1, iter = 25, strata = ".strata")
+      nowcast(sims, onset_date = "onset_week", report_date = "report_week", chains = 1,
+                     cores = 1, iter = 25, strata = "gender")
     )
   })
 
   #Check variational inference works
   suppressWarnings({
     expect_no_error(
-      nowcast(sims, onset_date = "onset_date", report_date = "report_date",
-                   method = "variational", strata = ".strata")
+      nowcast(sims, onset_date = "onset_week", report_date = "report_week",
+                   method = "variational", strata = "gender")
     )
   })
 
   suppressWarnings({
     expect_no_error(
-      nowcast(sims, onset_date = "onset_date", report_date = "report_date",
-              method = "optimization", strata = ".strata")
+      nowcast(sims, onset_date = "onset_week", report_date = "report_week",
+              method = "optimization", strata = "gender")
     )
   })
 

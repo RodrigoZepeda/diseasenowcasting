@@ -38,16 +38,16 @@ real<lower=0> nu_sd_param_1;
 real<lower=0> nu_sd_param_2;
 
 //Distribution specification for mu_0 and
-int<lower=0,upper=14> mu_sd_prior;
-int<lower=0,upper=14> nu_sd_prior;
-int<lower=0,upper=14> r_prior;
-int<lower=0,upper=14> phi_AR_prior;
-int<lower=0,upper=14> theta_MA_prior;
-int<lower=0,upper=14> xi_sd_prior;
-int<lower=0,upper=14> mu_0_mean_hyperprior;
-int<lower=0,upper=14> nu_0_mean_hyperprior;
-int<lower=0,upper=14> mu_0_sd_hyperprior;
-int<lower=0,upper=14> nu_0_sd_hyperprior;
+int<lower=0,upper=16> mu_sd_prior;
+int<lower=0,upper=16> nu_sd_prior;
+int<lower=0,upper=16> r_prior;
+int<lower=0,upper=16> phi_AR_prior;
+int<lower=0,upper=16> theta_MA_prior;
+int<lower=0,upper=16> xi_sd_prior;
+int<lower=0,upper=16> mu_0_mean_hyperprior;
+int<lower=0,upper=16> nu_0_mean_hyperprior;
+int<lower=0,upper=16> mu_0_sd_hyperprior;
+int<lower=0,upper=16> nu_0_sd_hyperprior;
 
 //Hyperpriors
 real mu_0_mean_param_1;

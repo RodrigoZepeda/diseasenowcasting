@@ -7,6 +7,8 @@ matrix[num_delays*num_strata, num_steps] lambda = state_space_process(
       xi_nu_centered, xi_mu_sd, xi_nu_sd, mu_0_centered, nu_0_centered, mu_0_sd, nu_0_sd,
       mu_0_mean, nu_0_mean, B_cnt, X_cnt, phi_AR, theta_MA, xi);
 
+
+
 //Create a vectorized version of the lambda
 //The lambda function is organized by delays and then strata so
 //
@@ -33,29 +35,49 @@ for (n in 1:n_rows)
 //Priors
 // ------------------------------------------------------------------------------------------------
 real lprior = 0;
+
+//Priors for mu coefficients
+//------------------------------------------------------------------------------------------
+
+//For the centered version of mu
 lprior += std_normal_lpdf(to_vector(mu_0_centered));
-lprior += std_normal_lpdf(to_vector(nu_0_centered));
-
-for (t in 1:(num_steps - 1)){
-  lprior += std_normal_lpdf(to_vector(xi_mu_centered[t]));
-  lprior += std_normal_lpdf(to_vector(xi_nu_centered[t]));
-}
-
-//ARMA components
-lprior += dist_lpdf(phi_AR | phi_AR_param_1, phi_AR_param_2, phi_AR_prior);
-lprior += dist_lpdf(theta_MA | theta_MA_param_1, theta_MA_param_2, theta_MA_prior);
-
-lprior += std_normal_lpdf(to_vector(xi_centered));
-lprior += dist_lpdf(xi_sd | xi_sd_param_1, xi_sd_param_2, xi_sd_prior);
 
 //Hyperparameter priors
-lprior += dist_lpdf(mu_0_mean | mu_0_mean_param_1, mu_0_mean_param_2, mu_0_mean_hyperprior);
-lprior += dist_lpdf(mu_0_sd   | mu_0_sd_param_1, mu_0_sd_param_2, mu_0_sd_hyperprior);
-lprior += dist_lpdf(nu_0_mean | nu_0_mean_param_1, nu_0_mean_param_2, nu_0_mean_hyperprior);
-lprior += dist_lpdf(nu_0_sd   | nu_0_sd_param_1, nu_0_sd_param_2, nu_0_sd_hyperprior);
-lprior += dist_lpdf(xi_mu_sd  | mu_sd_param_1, mu_sd_param_2, mu_sd_prior);
-lprior += dist_lpdf(xi_nu_sd  | nu_sd_param_1, nu_sd_param_2, nu_sd_prior);
+lprior += dist_lpdf(mu_0_mean | mu_0_mean_param_1, mu_0_mean_param_2, mu_0_mean_hyperprior, 0);
+lprior += dist_lpdf(mu_0_sd   | mu_0_sd_param_1, mu_0_sd_param_2, mu_0_sd_hyperprior, 1);
+
+//Errors related to mu
+lprior += dist_lpdf(xi_mu_sd  | mu_sd_param_1, mu_sd_param_2, mu_sd_prior, 1);
+
+//Priors for nu coefficients
+//------------------------------------------------------------------------------------------
+//For the centered version of mu
+lprior += std_normal_lpdf(to_vector(nu_0_centered));
+
+//Hyperparameter priors
+lprior += dist_lpdf(nu_0_mean | nu_0_mean_param_1, nu_0_mean_param_2, nu_0_mean_hyperprior, 0);
+lprior += dist_lpdf(nu_0_sd   | nu_0_sd_param_1, nu_0_sd_param_2, nu_0_sd_hyperprior, 1);
+
+//Errors related to nu
+lprior += dist_lpdf(xi_nu_sd  | nu_sd_param_1, nu_sd_param_2, nu_sd_prior, 1);
+
+//Priors for nu and mu errors
+//------------------------------------------------------------------------------------------
+for (t in 1:(num_steps - 1)){
+  lprior += std_normal_lpdf(to_vector(xi_nu_centered[t]));
+  lprior += std_normal_lpdf(to_vector(xi_mu_centered[t]));
+}
+
+
+
+//ARMA components
+lprior += dist_lpdf(phi_AR | phi_AR_param_1, phi_AR_param_2, phi_AR_prior, 0);
+lprior += dist_lpdf(theta_MA | theta_MA_param_1, theta_MA_param_2, theta_MA_prior, 0);
+
+//Errors
+lprior += std_normal_lpdf(to_vector(xi_centered));
+lprior += dist_lpdf(xi_sd | xi_sd_param_1, xi_sd_param_2, xi_sd_prior, 1);
 
 //Add prior to the negative binomial precision
 if (is_negative_binomial)
-  lprior += dist_lpdf(r | r_param_1, r_param_2, r_prior);
+  lprior += dist_lpdf(r | r_param_1, r_param_2, r_prior, 1);

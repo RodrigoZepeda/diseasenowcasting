@@ -9,7 +9,7 @@ simulate_disease(
   num_delays = 8,
   num_strata = 2,
   initial_day = NULL,
-  initial_n = 100,
+  warmup_steps = 50,
   dist = c("NegativeBinomial", "Poisson"),
   units = c("daily", "weekly"),
   priors = set_priors()
@@ -24,7 +24,7 @@ simulate_disease(
 
 \item{initial_day}{Date. If the simulation is to start on a specific day.}
 
-\item{initial_n}{Real. The initial expected average value of cases.}
+\item{warmup_steps}{Initial steps on model (to discard)}
 
 \item{dist}{Distribution. Either "NegativeBinomial"  or "Poisson"}
 
@@ -43,5 +43,6 @@ multiple delays and strata. It estimates the process over a spesupcified number 
  with options for trend degrees, priors, and error distributions.
 }
 \examples{
-simulate_process_for_testing(num_steps = 20, num_delays = 5, num_strata = 3)
+simulate_disease(num_steps = 20, num_delays = 5, num_strata = 3,
+      priors = set_priors(p = 0, q = 0, mu_is_constant =TRUE))
 }

@@ -11,7 +11,6 @@ knitr::opts_chunk$set(
 
 library(tidyverse)
 library(ggtext)
-library(MetBrewer)
 library(latex2exp)
 library(cowplot)
 ```
@@ -72,7 +71,7 @@ plt2 <- ggplot(df) +
     panel.grid      = element_blank(),
     legend.position = "bottom"
   ) +
-  scale_fill_manual("", values = met.brewer("Juarez", 5)[c(2,4)]) 
+  scale_fill_manual("", values = c("#334335","#DA6529")) 
 
 print(plt2)
 ```
@@ -142,9 +141,9 @@ plt <- ggplot(df) +
             data = df |> filter(x %in% c(2,4))) +
   geom_text(aes(x = x, y = y, label = z), parse = T, size = 7, color = "white",
             data = df |> filter(x %in% c(1,3,5))) +
-  annotate("text", x = 1, y = 2, label = "Log average cases", color = met.brewer("Juarez", 5)[2]) +
-  annotate("text", x = 3, y = 2, label = "Time-dependent", color = met.brewer("Juarez", 5)[1]) +
-  annotate("text", x = 5, y = 2, label = "Delay-time-dependent", color = met.brewer("Juarez", 5)[5]) +
+  annotate("text", x = 1, y = 2, label = "Log average cases", color = "#334335") +
+  annotate("text", x = 3, y = 2, label = "Time-dependent", color = "#5F7E62") +
+  annotate("text", x = 5, y = 2, label = "Delay-time-dependent", color = "#DA6529") +
   theme_void() +
   scale_y_continuous(expand = c(0.5,0.5)) +
   theme(
@@ -176,7 +175,7 @@ df <- tibble(t = 0:365, day = ymd("2021/01/01") + t,
 
 #Create plot for seasonality
 seasonality_1 <- ggplot(df) +
-  geom_point(aes(x = wday, y = day_effect), color = "#a82203") +
+  geom_point(aes(x = wday, y = day_effect), color = "#5F7E62") +
   labs(
     x = "Day",
     y = "Seasonal",
@@ -190,7 +189,7 @@ seasonality_1 <- ggplot(df) +
   )
 
 seasonality_2 <- ggplot(df) +
-  geom_point(aes(x = epiweek, y = week_effect), color = "#a82203") +
+  geom_point(aes(x = epiweek, y = week_effect), color = "#5F7E62") +
   labs(
     x = "Epiweek",
     y = "Sesonal",
@@ -207,7 +206,7 @@ seasonality <- plot_grid(seasonality_1, seasonality_2)
 
 #Create plot for trend
 trend <- ggplot(df) +
-  geom_line(aes(x = day, y = trend), color = "#a82203") +
+  geom_line(aes(x = day, y = trend), color = "#5F7E62") +
   labs(
     x = "Day",
     y = "Trend",
@@ -223,7 +222,7 @@ trend <- ggplot(df) +
 
 #Create plot for noise
 noise <- ggplot(df) +
-  geom_line(aes(x = day, y = noise), color = "#a82203") +
+  geom_line(aes(x = day, y = noise), color = "#5F7E62") +
   labs(
     x = "Day",
     y = "Noise",
@@ -245,9 +244,9 @@ df <- tibble(x = c(1),
 
 tdmu <- ggplot(df) +
   geom_tile(aes(x = x, y = y, fill = fill_col)) +
-  geom_segment(aes(x = 1, y = 1, xend = 2.5, yend = 1.8), color = "#a82203", arrow = arrow()) +
-  geom_segment(aes(x = 1, y = 1, xend = 2.5, yend = 1), color = "#a82203", arrow = arrow()) +
-  geom_segment(aes(x = 1, y = 1, xend = 2.5, yend = 0.2), color = "#a82203", arrow = arrow()) +
+  geom_segment(aes(x = 1, y = 1, xend = 2.5, yend = 1.8), color = "#5F7E62", arrow = arrow()) +
+  geom_segment(aes(x = 1, y = 1, xend = 2.5, yend = 1), color = "#5F7E62", arrow = arrow()) +
+  geom_segment(aes(x = 1, y = 1, xend = 2.5, yend = 0.2), color = "#5F7E62", arrow = arrow()) +
   geom_text(aes(x = x, y = y, label = z), parse = T, size = 7, color = "white") +
   annotate("text", x = 1, y = 1.75, label = "Time-dependent", color = met.brewer("Juarez", 5)[1]) +
   theme_void() +

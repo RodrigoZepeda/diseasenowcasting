@@ -13,7 +13,7 @@ get_prior_code_stan <- function(prior_name){
 
   dist_list <- c("jeffreys", "standard_normal", "normal", "student_t", "cauchy", "exponential",
                  "gamma", "inverse_gamma", "lognormal", "weibull", "frechet",
-                 "double_exponential", "rayleigh", "loglogistic", "gumbel")
+                 "double_exponential","logistic","rayleigh", "loglogistic", "gumbel","uniform")
 
   if (!is.numeric(prior_name)){
     return(
@@ -31,44 +31,16 @@ get_prior_code_stan <- function(prior_name){
            "weibull"            = 9,
            "frechet"            = 10,
            "double_exponential" = 11,
-           "rayleigh"           = 12,
-           "loglogistic"        = 13,
-           "gumbel"             = 14,
+            "logistic"          = 12,
+           "rayleigh"           = 13,
+           "loglogistic"        = 14,
+           "gumbel"             = 15,
+           "uniform"            = 16,
            cli::cli_abort("Distribution {.val {character}} not found. Choose one of the following: {.val {dist_list}}"))
     )
   } else {
     return(prior_name)
   }
-}
-
-#' Function for mapping the priors to numbers
-#'
-#' Takes a prior from one of the listed in `priors.stan` and
-#' returns a function for generating random numbers from it
-#'
-#' @inheritParams get_prior_code_stan
-#'
-#' @keywords internal
-get_prior_code_sim_R <- function(prior_name){
-  dist_list <- c("standard_normal", "normal", "student_t", "cauchy", "exponential",
-                 "gamma", "inverse_gamma", "lognormal", "weibull", "frechet",
-                 "double_exponential", "rayleigh", "loglogistic", "gumbel")
-  switch(tolower(prior_name),
-         "standard_normal"    = function(x, param1, param2) rnorm(x, 0, 1),
-         "normal"             = rnorm,
-         "student_t"          = rt,
-         "cauchy"             = rcauchy,
-         "exponential"        = function(x, param1, param2) rexp(x, param1),
-         "gamma"              = rgamma,
-         "inverse_gamma"      = function(x, param1, param2) 1/rgamma(x, param1, param2),
-         "lognormal"          = rlnorm,
-         "weibull"            = rweibull,
-         #"frechet"            = 10,
-         #"double_exponential" = 11,
-         #"rayleigh"           = 12,
-         #"loglogistic"        = 13,
-         #"gumbel"             = 14,
-         cli::cli_abort("Distribution {.val {character}} not found. Choose one of the following: {.val {dist_list}}"))
 }
 
 #' Return the default `STAN` control parameters for nowcasting

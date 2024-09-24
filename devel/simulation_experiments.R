@@ -10,11 +10,9 @@ test_nowcast <- NobBS(data=denguedat, units="1 week", now = now,
 
 #FIXME: Should add this to testthat
 #Check the data
-t1 <- Sys.time()
-predictions <- nowcast(denguedat, "onset_week", "report_week",
+predictions <- nowcast(denguedat, "onset_week", "report_week", now = now,
                        method = "variational",
-                       priors = set_priors())
-t2 <- Sys.time()
+                       priors = set_priors(p = 3))
 
 #Get the predicted values in a nice format
 predicted_values <- predictions$generated_quantities |>
@@ -22,10 +20,15 @@ predicted_values <- predictions$generated_quantities |>
   posterior::subset_draws("N_predict") |>
   posterior::summarise_draws() |>
   dplyr::mutate(.strata = as.numeric(stringr::str_remove_all(variable,".*\\[.*,|\\]"))) |>
-  dplyr::mutate(.tval = as.numeric(stringr::str_remove_all(variable,".*\\[|,.*\\]")))
+  dplyr::mutate(.tval = as.numeric(stringr::str_remove_all(variable,".*\\[|,.*\\]"))) |>
+  dplyr::left_join(
+    predictions$data$preprocessed_data |>
+      dplyr::distinct(.strata, .tval, onset_week, .strata_unified)
+  ) |>
+  dplyr::mutate(.strata = .strata_unified)
 
 obs <- predictions$data$preprocessed_data |>
-  dplyr::group_by(.tval) |>
+  dplyr::group_by(onset_week) |>
   dplyr::summarise(n = sum(n))
 
 # Create plot
