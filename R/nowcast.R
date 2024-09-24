@@ -10,7 +10,7 @@
 #'
 #' @param units Time scale of reporting. Options: "1 day", "1 week".
 #'
-#' @param dist Distribution. Either "NegativeBinomial"  or "Poisson"
+#' @param dist Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"
 #'
 #' @param onset_date In quotations, the name of the column of datatype
 #' \code{Date} designating the date of case onset. e.g. "onset_week"
@@ -57,7 +57,7 @@
 #' @export
 nowcast <- function(.disease_data, onset_date, report_date,
                     strata = NULL,
-                    dist = c("NegativeBinomial", "Poisson"),
+                    dist   = c("NegativeBinomial", "Poisson","Normal","Student"),
                     now = NULL,
                     units = NULL,
                     max_delay = Inf,
@@ -83,7 +83,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
   units  <- infer_units(.disease_data, units = units, date_column = onset_date)
 
   # Match the distribution whether negative binomial or poisson
-  dist   <- match.arg(dist, c("NegativeBinomial", "Poisson"))
+  dist   <- match.arg(dist, c("NegativeBinomial", "Poisson","Normal","Student"))
 
   # Method
   method <- match.arg(method, c("sampling", "variational","optimization"))
@@ -178,19 +178,23 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
     dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), !!as.symbol(".strata"))
 
   # Distribution
-  is_negative_binomial <- as.numeric(dist == "NegativeBinomial")
+  is_negative_binomial <- as.numeric(dist == "NegativeBinomial" | dist == "Normal")
+
+  # Cases and positions handled separately
+  N_cases <- as.matrix(.disease_data)
 
   stan_data <- list(
 
     #Data information
-    num_steps  = num_steps,
-    num_delays = num_delays,
-    num_strata = num_strata,
-    n_rows     = nrow(.disease_data),
-    N_cases    = as.matrix(.disease_data),
+    num_steps   = num_steps,
+    num_delays  = num_delays,
+    num_strata  = num_strata,
+    n_rows      = nrow(.disease_data),
+    N_cases     = N_cases[,2:4],
+    Cases       = as.matrix(N_cases[,1]),
 
     #Whether to compute only the prior
-    prior_only     = as.numeric(prior_only),
+    prior_only  = as.numeric(prior_only),
 
     #Trend specification
     mu_degree      = priors$mu_degree,
@@ -242,17 +246,26 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
     precision_tol        = 1.e-3
   )
 
+  #Select the model
+  if (dist %in% c("NegativeBinomial","Poisson")){
+    model_stan <- stanmodels$nowcast_discrete
+    gq_stan    <- stanmodels$discrete_generated_quantities
+  } else {
+    model_stan <- stanmodels$nowcast_continuous
+    gq_stan    <- stanmodels$continuous_generated_quantities
+  }
+
   if (method[1] == "sampling"){
-    stan_fit <- rstan::sampling(stanmodels$nowcast, data = stan_data,
+    stan_fit <- rstan::sampling(model_stan, data = stan_data,
                            control = control,
                            refresh = refresh,
                            ...)
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "variational") {
-    stan_fit <- rstan::vb(stanmodels$nowcast, data = stan_data, refresh = refresh,...)
+    stan_fit <- rstan::vb(model_stan, data = stan_data, refresh = refresh,...)
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "optimization") {
-    stan_fit <- rstan::optimizing(stanmodels$nowcast, data = stan_data, refresh = refresh, ...)
+    stan_fit <- rstan::optimizing(model_stan, data = stan_data, refresh = refresh, ...)
 
     # Work around to get draws from the optimized params for gq
     draws           <- matrix(rep(stan_fit$par, 1000), ncol = length(stan_fit$par), byrow = TRUE)
@@ -263,8 +276,7 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
   }
 
   #Get the generated quantities
-  generated_quantities <- rstan::gqs(stanmodels$generated_quantities, data = stan_data, draws = draws)
-
+  generated_quantities <- rstan::gqs(gq_stan, data = stan_data, draws = draws)
 
   flag <- generated_quantities |>
     posterior::as_draws() |>

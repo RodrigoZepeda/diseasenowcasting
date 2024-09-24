@@ -68,8 +68,6 @@ for (t in 1:(num_steps - 1)){
   lprior += std_normal_lpdf(to_vector(xi_mu_centered[t]));
 }
 
-
-
 //ARMA components
 lprior += dist_lpdf(phi_AR | phi_AR_param_1, phi_AR_param_2, phi_AR_prior, 0);
 lprior += dist_lpdf(theta_MA | theta_MA_param_1, theta_MA_param_2, theta_MA_prior, 0);
@@ -78,6 +76,3 @@ lprior += dist_lpdf(theta_MA | theta_MA_param_1, theta_MA_param_2, theta_MA_prio
 lprior += std_normal_lpdf(to_vector(xi_centered));
 lprior += dist_lpdf(xi_sd | xi_sd_param_1, xi_sd_param_2, xi_sd_prior, 1);
 
-//Add prior to the negative binomial precision
-if (is_negative_binomial)
-  lprior += dist_lpdf(r | r_param_1, r_param_2, r_prior, 1);

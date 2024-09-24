@@ -2,27 +2,27 @@ library(ggplot2)
 library(posterior)
 library(dplyr)
 
-#rstantools::rstan_config(); devtools::load_all()
-#rstantools::rstan_config(); devtools::load_all()
+rstantools::rstan_config(); devtools::load_all()
+rstantools::rstan_config(); devtools::load_all()
 
 num_strata <- 1 #doesn't work with more RN
 num_delays <- 5
 
 for (k in 1:10){
-sims       <- simulate_disease(num_steps = 100, num_strata = num_strata,
+sims       <- simulate_disease(num_steps = 100,
+                               num_strata = num_strata,
                                num_delays = num_delays,
                                warmup_steps = 0,
-                               dist = "Poisson",
+                               dist = "Normal",
                                priors = set_priors(
                                  mu_degree = 1,
-                                 nu_degree = 1,
-                                 phi_AR_prior = "cauchy",
+                                 nu_degree = 0,
                                  mu_is_constant = TRUE,
-                                 phi_AR_param_2 = 1.e-5,
-                                 mu_sd_param_1 = 0.0,
-                                 mu_sd_param_2 = 0.0,
-                                 p = 2,
-                                 q = 2)
+                                 mu_0_mean_param_1 = 1000,
+                                 xi_sd_param_2 = 0,
+                                 p = 0,
+                                 q = 0),
+                               init = list(r = 50)
                                )
 }
 
@@ -37,6 +37,8 @@ ggplot() +
 #   subset_draws("mu_0_sd") |>
 #   summarise_draws()
 #
+
+sims$stan_fit$model |> as_draws() |> subset_draws("r") |> summarise_draws()
 
 lambdavals <- sims$stan_fit$model |>
   as_draws() |>

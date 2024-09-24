@@ -9,7 +9,7 @@ nowcast(
   onset_date,
   report_date,
   strata = NULL,
-  dist = c("NegativeBinomial", "Poisson"),
+  dist = c("NegativeBinomial", "Poisson", "Normal", "Student"),
   now = NULL,
   units = NULL,
   max_delay = Inf,
@@ -34,7 +34,7 @@ such that each row has a column for onset date, report date, and}
 
 \item{strata}{Character vector of names of the strata included in the data.}
 
-\item{dist}{Distribution. Either "NegativeBinomial"  or "Poisson"}
+\item{dist}{Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"}
 
 \item{now}{An object of datatype \code{Date} indicating the date at which
 to perform the nowcast.}

@@ -10,7 +10,7 @@ simulate_disease(
   num_strata = 2,
   initial_day = NULL,
   warmup_steps = 50,
-  dist = c("NegativeBinomial", "Poisson"),
+  dist = c("NegativeBinomial", "Poisson", "Normal", "Student"),
   units = c("daily", "weekly"),
   priors = set_priors()
 )
@@ -26,7 +26,7 @@ simulate_disease(
 
 \item{warmup_steps}{Initial steps on model (to discard)}
 
-\item{dist}{Distribution. Either "NegativeBinomial"  or "Poisson"}
+\item{dist}{Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"}
 
 \item{units}{Either `"daily"` (default) or `"weekly"`.}
 

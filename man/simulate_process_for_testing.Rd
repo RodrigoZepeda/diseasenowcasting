@@ -26,7 +26,7 @@ simulate_process_for_testing(
 
 \item{initial_n}{Real. The initial expected average value of cases.}
 
-\item{dist}{Distribution. Either "NegativeBinomial"  or "Poisson"}
+\item{dist}{Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"}
 
 \item{units}{Either `"daily"` (default) or `"weekly"`.}
 
