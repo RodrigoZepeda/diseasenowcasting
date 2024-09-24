@@ -57,7 +57,7 @@
 #' @export
 nowcast <- function(.disease_data, onset_date, report_date,
                     strata = NULL,
-                    dist = c("NegativeBinomial", "Poisson"),
+                    dist = c("NegativeBinomial", "Poisson","Normal","Student"),
                     now = NULL,
                     units = NULL,
                     max_delay = Inf,
@@ -83,7 +83,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
   units  <- infer_units(.disease_data, units = units, date_column = onset_date)
 
   # Match the distribution whether negative binomial or poisson
-  dist   <- match.arg(dist, c("NegativeBinomial", "Poisson"))
+  dist   <- match.arg(dist, c("NegativeBinomial","Poisson","Normal","Student"))
 
   # Method
   method <- match.arg(method, c("sampling", "variational","optimization"))
@@ -178,16 +178,40 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
     dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), !!as.symbol(".strata"))
 
   # Distribution
-  is_negative_binomial <- as.numeric(dist == "NegativeBinomial")
+  data_distribution <- switch(dist,
+    "Poisson" = 100,
+    "NegativeBinomial" = 101,
+    "Normal" = 1,
+    "Student" = 2,
+    )
+
+  is_discrete  <- ifelse(dist %in% c("Normal", "Student"), 0, 1)
+
+  #Information on cases
+  N_cases <- as.matrix(.disease_data)
+  if (is_discrete){
+    N_cases_int <- as.matrix(N_cases[,1])
+    N_cases_ct  <- matrix(1, nrow = 1, ncol = 1)
+  } else {
+    N_cases_int <- matrix(1, nrow = 1, ncol = 1)
+    N_cases_ct  <- as.matrix(N_cases[,1])
+  }
 
   stan_data <- list(
 
     #Data information
-    num_steps  = num_steps,
-    num_delays = num_delays,
-    num_strata = num_strata,
-    n_rows     = nrow(.disease_data),
-    N_cases    = as.matrix(.disease_data),
+    num_steps   = num_steps,
+    num_delays  = num_delays,
+    num_strata  = num_strata,
+
+    #Information on the distribution
+    is_discrete = is_discrete,
+    data_distribution = data_distribution,
+
+    n_rows      = nrow(.disease_data),
+    N_cases_pos = N_cases[,2:4],
+    N_cases_int = N_cases_int,
+    N_cases_ct  = N_cases_ct,
 
     #Whether to compute only the prior
     prior_only     = as.numeric(prior_only),
@@ -212,7 +236,6 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
     xi_sd_prior          = priors$xi_sd_prior,
 
     #Distribution information
-    is_negative_binomial = is_negative_binomial,
     mu_sd_prior = priors$mu_sd_prior,
     nu_sd_prior = priors$nu_sd_prior,
     r_prior     = priors$r_prior,
@@ -264,7 +287,6 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
 
   #Get the generated quantities
   generated_quantities <- rstan::gqs(stanmodels$generated_quantities, data = stan_data, draws = draws)
-
 
   flag <- generated_quantities |>
     posterior::as_draws() |>

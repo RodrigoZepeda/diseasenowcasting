@@ -12,7 +12,8 @@ test_nowcast <- NobBS(data=denguedat, units="1 week", now = now,
 #Check the data
 predictions <- nowcast(denguedat, "onset_week", "report_week", now = now,
                        method = "variational",
-                       priors = set_priors(p = 3))
+                       dist = "Normal",
+                       priors = set_priors(p = 0, q = 0, mu_degree = 2))
 
 #Get the predicted values in a nice format
 predicted_values <- predictions$generated_quantities |>

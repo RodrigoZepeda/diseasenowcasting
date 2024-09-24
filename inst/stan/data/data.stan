@@ -3,9 +3,16 @@ int<lower=1> num_steps;      //Number of time steps modelled
 int<lower=0> num_delays;     //Maximum number of unique delays considered
 int<lower=1> num_strata;     //Number of strata included in the model
 int<lower=1> n_rows;         //Number of rows in data Nmat
+int<lower=0,upper=1>is_discrete; //Whether the data is discrete or continuous
 
 //Data with time, delays, strata. Each entry is a case count -----------------------------------
-array[n_rows, 4] int N_cases; //Matrix with first entry = n, second = time, third = delay, fourth = strata
+//The difference between N_cases_int and N_cases_ct is whether the data is continuous or
+//discrete
+array[n_rows, 3] int N_cases_pos; //Matrix with first = time, second = delay, third = strata. Correspond to same rows as N_cases_int/N_cases_ct
+
+//These are the cases whether we assume the model is real or integer
+array[is_discrete ? 1 : n_rows, 1] real N_cases_ct; //Matrix with entries equal to cases (integer)
+array[is_discrete ? n_rows: 1, 1] int N_cases_int;  //Matrix with entries equal to cases (reals)
 
 //Trend options --------------------------------------------------------------------------------
 int<lower=0> mu_degree;                 //Degree associated to the mu's trend
@@ -24,7 +31,7 @@ real xi_sd_param_1;
 real xi_sd_param_2;
 
 //Sampling options -----------------------------------------------------------------------------
-int<lower=0, upper=1> is_negative_binomial; //Either 0 = Poisson or 1 = NegativeBinomial
+int<lower=0> data_distribution; //Either 0 = Poisson or 1 = NegativeBinomial
 int<lower=0, upper=1> prior_only;   //Set to 1 to sample only from the prior
 
 //Priors ---------------------------------------------------------------------------------------

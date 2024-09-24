@@ -1,4 +1,4 @@
-#include include/license.stan
+#include license/license.stan
 
 //BLOCK MATRICES-------
 //The seasonal_discrete matrix is constructed by blocks for each delay d. First we construct each

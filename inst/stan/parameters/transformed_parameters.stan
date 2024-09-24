@@ -7,8 +7,6 @@ matrix[num_delays*num_strata, num_steps] lambda = state_space_process(
       xi_nu_centered, xi_mu_sd, xi_nu_sd, mu_0_centered, nu_0_centered, mu_0_sd, nu_0_sd,
       mu_0_mean, nu_0_mean, B_cnt, X_cnt, phi_AR, theta_MA, xi);
 
-
-
 //Create a vectorized version of the lambda
 //The lambda function is organized by delays and then strata so
 //
@@ -24,9 +22,14 @@ matrix[num_delays*num_strata, num_steps] lambda = state_space_process(
 //      2        |      4      |      8       |
 //---------------------------------------------
 //
+
+//Reorder lambda to be the same as the data
 vector[n_rows] lambda_mean;
 for (n in 1:n_rows)
-  lambda_mean[n] = lambda[num_strata*(N_cases[n,d_col] - 1) + N_cases[n,s_col], N_cases[n,t_col]];
+  lambda_mean[n] = lambda[num_strata*(N_cases_pos[n,d_col] - 1) + N_cases_pos[n,s_col], N_cases_pos[n,t_col]];
+
+//Vectorized version of r
+vector[n_rows] rvec = rep_vector(r[1], n_rows);
 
 //Hyper priors
 // ------------------------------------------------------------------------------------------------
@@ -68,8 +71,6 @@ for (t in 1:(num_steps - 1)){
   lprior += std_normal_lpdf(to_vector(xi_mu_centered[t]));
 }
 
-
-
 //ARMA components
 lprior += dist_lpdf(phi_AR | phi_AR_param_1, phi_AR_param_2, phi_AR_prior, 0);
 lprior += dist_lpdf(theta_MA | theta_MA_param_1, theta_MA_param_2, theta_MA_prior, 0);
@@ -79,5 +80,5 @@ lprior += std_normal_lpdf(to_vector(xi_centered));
 lprior += dist_lpdf(xi_sd | xi_sd_param_1, xi_sd_param_2, xi_sd_prior, 1);
 
 //Add prior to the negative binomial precision
-if (is_negative_binomial)
+if (has_r)
   lprior += dist_lpdf(r | r_param_1, r_param_2, r_prior, 1);

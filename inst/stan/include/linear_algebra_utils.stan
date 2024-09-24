@@ -1,4 +1,4 @@
-#include include/license.stan
+#include license/license.stan
 
 matrix create_block_diagonal(matrix A, matrix B){
   /*

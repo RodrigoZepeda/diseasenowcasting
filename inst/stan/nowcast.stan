@@ -6,14 +6,14 @@
 // Data:
 // ------------------------------------------------------------------------------------------------
 
-#include /include/license.stan
+#include license/license.stan
 
 functions {
   #include include/linear_algebra_utils.stan
   #include include/trend.stan
   #include include/seasonal_discrete.stan
   #include include/state_space_model.stan
-  #include include/priors.stan
+  #include lpdfs_lpmfs/distributions.stan
 }
 
 data {
@@ -33,16 +33,12 @@ transformed parameters {
 }
 
 model {
-  //Don't calculate posterior if user only wants prior
-  if (!prior_only){
-
-    //Evaluate the model whether its negative binomial
-    if (is_negative_binomial){
-      target += neg_binomial_2_log_lpmf(N_cases[,n_col] | lambda_mean, rep_vector(r[1], num_elements(lambda_mean)));
+  if (!prior_only){ //Don't calculate posterior if user only wants prior
+    if(is_discrete){
+      target += discrete_data_distribution_lpmf(N_cases_int[,1] | lambda_mean, rvec, data_distribution); //Evaluate the model
     } else {
-      target += poisson_log_lpmf(N_cases[,n_col] | lambda_mean);
+      target += continuous_data_distribution_lpdf(N_cases_ct[,1] | lambda_mean, rvec, data_distribution); //Evaluate the model
     }
-
   }
 
   // Add the priors
