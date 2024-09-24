@@ -73,10 +73,9 @@ Function that uses the [rstan::sampling()] engine to generate nowcasts.
 # Load the data
 data(denguedat)
 
-# Create a fake disease process
-sims <- simulate_process_for_testing()
-
 # Run a nowcast with very few iterations
-# change to 4 chains and 2000 iter when doing inference
-nowcast(sims, "onset_date", "report_date", method = "optimization", seed = 2524)
+# change to method = "sampling" when working and remove the iter = 10 (or set to iter = 2000)
+now <- as.Date("1990-10-01")
+nowcast(denguedat, "onset_week", "report_week", now = now,
+  method = "optimization", seed = 2495624, iter = 10)
 }

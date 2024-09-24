@@ -15,13 +15,15 @@ matrix create_trend_matrix_block_A(int degree) {
   matrix[nrows, ncols] A = rep_matrix(0, nrows, ncols);
 
   // Fill the first row using binomial coefficients with alternating signs
-  for (j in 1:ncols) {
-    A[1, j] = (-1)^(j+1) * choose(degree, j);
-  }
+  if (degree > 0){
+    for (j in 1:ncols) {
+      A[1, j] = (-1)^(j+1) * choose(degree, j);
+    }
 
-  // Fill the lower triangular part with the identity matrix shifted by 1 row
-  for (i in 2:nrows) {
-    A[i, i-1] = 1.0;
+    // Fill the lower triangular part with the identity matrix shifted by 1 row
+    for (i in 2:nrows) {
+      A[i, i-1] = 1.0;
+    }
   }
 
   return A';
@@ -35,7 +37,10 @@ vector create_trend_vector_block_L(int degree){
   int nsize = get_num_elements_L_trend(degree);
 
   vector[nsize] L = rep_vector(0.0, nsize);
-  L[1] = 1.0;
+
+  if (degree > 0){
+    L[1] = 1.0;
+  }
 
   return L;
 }
@@ -51,7 +56,10 @@ matrix create_trend_matrix_block_R(int degree, int is_constant){
   int nrows = get_num_rows_R_trend(degree);
 
   matrix[nrows,ncols] R = rep_matrix(0.0, nrows, ncols);
-  R[1,1] = 1.0 - is_constant;
+
+  if (degree > 0){
+    R[1,1] = 1.0 - is_constant;
+  }
 
   return R';
 }

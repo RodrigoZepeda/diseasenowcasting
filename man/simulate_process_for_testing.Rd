@@ -43,5 +43,6 @@ multiple delays and strata. It estimates the process over a specified number of 
  with options for trend degrees, priors, and error distributions.
 }
 \examples{
-simulate_process_for_testing(num_steps = 20, num_delays = 5, num_strata = 3)
+simulate_process_for_testing(num_steps = 20, num_delays = 5, num_strata = 3,
+      priors = set_priors(p = 0, q = 0, mu_is_constant = TRUE))
 }

@@ -30,9 +30,10 @@ generated quantities {
   int lambda_higher_than_maxval_flag = 0;
 
   //
-  array[num_steps, num_delays*num_strata] int N_mat_predict;
-  matrix[num_delays*num_strata, num_steps] lambda_transformed;
+  array[num_steps, num_delays*num_strata] int N_mat_predict = rep_array(0, num_steps, num_delays*num_strata);
   matrix[num_steps, num_strata] N_predict = rep_matrix(0, num_steps, num_strata);     //Prediction of overall cases at time t
+  matrix[num_steps, num_strata] N_predict_raw = rep_matrix(0, num_steps, num_strata);
+  matrix[num_delays*num_strata, num_steps] lambda_transformed;
 
 
   //Caps the lambda so that if it explodes it doesn't destroy the poisson and binomial
@@ -46,7 +47,7 @@ generated quantities {
       }
   }
 
-  //Get a matrix of all of the predictions
+  //Get a matrix of all of the predictions through all times
   for (t in 1:num_steps){
       if (is_negative_binomial){
           N_mat_predict[t,:] =
@@ -56,12 +57,21 @@ generated quantities {
       }
   }
 
+  //Get the overall prediction from the model (rowsums)
+  for (t in 1:num_steps){
+    for (s in 1:num_strata){
+      for (d in 1:num_delays){
+        N_predict_raw[t,s] += N_mat_predict[t,num_strata*(d - 1) + s];
+      }
+    }
+  }
+
   //Substitute back those values we do know
   for (n in 1:n_rows){
     N_mat_predict[N_cases[n,t_col], num_strata*(N_cases[n,d_col] - 1) + N_cases[n,s_col]] = N_cases[n,n_col];
   }
 
-  //Get the overall total (rowsums)
+  //Get the overall total (rowsums) once the model is considered
   for (t in 1:num_steps){
     for (s in 1:num_strata){
       for (d in 1:num_delays){
