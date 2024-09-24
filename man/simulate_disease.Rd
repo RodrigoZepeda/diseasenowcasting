@@ -46,6 +46,6 @@ multiple delays and strata. It estimates the process over a specified number of 
  with options for trend degrees, priors, and error distributions.
 }
 \examples{
-simulate_disease(num_steps = 20, num_delays = 5, num_strata = 3,
-      priors = set_priors(p = 0, q = 0, mu_is_constant =TRUE))
+# Simulate a disease for 20 time steps with delay of maximum 5 and 3 strata
+simulate_disease(num_steps = 20, num_delays = 5, num_strata = 3)
 }

@@ -22,6 +22,7 @@ In this article we compare our package against the results from:
 Here we reproduce the example from the `README.md` file:
 
 ```{r}
+set.seed(46285)
 library(NobBS)
 data("denguedat")
 now <- as.Date("1990-10-01")
@@ -32,14 +33,13 @@ test_nowcast <- NobBS(data = denguedat, units = "1 week", now = now,
 
 and compare against the `diseasenowcasting` package:
 
-```{r}
+```{r, message=FALSE}
 library(diseasenowcasting)
 library(posterior)
 library(tidyverse)
 
 predictions <- nowcast(denguedat, "onset_week", "report_week",
-                       now = now, method = "variational",
-                       priors = set_priors(nu_is_constant = F))
+                       now = now, method = "variational", refresh = FALSE)
 ```
 
 which, after formating, 
