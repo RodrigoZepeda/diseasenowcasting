@@ -284,7 +284,7 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
     posterior::summarise_draws(max) |>
     dplyr::pull(max)
 
-  if (flag > 0){
+  if (flag >= 1){
     cli::cli_alert_warning(
       "Some values of lambda have been truncated as they are too large. This might be attributed
       to a high variance of your data or on the prior. Consider reducing the prior variance."

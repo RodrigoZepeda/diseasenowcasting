@@ -7,8 +7,6 @@ matrix[num_delays*num_strata, num_steps] lambda = state_space_process(
       xi_nu_centered, xi_mu_sd, xi_nu_sd, mu_0_centered, nu_0_centered, mu_0_sd, nu_0_sd,
       mu_0_mean, nu_0_mean, B_cnt, X_cnt, phi_AR, theta_MA, xi);
 
-
-
 //Create a vectorized version of the lambda
 //The lambda function is organized by delays and then strata so
 //

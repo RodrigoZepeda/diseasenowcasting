@@ -7,25 +7,12 @@ rstantools::rstan_config(); devtools::load_all()
 num_strata <- 1 #doesn't work with more RN
 num_delays <- 5
 
-for (k in 1:10){
 sims       <- simulate_disease(num_steps = 100,
                                num_strata = num_strata,
                                num_delays = num_delays,
-                               warmup_steps = 0,
-                               dist = "NegativeBinomial",
-                               priors = set_priors(
-                                 mu_degree = 1,
-                                 nu_degree = 0,
-                                 mu_is_constant = TRUE,
-                                 mu_0_mean_param_1 = 1000,
-                                 mu_0_mean_param_2 = 0.0,
-                                 xi_sd_param_1 = 0,
-                                 xi_sd_param_2 = 0,
-                                 p = 0,
-                                 q = 0),
-                               initial_day = NULL
-                               )
- }
+                               dist = "Poisson",
+                               priors = set_priors())
+
 
 ggplot() +
   geom_point(aes(x = onset_date, y = n, color = .strata),
@@ -39,7 +26,7 @@ ggplot() +
 #   summarise_draws()
 #
 
-sims$stan_fit$model |> as_draws() |> subset_draws("r") |> summarise_draws()
+sims$stan_fit$model |> as_draws() |> subset_draws("mu_0_mean") |> summarise_draws()
 
 lambdavals <- sims$stan_fit$model |>
   as_draws() |>

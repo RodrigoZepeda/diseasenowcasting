@@ -12,7 +12,7 @@ real nu_0_mean;
 real<lower=0> mu_0_sd;
 real<lower=0> nu_0_sd;
 
-real xi_sd;
+real<lower=0> xi_sd;
 real<lower=0> xi_mu_sd;
 real<lower=0> xi_nu_sd;
 
