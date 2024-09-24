@@ -21,5 +21,3 @@ matrix[num_strata*num_delays, num_steps] xi_centered;
 array[num_steps - 1] matrix[num_strata*num_delays, xi_mu_size] xi_mu_centered;
 array[num_steps - 1] matrix[num_strata*num_delays, xi_nu_size] xi_nu_centered;
 
-//Precision parameter for negative binomial
-vector<lower=0>[is_negative_binomial ? 1 : 0] r;

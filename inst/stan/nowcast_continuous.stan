@@ -27,6 +27,7 @@ transformed data {
 
 parameters {
   #include parameters/parameters.stan
+  #include parameters/parameters_continuous.stan
 }
 
 transformed parameters {

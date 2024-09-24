@@ -27,6 +27,7 @@ transformed data {
 
 parameters {
   #include parameters/parameters.stan
+  #include parameters/parameters_discrete.stan
 }
 
 transformed parameters {

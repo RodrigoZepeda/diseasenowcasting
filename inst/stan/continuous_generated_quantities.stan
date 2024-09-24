@@ -19,10 +19,12 @@ transformed data {
 
 parameters {
   #include parameters/parameters.stan
+  #include parameters/parameters_continuous.stan
 }
 
 transformed parameters {
   #include parameters/transformed_parameters.stan
+  #include parameters/transformed_parameters_continuous.stan
 }
 
 generated quantities {
