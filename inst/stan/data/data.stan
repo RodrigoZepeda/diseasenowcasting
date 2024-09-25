@@ -65,3 +65,7 @@ real nu_0_sd_param_2;
 real<lower=0> max_log_tol_val; //Maximum value allowable for log(lambda)
 real<lower=0> precision_tol; //Precision value for r in negative binomial
 
+//Generated quantities-------------
+matrix[num_strata, num_delays] sd_cases; //SD of cases for normalization
+matrix[num_strata, num_delays] mu_cases; //Mean of cases for normalization
+

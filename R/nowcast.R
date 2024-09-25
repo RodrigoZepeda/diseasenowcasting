@@ -180,8 +180,45 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
   # Distribution
   is_negative_binomial <- as.numeric(dist == "NegativeBinomial" | dist == "Normal")
 
+  # If cases are normal or student normalize the cases and fit the model to the normalized version
+  if (dist == "Normal" || dist == "Student"){
+
+    #Get the mean and variance per delay-strata
+    .disease_data_normalization_ct <- .disease_data |>
+      dplyr::group_by(!!as.symbol(".strata"), !!as.symbol(".delay")) |>
+      dplyr::summarise(
+        !!as.symbol("mu") := mean(!!as.symbol("n"), na.rm = TRUE),
+        !!as.symbol("sd") := sd(!!as.symbol("n"), na.rm = TRUE), .groups = "drop"
+      ) |>
+      #Reconvert sd = 1 and mu = 0 if we have only one observation as it will not make sense to divide by mu
+      dplyr::mutate(!!as.symbol("sd") := dplyr::if_else(!!as.symbol("sd") == 0, 1, !!as.symbol("sd")))
+
+    .disease_data <- .disease_data |>
+      dplyr::left_join(.disease_data_normalization_ct, by = c(".strata",".delay")) |>
+      dplyr::mutate(!!as.symbol("n") := (!!as.symbol("n") - !!as.symbol("mu"))/!!as.symbol("sd")) |>
+      dplyr::arrange(!!as.symbol(".strata"), !!as.symbol(".delay"))
+
+    #Create the mu_case matrix
+    mu_cases <- .disease_data_normalization_ct |>
+      tidyr::pivot_wider(id_cols = ".strata", names_from = ".delay", values_from = "mu") |>
+      dplyr::select(-!!as.symbol(".strata")) |>
+      as.matrix()
+
+    sd_cases <- .disease_data_normalization_ct |>
+      tidyr::pivot_wider(id_cols = ".strata", names_from = ".delay", values_from = "sd") |>
+      dplyr::select(-!!as.symbol(".strata")) |>
+      as.matrix()
+
+
+  } else {
+    #There shouldn't be a scaling for the Poisson and Negative Binomial
+    mu_cases <- matrix(0.0, nrow = num_strata, ncol = num_delays)
+    sd_cases <- matrix(1.0, nrow = num_strata, ncol = num_delays)
+  }
+
   # Cases and positions handled separately
   N_cases <- as.matrix(.disease_data)
+
 
   stan_data <- list(
 
@@ -243,7 +280,11 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
     nu_0_sd_hyperprior   = priors$nu_0_sd_hyperprior,
 
     max_log_tol_val      = 15,
-    precision_tol        = 1.e-3
+    precision_tol        = 1.e-3,
+
+    #For generated quantities
+    mu_cases = mu_cases,
+    sd_cases = sd_cases
   )
 
   #Select the model

@@ -2,7 +2,7 @@
 % Please edit documentation in R/priors.R
 \name{set_priors}
 \alias{set_priors}
-\title{Get nowcast priors}
+\title{Get nowcast priors not controlling by distribution}
 \usage{
 set_priors(
   mu_degree = 1,
