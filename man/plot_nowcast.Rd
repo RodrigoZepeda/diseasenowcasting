@@ -4,13 +4,13 @@
 \alias{plot_nowcast}
 \title{Create plots form the nowcast() output}
 \usage{
-plot_nowcast(nowcast_output, ...)
+plot_nowcast(nowcast_output)
 }
 \arguments{
 \item{nowcast_output}{the output of the nowcast() function}
 }
 \description{
-Plots the prediction of the function nowcast() of the observed value
+Plots the predictions of the function nowcast() over the input observed values
 }
 \examples{
 # Load the data
@@ -21,7 +21,8 @@ data(denguedat)
 now <- as.Date("1990-10-01")
 
 # perform nowcasting
-predictions <- nowcast(denguedat, "onset_week", "report_week", now = now, method = "optimization", seed = 2495624, iter = 10)
+predictions <- nowcast(denguedat, "onset_week", "report_week", now = now, method = "optimization",
+seed = 2495624, iter = 10)
 
 # create summary dataframe
 plot_nowcast(predictions)

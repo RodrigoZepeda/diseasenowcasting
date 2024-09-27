@@ -4,7 +4,7 @@
 \alias{summary_nowcast}
 \title{Makes a summary of nowcast() output}
 \usage{
-summary_nowcast(nowcast_output, ...)
+summary_nowcast(nowcast_output)
 }
 \arguments{
 \item{nowcast_output}{the output of the nowcast() function}
@@ -21,7 +21,8 @@ data(denguedat)
 now <- as.Date("1990-10-01")
 
 # perform nowcasting
-predictions <- nowcast(denguedat, "onset_week", "report_week", now = now, method = "optimization", seed = 2495624, iter = 10)
+predictions <- nowcast(denguedat, "onset_week", "report_week", now = now, method = "optimization",
+seed = 2495624, iter = 10)
 
 # create summary dataframe
 summary_nowcast(predictions)

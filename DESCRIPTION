@@ -28,7 +28,8 @@ Imports:
     rstantools (>= 2.4.0),
     stats,
     stringr,
-    tidyr
+    tidyr,
+    ggplot2
 Depends: 
     R (>= 4.2.0)
 RoxygenNote: 7.3.2
