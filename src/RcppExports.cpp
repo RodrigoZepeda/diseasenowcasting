@@ -90,40 +90,40 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// create_trend_matrix_block_A
-Eigen::Matrix<double,-1,-1> create_trend_matrix_block_A(const int& degree, std::ostream* pstream__);
-RcppExport SEXP _diseasenowcasting_create_trend_matrix_block_A(SEXP degreeSEXP, SEXP pstream__SEXP) {
+// trend_matrix_A
+Eigen::Matrix<double,-1,-1> trend_matrix_A(const int& degree, std::ostream* pstream__);
+RcppExport SEXP _diseasenowcasting_trend_matrix_A(SEXP degreeSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const int& >::type degree(degreeSEXP);
     Rcpp::traits::input_parameter< std::ostream* >::type pstream__(pstream__SEXP);
-    rcpp_result_gen = Rcpp::wrap(create_trend_matrix_block_A(degree, pstream__));
+    rcpp_result_gen = Rcpp::wrap(trend_matrix_A(degree, pstream__));
     return rcpp_result_gen;
 END_RCPP
 }
-// create_trend_vector_block_L
-Eigen::Matrix<double,-1,1> create_trend_vector_block_L(const int& degree, std::ostream* pstream__);
-RcppExport SEXP _diseasenowcasting_create_trend_vector_block_L(SEXP degreeSEXP, SEXP pstream__SEXP) {
+// trend_vector_L
+Eigen::Matrix<double,-1,1> trend_vector_L(const int& degree, std::ostream* pstream__);
+RcppExport SEXP _diseasenowcasting_trend_vector_L(SEXP degreeSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const int& >::type degree(degreeSEXP);
     Rcpp::traits::input_parameter< std::ostream* >::type pstream__(pstream__SEXP);
-    rcpp_result_gen = Rcpp::wrap(create_trend_vector_block_L(degree, pstream__));
+    rcpp_result_gen = Rcpp::wrap(trend_vector_L(degree, pstream__));
     return rcpp_result_gen;
 END_RCPP
 }
-// create_trend_matrix_block_R
-Eigen::Matrix<double,-1,-1> create_trend_matrix_block_R(const int& degree, const int& is_constant, std::ostream* pstream__);
-RcppExport SEXP _diseasenowcasting_create_trend_matrix_block_R(SEXP degreeSEXP, SEXP is_constantSEXP, SEXP pstream__SEXP) {
+// trend_matrix_R
+Eigen::Matrix<double,-1,-1> trend_matrix_R(const int& degree, const int& is_constant, std::ostream* pstream__);
+RcppExport SEXP _diseasenowcasting_trend_matrix_R(SEXP degreeSEXP, SEXP is_constantSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const int& >::type degree(degreeSEXP);
     Rcpp::traits::input_parameter< const int& >::type is_constant(is_constantSEXP);
     Rcpp::traits::input_parameter< std::ostream* >::type pstream__(pstream__SEXP);
-    rcpp_result_gen = Rcpp::wrap(create_trend_matrix_block_R(degree, is_constant, pstream__));
+    rcpp_result_gen = Rcpp::wrap(trend_matrix_R(degree, is_constant, pstream__));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -379,9 +379,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_rep_vec_piecewise", (DL_FUNC) &_diseasenowcasting_rep_vec_piecewise, 3},
     {"_diseasenowcasting_append_val_2_vec", (DL_FUNC) &_diseasenowcasting_append_val_2_vec, 3},
     {"_diseasenowcasting_append_vec_2_val", (DL_FUNC) &_diseasenowcasting_append_vec_2_val, 3},
-    {"_diseasenowcasting_create_trend_matrix_block_A", (DL_FUNC) &_diseasenowcasting_create_trend_matrix_block_A, 2},
-    {"_diseasenowcasting_create_trend_vector_block_L", (DL_FUNC) &_diseasenowcasting_create_trend_vector_block_L, 2},
-    {"_diseasenowcasting_create_trend_matrix_block_R", (DL_FUNC) &_diseasenowcasting_create_trend_matrix_block_R, 3},
+    {"_diseasenowcasting_trend_matrix_A", (DL_FUNC) &_diseasenowcasting_trend_matrix_A, 2},
+    {"_diseasenowcasting_trend_vector_L", (DL_FUNC) &_diseasenowcasting_trend_vector_L, 2},
+    {"_diseasenowcasting_trend_matrix_R", (DL_FUNC) &_diseasenowcasting_trend_matrix_R, 3},
     {"_diseasenowcasting_get_num_elements_alpha_trend", (DL_FUNC) &_diseasenowcasting_get_num_elements_alpha_trend, 2},
     {"_diseasenowcasting_get_num_cols_A_trend", (DL_FUNC) &_diseasenowcasting_get_num_cols_A_trend, 2},
     {"_diseasenowcasting_get_num_rows_A_trend", (DL_FUNC) &_diseasenowcasting_get_num_rows_A_trend, 2},

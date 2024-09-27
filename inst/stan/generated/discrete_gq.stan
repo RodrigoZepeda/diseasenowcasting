@@ -13,8 +13,10 @@ for (t in 1:num_steps){
 for (t in 1:num_steps){
     if (is_negative_binomial){
         N_mat_predict[t,:] =
-        neg_binomial_2_log_rng(lambda_transformed[:, t]', rep_vector(r[1] + precision_tol, num_delays*num_strata));
-    } else {
+        neg_binomial_2_log_rng(lambda_transformed[:, t]', rep_vector(r[t,1] + precision_tol, num_delays*num_strata));
+    } else if (is_poisson) {
         N_mat_predict[t,:] = poisson_log_rng(lambda_transformed[:, t]');
+    } else {
+      reject("Invalid distribution specified");
     }
 }

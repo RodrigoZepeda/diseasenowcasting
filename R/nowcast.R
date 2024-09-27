@@ -55,7 +55,9 @@
 #' nowcast(denguedat, "onset_week", "report_week", now = now,
 #'   method = "optimization", seed = 2495624, iter = 10)
 #' @export
-nowcast <- function(.disease_data, onset_date, report_date,
+nowcast <- function(.disease_data,
+                    onset_date,
+                    report_date,
                     strata = NULL,
                     dist   = c("NegativeBinomial", "Poisson","Normal","Student"),
                     now = NULL,
@@ -114,7 +116,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
     dplyr::pull(num_delays)
 
   #Get the specified prior distributions
-  priors        <- priors_to_numeric(.disease_data, priors)
+  priors        <- priors_to_numeric(.disease_data, priors, dist)
 
   #Get the strata
   strata_list   <- preprocess_strata(.disease_data, strata)
@@ -178,7 +180,7 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
     dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), !!as.symbol(".strata"))
 
   # Distribution
-  is_negative_binomial <- as.numeric(dist == "NegativeBinomial" | dist == "Normal")
+  distribution <- get_distribution_number(dist)
 
   # If cases are normal or student normalize the cases and fit the model to the normalized version
   if (dist == "Normal" || dist == "Student"){
@@ -219,73 +221,32 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
   # Cases and positions handled separately
   N_cases <- as.matrix(.disease_data)
 
+  stan_data <- priors |>
+    append(
+      list(
 
-  stan_data <- list(
+        #Data information
+        num_steps   = num_steps,
+        num_delays  = num_delays,
+        num_strata  = num_strata,
+        n_rows      = nrow(.disease_data),
+        N_cases     = N_cases[,2:4],
+        Cases       = as.matrix(N_cases[,1]),
 
-    #Data information
-    num_steps   = num_steps,
-    num_delays  = num_delays,
-    num_strata  = num_strata,
-    n_rows      = nrow(.disease_data),
-    N_cases     = N_cases[,2:4],
-    Cases       = as.matrix(N_cases[,1]),
+        #Whether to compute only the prior
+        prior_only  = as.numeric(prior_only),
 
-    #Whether to compute only the prior
-    prior_only  = as.numeric(prior_only),
+        #Distribution information
+        distribution = distribution,
 
-    #Trend specification
-    mu_degree      = priors$mu_degree,
-    nu_degree      = priors$nu_degree,
-    mu_is_constant = priors$mu_is_constant,
-    nu_is_constant = priors$nu_is_constant,
+        #Precision
+        max_log_tol_val      = 15,
+        precision_tol        = 1.e-3,
 
-    #ARMA specification
-    p                    = priors$p,
-    q                    = priors$q,
-    phi_AR_param_1       = priors$phi_AR_param_1,
-    phi_AR_param_2       = priors$phi_AR_param_2,
-    phi_AR_prior         = priors$phi_AR_prior,
-    theta_MA_param_1     = priors$theta_MA_param_1,
-    theta_MA_param_2     = priors$theta_MA_param_2,
-    theta_MA_prior       = priors$theta_MA_prior,
-    xi_sd_param_1        = priors$xi_sd_param_1,
-    xi_sd_param_2        = priors$xi_sd_param_2,
-    xi_sd_prior          = priors$xi_sd_prior,
-
-    #Distribution information
-    is_negative_binomial = is_negative_binomial,
-    mu_sd_prior = priors$mu_sd_prior,
-    nu_sd_prior = priors$nu_sd_prior,
-    r_prior     = priors$r_prior,
-
-    #Prior parameters
-    r_param_1     = priors$r_param_1,
-    r_param_2     = priors$r_param_2,
-    mu_sd_param_1 = priors$mu_sd_param_1,
-    mu_sd_param_2 = priors$mu_sd_param_2,
-    nu_sd_param_1 = priors$nu_sd_param_1,
-    nu_sd_param_2 = priors$nu_sd_param_2,
-
-    mu_0_mean_param_1    = priors$mu_0_mean_param_1,
-    mu_0_mean_param_2    = priors$mu_0_mean_param_2,
-    mu_0_sd_param_1      = priors$mu_0_sd_param_1,
-    mu_0_sd_param_2      = priors$mu_0_sd_param_2,
-    nu_0_mean_param_1    = priors$nu_0_mean_param_1,
-    nu_0_mean_param_2    = priors$nu_0_mean_param_2,
-    nu_0_sd_param_1      = priors$nu_0_sd_param_1,
-    nu_0_sd_param_2      = priors$nu_0_sd_param_2,
-    mu_0_mean_hyperprior = priors$mu_0_mean_hyperprior,
-    nu_0_mean_hyperprior = priors$nu_0_mean_hyperprior,
-    mu_0_sd_hyperprior   = priors$mu_0_sd_hyperprior,
-    nu_0_sd_hyperprior   = priors$nu_0_sd_hyperprior,
-
-    max_log_tol_val      = 15,
-    precision_tol        = 1.e-3,
-
-    #For generated quantities
-    mu_cases = mu_cases,
-    sd_cases = sd_cases
-  )
+        #For generated quantities
+        mu_cases = mu_cases,
+        sd_cases = sd_cases
+  ))
 
   #Select the model
   if (dist %in% c("NegativeBinomial","Poisson")){

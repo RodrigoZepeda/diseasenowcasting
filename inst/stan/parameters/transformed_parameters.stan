@@ -61,6 +61,7 @@ lprior += dist_lpdf(xi_nu_sd  | nu_sd_param_1, nu_sd_param_2, nu_sd_prior, 1);
 
 //Priors for nu and mu errors
 //------------------------------------------------------------------------------------------
+
 for (t in 1:(num_steps - 1)){
   lprior += std_normal_lpdf(to_vector(xi_nu_centered[t]));
   lprior += std_normal_lpdf(to_vector(xi_mu_centered[t]));
@@ -73,4 +74,28 @@ lprior += dist_lpdf(theta_MA | theta_MA_param_1, theta_MA_param_2, theta_MA_prio
 //Errors
 lprior += std_normal_lpdf(to_vector(xi_centered));
 lprior += dist_lpdf(xi_sd | xi_sd_param_1, xi_sd_param_2, xi_sd_prior, 1);
+
+//Add prior to the variance
+matrix[num_steps, has_variance ? 1 : 0] r;
+vector[has_variance ? n_rows : 0] r_mean;
+if (has_variance){
+  lprior += dist_lpdf(var_cases_0 | r_param_1, r_param_2, r_prior, 0);
+  lprior += dist_lpdf(r_sd | r_param_sd_1, r_param_sd_2, r_sd_prior, 1);
+  lprior += std_normal_lpdf(to_vector(error_var_cases));
+
+  matrix[num_steps, 1] var_cases;
+  var_cases[1,1] = log(var_cases_0[1]);
+  for (t in 2:num_steps)
+    var_cases[t,1] = var_cases[t-1,1] + r_sd[1]*error_var_cases[t-1,1];
+
+  if (is_negative_binomial){
+    r = 1 ./ exp(var_cases); //This is precision
+  } else {
+    r = exp(var_cases);
+  }
+
+  for (n in 1:n_rows)
+    r_mean[n] = r[N_cases[n,t_col], 1];
+
+}
 

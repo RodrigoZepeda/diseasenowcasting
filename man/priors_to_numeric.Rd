@@ -4,7 +4,7 @@
 \alias{priors_to_numeric}
 \title{Function for setting the priors to numeric}
 \usage{
-priors_to_numeric(.disease_data, priors)
+priors_to_numeric(.disease_data, priors, dist)
 }
 \arguments{
 \item{.disease_data}{A time series of reporting data in aggregated line list format
@@ -12,6 +12,8 @@ such that each row has a column for onset date, report date, and}
 
 \item{priors}{A list of all of the nowcast priors. You can use [set_priors()] to change
 the priors of the function (see details)}
+
+\item{dist}{Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"}
 }
 \value{
 The same list of priors but with the numeric codes RStan requires for the distributions

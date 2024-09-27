@@ -27,12 +27,10 @@ transformed data {
 
 parameters {
   #include parameters/parameters.stan
-  #include parameters/parameters_discrete.stan
 }
 
 transformed parameters {
   #include parameters/transformed_parameters.stan
-  #include parameters/transformed_parameters_discrete.stan
 }
 
 model {

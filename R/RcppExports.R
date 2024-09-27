@@ -25,16 +25,16 @@ append_vec_2_val <- function(val, A, pstream__ = 0L) {
     .Call(`_diseasenowcasting_append_vec_2_val`, val, A, pstream__)
 }
 
-create_trend_matrix_block_A <- function(degree, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_create_trend_matrix_block_A`, degree, pstream__)
+trend_matrix_A <- function(degree, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_trend_matrix_A`, degree, pstream__)
 }
 
-create_trend_vector_block_L <- function(degree, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_create_trend_vector_block_L`, degree, pstream__)
+trend_vector_L <- function(degree, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_trend_vector_L`, degree, pstream__)
 }
 
-create_trend_matrix_block_R <- function(degree, is_constant, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_create_trend_matrix_block_R`, degree, is_constant, pstream__)
+trend_matrix_R <- function(degree, is_constant, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_trend_matrix_R`, degree, is_constant, pstream__)
 }
 
 get_num_elements_alpha_trend <- function(degree, pstream__ = 0L) {

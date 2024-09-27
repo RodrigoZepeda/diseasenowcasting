@@ -1,7 +1,9 @@
 #include include/license.stan
 int max_int(int a, int b){
   /*
-  * Return the maximum between two integers as an integer
+  * @title Maximum integer
+  *
+  * @description Return the maximum between two integers as an integer
   *
   * @param a An integer
   * @param b An integer
@@ -13,12 +15,15 @@ int max_int(int a, int b){
   } else {
     return b;
   }
+  reject("Error in `max_int` function.");
   return 1;
 }
 
 int min_int(int a, int b){
   /*
-  * Return the minimum between two integers as an integer
+  * @title Minimum integer
+  *
+  * @description Return the minima between two integers as an integer
   *
   * @param a An integer
   * @param b An integer
@@ -30,14 +35,15 @@ int min_int(int a, int b){
   } else {
     return a;
   }
+  reject("Error in `min_int` function.");
   return 1;
 }
 
 vector AR(matrix y, vector phi, int t){
   /*
-  * Calculate the autoregresive AR(p) component of a vector y at time t
+  * @title Calculate the autoregresive AR(p) component of a vector y at time t
   *
-  * @details The AR(p) component is given by:
+  * @description The AR(p) component is given by:
   *
   * 0*y_t + phi_p*y_{t-1} + phi_{p-1}*y_{t-2} + ... + phi_1*y_{t-p}
   *
@@ -101,7 +107,7 @@ vector create_phi_AR(vector phi){
   /*
   * Create the phi vector for AR(p) coeficients
   *
-  * @details The AR(p) component is given by:
+  * @description The AR(p) component is given by:
   *
   * 0*y_t + phi_p*y_{t-1} + phi_{p-1}*y_{t-2} + ... + phi_1*y_{t-p}
   *
@@ -119,7 +125,7 @@ vector create_theta_MA(vector theta){
   /*
   * Create the theta vector for MA(p) coeficients
   *
-  * @details The MA(q) component is given by:
+  * @description The MA(q) component is given by:
   *
   * €_t + ø_{q}*€_{t-1} + ø_{q-1}*€_{t-2} + ... + ø_{1}*€_{t-q}
   *

@@ -15,8 +15,8 @@ matrix state_space_process(
   array[] matrix xi_nu_centered, //Error parameters for the delay process (centered)
   real xi_mu_sd,        //Standard deviation for xi_mu
   real xi_nu_sd,        //Standard deviation for xi_nu
-  matrix mu_0_centered, //Initial value of the latent epidemic process (centered)
-  matrix nu_0_centered, //Initial value of the latent trend process (centered)
+  vector mu_0_centered, //Initial value of the latent epidemic process (centered)
+  vector nu_0_centered, //Initial value of the latent trend process (centered)
   real mu_0_sd,         //Scaling for mu_0 (for uncentering)
   real nu_0_sd,         //Scaling for nu_0 (for uncentering)
   real mu_0_mean,       //Centering parameter for mu_0
@@ -33,11 +33,11 @@ matrix state_space_process(
     matrix[num_delays*num_strata, num_steps] l = rep_matrix(0.0, num_delays*num_strata, num_steps);
 
     //Create the initial state by uncentering the value
-    array[num_steps] matrix[num_delays*num_strata, num_elements(L_mu)] mu;
-    mu[1] = rep_matrix(mu_0_mean, num_strata*num_delays, num_elements(L_mu)) + mu_0_sd*mu_0_centered;
+    matrix[num_delays*num_strata, num_steps] mu;
+    mu[1,] = rep_vector(mu_0_mean, num_strata*num_delays) + mu_0_sd*mu_0_centered;
 
-    array[num_steps] matrix[num_delays*num_strata, num_elements(L_nu)] nu;
-    nu[1] = rep_matrix(nu_0_mean, num_strata*num_delays, num_elements(L_nu)) + nu_0_sd*nu_0_centered;
+    matrix[num_delays*num_strata, num_steps nu;
+    nu[1,] = rep_vector(nu_0_mean, num_strata*num_delays) + nu_0_sd*nu_0_centered;
 
     //Get the ARMA vectors
     vector[num_elements(phi_AR) + 1] phi     = create_phi_AR(phi_AR);
@@ -48,7 +48,7 @@ matrix state_space_process(
 
     //Loop through the rest of the vectors
     for (t in 1:(num_steps - 1)){
-      l[,t]   = mu[t]*L_mu + nu[t]*L_nu + AR(l, phi, t) + MA(xi, theta, t);
+      l[,t]   = mu[,t] + nu[,t] + AR(l, phi, t) + MA(xi, theta, t);
       mu[t+1] = mu[t]*A_mu + xi_mu_sd*xi_mu_centered[t]*R_mu;
       nu[t+1] = nu[t]*A_nu + xi_nu_sd*xi_nu_centered[t]*R_nu;
     }

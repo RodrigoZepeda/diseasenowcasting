@@ -3,7 +3,7 @@
   *
   * Function that generates the lpdf to sum to the prior inside transformed parameters
   * according to the prior specification, `prior_spec` and considering whether the
-  * parameter under consideration is positive or not.
+  * parameter under consideration is positive or not (`is_positive`).
   *
   * @param x A vector containing `parameters` that is distributed as:
   * x ~ dist_lpdf(param_1, param_2)
@@ -21,6 +21,12 @@
   * the entry in param_2. So to call an exponential(3) you would do:
   * dist_lpdf(x, 3, 10, 1, 5);
   * and the value of 10 for param_2 is ignored.
+  *
+  * @section Specified distributions
+  * The following table specifies the distirbutions
+  *
+  *
+  *
   *
   * @return An lpdf object to sum to lprior.
 */
@@ -59,7 +65,7 @@ if (is_positive){
   else if (prior_spec == 7)  return inv_gamma_lpdf(x | param_1, param_2);            // Inverse gamma
   else if (prior_spec == 8)  return lognormal_lpdf(x | param_1, param_2);            // Lognormal
   else if (prior_spec == 9)  return weibull_lpdf(x | param_1, param_2);              // Weibull
-  else if (prior_spec == 10)  return frechet_lpdf(x | param_1, param_2);              // Frechet
+  else if (prior_spec == 10) return frechet_lpdf(x | param_1, param_2);              // Frechet
   else if (prior_spec == 11) return double_exponential_lpdf(x | param_1, param_2);   // Double exponential
   else if (prior_spec == 12) return logistic_lpdf(x | param_1, param_2);             // Logistic
   else if (prior_spec == 13) return rayleigh_lpdf(x | param_1);                      // Rayleigh

@@ -21,3 +21,9 @@ matrix[num_strata*num_delays, num_steps] xi_centered;
 array[num_steps - 1] matrix[num_strata*num_delays, xi_mu_size] xi_mu_centered;
 array[num_steps - 1] matrix[num_strata*num_delays, xi_nu_size] xi_nu_centered;
 
+//Variances for cases
+vector<lower=0>[has_variance ? 1 : 0] var_cases_0;
+matrix[num_steps - 1, has_variance ? 1 : 0] error_var_cases;
+vector<lower=0>[has_variance ? 1 : 0] r_sd;
+
+

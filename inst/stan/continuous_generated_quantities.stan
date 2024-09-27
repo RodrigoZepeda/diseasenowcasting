@@ -19,12 +19,10 @@ transformed data {
 
 parameters {
   #include parameters/parameters.stan
-  #include parameters/parameters_continuous.stan
 }
 
 transformed parameters {
   #include parameters/transformed_parameters.stan
-  #include parameters/transformed_parameters_continuous.stan
 }
 
 generated quantities {
@@ -32,7 +30,6 @@ generated quantities {
   //This flag is to flag to the user that we have capped the lambda
   int lambda_higher_than_maxval_flag = 0;
 
-  //
   array[num_steps, num_delays*num_strata] real N_mat_predict = rep_array(0, num_steps, num_delays*num_strata);
   matrix[num_steps, num_strata] N_predict = rep_matrix(0, num_steps, num_strata);     //Prediction of overall cases at time t
   matrix[num_steps, num_strata] N_predict_raw = rep_matrix(0, num_steps, num_strata);

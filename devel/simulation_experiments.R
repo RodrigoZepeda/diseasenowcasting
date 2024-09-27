@@ -3,7 +3,8 @@ library(tidyverse)
 now <- as.Date("1990-10-01")
 predictions <- nowcast(denguedat, "onset_week", "report_week",
                        dist = "Normal", method = "variational",
-                       now = now)
+                       now = now,
+                       priors = set_priors(p = 0, q = 0))
 
 #Get the predicted values in a nice format
 predicted_values <- predictions$generated_quantities |>
@@ -27,7 +28,7 @@ ggplot() +
   geom_ribbon(aes(x = onset_week, ymin = q5, ymax = q95, fill = "diseasenowcasting"),
               data = predicted_values, alpha = 0.25) +
   geom_line(aes(x = onset_week, y = n, color = "Train data", fill = "Train data"), data = obs) +
-  geom_line(aes(x = onset_week, y = mean, color = "diseasenowcasting"),
+  geom_line(aes(x = onset_week, y = median, color = "diseasenowcasting"),
             data = predicted_values, linetype = "dotted") +
   theme_bw()
 

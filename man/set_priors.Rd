@@ -7,40 +7,43 @@
 set_priors(
   mu_degree = 1,
   nu_degree = 1,
-  p = 3,
-  q = 0,
+  p = 4,
+  q = 3,
   mu_is_constant = FALSE,
-  nu_is_constant = TRUE,
-  mu_sd_prior = "standard_normal",
-  nu_sd_prior = "standard_normal",
-  mu_sd_param_1 = 0,
-  mu_sd_param_2 = 0.1,
-  nu_sd_param_1 = 0,
-  nu_sd_param_2 = 0.1,
-  phi_AR_param_1 = 0,
-  phi_AR_param_2 = 0.01,
-  phi_AR_prior = "cauchy",
-  theta_MA_param_1 = 0,
-  theta_MA_param_2 = 0.1,
-  theta_MA_prior = "cauchy",
-  xi_sd_param_1 = 0,
-  xi_sd_param_2 = 0.1,
-  xi_sd_prior = "standard_normal",
+  nu_is_constant = FALSE,
   mu_0_mean_param_1 = "auto",
-  mu_0_mean_param_2 = 0.01,
+  mu_0_mean_param_2 = 1,
   mu_0_sd_param_1 = "auto",
-  mu_0_sd_param_2 = 0.01,
+  mu_0_sd_param_2 = mu_0_mean_param_2,
   nu_0_mean_param_1 = 0,
-  nu_0_mean_param_2 = 0.01,
+  nu_0_mean_param_2 = 1,
   nu_0_sd_param_1 = 0,
-  nu_0_sd_param_2 = 0.01,
-  mu_0_mean_hyperprior = "standard_normal",
-  nu_0_mean_hyperprior = "standard_normal",
-  mu_0_sd_hyperprior = "standard_normal",
-  nu_0_sd_hyperprior = "standard_normal",
-  r_prior = "standard_normal",
+  nu_0_sd_param_2 = nu_0_mean_param_2,
+  mu_0_mean_hyperprior = "normal",
+  nu_0_mean_hyperprior = "normal",
+  mu_0_sd_hyperprior = "normal",
+  nu_0_sd_hyperprior = "normal",
+  mu_sd_prior = "normal",
+  nu_sd_prior = "normal",
+  mu_sd_param_1 = 0,
+  mu_sd_param_2 = mu_0_sd_param_2,
+  nu_sd_param_1 = 0,
+  nu_sd_param_2 = nu_0_sd_param_2,
+  phi_AR_param_1 = 0,
+  phi_AR_param_2 = 1,
+  phi_AR_prior = "normal",
+  theta_MA_param_1 = 0,
+  theta_MA_param_2 = 1,
+  theta_MA_prior = "normal",
+  xi_sd_param_1 = 0,
+  xi_sd_param_2 = 1e-05,
+  xi_sd_prior = "normal",
+  r_prior = "normal",
   r_param_1 = 0,
-  r_param_2 = 1
+  r_param_2 = 1e-05,
+  r_sd_prior = "normal",
+  r_param_sd_1 = 0,
+  r_param_sd_2 = r_param_2
 )
 }
 \arguments{
@@ -55,6 +58,30 @@ set_priors(
 \item{mu_is_constant}{Logical. Indicates whether the epidemic trend is constant.}
 
 \item{nu_is_constant}{Logical. Indicates whether the delay trend is constant.}
+
+\item{mu_0_mean_param_1}{Character. Prior for the initial epidemic trend mean's first parameter.}
+
+\item{mu_0_mean_param_2}{Character. Prior for the initial epidemic trend mean's second parameter.}
+
+\item{mu_0_sd_param_1}{Character. Prior for the initial epidemic trend standard deviation's first parameter.}
+
+\item{mu_0_sd_param_2}{Character. Prior for the initial epidemic trend standard deviation's second parameter.}
+
+\item{nu_0_mean_param_1}{Character. Prior for the initial delay trend mean's first parameter.}
+
+\item{nu_0_mean_param_2}{Character. Prior for the initial delay trend mean's second parameter.}
+
+\item{nu_0_sd_param_1}{Character. Prior for the initial delay trend standard deviation's first parameter.}
+
+\item{nu_0_sd_param_2}{Character. Prior for the initial delay trend standard deviation's second parameter.}
+
+\item{mu_0_mean_hyperprior}{Prior distribution for the mean of the epidemic trend.}
+
+\item{nu_0_mean_hyperprior}{Prior distribution for the mean of the delay trend. Default is normal.}
+
+\item{mu_0_sd_hyperprior}{Prior distribution for the standard deviation of the epidemic trend.}
+
+\item{nu_0_sd_hyperprior}{Prior distribution for the standard deviation of the delay trend.}
 
 \item{mu_sd_prior}{Character. Prior for the epidemic trend error.}
 
@@ -85,30 +112,6 @@ set_priors(
 \item{xi_sd_param_2}{Numeric. Prior for the error (in log-scale) second parameter}
 
 \item{xi_sd_prior}{String Prior distribution name for the errors}
-
-\item{mu_0_mean_param_1}{Character. Prior for the initial epidemic trend mean's first parameter.}
-
-\item{mu_0_mean_param_2}{Character. Prior for the initial epidemic trend mean's second parameter.}
-
-\item{mu_0_sd_param_1}{Character. Prior for the initial epidemic trend standard deviation's first parameter.}
-
-\item{mu_0_sd_param_2}{Character. Prior for the initial epidemic trend standard deviation's second parameter.}
-
-\item{nu_0_mean_param_1}{Character. Prior for the initial delay trend mean's first parameter.}
-
-\item{nu_0_mean_param_2}{Character. Prior for the initial delay trend mean's second parameter.}
-
-\item{nu_0_sd_param_1}{Character. Prior for the initial delay trend standard deviation's first parameter.}
-
-\item{nu_0_sd_param_2}{Character. Prior for the initial delay trend standard deviation's second parameter.}
-
-\item{mu_0_mean_hyperprior}{Prior distribution for the mean of the epidemic trend.}
-
-\item{nu_0_mean_hyperprior}{Prior distribution for the mean of the delay trend. Default is normal.}
-
-\item{mu_0_sd_hyperprior}{Prior distribution for the standard deviation of the epidemic trend.}
-
-\item{nu_0_sd_hyperprior}{Prior distribution for the standard deviation of the delay trend.}
 
 \item{r_prior}{Character. Prior for the negative binomial precision parameter.}
 
