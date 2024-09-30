@@ -167,7 +167,7 @@ plot_nowcast <- function(nowcast_output) {
       legend.direction = "horizontal"
     )
 
-    # if all data as the same strata, it does not plot the title
+    # if all data has the same strata, it does not plot the title
     if (length(unique(data_delays$.strata)) == 1) {
       plotnow <- plotnow + ggplot2::theme(strip.text = ggplot2::element_blank())
     }
