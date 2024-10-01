@@ -76,3 +76,26 @@ test_that("Checking `max_int` and `min_int`",{
   expect_equal(min_int(14, 12, pstream__ = rstan::get_stream()), 12)
 })
 
+test_that("Checking `colwise_mat_2_vec` and `rowwise_mat_2_vec`",{
+
+  vals <- rnorm(50)
+
+  expect_equal(
+    rowwise_mat_2_vec(matrix(vals, ncol = 10, nrow = 5, byrow = TRUE), pstream__ = rstan::get_stream()),
+    vals
+  )
+
+  expect_equal(
+    colwise_mat_2_vec(matrix(vals, ncol = 10, nrow = 5, byrow = FALSE), pstream__ = rstan::get_stream()),
+    vals
+  )
+
+  #Transposed of A should yield identical results
+  Amat <- matrix(vals, ncol = 10, nrow = 5, byrow = TRUE)
+  expect_equal(
+    rowwise_mat_2_vec(Amat, pstream__ = rstan::get_stream()),
+    colwise_mat_2_vec(t(Amat), pstream__ = rstan::get_stream())
+  )
+
+})
+

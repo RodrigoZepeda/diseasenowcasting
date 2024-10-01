@@ -3,8 +3,8 @@ library(tidyverse)
 now <- as.Date("1990-10-01")
 predictions <- nowcast(denguedat, "onset_week", "report_week",
                        dist = "Normal", method = "variational",
-                       now = now,
-                       priors = set_priors(p = 0, q = 0))
+                       now = now, strata = "gender",
+                       priors = set_priors())
 
 #Get the predicted values in a nice format
 predicted_values <- predictions$generated_quantities |>
@@ -17,20 +17,23 @@ predicted_values <- predictions$generated_quantities |>
     predictions$data$preprocessed_data |>
       dplyr::distinct(.strata, .tval, onset_week, .strata_unified)
   ) |>
-  dplyr::mutate(.strata = .strata_unified)
+  dplyr::mutate(.strata = .strata_unified) |>
+  dplyr::rename(gender = .strata)
 
 obs <- denguedat |>
-  count(onset_week) |>
+  count(onset_week, gender) |>
   filter(onset_week <= now)
 
 # Create plot
 ggplot() +
-  geom_ribbon(aes(x = onset_week, ymin = q5, ymax = q95, fill = "diseasenowcasting"),
+  geom_ribbon(aes(x = onset_week, ymin = q5, ymax = q95,
+                  fill = gender),
               data = predicted_values, alpha = 0.25) +
-  geom_line(aes(x = onset_week, y = n, color = "Train data", fill = "Train data"), data = obs) +
-  geom_line(aes(x = onset_week, y = median, color = "diseasenowcasting"),
+  geom_line(aes(x = onset_week, y = n, color = gender), data = obs) +
+  geom_line(aes(x = onset_week, y = median, color = gender),
             data = predicted_values, linetype = "dotted") +
-  theme_bw()
+  theme_bw() +
+  facet_wrap(~gender)
 
 
 

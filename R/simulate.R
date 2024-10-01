@@ -32,7 +32,7 @@ simulate_disease <- function(num_steps  = 10,
                              ...){
 
 
-  dist     <- match.arg(dist, c("NegativeBinomial", "Poisson","Normal","Student"))
+  dist         <- match.arg(dist, c("NegativeBinomial", "Poisson","Normal","Student"))
   warmup_steps <- ifelse(!is.numeric(warmup_steps) | warmup_steps < 0,
                          cli::cli_abort("Invalid warmup_steps. Set to an integer >= 0"),
                          ceiling(warmup_steps))
@@ -70,7 +70,7 @@ simulate_disease <- function(num_steps  = 10,
                         #refresh = 0,
                         dist = dist,
                         chains = 1,
-                        init = get_priors_from_init(priors, num_strata, num_delays, num_steps, dist),
+                        #init = get_priors_from_init(priors, num_strata, num_delays, num_steps, dist),
                         ...)
 
   #Create the simulation tibble

@@ -87,110 +87,42 @@
 #' @export
 
 set_priors <- function(
-    mu_degree            = 1,
-    nu_degree            = 1,
-    p                    = 4,
-    q                    = 3,
-    mu_is_constant       = FALSE,
-    nu_is_constant       = FALSE,
-    mu_0_mean_param_1    = "auto",
-    mu_0_mean_param_2    = 1.0,
-    mu_0_sd_param_1      = "auto",
-    mu_0_sd_param_2      = 1.0,
-    nu_0_mean_param_1    = 0.0,
-    nu_0_mean_param_2    = 1.0,
-    nu_0_sd_param_1      = 0.0,
-    nu_0_sd_param_2      = 1.0,
-    mu_0_mean_hyperprior = "normal",
-    nu_0_mean_hyperprior = "normal",
-    mu_0_sd_hyperprior   = "normal",
-    nu_0_sd_hyperprior   = "normal",
-    mu_sd_prior          = "normal",
-    nu_sd_prior          = "normal",
-    mu_sd_param_1        = 0.0,
-    mu_sd_param_2        = 1.0,
-    nu_sd_param_1        = 0.0,
-    nu_sd_param_2        = 1.0,
-    phi_AR_param_1       = 0.0,
-    phi_AR_param_2       = 1.0,
-    phi_AR_prior         = "normal",
-    theta_MA_param_1     = 0.0,
-    theta_MA_param_2     = 1.0,
-    theta_MA_prior       = "normal",
-    xi_sd_param_1        = 0.0,
-    xi_sd_param_2        = 1.0,
-    xi_sd_prior          = "normal",
-    r_prior              = "normal",
-    r_param_1            = 0.0,
-    r_param_2            = 1.0,
-    r_sd_prior           = "normal",
-    r_param_sd_1         = 0.0,
-    r_param_sd_2         = 1.e-5
-    ) {
+    mu_p = 3,
+    mu_q = 3,
+    nu_p = 3,
+    AR_mu_param_1 = 0,
+    AR_mu_param_2 = 1,
+    MA_mu_param_1 = 0,
+    MA_mu_param_2 = 1,
+    mu_intercept_param_1 = 0,
+    mu_intercept_param_2 = 1,
+    mu_0_param_1 = 0,
+    mu_0_param_2 = 1,
+    AR_nu_param_1 = 0,
+    AR_nu_param_2 = 1,
+    nu_intercept_param_1 = 0,
+    nu_intercept_param_2 = 1,
+    nu_0_param_1 = 0,
+    nu_0_param_2 = 1,
+    xi_mu_sd_param_1 = 0,
+    xi_mu_sd_param_2 = 1,
+    xi_nu_sd_param_1 = 0,
+    xi_nu_sd_param_2 = 1,
+    xi_m_sd_param_1 = 0,
+    xi_m_sd_param_2 = 1,
+    obs_sd_param_1 = 0,
+    obs_sd_param_2 = 1,
+    sd_mu_param_1 = 0,
+    sd_mu_param_2 = 1,
+    sd_nu_param_1 = 0,
+    sd_nu_param_2 = 1,
+    sd_m_param_1 = 0,
+    sd_m_param_2 = 1,
+    sd_obs_param_1 = 0,
+    sd_obs_param_2 = 1
+  ) {
 
   return(as.list(environment()))
-
-}
-
-#' Get nowcast priors for running a simulation
-#'
-#' Function to return the default values for the [simulate_disease()] function
-#' as a list.
-#' @inheritParams set_priors
-#'
-#' @return A list with all the priors for the [simulate_disease()] function.
-#'
-#' @examples
-#' #Get the default priors
-#' simulation_priors()
-#'
-#' #Change the distribution of the priors sd for the epidemic trend as well as the degree of the delays
-#' simulation_priors(nu_degree = 2, mu_sd_prior = "cauchy")
-#'
-#' @export
-simulation_priors <- function(
-    mu_degree            = 1,
-    nu_degree            = 1,
-    p                    = 3,
-    q                    = 0,
-    mu_is_constant       = FALSE,
-    nu_is_constant       = TRUE,
-    mu_sd_prior          = "standard_normal",
-    nu_sd_prior          = "standard_normal",
-    mu_sd_param_1        = 0.0,
-    mu_sd_param_2        = 0.1,
-    nu_sd_param_1        = 0.0,
-    nu_sd_param_2        = 0.1,
-    phi_AR_param_1       = 0.0,
-    phi_AR_param_2       = 0.05,
-    phi_AR_prior         = "cauchy",
-    theta_MA_param_1     = 0.05,
-    theta_MA_param_2     = 0.1,
-    theta_MA_prior       = "cauchy",
-    xi_sd_param_1        = 0.05,
-    xi_sd_param_2        = 0.05,
-    xi_sd_prior          = "standard_normal",
-    mu_0_mean_param_1    = -1.57,
-    mu_0_mean_param_2    = 0.01,
-    mu_0_sd_param_1      = 0.02,
-    mu_0_sd_param_2      = 0.01,
-    nu_0_mean_param_1    = -1.67,
-    nu_0_mean_param_2    = 0.11,
-    nu_0_sd_param_1      = 0.03,
-    nu_0_sd_param_2      = 0.01,
-    mu_0_mean_hyperprior = "standard_normal",
-    nu_0_mean_hyperprior = "standard_normal",
-    mu_0_sd_hyperprior   = "standard_normal",
-    nu_0_sd_hyperprior   = "standard_normal",
-    r_prior              = "standard_normal",
-    r_param_1            = 0.926,
-    r_param_2            = 0.0,
-    r_sd_prior           = "standard_normal",
-    r_param_sd_1         = 0.0,
-    r_param_sd_2         = 1.0
-) {
-
-  do.call(set_priors, as.list(environment()))
 
 }
 

@@ -116,7 +116,7 @@ nowcast <- function(.disease_data,
     dplyr::pull(num_delays)
 
   #Get the specified prior distributions
-  priors        <- priors_to_numeric(.disease_data, priors, dist)
+  #priors        <- priors_to_numeric(.disease_data, priors, dist)
 
   #Get the strata
   strata_list   <- preprocess_strata(.disease_data, strata)
@@ -230,18 +230,11 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
         num_delays  = num_delays,
         num_strata  = num_strata,
         n_rows      = nrow(.disease_data),
-        N_cases     = N_cases[,2:4],
-        Cases       = as.matrix(N_cases[,1]),
+        case_idx    = N_cases[,2:4],
+        cases       = N_cases[,1],
 
         #Whether to compute only the prior
         prior_only  = as.numeric(prior_only),
-
-        #Distribution information
-        distribution = distribution,
-
-        #Precision
-        max_log_tol_val      = 15,
-        precision_tol        = 1.e-3,
 
         #For generated quantities
         mu_cases = mu_cases,
@@ -250,11 +243,11 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
 
   #Select the model
   if (dist %in% c("NegativeBinomial","Poisson")){
-    model_stan <- stanmodels$nowcast_discrete
-    gq_stan    <- stanmodels$discrete_generated_quantities
+    model_stan <- stanmodels$nowcasting_v2
+    gq_stan    <- stanmodels$generated_quantities
   } else {
-    model_stan <- stanmodels$nowcast_continuous
-    gq_stan    <- stanmodels$continuous_generated_quantities
+    model_stan <- stanmodels$nowcasting_v2
+    gq_stan    <- stanmodels$generated_quantities
   }
 
   if (method[1] == "sampling"){
@@ -280,18 +273,18 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
   #Get the generated quantities
   generated_quantities <- rstan::gqs(gq_stan, data = stan_data, draws = draws)
 
-  flag <- generated_quantities |>
-    posterior::as_draws() |>
-    posterior::subset_draws("lambda_higher_than_maxval_flag") |>
-    posterior::summarise_draws(max) |>
-    dplyr::pull(max)
+  # flag <- generated_quantities |>
+  #   posterior::as_draws() |>
+  #   posterior::subset_draws("lambda_higher_than_maxval_flag") |>
+  #   posterior::summarise_draws(max) |>
+  #   dplyr::pull(max)
 
-  if (flag >= 1){
-    cli::cli_alert_warning(
-      "Some values of lambda have been truncated as they are too large. This might be attributed
-      to a high variance of your data or on the prior. Consider reducing the prior variance."
-    )
-  }
+  # if (flag >= 1){
+  #   cli::cli_alert_warning(
+  #     "Some values of lambda have been truncated as they are too large. This might be attributed
+  #     to a high variance of your data or on the prior. Consider reducing the prior variance."
+  #   )
+  # }
 
   return(
     list(
