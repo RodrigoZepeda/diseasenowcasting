@@ -29,7 +29,7 @@ generated quantities {
 
   //Initial predictions
   for (t in 1:num_steps)
-    N_mat_predict[t,:] = normal_rng(m[:,t]', rep_vector(sd_obs, tsize));
+    N_mat_predict[t,:] = normal_rng(m[:,t]', rep_vector(1.0, tsize));
 
   //Save the predictions from the model (rowsums)
   for (t in 1:num_steps){

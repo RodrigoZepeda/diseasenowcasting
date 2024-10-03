@@ -1,10 +1,13 @@
 set.seed(425)
 library(tidyverse)
-now <- as.Date("1990-10-01")
+library(diseasenowcasting)
+t1 <- Sys.time()
 predictions <- nowcast(denguedat, "onset_week", "report_week",
                        dist = "Normal", method = "variational",
-                       now = now, strata = "gender",
-                       priors = set_priors())
+                       strata = "gender",
+                       priors = set_priors(mu_p = 1, mu_q = 1, nu_p = 1))
+t2 <- Sys.time()
+print(t2 - t1)
 
 #Get the predicted values in a nice format
 predicted_values <- predictions$generated_quantities |>
@@ -21,8 +24,7 @@ predicted_values <- predictions$generated_quantities |>
   dplyr::rename(gender = .strata)
 
 obs <- denguedat |>
-  count(onset_week, gender) |>
-  filter(onset_week <= now)
+  count(onset_week, gender)
 
 # Create plot
 ggplot() +
@@ -33,7 +35,8 @@ ggplot() +
   geom_line(aes(x = onset_week, y = median, color = gender),
             data = predicted_values, linetype = "dotted") +
   theme_bw() +
-  facet_wrap(~gender)
+  facet_wrap(~gender) +
+  xlim(c(ymd("2010/01/01"), ymd("2010/12/31")))
 
 
 

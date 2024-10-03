@@ -58,24 +58,6 @@
   real nu_0_param_1;
   real<lower=0> nu_0_param_2;
 
-  /*Priors for noise components ------------------------------------------------------------------*/
-
-  /*mu:*/
-  real xi_mu_sd_param_1;
-  real<lower=0> xi_mu_sd_param_2;
-
-  /*nu:*/
-  real xi_nu_sd_param_1;
-  real<lower=0> xi_nu_sd_param_2;
-
-  /*m:*/
-  real xi_m_sd_param_1;
-  real<lower=0> xi_m_sd_param_2;
-
-  /*obs:*/
-  real obs_sd_param_1;
-  real<lower=0> obs_sd_param_2;
-
   /*Priors for variances -------------------------------------------------------------------------*/
   real sd_mu_param_1;
   real<lower=0> sd_mu_param_2;
@@ -83,8 +65,8 @@
   real<lower=0> sd_nu_param_2;
   real sd_m_param_1;
   real<lower=0> sd_m_param_2;
-  real sd_obs_param_1;
-  real<lower=0> sd_obs_param_2;
+  //real sd_obs_param_1;
+  //real<lower=0> sd_obs_param_2;
 
   /*Model options---------------------------------------------------------------------------------*/
   int<lower=0,upper=1> prior_only;

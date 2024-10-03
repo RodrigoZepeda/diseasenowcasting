@@ -9,12 +9,12 @@ min_int <- function(a, b, pstream__ = 0L) {
     .Call(`_diseasenowcasting_min_int`, a, b, pstream__)
 }
 
-AR <- function(y, phi, t, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_AR`, y, phi, t, pstream__)
+AR <- function(y, phi, t, p, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_AR`, y, phi, t, p, pstream__)
 }
 
-MA <- function(xi, theta, t, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_MA`, xi, theta, t, pstream__)
+MA <- function(xi, theta, t, q, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_MA`, xi, theta, t, q, pstream__)
 }
 
 create_phi_AR <- function(phi, pstream__ = 0L) {
@@ -57,8 +57,8 @@ colwise_mat_2_vec <- function(A, pstream__ = 0L) {
     .Call(`_diseasenowcasting_colwise_mat_2_vec`, A, pstream__)
 }
 
-state_space_model <- function(num_steps, num_delays, num_strata, phi_mu, theta_mu, phi_nu, mu_intercept, nu_intercept, mu_init, nu_init, sd_mu, sd_nu, sd_m, xi_mu, xi_nu, xi_m, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_state_space_model`, num_steps, num_delays, num_strata, phi_mu, theta_mu, phi_nu, mu_intercept, nu_intercept, mu_init, nu_init, sd_mu, sd_nu, sd_m, xi_mu, xi_nu, xi_m, pstream__)
+state_space_model <- function(num_steps, num_delays, num_strata, phi_mu, theta_mu, phi_nu, mu_intercept, nu_intercept, mu_p, mu_q, nu_p, mu_init, nu_init, sd_mu, sd_nu, xi_mu, xi_nu, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_state_space_model`, num_steps, num_delays, num_strata, phi_mu, theta_mu, phi_nu, mu_intercept, nu_intercept, mu_p, mu_q, nu_p, mu_init, nu_init, sd_mu, sd_nu, xi_mu, xi_nu, pstream__)
 }
 
 observed_mean <- function(n_rows, num_delays, m, case_idx, s_col, d_col, t_col, pstream__ = 0L) {

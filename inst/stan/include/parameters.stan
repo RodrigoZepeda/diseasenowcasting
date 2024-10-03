@@ -14,12 +14,10 @@ vector[tsize] mu_init;
 vector[num_strata] nu_init;
 
 //Errors for each of the components---------------------------------------------------------------
-matrix[tsize, num_steps]  xi_mu;
-matrix[num_strata, num_delays] xi_nu;
-matrix[tsize, num_steps]  xi_m;
+matrix[tsize, num_steps - 1]  xi_mu;
+matrix[num_strata, num_delays - 1] xi_nu;
 
 /*Variances-------------------------------------------------------------------------------------*/
-vector<lower=0>[tsize] sd_mu;
-vector<lower=0>[num_strata] sd_nu;
-vector<lower=0>[tsize] sd_m;
-real<lower=0> sd_obs;
+real<lower=0> sd_mu;
+real<lower=0> sd_nu;
+real<lower=0> sd_m;

@@ -39,7 +39,7 @@ int min_int(int a, int b){
   return 1;
 }
 
-vector AR(matrix y, vector phi, int t){
+vector AR(matrix y, vector phi, int t, int p){
   /*
   * @title Calculate the autoregresive AR(p) component of a vector y at time t
   *
@@ -65,10 +65,10 @@ vector AR(matrix y, vector phi, int t){
   *
   * @return The sum 0*y_t + phi_p*y_{t-1} + phi_{p-1}*y_{t-2} + ... + phi_1*y_{t-p}
   */
-  return y[,(t + 1 - min_int(t, num_elements(phi))):t]*phi[(num_elements(phi) + 1 - min_int(t, num_elements(phi))):num_elements(phi)];
+  return y[,(t + 1 - min_int(t, p + 1)):t]*phi[(p + 2 - min_int(t, p + 1)):(p + 1)];
 }
 
-vector MA(matrix xi, vector theta, int t){
+vector MA(matrix xi, vector theta, int t, int q){
   /*
   * Calculate the moving average MA(q) component given errors xi at time t
   *
@@ -99,7 +99,7 @@ vector MA(matrix xi, vector theta, int t){
   *
   * @return The sum €_t + ø_{q}*€_{t-1} + ø_{q-1}*€_{t-2} + ... + ø_{1}*€_{t-q}
   */
-  return AR(xi, theta, t);
+  return AR(xi, theta, t, q);
 }
 
 

@@ -104,22 +104,12 @@ set_priors <- function(
     nu_intercept_param_2 = 1,
     nu_0_param_1 = 0,
     nu_0_param_2 = 1,
-    xi_mu_sd_param_1 = 0,
-    xi_mu_sd_param_2 = 1,
-    xi_nu_sd_param_1 = 0,
-    xi_nu_sd_param_2 = 1,
-    xi_m_sd_param_1 = 0,
-    xi_m_sd_param_2 = 1,
-    obs_sd_param_1 = 0,
-    obs_sd_param_2 = 1,
     sd_mu_param_1 = 0,
     sd_mu_param_2 = 1,
     sd_nu_param_1 = 0,
     sd_nu_param_2 = 1,
     sd_m_param_1 = 0,
-    sd_m_param_2 = 1,
-    sd_obs_param_1 = 0,
-    sd_obs_param_2 = 1
+    sd_m_param_2 = 1
   ) {
 
   return(as.list(environment()))

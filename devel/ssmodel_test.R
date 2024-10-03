@@ -4,29 +4,33 @@ num_strata <- 4
 tsize      <- num_delays*num_strata
 mu_p       <- 3
 mu_q       <- 2
-mu_nu      <- 5
+nu_p      <- 5
+phi_mu    <- create_phi_AR(rep(1, mu_p), rstan::get_stream())
+A         <- matrix(rnorm(25), ncol = 5)
+AR(A, phi_mu, t = 5, p = 3, rstan::get_stream())
 
-phi_nu_star <- create_phi_AR(runif(mu_nu, -1, 1), pstream__ = rstan::get_stream())
-AR(matrix(c(rep(1, num_strata), rep(NA_real_, num_strata*(num_delays - 1))), nrow = num_strata, ncol = num_delays),
-   phi = phi_nu_star, t = 1, pstream__ = rstan::get_stream())
 
+
+microbenchmark::microbenchmark({
 ssmod <- state_space_model(num_steps     = num_steps,
                            num_delays    = num_delays,
                            num_strata    = num_strata,
                            phi_mu        = runif(mu_p, -1, 1),
                            theta_mu      = runif(mu_q, -1, 1),
-                           phi_nu        = runif(mu_nu, -1, 1),
+                           phi_nu        = runif(nu_p, -1, 1),
                            mu_intercept  = rlnorm(tsize),
                            nu_intercept  = rlnorm(num_strata),
+                           mu_p = mu_p,
+                           mu_q = mu_q,
+                           nu_p = nu_p,
                            mu_init       = rlnorm(tsize),
                            nu_init       = rlnorm(num_strata),
-                           sd_mu         = rexp(tsize),
-                           sd_nu         = rexp(num_strata),
-                           sd_m          = rexp(tsize),
-                           xi_mu         = matrix(rnorm(num_steps*tsize), nrow = tsize, ncol = num_steps),
-                           xi_nu         = matrix(rnorm(num_strata*num_delays), nrow = num_strata, ncol = num_delays),
-                           xi_m          = matrix(rnorm(num_steps*tsize), nrow = tsize, ncol = num_steps),
+                           sd_mu         = rexp(1),
+                           sd_nu         = rexp(1),
+                           xi_mu         = matrix(rnorm((num_steps - 1)*tsize), nrow = tsize, ncol = num_steps - 1),
+                           xi_nu         = matrix(rnorm(num_strata*(num_delays - 1)), nrow = num_strata, ncol = num_delays - 1),
                            pstream__     = rstan::get_stream())
+})
 
 n_obs <- 10
 case_idx <-lapply(

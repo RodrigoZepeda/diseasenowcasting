@@ -3,19 +3,22 @@
 
 matrix state_space_model(
     //Data characteristics
-    int num_steps, int num_delays, int num_strata,
+    data int num_steps, data int num_delays, data int num_strata,
 
     //Parameter vectors for coefficients
     vector phi_mu, vector theta_mu, vector phi_nu, vector mu_intercept, vector nu_intercept,
 
+    //Sizes
+    data int mu_p, data int mu_q, data int nu_p,
+
     //Parameter vectors for initial values
-     vector mu_init, vector nu_init,
+    vector mu_init, vector nu_init,
 
     //Variances:
-    vector sd_mu, vector sd_nu, vector sd_m,
+    real sd_mu, real sd_nu,
 
     //Errors
-    matrix xi_mu, matrix xi_nu, matrix xi_m
+    matrix xi_mu, matrix xi_nu
   ){
     /*
     * @title State space model
@@ -31,38 +34,27 @@ matrix state_space_model(
   int tsize = num_strata*num_delays;
 
   /*Transform the errors multiplying by the variances*/
-  matrix[tsize, num_steps]       error_mu;
-  matrix[num_strata, num_delays] error_nu;
-  matrix[tsize, num_steps]       error_m;
+  matrix[tsize, num_steps - 1]  error_mu = sd_mu*xi_mu;
+  matrix[num_strata, num_delays - 1] error_nu = sd_nu*xi_nu;
 
-  vector[num_elements(phi_mu) + 1]   phi_mu_star   = create_phi_AR(phi_mu);
-  vector[num_elements(theta_mu) + 1] theta_mu_star = create_theta_MA(theta_mu);
-  vector[num_elements(phi_nu) + 1]   phi_nu_star   = create_phi_AR(phi_nu);
-
-  /*Initial values for errors*/
-  error_mu[,1] = sd_mu .* xi_mu[,1];
-  error_nu[,1] = sd_nu .* xi_nu[,1];
-  error_m[,1]  = sd_m  .* xi_m[,1];
+  vector[mu_p + 1]   phi_mu_star   = create_phi_AR(phi_mu);
+  vector[mu_q + 1] theta_mu_star   = create_theta_MA(theta_mu);
+  vector[nu_p + 1]   phi_nu_star   = create_phi_AR(phi_nu);
 
   /*Initial matrices for saving the data*/
   matrix[tsize, num_steps]        m = rep_matrix(0.0, tsize, num_steps);
   matrix[tsize, num_steps]       mu = rep_matrix(0.0, tsize, num_steps);
   matrix[num_strata, num_delays] nu = rep_matrix(0.0, num_strata, num_delays);
 
-
   /*Initial vectors for the time step*/
-  mu[,1] = mu_intercept + mu_init + error_mu[,1];
-  nu[,1] = nu_intercept + nu_init + error_nu[,1];
+  mu[,1] = mu_init;
+  nu[,1] = nu_init;
 
   //Loop through the delays
   if (num_delays > 1){
-    for (d in 2:num_delays){
-
-      //Update the error
-      error_nu[,d] = sd_nu .* xi_nu[,d];
-
+    for (d in 1:(num_delays - 1)){
       //Update the term
-      nu[,d] = nu_intercept + AR(nu, phi_nu_star, d) + error_nu[,d]; //The error is here in AR
+      nu[,d + 1] = nu_intercept + AR(nu, phi_nu_star, d + 1, nu_p) + error_nu[,d]; //Check whether its d or d + 1 in AR
     }
   }
 
@@ -71,20 +63,16 @@ matrix state_space_model(
     for (t in 1:(num_steps - 1)){
 
       //Calculate the mean (resp. log-mean)
-      m[,t] = mu[,t] + colwise_mat_2_vec(nu) + error_mu[,t];
-
-      //Update error terms
-      error_mu[,t + 1] = sd_mu .* xi_mu[,t + 1];
-      error_m[,t + 1]  = sd_m  .* xi_m[,t + 1];
+      m[,t] = mu[,t] + colwise_mat_2_vec(nu);
 
       //Update the value for mu
-      mu[,t + 1] = mu_intercept + AR(mu, phi_mu_star, t) + MA(error_mu, theta_mu_star, t);
+      mu[,t + 1] = mu_intercept + AR(mu, phi_mu_star, t + 1, mu_p) + MA(error_mu, theta_mu_star, t, mu_q) + error_mu[,t];
 
     }
   }
 
   //Last element of for m
-  m[,num_steps]  = mu[,num_steps] + colwise_mat_2_vec(nu) + error_mu[,num_steps];
+  m[,num_steps]  = mu[,num_steps] + colwise_mat_2_vec(nu);
 
   return m;
 }

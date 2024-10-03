@@ -24,7 +24,7 @@ transformed parameters {
 model {
     //Add observations
     if (!prior_only)
-      target += normal_lpdf(cases | m_obs, rep_vector(sd_obs, n_rows));
+      target += std_normal_lpdf(merror);
 
     // Add the priors
     target += lprior;

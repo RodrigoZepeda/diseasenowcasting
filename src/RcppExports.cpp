@@ -39,30 +39,32 @@ BEGIN_RCPP
 END_RCPP
 }
 // AR
-Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>,                 stan::base_type_t<double>>,-1,1> AR(const Eigen::Matrix<double,-1,-1>& y, const Eigen::Matrix<double,-1,1>& phi, const int& t, std::ostream* pstream__);
-RcppExport SEXP _diseasenowcasting_AR(SEXP ySEXP, SEXP phiSEXP, SEXP tSEXP, SEXP pstream__SEXP) {
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>,                 stan::base_type_t<double>>,-1,1> AR(const Eigen::Matrix<double,-1,-1>& y, const Eigen::Matrix<double,-1,1>& phi, const int& t, const int& p, std::ostream* pstream__);
+RcppExport SEXP _diseasenowcasting_AR(SEXP ySEXP, SEXP phiSEXP, SEXP tSEXP, SEXP pSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,-1>& >::type y(ySEXP);
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type phi(phiSEXP);
     Rcpp::traits::input_parameter< const int& >::type t(tSEXP);
+    Rcpp::traits::input_parameter< const int& >::type p(pSEXP);
     Rcpp::traits::input_parameter< std::ostream* >::type pstream__(pstream__SEXP);
-    rcpp_result_gen = Rcpp::wrap(AR(y, phi, t, pstream__));
+    rcpp_result_gen = Rcpp::wrap(AR(y, phi, t, p, pstream__));
     return rcpp_result_gen;
 END_RCPP
 }
 // MA
-Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>,                 stan::base_type_t<double>>,-1,1> MA(const Eigen::Matrix<double,-1,-1>& xi, const Eigen::Matrix<double,-1,1>& theta, const int& t, std::ostream* pstream__);
-RcppExport SEXP _diseasenowcasting_MA(SEXP xiSEXP, SEXP thetaSEXP, SEXP tSEXP, SEXP pstream__SEXP) {
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>,                 stan::base_type_t<double>>,-1,1> MA(const Eigen::Matrix<double,-1,-1>& xi, const Eigen::Matrix<double,-1,1>& theta, const int& t, const int& q, std::ostream* pstream__);
+RcppExport SEXP _diseasenowcasting_MA(SEXP xiSEXP, SEXP thetaSEXP, SEXP tSEXP, SEXP qSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,-1>& >::type xi(xiSEXP);
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type theta(thetaSEXP);
     Rcpp::traits::input_parameter< const int& >::type t(tSEXP);
+    Rcpp::traits::input_parameter< const int& >::type q(qSEXP);
     Rcpp::traits::input_parameter< std::ostream* >::type pstream__(pstream__SEXP);
-    rcpp_result_gen = Rcpp::wrap(MA(xi, theta, t, pstream__));
+    rcpp_result_gen = Rcpp::wrap(MA(xi, theta, t, q, pstream__));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -193,8 +195,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // state_space_model
-Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>,                 stan::base_type_t<double>, stan::base_type_t<double>,                 stan::base_type_t<double>, stan::base_type_t<double>,                 stan::promote_args_t<stan::base_type_t<double>,                   stan::base_type_t<double>, stan::base_type_t<double>,                   stan::base_type_t<double>, stan::base_type_t<double>,                   stan::promote_args_t<stan::base_type_t<double>,                     stan::base_type_t<double>, stan::base_type_t<double>>>>,-1,-1> state_space_model(const int& num_steps, const int& num_delays, const int& num_strata, const Eigen::Matrix<double,-1,1>& phi_mu, const Eigen::Matrix<double,-1,1>& theta_mu, const Eigen::Matrix<double,-1,1>& phi_nu, const Eigen::Matrix<double,-1,1>& mu_intercept, const Eigen::Matrix<double,-1,1>& nu_intercept, const Eigen::Matrix<double,-1,1>& mu_init, const Eigen::Matrix<double,-1,1>& nu_init, const Eigen::Matrix<double,-1,1>& sd_mu, const Eigen::Matrix<double,-1,1>& sd_nu, const Eigen::Matrix<double,-1,1>& sd_m, const Eigen::Matrix<double,-1,-1>& xi_mu, const Eigen::Matrix<double,-1,-1>& xi_nu, const Eigen::Matrix<double,-1,-1>& xi_m, std::ostream* pstream__);
-RcppExport SEXP _diseasenowcasting_state_space_model(SEXP num_stepsSEXP, SEXP num_delaysSEXP, SEXP num_strataSEXP, SEXP phi_muSEXP, SEXP theta_muSEXP, SEXP phi_nuSEXP, SEXP mu_interceptSEXP, SEXP nu_interceptSEXP, SEXP mu_initSEXP, SEXP nu_initSEXP, SEXP sd_muSEXP, SEXP sd_nuSEXP, SEXP sd_mSEXP, SEXP xi_muSEXP, SEXP xi_nuSEXP, SEXP xi_mSEXP, SEXP pstream__SEXP) {
+Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>,                 stan::base_type_t<double>, stan::base_type_t<double>,                 stan::base_type_t<double>, stan::base_type_t<double>,                 stan::promote_args_t<stan::base_type_t<double>,                   stan::base_type_t<double>, double, double,                   stan::base_type_t<double>,                   stan::promote_args_t<stan::base_type_t<double>>>>,-1,-1> state_space_model(const int& num_steps, const int& num_delays, const int& num_strata, const Eigen::Matrix<double,-1,1>& phi_mu, const Eigen::Matrix<double,-1,1>& theta_mu, const Eigen::Matrix<double,-1,1>& phi_nu, const Eigen::Matrix<double,-1,1>& mu_intercept, const Eigen::Matrix<double,-1,1>& nu_intercept, const int& mu_p, const int& mu_q, const int& nu_p, const Eigen::Matrix<double,-1,1>& mu_init, const Eigen::Matrix<double,-1,1>& nu_init, const double& sd_mu, const double& sd_nu, const Eigen::Matrix<double,-1,-1>& xi_mu, const Eigen::Matrix<double,-1,-1>& xi_nu, std::ostream* pstream__);
+RcppExport SEXP _diseasenowcasting_state_space_model(SEXP num_stepsSEXP, SEXP num_delaysSEXP, SEXP num_strataSEXP, SEXP phi_muSEXP, SEXP theta_muSEXP, SEXP phi_nuSEXP, SEXP mu_interceptSEXP, SEXP nu_interceptSEXP, SEXP mu_pSEXP, SEXP mu_qSEXP, SEXP nu_pSEXP, SEXP mu_initSEXP, SEXP nu_initSEXP, SEXP sd_muSEXP, SEXP sd_nuSEXP, SEXP xi_muSEXP, SEXP xi_nuSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -206,21 +208,22 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type phi_nu(phi_nuSEXP);
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type mu_intercept(mu_interceptSEXP);
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type nu_intercept(nu_interceptSEXP);
+    Rcpp::traits::input_parameter< const int& >::type mu_p(mu_pSEXP);
+    Rcpp::traits::input_parameter< const int& >::type mu_q(mu_qSEXP);
+    Rcpp::traits::input_parameter< const int& >::type nu_p(nu_pSEXP);
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type mu_init(mu_initSEXP);
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type nu_init(nu_initSEXP);
-    Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type sd_mu(sd_muSEXP);
-    Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type sd_nu(sd_nuSEXP);
-    Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,1>& >::type sd_m(sd_mSEXP);
+    Rcpp::traits::input_parameter< const double& >::type sd_mu(sd_muSEXP);
+    Rcpp::traits::input_parameter< const double& >::type sd_nu(sd_nuSEXP);
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,-1>& >::type xi_mu(xi_muSEXP);
     Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,-1>& >::type xi_nu(xi_nuSEXP);
-    Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,-1>& >::type xi_m(xi_mSEXP);
     Rcpp::traits::input_parameter< std::ostream* >::type pstream__(pstream__SEXP);
-    rcpp_result_gen = Rcpp::wrap(state_space_model(num_steps, num_delays, num_strata, phi_mu, theta_mu, phi_nu, mu_intercept, nu_intercept, mu_init, nu_init, sd_mu, sd_nu, sd_m, xi_mu, xi_nu, xi_m, pstream__));
+    rcpp_result_gen = Rcpp::wrap(state_space_model(num_steps, num_delays, num_strata, phi_mu, theta_mu, phi_nu, mu_intercept, nu_intercept, mu_p, mu_q, nu_p, mu_init, nu_init, sd_mu, sd_nu, xi_mu, xi_nu, pstream__));
     return rcpp_result_gen;
 END_RCPP
 }
 // observed_mean
-Eigen::Matrix<stan::promote_args_t<stan::base_type_t<double>>,-1,1> observed_mean(const int& n_rows, const int& num_delays, const Eigen::Matrix<double,-1,-1>& m, const std::vector<std::vector<int>>& case_idx, const int& s_col, const int& d_col, const int& t_col, std::ostream* pstream__);
+std::vector<stan::promote_args_t<stan::base_type_t<double>>> observed_mean(const int& n_rows, const int& num_delays, const Eigen::Matrix<double,-1,-1>& m, const std::vector<std::vector<int>>& case_idx, const int& s_col, const int& d_col, const int& t_col, std::ostream* pstream__);
 RcppExport SEXP _diseasenowcasting_observed_mean(SEXP n_rowsSEXP, SEXP num_delaysSEXP, SEXP mSEXP, SEXP case_idxSEXP, SEXP s_colSEXP, SEXP d_colSEXP, SEXP t_colSEXP, SEXP pstream__SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -244,8 +247,8 @@ RcppExport SEXP _rcpp_module_boot_stan_fit4nowcasting_v2_mod();
 static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_max_int", (DL_FUNC) &_diseasenowcasting_max_int, 3},
     {"_diseasenowcasting_min_int", (DL_FUNC) &_diseasenowcasting_min_int, 3},
-    {"_diseasenowcasting_AR", (DL_FUNC) &_diseasenowcasting_AR, 4},
-    {"_diseasenowcasting_MA", (DL_FUNC) &_diseasenowcasting_MA, 4},
+    {"_diseasenowcasting_AR", (DL_FUNC) &_diseasenowcasting_AR, 5},
+    {"_diseasenowcasting_MA", (DL_FUNC) &_diseasenowcasting_MA, 5},
     {"_diseasenowcasting_create_phi_AR", (DL_FUNC) &_diseasenowcasting_create_phi_AR, 2},
     {"_diseasenowcasting_create_theta_MA", (DL_FUNC) &_diseasenowcasting_create_theta_MA, 2},
     {"_diseasenowcasting_create_block_diagonal", (DL_FUNC) &_diseasenowcasting_create_block_diagonal, 3},
@@ -256,7 +259,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_append_vec_2_val", (DL_FUNC) &_diseasenowcasting_append_vec_2_val, 3},
     {"_diseasenowcasting_rowwise_mat_2_vec", (DL_FUNC) &_diseasenowcasting_rowwise_mat_2_vec, 2},
     {"_diseasenowcasting_colwise_mat_2_vec", (DL_FUNC) &_diseasenowcasting_colwise_mat_2_vec, 2},
-    {"_diseasenowcasting_state_space_model", (DL_FUNC) &_diseasenowcasting_state_space_model, 17},
+    {"_diseasenowcasting_state_space_model", (DL_FUNC) &_diseasenowcasting_state_space_model, 18},
     {"_diseasenowcasting_observed_mean", (DL_FUNC) &_diseasenowcasting_observed_mean, 8},
     {"_rcpp_module_boot_stan_fit4generated_quantities_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4generated_quantities_mod, 0},
     {"_rcpp_module_boot_stan_fit4nowcasting_v2_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nowcasting_v2_mod, 0},
