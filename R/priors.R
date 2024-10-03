@@ -87,29 +87,24 @@
 #' @export
 
 set_priors <- function(
-    mu_p = 3,
-    mu_q = 3,
-    nu_p = 3,
-    AR_mu_param_1 = 0,
-    AR_mu_param_2 = 1,
-    MA_mu_param_1 = 0,
-    MA_mu_param_2 = 1,
+    mu_p = 1,
+    mu_q = 1,
+    nu_p = 1,
     mu_intercept_param_1 = 0,
-    mu_intercept_param_2 = 1,
+    mu_intercept_param_2 = 1.e-5,
     mu_0_param_1 = 0,
-    mu_0_param_2 = 1,
-    AR_nu_param_1 = 0,
-    AR_nu_param_2 = 1,
+    mu_0_param_2 = 1.e-5,
     nu_intercept_param_1 = 0,
-    nu_intercept_param_2 = 1,
+    nu_intercept_param_2 = 1.e-5,
     nu_0_param_1 = 0,
-    nu_0_param_2 = 1,
+    nu_0_param_2 = 1.e-5,
     sd_mu_param_1 = 0,
-    sd_mu_param_2 = 1,
+    sd_mu_param_2 = 1.e-5,
     sd_nu_param_1 = 0,
-    sd_nu_param_2 = 1,
+    sd_nu_param_2 = 1.e-5,
     sd_m_param_1 = 0,
-    sd_m_param_2 = 1
+    sd_m_param_2 = 1.e-5,
+    dof = 7 #Degrees of freedom for student t
   ) {
 
   return(as.list(environment()))
@@ -124,10 +119,10 @@ set_priors <- function(
 #' @keywords internal
 get_distribution_number <- function(dist){
   switch(dist,
-         "Poisson"          = 0,
-         "NegativeBinomial" = 1,
-         "Normal"           = 2,
-         "Student"          = 3,
+         "Normal"           = 0,
+         "Student"          = 1,
+         "Poisson"          = 2,
+         "NegativeBinomial" = 3,
          cli::cli_abort("Invalid distribution {dist}"))
 }
 

@@ -222,27 +222,11 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// observed_mean
-std::vector<stan::promote_args_t<stan::base_type_t<double>>> observed_mean(const int& n_rows, const int& num_delays, const Eigen::Matrix<double,-1,-1>& m, const std::vector<std::vector<int>>& case_idx, const int& s_col, const int& d_col, const int& t_col, std::ostream* pstream__);
-RcppExport SEXP _diseasenowcasting_observed_mean(SEXP n_rowsSEXP, SEXP num_delaysSEXP, SEXP mSEXP, SEXP case_idxSEXP, SEXP s_colSEXP, SEXP d_colSEXP, SEXP t_colSEXP, SEXP pstream__SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const int& >::type n_rows(n_rowsSEXP);
-    Rcpp::traits::input_parameter< const int& >::type num_delays(num_delaysSEXP);
-    Rcpp::traits::input_parameter< const Eigen::Matrix<double,-1,-1>& >::type m(mSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::vector<int>>& >::type case_idx(case_idxSEXP);
-    Rcpp::traits::input_parameter< const int& >::type s_col(s_colSEXP);
-    Rcpp::traits::input_parameter< const int& >::type d_col(d_colSEXP);
-    Rcpp::traits::input_parameter< const int& >::type t_col(t_colSEXP);
-    Rcpp::traits::input_parameter< std::ostream* >::type pstream__(pstream__SEXP);
-    rcpp_result_gen = Rcpp::wrap(observed_mean(n_rows, num_delays, m, case_idx, s_col, d_col, t_col, pstream__));
-    return rcpp_result_gen;
-END_RCPP
-}
 
-RcppExport SEXP _rcpp_module_boot_stan_fit4generated_quantities_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4nowcasting_v2_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4generated_quantities_continuous_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4generated_quantities_discrete_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4nowcasting_continuous_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4nowcasting_discrete_mod();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_max_int", (DL_FUNC) &_diseasenowcasting_max_int, 3},
@@ -260,9 +244,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_diseasenowcasting_rowwise_mat_2_vec", (DL_FUNC) &_diseasenowcasting_rowwise_mat_2_vec, 2},
     {"_diseasenowcasting_colwise_mat_2_vec", (DL_FUNC) &_diseasenowcasting_colwise_mat_2_vec, 2},
     {"_diseasenowcasting_state_space_model", (DL_FUNC) &_diseasenowcasting_state_space_model, 18},
-    {"_diseasenowcasting_observed_mean", (DL_FUNC) &_diseasenowcasting_observed_mean, 8},
-    {"_rcpp_module_boot_stan_fit4generated_quantities_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4generated_quantities_mod, 0},
-    {"_rcpp_module_boot_stan_fit4nowcasting_v2_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nowcasting_v2_mod, 0},
+    {"_rcpp_module_boot_stan_fit4generated_quantities_continuous_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4generated_quantities_continuous_mod, 0},
+    {"_rcpp_module_boot_stan_fit4generated_quantities_discrete_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4generated_quantities_discrete_mod, 0},
+    {"_rcpp_module_boot_stan_fit4nowcasting_continuous_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nowcasting_continuous_mod, 0},
+    {"_rcpp_module_boot_stan_fit4nowcasting_discrete_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nowcasting_discrete_mod, 0},
     {NULL, NULL, 0}
 };
 

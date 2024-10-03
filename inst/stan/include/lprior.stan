@@ -2,15 +2,12 @@ real lprior = 0;
 
 // Priors for components
 // mu:
-lprior += normal_lpdf(mu_intercept | mu_intercept_param_1, mu_intercept_param_2);
-lprior += normal_lpdf(phi_mu | AR_mu_param_1, AR_mu_param_2);
-lprior += normal_lpdf(theta_mu | MA_mu_param_1, MA_mu_param_2);
-lprior += normal_lpdf(mu_init | mu_0_param_1, mu_0_param_2);
+lprior += std_normal_lpdf(mu_intercept_centered);
+lprior += std_normal_lpdf(mu_init_centered);
 
 // nu:
-lprior += normal_lpdf(nu_intercept | nu_intercept_param_1, nu_intercept_param_2);
-lprior += normal_lpdf(phi_nu | AR_nu_param_1, AR_nu_param_2);
-lprior += normal_lpdf(nu_init | nu_0_param_1, nu_0_param_2);
+lprior += std_normal_lpdf(nu_intercept_centered);
+lprior += std_normal_lpdf(nu_init_centered);
 
 // Errors for each of the components
 lprior += std_normal_lpdf(to_vector(xi_mu));

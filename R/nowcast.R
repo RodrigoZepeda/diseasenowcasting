@@ -235,6 +235,7 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
 
         #Whether to compute only the prior
         prior_only  = as.numeric(prior_only),
+        dist        = distribution,
 
         #For generated quantities
         mu_cases = mu_cases,
@@ -243,11 +244,11 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
 
   #Select the model
   if (dist %in% c("NegativeBinomial","Poisson")){
-    model_stan <- stanmodels$nowcasting_v2
-    gq_stan    <- stanmodels$generated_quantities
+    model_stan <- stanmodels$nowcasting_discrete
+    gq_stan    <- stanmodels$generated_quantities_discrete
   } else {
-    model_stan <- stanmodels$nowcasting_v2
-    gq_stan    <- stanmodels$generated_quantities
+    model_stan <- stanmodels$nowcasting_continuous
+    gq_stan    <- stanmodels$generated_quantities_continuous
   }
 
   if (method[1] == "sampling"){

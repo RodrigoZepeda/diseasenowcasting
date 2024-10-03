@@ -61,7 +61,3 @@ state_space_model <- function(num_steps, num_delays, num_strata, phi_mu, theta_m
     .Call(`_diseasenowcasting_state_space_model`, num_steps, num_delays, num_strata, phi_mu, theta_mu, phi_nu, mu_intercept, nu_intercept, mu_p, mu_q, nu_p, mu_init, nu_init, sd_mu, sd_nu, xi_mu, xi_nu, pstream__)
 }
 
-observed_mean <- function(n_rows, num_delays, m, case_idx, s_col, d_col, t_col, pstream__ = 0L) {
-    .Call(`_diseasenowcasting_observed_mean`, n_rows, num_delays, m, case_idx, s_col, d_col, t_col, pstream__)
-}
-

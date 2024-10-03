@@ -1,12 +1,13 @@
-//Version 0.0
+//Version 0.1
 
 functions {
     #include include/ss_model.stan
-    #include include/observed_mean.stan
+    #include include/get_val_for_model.stan
 }
 
 data {
   #include include/data.stan
+  array[n_rows] int cases;
 }
 
 transformed data {
@@ -23,19 +24,26 @@ transformed parameters {
 
 generated quantities {
 
-  array[num_steps, tsize] real N_mat_predict  = rep_array(0, num_steps, tsize);
+  array[num_steps, tsize] int N_mat_predict   = rep_array(0, num_steps, tsize);
   matrix[num_steps, num_strata] N_predict_raw = rep_matrix(0, num_steps, num_strata);
   matrix[num_steps, num_strata] N_predict     = rep_matrix(0, num_steps, num_strata);
 
   //Initial predictions
-  for (t in 1:num_steps)
-    N_mat_predict[t,:] = normal_rng(m[:,t]', rep_vector(1.0, tsize));
+  if (is_poisson){
+    for (t in 1:num_steps){
+      N_mat_predict[t,:] = poisson_log_rng(m[:,t]');
+    }
+  } else if (is_negbin){
+    for (t in 1:num_steps){
+      N_mat_predict[t,:] = neg_binomial_2_log_rng(m[:,t]', rep_row_vector(sd_m[1], tsize));
+    }
+  }
 
   //Save the predictions from the model (rowsums)
   for (t in 1:num_steps){
     for (s in 1:num_strata){
       for (d in 1:num_delays){
-        N_predict_raw[t,s] += N_mat_predict[t,num_strata*(d - 1) + s];
+        N_predict_raw[t,s] += N_mat_predict[t,num_delays*(s - 1) + d];
       }
     }
   }
