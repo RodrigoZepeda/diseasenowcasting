@@ -63,6 +63,7 @@ real<lower=0> sd_m_param_2;
 /*Model options---------------------------------------------------------------------------------*/
 int<lower=0,upper=1> prior_only;
 int<lower=0,upper=3> dist;
+int<lower=0,upper=3> link; //How to link the average to the data 0 = identity; 1 = log; 2 =
 real<lower=0> dof; //Student-T degrees of freedom
 
 /*Generated quantities--------------------------------------------------------------------------*/

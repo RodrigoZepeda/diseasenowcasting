@@ -35,7 +35,7 @@ generated quantities {
     }
   } else if (is_negbin){
     for (t in 1:num_steps){
-      N_mat_predict[t,:] = neg_binomial_2_log_rng(m[:,t]', rep_row_vector(sd_m[1], tsize));
+      N_mat_predict[t,:] = neg_binomial_2_log_rng(m[:,t]', rep_row_vector(1.0 / sd_m[1], tsize));
     }
   }
 

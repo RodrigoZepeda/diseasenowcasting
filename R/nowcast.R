@@ -236,6 +236,7 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
         #Whether to compute only the prior
         prior_only  = as.numeric(prior_only),
         dist        = distribution,
+        link        = 0,
 
         #For generated quantities
         mu_cases = mu_cases,

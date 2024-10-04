@@ -91,19 +91,19 @@ set_priors <- function(
     mu_q = 1,
     nu_p = 1,
     mu_intercept_param_1 = 0,
-    mu_intercept_param_2 = 1.e-5,
+    mu_intercept_param_2 = 1, #exp(1.e-5) -> 1
     mu_0_param_1 = 0,
-    mu_0_param_2 = 1.e-5,
+    mu_0_param_2 = 1,
     nu_intercept_param_1 = 0,
-    nu_intercept_param_2 = 1.e-5,
+    nu_intercept_param_2 = 1,
     nu_0_param_1 = 0,
-    nu_0_param_2 = 1.e-5,
+    nu_0_param_2 = 1,
     sd_mu_param_1 = 0,
-    sd_mu_param_2 = 1.e-5,
+    sd_mu_param_2 = 1,
     sd_nu_param_1 = 0,
-    sd_nu_param_2 = 1.e-5,
+    sd_nu_param_2 = 1,
     sd_m_param_1 = 0,
-    sd_m_param_2 = 1.e-5,
+    sd_m_param_2 = 1,
     dof = 7 #Degrees of freedom for student t
   ) {
 

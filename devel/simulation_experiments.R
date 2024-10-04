@@ -6,7 +6,7 @@ t1 <- Sys.time()
 predictions <- nowcast(denguedat, "onset_week", "report_week",
                        dist = "NegativeBinomial", method = "variational",
                        strata = "gender", now = now, iter = 50000,
-                       priors = set_priors(mu_intercept_param_1 = -5))
+                       priors = set_priors())
 t2 <- Sys.time()
 print(t2 - t1)
 
