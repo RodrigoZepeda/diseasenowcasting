@@ -1,4 +1,3 @@
-#include include/license.stan
 int max_int(int a, int b){
   /*
   * @title Maximum integer
@@ -15,7 +14,7 @@ int max_int(int a, int b){
   } else {
     return b;
   }
-  reject("Error in `max_int` function.");
+  reject("Error in `max_int` function. This is an internal error of the `diseasenowcasting` package. Report to `https://github.com/RodrigoZepeda/diseasenowcasting/issues`");
   return 1;
 }
 
@@ -35,7 +34,7 @@ int min_int(int a, int b){
   } else {
     return a;
   }
-  reject("Error in `min_int` function.");
+  reject("Error in `min_int` function. This is an internal error of the `diseasenowcasting` package. Report to `https://github.com/RodrigoZepeda/diseasenowcasting/issues`");
   return 1;
 }
 

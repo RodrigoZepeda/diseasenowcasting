@@ -2,12 +2,12 @@
 
 #include <Rcpp.h>
 using namespace Rcpp ;
-#include "stanExports_generated_quantities_continuous.h"
+#include "stanExports_nowcasting.h"
 
-RCPP_MODULE(stan_fit4generated_quantities_continuous_mod) {
+RCPP_MODULE(stan_fit4nowcasting_mod) {
 
 
-    class_<rstan::stan_fit<stan_model, boost::random::ecuyer1988> >("rstantools_model_generated_quantities_continuous")
+    class_<rstan::stan_fit<stan_model, boost::random::ecuyer1988> >("rstantools_model_nowcasting")
 
     .constructor<SEXP,SEXP,SEXP>()
 

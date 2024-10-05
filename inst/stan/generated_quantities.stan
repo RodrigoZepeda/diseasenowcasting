@@ -1,13 +1,14 @@
-//Version 0.0
+#include license/license.stan
 
 functions {
   #include include/ss_model.stan
   #include include/get_val_for_model.stan
+  #include include/transform_state_space_model.stan
+  #include include/mean_sd_cases.stan
 }
 
 data {
   #include include/data.stan
-  array[n_rows] int cases;
 }
 
 transformed data {
@@ -22,9 +23,6 @@ transformed parameters {
   #include include/transformed_parameters.stan
 }
 
-model {
-  #include include/model_discrete.stan
-
-  // Add the priors
-  target += lprior;
+generated quantities {
+  #include include/gq.stan
 }

@@ -1,5 +1,3 @@
-#include include/license.stan
-
 matrix create_block_diagonal(matrix A, matrix B){
   /*
   * Create a block diagonal matrix from matrix A and matrix B

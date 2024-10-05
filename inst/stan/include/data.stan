@@ -5,7 +5,9 @@ int<lower=1> num_strata;     //Number of strata included in the model
 int<lower=1> n_rows;         //Number of rows in case data
 
 /*Case data ------------------------------------------------------------------------------------*/
-array[n_rows, 3] int case_idx;
+array[n_rows, 3] int case_idx; //Index for the cases matrix (see below).
+array[n_rows] real cases_real; //For the case of a continuous model
+array[n_rows] int cases_int;   //For the case of a discrete model
 
 /*
 `case_idx` is a matrix with columns 1 = time, 2 = delay, 3 = strata. The matrix corresponds
@@ -59,13 +61,13 @@ real sd_nu_param_1;
 real<lower=0> sd_nu_param_2;
 real sd_m_param_1;
 real<lower=0> sd_m_param_2;
+real<lower=0> dof; //Student-T degrees of freedom in the case of Student being the distribution dist.
 
 /*Model options---------------------------------------------------------------------------------*/
-int<lower=0,upper=1> prior_only;
-int<lower=0,upper=3> dist;
-int<lower=0,upper=3> link; //How to link the average to the data 0 = identity; 1 = log; 2 =
-real<lower=0> dof; //Student-T degrees of freedom
-
-/*Generated quantities--------------------------------------------------------------------------*/
-matrix[num_strata, num_delays] sd_cases; //SD of cases for normalization
-matrix[num_strata, num_delays] mu_cases; //Mean of cases for normalization
+int<lower=0,upper=1> prior_only;     //Flag. Set to 1 to only compute the prior distribution.
+int<lower=0,upper=3> dist;           //Distribution (0 = Normal, 1 = StudenT, 2 = Poisson, 3 = Negative Binomial)
+int<lower=0,upper=3> link_x;         //How to link the average to the data 0 = identity; 1 = log; 2 = softplus ; 3 = distorted hyperbolic
+int<lower=0,upper=3> link_y;         //How to link the average to the data 0 = identity; 1 = log; 2 = sofplus ; 3 = distorted hyperbolic
+int<lower=0,upper=1> normalize_data; //Whether to substract the mean from the data and divide by standard dev (only for continuous data)
+real<lower=0> control_k_transform;   //K-parameter for some of the transforms (dh and softplus)
+real<lower=0> control_c_transform;   //C-parameter for some of the transforms (dh)

@@ -9,19 +9,22 @@ set_priors(
   mu_q = 1,
   nu_p = 1,
   mu_intercept_param_1 = 0,
-  mu_intercept_param_2 = 1e-05,
+  mu_intercept_param_2 = 1,
   mu_0_param_1 = 0,
-  mu_0_param_2 = 1e-05,
+  mu_0_param_2 = 1,
   nu_intercept_param_1 = 0,
-  nu_intercept_param_2 = 1e-05,
+  nu_intercept_param_2 = 1,
   nu_0_param_1 = 0,
-  nu_0_param_2 = 1e-05,
+  nu_0_param_2 = 1,
   sd_mu_param_1 = 0,
-  sd_mu_param_2 = 1e-05,
+  sd_mu_param_2 = 1,
   sd_nu_param_1 = 0,
-  sd_nu_param_2 = 1e-05,
+  sd_nu_param_2 = 1,
   sd_m_param_1 = 0,
-  sd_m_param_2 = 1e-05
+  sd_m_param_2 = 1,
+  dof = 7,
+  control_k_transform = 2,
+  control_c_transform = 0.5
 )
 }
 \arguments{

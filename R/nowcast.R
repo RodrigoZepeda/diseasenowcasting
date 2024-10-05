@@ -60,11 +60,14 @@ nowcast <- function(.disease_data,
                     report_date,
                     strata = NULL,
                     dist   = c("NegativeBinomial", "Poisson","Normal","Student"),
+                    link_x = default_x_link(dist),
+                    link_y = default_y_link(dist),
                     now = NULL,
                     units = NULL,
                     max_delay = Inf,
                     prior_only = FALSE,
                     proportion_reported = 1,
+                    normalize_data = (dist %in% c("Normal","Student")),
                     refresh = 250*rlang::is_interactive(),
                     control = control_default(),
                     method  = c("sampling","variational","optimization"),
@@ -89,6 +92,10 @@ nowcast <- function(.disease_data,
 
   # Method
   method <- match.arg(method, c("sampling", "variational","optimization"))
+
+  #Link
+  link_x <- match.arg(link_x, c("log","identity","softplus","dhyperbolic"))
+  link_y <- match.arg(link_y, c("log","identity","softplus","dhyperbolic"))
 
   # Print message to user
   cli::cli_alert_info(
@@ -130,6 +137,9 @@ nowcast <- function(.disease_data,
                 num_delays = num_delays,
                 num_strata = num_strata,
                 dist       = dist,
+                link_x     = link_x,
+                link_y     = link_y,
+                normalize_data = normalize_data,
                 prior_only = prior_only,
                 refresh    = refresh,
                 control    = control,
@@ -173,7 +183,8 @@ nowcast <- function(.disease_data,
 #'
 #' @keywords internal
 nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num_delays, num_strata,
-                          dist, prior_only, control, refresh, method, priors, ...) {
+                          dist, link_x, link_y, normalize_data,
+                          prior_only, control, refresh, method, priors, ...) {
 
   #Keep only the columns n, .tval, .delay, .strata
   .disease_data <- .disease_data |>
@@ -181,42 +192,6 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
 
   # Distribution
   distribution <- get_distribution_number(dist)
-
-  # If cases are normal or student normalize the cases and fit the model to the normalized version
-  if (dist == "Normal" || dist == "Student"){
-
-    #Get the mean and variance per delay-strata
-    .disease_data_normalization_ct <- .disease_data |>
-      dplyr::group_by(!!as.symbol(".strata"), !!as.symbol(".delay")) |>
-      dplyr::summarise(
-        !!as.symbol("mu") := mean(!!as.symbol("n"), na.rm = TRUE),
-        !!as.symbol("sd") := sd(!!as.symbol("n"), na.rm = TRUE), .groups = "drop"
-      ) |>
-      #Reconvert sd = 1 and mu = 0 if we have only one observation as it will not make sense to divide by mu
-      dplyr::mutate(!!as.symbol("sd") := dplyr::if_else(!!as.symbol("sd") == 0, 1, !!as.symbol("sd")))
-
-    .disease_data <- .disease_data |>
-      dplyr::left_join(.disease_data_normalization_ct, by = c(".strata",".delay")) |>
-      dplyr::mutate(!!as.symbol("n") := (!!as.symbol("n") - !!as.symbol("mu"))/!!as.symbol("sd")) |>
-      dplyr::arrange(!!as.symbol(".strata"), !!as.symbol(".delay"))
-
-    #Create the mu_case matrix
-    mu_cases <- .disease_data_normalization_ct |>
-      tidyr::pivot_wider(id_cols = ".strata", names_from = ".delay", values_from = "mu") |>
-      dplyr::select(-!!as.symbol(".strata")) |>
-      as.matrix()
-
-    sd_cases <- .disease_data_normalization_ct |>
-      tidyr::pivot_wider(id_cols = ".strata", names_from = ".delay", values_from = "sd") |>
-      dplyr::select(-!!as.symbol(".strata")) |>
-      as.matrix()
-
-
-  } else {
-    #There shouldn't be a scaling for the Poisson and Negative Binomial
-    mu_cases <- matrix(0.0, nrow = num_strata, ncol = num_delays)
-    sd_cases <- matrix(1.0, nrow = num_strata, ncol = num_delays)
-  }
 
   # Cases and positions handled separately
   N_cases <- as.matrix(.disease_data)
@@ -231,38 +206,30 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
         num_strata  = num_strata,
         n_rows      = nrow(.disease_data),
         case_idx    = N_cases[,2:4],
-        cases       = N_cases[,1],
+        cases_real  = N_cases[,1],
+        cases_int   = as.integer(N_cases[,1]),
 
         #Whether to compute only the prior
         prior_only  = as.numeric(prior_only),
         dist        = distribution,
-        link        = 0,
+        link_x      = get_link_number(link_x),
+        link_y      = get_link_number(link_y),
+        normalize_data = normalize_data
 
-        #For generated quantities
-        mu_cases = mu_cases,
-        sd_cases = sd_cases
   ))
 
-  #Select the model
-  if (dist %in% c("NegativeBinomial","Poisson")){
-    model_stan <- stanmodels$nowcasting_discrete
-    gq_stan    <- stanmodels$generated_quantities_discrete
-  } else {
-    model_stan <- stanmodels$nowcasting_continuous
-    gq_stan    <- stanmodels$generated_quantities_continuous
-  }
 
   if (method[1] == "sampling"){
-    stan_fit <- rstan::sampling(model_stan, data = stan_data,
+    stan_fit <- rstan::sampling(stanmodels$nowcasting, data = stan_data,
                            control = control,
                            refresh = refresh,
                            ...)
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "variational") {
-    stan_fit <- rstan::vb(model_stan, data = stan_data, refresh = refresh,...)
+    stan_fit <- rstan::vb(stanmodels$nowcasting, data = stan_data, refresh = refresh,...)
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "optimization") {
-    stan_fit <- rstan::optimizing(model_stan, data = stan_data, refresh = refresh, ...)
+    stan_fit <- rstan::optimizing(stanmodels$nowcasting, data = stan_data, refresh = refresh, ...)
 
     # Work around to get draws from the optimized params for gq
     draws           <- matrix(rep(stan_fit$par, 1000), ncol = length(stan_fit$par), byrow = TRUE)
@@ -273,7 +240,7 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
   }
 
   #Get the generated quantities
-  generated_quantities <- rstan::gqs(gq_stan, data = stan_data, draws = draws)
+  generated_quantities <- rstan::gqs(stanmodels$generated_quantities, data = stan_data, draws = draws)
 
   # flag <- generated_quantities |>
   #   posterior::as_draws() |>

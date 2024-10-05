@@ -104,7 +104,9 @@ set_priors <- function(
     sd_nu_param_2 = 1,
     sd_m_param_1 = 0,
     sd_m_param_2 = 1,
-    dof = 7 #Degrees of freedom for student t
+    dof = 7, #Degrees of freedom for student t
+    control_k_transform = 2,
+    control_c_transform = 0.5
   ) {
 
   return(as.list(environment()))
@@ -124,6 +126,21 @@ get_distribution_number <- function(dist){
          "Poisson"          = 2,
          "NegativeBinomial" = 3,
          cli::cli_abort("Invalid distribution {dist}"))
+}
+
+#' Function for sets the link required
+#'
+#' @inheritParams nowcast
+#'
+#' @return A number for the distribution code for Stan's `data`.
+#' @keywords internal
+get_link_number <- function(link){
+  switch(link,
+         "identity"             = 0,
+         "log"                  = 1,
+         "softplus"             = 2,
+         "dhyperbolic" = 3,
+         cli::cli_abort("Invalid link {link}"))
 }
 
 #' Function for setting the priors to numeric
