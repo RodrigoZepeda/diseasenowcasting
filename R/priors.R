@@ -109,7 +109,13 @@ set_priors <- function(
     control_c_transform = 0.5
   ) {
 
-  return(as.list(environment()))
+  #Get the priors
+  priors <- as.list(environment())
+
+  #Remove the distribution specification
+
+
+  return(priors)
 
 }
 

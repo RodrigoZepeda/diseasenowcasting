@@ -1,12 +1,12 @@
 set.seed(425)
 library(tidyverse)
-#library(diseasenowcasting)
+library(diseasenowcasting)
 now <- as.Date("1990-10-01")
 t1 <- Sys.time()
 predictions <- nowcast(denguedat, "onset_week", "report_week",
-                       dist = "NegativeBinomial", method = "variational",
-                       strata = "gender", now = now, link_x = "dhyperbolic", link_y = "identity",
-                       normalize_data = FALSE,
+                       dist = "Normal", method = "variational",
+                       strata = "gender", now = now, link_x = "softplus", link_y = "dhyperbolic",
+                       normalize_data = T,
                        priors = set_priors())
 t2 <- Sys.time()
 print(t2 - t1)

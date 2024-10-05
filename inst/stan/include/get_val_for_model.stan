@@ -1,6 +1,6 @@
 /*Continuous case*/
 array[] real get_val_for_model(data int n_rows, data int num_delays, matrix m,
-  array[] real cases_real, array[] real cases_int,
+  array[] real cases_real_trans, array[] real cases_int,
   array[,] int case_idx, data int s_col, data int d_col, data int t_col, vector sd_m,
   data int is_continuous, data int is_discrete){
   /*
@@ -10,7 +10,7 @@ array[] real get_val_for_model(data int n_rows, data int num_delays, matrix m,
   if (is_continuous){
     for (n in 1:n_rows)
       /*In the continuous case we are actually modelling the error term as normal/student*/
-      dist_val[n] = (cases_real[n] - m[num_delays*(case_idx[n,s_col] - 1) + case_idx[n,d_col], case_idx[n,t_col]])/sd_m[1];
+      dist_val[n] = (cases_real_trans[n] - m[num_delays*(case_idx[n,s_col] - 1) + case_idx[n,d_col], case_idx[n,t_col]])/sd_m[1];
   } else if (is_discrete) {
     for (n in 1:n_rows)
       /*In the discrete case we are actually using the link*/

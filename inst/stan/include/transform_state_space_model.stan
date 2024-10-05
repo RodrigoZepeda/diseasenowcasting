@@ -29,7 +29,7 @@ array[] real inv_log_transform(data array[] real y){
     array[n_rows] real x;
 
     for (n in 1:n_rows)
-      x[n] = max({inv_log_transform(y[n]), 0.0});
+      x[n] = inv_log_transform(y[n]);
 
     return x;
 
@@ -66,7 +66,7 @@ array[] real inv_log1p_transform(data array[] real y){
     array[n_rows] real x;
 
     for (n in 1:n_rows)
-      x[n] = max({inv_log1p_transform(y[n]), 0.0});
+      x[n] = inv_log1p_transform(y[n]);
 
     return x;
 
@@ -140,7 +140,7 @@ array[] real inv_softplus1p_transform(data array[] real y, data real k){
     array[n_rows] real x;
 
     for (n in 1:n_rows)
-      x[n] = max({inv_softplus1p_transform(y[n], k), 0.0});
+      x[n] = inv_softplus1p_transform(y[n], k);
 
     return x;
 
@@ -222,7 +222,7 @@ array[] real inv_dhyperbolic1p_transform(data array[] real y, data real k, data 
     array[n_rows] real x;
 
     for (n in 1:n_rows)
-      x[n] = max({inv_dhyperbolic1p_transform(y[n], k, c), 0.0});
+      x[n] = inv_dhyperbolic1p_transform(y[n], k, c);
 
     return x;
 

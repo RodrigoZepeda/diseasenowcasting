@@ -50,7 +50,7 @@ static constexpr std::array<const char*, 578> locations_array__ =
   " (in 'generated_quantities', line 847, column 0 to column 74)",
   " (in 'generated_quantities', line 849, column 0 to line 851, column 30)",
   " (in 'generated_quantities', line 853, column 0 to line 854, column 80)",
-  " (in 'generated_quantities', line 856, column 0 to line 857, column 67)",
+  " (in 'generated_quantities', line 856, column 0 to line 857, column 78)",
   " (in 'generated_quantities', line 859, column 0 to column 16)",
   " (in 'generated_quantities', line 877, column 0 to column 79)",
   " (in 'generated_quantities', line 878, column 0 to column 81)",
@@ -68,12 +68,12 @@ static constexpr std::array<const char*, 578> locations_array__ =
   " (in 'generated_quantities', line 873, column 0 to column 104)",
   " (in 'generated_quantities', line 896, column 2 to column 175)",
   " (in 'generated_quantities', line 895, column 7 to line 897, column 1)",
-  " (in 'generated_quantities', line 894, column 4 to column 69)",
-  " (in 'generated_quantities', line 893, column 2 to line 894, column 69)",
+  " (in 'generated_quantities', line 894, column 4 to column 73)",
+  " (in 'generated_quantities', line 893, column 2 to line 894, column 73)",
   " (in 'generated_quantities', line 892, column 22 to line 895, column 1)",
   " (in 'generated_quantities', line 892, column 7 to line 897, column 1)",
-  " (in 'generated_quantities', line 891, column 4 to column 80)",
-  " (in 'generated_quantities', line 890, column 2 to line 891, column 80)",
+  " (in 'generated_quantities', line 891, column 4 to column 84)",
+  " (in 'generated_quantities', line 890, column 2 to line 891, column 84)",
   " (in 'generated_quantities', line 889, column 21 to line 892, column 1)",
   " (in 'generated_quantities', line 889, column 7 to line 897, column 1)",
   " (in 'generated_quantities', line 888, column 4 to column 101)",
@@ -374,8 +374,8 @@ static constexpr std::array<const char*, 578> locations_array__ =
   " (in 'generated_quantities', line 362, column 4 to line 364, column 97)",
   " (in 'generated_quantities', line 361, column 26 to line 365, column 3)",
   " (in 'generated_quantities', line 361, column 9 to line 367, column 3)",
-  " (in 'generated_quantities', line 360, column 6 to column 123)",
-  " (in 'generated_quantities', line 358, column 4 to line 360, column 123)",
+  " (in 'generated_quantities', line 360, column 6 to column 129)",
+  " (in 'generated_quantities', line 358, column 4 to line 360, column 129)",
   " (in 'generated_quantities', line 357, column 20 to line 361, column 3)",
   " (in 'generated_quantities', line 357, column 2 to line 367, column 3)",
   " (in 'generated_quantities', line 368, column 2 to column 18)",
@@ -394,8 +394,8 @@ static constexpr std::array<const char*, 578> locations_array__ =
   " (in 'generated_quantities', line 389, column 4 to column 33)",
   " (in 'generated_quantities', line 390, column 10 to column 16)",
   " (in 'generated_quantities', line 390, column 4 to column 25)",
-  " (in 'generated_quantities', line 392, column 6 to column 49)",
-  " (in 'generated_quantities', line 391, column 4 to line 392, column 49)",
+  " (in 'generated_quantities', line 392, column 6 to column 37)",
+  " (in 'generated_quantities', line 391, column 4 to line 392, column 37)",
   " (in 'generated_quantities', line 393, column 4 to column 13)",
   " (in 'generated_quantities', line 387, column 51 to line 394, column 1)",
   " (in 'generated_quantities', line 397, column 2 to column 30)",
@@ -412,8 +412,8 @@ static constexpr std::array<const char*, 578> locations_array__ =
   " (in 'generated_quantities', line 414, column 4 to column 33)",
   " (in 'generated_quantities', line 415, column 10 to column 16)",
   " (in 'generated_quantities', line 415, column 4 to column 25)",
-  " (in 'generated_quantities', line 417, column 6 to column 51)",
-  " (in 'generated_quantities', line 416, column 4 to line 417, column 51)",
+  " (in 'generated_quantities', line 417, column 6 to column 39)",
+  " (in 'generated_quantities', line 416, column 4 to line 417, column 39)",
   " (in 'generated_quantities', line 418, column 4 to column 13)",
   " (in 'generated_quantities', line 412, column 53 to line 419, column 1)",
   " (in 'generated_quantities', line 422, column 2 to column 31)",
@@ -448,8 +448,8 @@ static constexpr std::array<const char*, 578> locations_array__ =
   " (in 'generated_quantities', line 464, column 4 to column 33)",
   " (in 'generated_quantities', line 465, column 10 to column 16)",
   " (in 'generated_quantities', line 465, column 4 to column 25)",
-  " (in 'generated_quantities', line 467, column 6 to column 59)",
-  " (in 'generated_quantities', line 466, column 4 to line 467, column 59)",
+  " (in 'generated_quantities', line 467, column 6 to column 47)",
+  " (in 'generated_quantities', line 466, column 4 to line 467, column 47)",
   " (in 'generated_quantities', line 468, column 4 to column 13)",
   " (in 'generated_quantities', line 462, column 71 to line 469, column 1)",
   " (in 'generated_quantities', line 480, column 2 to column 30)",
@@ -484,8 +484,8 @@ static constexpr std::array<const char*, 578> locations_array__ =
   " (in 'generated_quantities', line 521, column 4 to column 33)",
   " (in 'generated_quantities', line 522, column 10 to column 16)",
   " (in 'generated_quantities', line 522, column 4 to column 25)",
-  " (in 'generated_quantities', line 524, column 6 to column 65)",
-  " (in 'generated_quantities', line 523, column 4 to line 524, column 65)",
+  " (in 'generated_quantities', line 524, column 6 to column 53)",
+  " (in 'generated_quantities', line 523, column 4 to line 524, column 53)",
   " (in 'generated_quantities', line 525, column 4 to column 13)",
   " (in 'generated_quantities', line 519, column 87 to line 526, column 1)",
   " (in 'generated_quantities', line 530, column 9 to column 16)",
@@ -737,7 +737,7 @@ std::vector<
   stan::promote_args_t<stan::base_type_t<T2__>, T3__, T4__,
     stan::base_type_t<T9__>>>
 get_val_for_model(const int& n_rows, const int& num_delays, const T2__&
-                  m_arg__, const std::vector<T3__>& cases_real,
+                  m_arg__, const std::vector<T3__>& cases_real_trans,
                   const std::vector<T4__>& cases_int,
                   const std::vector<std::vector<int>>& case_idx, const int&
                   s_col, const int& d_col, const int& t_col, const T9__&
@@ -1582,7 +1582,7 @@ std::vector<
   stan::promote_args_t<stan::base_type_t<T2__>, T3__, T4__,
     stan::base_type_t<T9__>>>
 get_val_for_model(const int& n_rows, const int& num_delays, const T2__&
-                  m_arg__, const std::vector<T3__>& cases_real,
+                  m_arg__, const std::vector<T3__>& cases_real_trans,
                   const std::vector<T4__>& cases_int,
                   const std::vector<std::vector<int>>& case_idx, const int&
                   s_col, const int& d_col, const int& t_col, const T9__&
@@ -1610,7 +1610,7 @@ get_val_for_model(const int& n_rows, const int& num_delays, const T2__&
       for (int n = 1; n <= n_rows; ++n) {
         current_statement__ = 343;
         stan::model::assign(dist_val,
-          ((stan::model::rvalue(cases_real, "cases_real",
+          ((stan::model::rvalue(cases_real_trans, "cases_real_trans",
               stan::model::index_uni(n)) -
           stan::model::rvalue(m, "m",
             stan::model::index_uni(((num_delays *
@@ -1747,11 +1747,9 @@ inv_log_transform(const std::vector<double>& y, std::ostream* pstream__) {
     for (int n = 1; n <= n_rows; ++n) {
       current_statement__ = 363;
       stan::model::assign(x,
-        stan::math::max(
-          std::vector<double>{inv_log_transform(
-                                stan::model::rvalue(y, "y",
-                                  stan::model::index_uni(n)), pstream__),
-            0.0}), "assigning variable x", stan::model::index_uni(n));
+        inv_log_transform(
+          stan::model::rvalue(y, "y", stan::model::index_uni(n)), pstream__),
+        "assigning variable x", stan::model::index_uni(n));
     }
     current_statement__ = 365;
     return x;
@@ -1849,11 +1847,9 @@ inv_log1p_transform(const std::vector<double>& y, std::ostream* pstream__) {
     for (int n = 1; n <= n_rows; ++n) {
       current_statement__ = 381;
       stan::model::assign(x,
-        stan::math::max(
-          std::vector<double>{inv_log1p_transform(
-                                stan::model::rvalue(y, "y",
-                                  stan::model::index_uni(n)), pstream__),
-            0.0}), "assigning variable x", stan::model::index_uni(n));
+        inv_log1p_transform(
+          stan::model::rvalue(y, "y", stan::model::index_uni(n)), pstream__),
+        "assigning variable x", stan::model::index_uni(n));
     }
     current_statement__ = 383;
     return x;
@@ -2064,11 +2060,9 @@ inv_softplus1p_transform(const std::vector<double>& y, const double& k,
     for (int n = 1; n <= n_rows; ++n) {
       current_statement__ = 417;
       stan::model::assign(x,
-        stan::math::max(
-          std::vector<double>{inv_softplus1p_transform(
-                                stan::model::rvalue(y, "y",
-                                  stan::model::index_uni(n)), k, pstream__),
-            0.0}), "assigning variable x", stan::model::index_uni(n));
+        inv_softplus1p_transform(
+          stan::model::rvalue(y, "y", stan::model::index_uni(n)), k,
+          pstream__), "assigning variable x", stan::model::index_uni(n));
     }
     current_statement__ = 419;
     return x;
@@ -2287,11 +2281,9 @@ inv_dhyperbolic1p_transform(const std::vector<double>& y, const double& k,
     for (int n = 1; n <= n_rows; ++n) {
       current_statement__ = 453;
       stan::model::assign(x,
-        stan::math::max(
-          std::vector<double>{inv_dhyperbolic1p_transform(
-                                stan::model::rvalue(y, "y",
-                                  stan::model::index_uni(n)), k, c, pstream__),
-            0.0}), "assigning variable x", stan::model::index_uni(n));
+        inv_dhyperbolic1p_transform(
+          stan::model::rvalue(y, "y", stan::model::index_uni(n)), k, c,
+          pstream__), "assigning variable x", stan::model::index_uni(n));
     }
     current_statement__ = 455;
     return x;
@@ -3679,7 +3671,7 @@ public:
         std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
       current_statement__ = 19;
       stan::model::assign(dist_val,
-        get_val_for_model(n_rows, num_delays, m_trans, cases_real,
+        get_val_for_model(n_rows, num_delays, m_trans, cases_real_trans,
           stan::math::promote_scalar<double>(cases_int), case_idx, s_col,
           d_col, t_col, sd_m, is_continuous, is_discrete, pstream__),
         "assigning variable dist_val");
@@ -3897,7 +3889,7 @@ public:
           control_c_transform, pstream__), "assigning variable m_trans");
       current_statement__ = 19;
       stan::model::assign(dist_val,
-        get_val_for_model(n_rows, num_delays, m_trans, cases_real,
+        get_val_for_model(n_rows, num_delays, m_trans, cases_real_trans,
           stan::math::promote_scalar<double>(cases_int), case_idx, s_col,
           d_col, t_col, sd_m, is_continuous, is_discrete, pstream__),
         "assigning variable dist_val");
@@ -4023,7 +4015,9 @@ public:
                   stan::math::transpose(
                     stan::model::rvalue(m_trans, "m_trans",
                       stan::model::index_omni(), stan::model::index_uni(t))),
-                  stan::math::rep_vector(1.0, tsize), base_rng__),
+                  stan::math::rep_vector(
+                    stan::model::rvalue(sd_m, "sd_m",
+                      stan::model::index_uni(1)), tsize), base_rng__),
                 "assigning variable N_mat_predict_real",
                 stan::model::index_uni(t), stan::model::index_omni());
             }
@@ -4038,7 +4032,8 @@ public:
                     stan::math::transpose(
                       stan::model::rvalue(m_trans, "m_trans",
                         stan::model::index_omni(), stan::model::index_uni(t))),
-                    1.0, base_rng__),
+                    stan::model::rvalue(sd_m, "sd_m",
+                      stan::model::index_uni(1)), base_rng__),
                   "assigning variable N_mat_predict_real",
                   stan::model::index_uni(t), stan::model::index_omni());
               }

@@ -14,8 +14,8 @@ matrix[tsize, num_steps] m_trans = transform_state_space_model(m, identity_link_
   softplus_link_x, dist_hyper_link_x, control_k_transform, control_c_transform);
 
 /*Get the value that is actually going to be modelled---------------------------------------------*/
-array[n_rows] real dist_val = get_val_for_model(n_rows, num_delays, m_trans, cases_real, cases_int,
-  case_idx, s_col, d_col, t_col, sd_m, is_continuous, is_discrete);
+array[n_rows] real dist_val = get_val_for_model(n_rows, num_delays, m_trans, cases_real_trans,
+  cases_int, case_idx, s_col, d_col, t_col, sd_m, is_continuous, is_discrete);
 
 /*Include the priors------------------------------------------------------------------------------*/
 #include include/lprior.stan
