@@ -21,3 +21,7 @@ inv_normalize_cases <- function(normalized, case_idx, num_strata, num_delays, n_
     .Call(`_diseasenowcasting_inv_normalize_cases`, normalized, case_idx, num_strata, num_delays, n_rows, d_col, s_col, mu, sigma, pstream__)
 }
 
+inv_normalize_cases_2 <- function(normalized_mat, case_idx, num_strata, num_delays, num_steps, tsize, d_col, s_col, mu, sigma, pstream__ = 0L) {
+    .Call(`_diseasenowcasting_inv_normalize_cases_2`, normalized_mat, case_idx, num_strata, num_delays, num_steps, tsize, d_col, s_col, mu, sigma, pstream__)
+}
+

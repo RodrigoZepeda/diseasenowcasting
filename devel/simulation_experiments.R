@@ -4,9 +4,9 @@ library(diseasenowcasting)
 now <- as.Date("1990-10-01")
 t1 <- Sys.time()
 predictions <- nowcast(denguedat, "onset_week", "report_week",
-                       dist = "Normal", method = "variational",
-                       strata = "gender", now = now, link_x = "softplus", link_y = "dhyperbolic",
-                       normalize_data = T,
+                       dist = "Student", method = "variational",
+                       now = now, link_x = "identity", link_y = "identity",
+                       normalize_data = F,
                        priors = set_priors())
 t2 <- Sys.time()
 print(t2 - t1)

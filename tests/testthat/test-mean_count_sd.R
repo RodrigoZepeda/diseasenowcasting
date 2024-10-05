@@ -132,3 +132,67 @@ test_that("`inverse normalization` works", {
   expect_equal(cinv, cases$cases)
 
 })
+
+test_that("`inverse normalization` works for the second version", {
+
+  # Define the data
+  cases  <- c(10, 11, 9, 21, 16, 15, 12, 8, 8, 25, 20, 17, 11, 9, 0, 14, 21, 28)
+  time   <- c(1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3)
+  delay  <- c(0, 0, 1, 1, 2, 2, 0, 0, 1, 1, 2, 2,  0, 0, 1, 1, 2, 2) + 1
+  strata <- c(1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2)
+
+  # Create a data frame
+  case_data <- data.frame(
+    cases = cases,
+    t = time,
+    d = delay,
+    s = strata
+  ) |>
+    dplyr::arrange(s, d)
+
+  case_idx <- case_data[,-1]
+  case_idx <- split(as.matrix(case_idx), seq(nrow(case_idx)))
+
+  #Get mean
+  mu   <- mean_cases(cases_real = case_data$cases, case_idx = case_idx, num_strata = 2,
+                     num_delays = 3, n_rows = nrow(case_data), d_col = 2, s_col = 3,
+                     pstream__ = rstan::get_stream())
+
+  #Get standard dev
+  sigma <- sd_cases(cases_real = case_data$cases, case_idx = case_idx, num_strata = 2,
+                    num_delays = 3, n_rows = nrow(case_data), d_col = 2, s_col = 3,
+                    pstream__ = rstan::get_stream())
+
+  #Normalize the cases to unnormalize them
+  #FIXME: Make this test
+  cdf <- case_data |>
+    dplyr::left_join(
+      case_data |>
+        dplyr::group_by(s,d) |>
+        dplyr::summarise(mu = mean(cases), sigma = sd(cases)*sqrt((dplyr::n() - 1)/dplyr::n()), .groups = "drop"),
+      by = c("s","d")
+    ) |>
+    dplyr::mutate(normalized_cases = dplyr::if_else(!is.na(sigma) & sigma > 0, (cases - mu)/sigma, cases)) |>
+    tidyr::pivot_wider(id_cols = c(d, s), names_from = t, values_from = normalized_cases) |>
+    dplyr::select(-d,-s) |>
+    as.matrix()
+
+  cdf <- split(t(cdf), seq(ncol(cdf)))
+
+  #Check that it returns to original value
+  cinv <- inv_normalize_cases_2(normalized = cdf, case_idx = case_idx, num_strata = 2,
+                                num_delays = 3, num_steps = 3, tsize = 6, d_col = 2, s_col = 3,
+                                mu = mu, sigma = sigma, pstream__ = rstan::get_stream())
+
+  inv_cases <- sapply(cinv, rbind) |> as.matrix() |> round()
+
+  #Comparison
+  comparison <- case_data |>
+    tidyr::pivot_wider(id_cols = c(d,s), names_from = t, values_from = cases) |>
+    dplyr::select(-d, -s) |>
+    as.matrix()
+  dimnames(comparison) <- NULL
+
+  expect_equal(inv_cases, comparison)
+
+})

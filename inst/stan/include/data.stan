@@ -19,21 +19,21 @@ The correspondance is 1-to-1 following the row number as follows:
                              Time            Delay            Strata
     ------                 -------------------------------------------
      10                       1                0                 1
-     11                       1                0                 2
      09                       1                1                 1
-     21                       1                1                 2
      16                       1                2                 1
+     11                       1                0                 2
+     21                       1                1                 2
      15                       1                2                 2
      12                       2                0                 1
-     08                       2                0                 2
      08                       2                1                 1
-     25                       2                1                 2
      20                       2                2                 1
+     08                       2                0                 2
+     25                       2                1                 2
      17                       2                2                 2
      -----------------------------------------------------------------
 
      Note that the `case_idx` table (and correspondingly the cases) should be ordered
-     by Time then Delay then Strata.
+     by Time then Strata then Delay.
 */
 
 /*ARMA component options -----------------------------------------------------------------------*/

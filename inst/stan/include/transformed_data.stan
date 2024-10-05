@@ -31,10 +31,10 @@ array[n_rows] int  cases_int_trans;  //Transformed real cases
 
 /*Transform the data according to the link in y*/
 if (identity_link_y){
-  cases_real_trans = cases_real;                                                                  //No transform needed with identity link
-  cases_int_trans  = cases_int;                                                                   //No transform needed with identity link
+  cases_real_trans = cases_real;                                                                    //No transform needed with identity link
+  cases_int_trans  = cases_int;                                                                     //No transform needed with identity link
 } else if (log_link_y && is_continuous){
-  cases_real_trans = log1p_transform(cases_real);                                                 //Apply log to the cases which is actually log1p
+  cases_real_trans = log1p_transform(cases_real);                                                   //Apply log to the cases which is actually log1p
 } else if (softplus_link_y && is_continuous){
   cases_real_trans = softplus1p_transform(cases_real, control_k_transform);                         //Apply the softplus transformation
 } else if (dist_hyper_link_y && is_continuous){

@@ -188,7 +188,8 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
 
   #Keep only the columns n, .tval, .delay, .strata
   .disease_data <- .disease_data |>
-    dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), !!as.symbol(".strata"))
+    dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), !!as.symbol(".strata")) |>
+    dplyr::arrange(!!as.symbol(".tval"), !!as.symbol(".strata"), !!as.symbol(".delay")) #IMPORTANT! Requirement for Stan model to be arranged by time, strata and delay in that order
 
   # Distribution
   distribution <- get_distribution_number(dist)

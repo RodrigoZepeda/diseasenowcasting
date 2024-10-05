@@ -17,4 +17,3 @@ lprior += std_normal_lpdf(to_vector(xi_nu));
 lprior += normal_lpdf(sd_mu | sd_mu_param_1, sd_mu_param_2) - normal_lccdf(0 | sd_mu_param_1, sd_mu_param_2);
 lprior += normal_lpdf(sd_nu | sd_nu_param_1, sd_nu_param_2) - normal_lccdf(0 | sd_nu_param_1, sd_nu_param_2);
 lprior += normal_lpdf(sd_m  | sd_m_param_1, sd_m_param_2)   - normal_lccdf(0 | sd_m_param_1, sd_m_param_2);
-//lprior += normal_lpdf(sd_obs| sd_obs_param_1, sd_obs_param_2) - normal_lccdf(0 | sd_obs_param_1, sd_obs_param_2);
