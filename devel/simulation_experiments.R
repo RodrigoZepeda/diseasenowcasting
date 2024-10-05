@@ -4,8 +4,8 @@ library(tidyverse)
 now <- as.Date("1990-10-01")
 t1 <- Sys.time()
 predictions <- nowcast(denguedat, "onset_week", "report_week",
-                       dist = "Normal", method = "variational",
-                       strata = "gender", now = now, link_x = "softplus", link_y = "softplus",
+                       dist = "NegativeBinomial", method = "variational",
+                       strata = "gender", now = now, link_x = "dhyperbolic", link_y = "identity",
                        normalize_data = FALSE,
                        priors = set_priors())
 t2 <- Sys.time()
@@ -14,7 +14,7 @@ print(t2 - t1)
 #Get the predicted values in a nice format
 predicted_values <- predictions$generated_quantities |>
   posterior::as_draws() |>
-  posterior::subset_draws("m_trans") |>
+  posterior::subset_draws("N_predict") |>
   posterior::summarise_draws() |>
   dplyr::mutate(.strata = as.numeric(stringr::str_remove_all(variable,".*\\[.*,|\\]"))) |>
   dplyr::mutate(.tval = as.numeric(stringr::str_remove_all(variable,".*\\[|,.*\\]"))) |>

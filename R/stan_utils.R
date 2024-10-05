@@ -78,7 +78,7 @@ default_x_link <- function(dist){
   if (dist %in% c("Normal","Student")){
     return ("identity")
   } else {
-    return ("softplus")
+    return ("dhyperbolic")
   }
 }
 

@@ -13,10 +13,10 @@ if (is_poisson){
     N_mat_predict_int[t,:] = neg_binomial_2_rng(m_trans[:,t]', rep_row_vector(1.0 / sd_m[1], tsize));
 } else if (is_normal){
   for (t in 1:num_steps)
-    N_mat_predict_real[t,:] = normal_rng(m_trans[:,t]', rep_vector(1.0, tsize));
+    N_mat_predict_real[t,:] = normal_rng(m_trans[:,t]', rep_vector(sd_m[1.0], tsize));
 } else if (is_student){
   for (t in 1:num_steps)
-    N_mat_predict_real[t,:] = student_t_rng(dof, m_trans[:,t]', 1.0); //sd_m[]
+    N_mat_predict_real[t,:] = student_t_rng(dof, m_trans[:,t]', sd_m[1.0]);
 } else {
   reject("Unknown distribution @gq.stan. This is an internal error of the `diseasenowcasting` package. Report to `https://github.com/RodrigoZepeda/diseasenowcasting/issues`");
 }
