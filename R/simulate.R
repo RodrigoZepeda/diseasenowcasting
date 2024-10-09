@@ -78,12 +78,14 @@ simulate_disease <- function(num_steps    = 10,
   #Create the simulation tibble
   simulations <- ss_process$generated_quantities |>
     posterior::as_draws() |>
-    posterior::subset_draws("N_predict_raw") |>
+    posterior::subset_draws(c("N_mat_predict_real", "N_mat_predict_int")) |>
     posterior::summarise_draws() |>
     dplyr::mutate(!!as.symbol(".pos")  := as.numeric(stringr::str_remove_all(!!as.symbol("variable"),".*\\[.*,|\\]"))) |>
     dplyr::mutate(!!as.symbol(".tval") := as.numeric(stringr::str_remove_all(!!as.symbol("variable"),".*\\[|,.*\\]"))) |>
     dplyr::filter(!!as.symbol(".tval") >= !!warmup_steps) |>
     dplyr::select(!!as.symbol(".tval"), !!as.symbol(".pos"), !!as.symbol("median")) |>
+    dplyr::group_by(!!as.symbol(".tval"), !!as.symbol(".pos")) |>
+    dplyr::summarise(!!as.symbol("median") := sum(!!as.symbol("median")), .groups = "drop") |>
     dplyr::left_join(
       tidyr::expand_grid(
         .delay     =  seq(0, num_delays - 1, by = 1),

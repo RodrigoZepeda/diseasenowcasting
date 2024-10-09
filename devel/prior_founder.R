@@ -10,7 +10,7 @@ num_strata <- 3
 num_delays <- 5
 sims       <- simulate_disease(num_steps = 100,
                                num_strata = num_strata,
-                               num_delays = num_delays, dist = "Normal", normalize_data = F)
+                               num_delays = num_delays, dist = "Normal")
 
 
 ggplot(sims) +
