@@ -30,161 +30,161 @@ namespace model_nowcasting_namespace {
 using stan::model::model_base_crtp;
 using namespace stan::math;
 stan::math::profile_map profiles__;
-static constexpr std::array<const char*, 511> locations_array__ =
+static constexpr std::array<const char*, 503> locations_array__ =
   {" (found before start of program)",
-  " (in 'nowcasting', line 825, column 0 to column 36)",
-  " (in 'nowcasting', line 826, column 0 to column 38)",
-  " (in 'nowcasting', line 827, column 0 to column 40)",
-  " (in 'nowcasting', line 829, column 0 to column 41)",
-  " (in 'nowcasting', line 830, column 0 to column 38)",
-  " (in 'nowcasting', line 832, column 0 to column 31)",
-  " (in 'nowcasting', line 833, column 0 to column 36)",
-  " (in 'nowcasting', line 835, column 0 to column 35)",
-  " (in 'nowcasting', line 836, column 0 to column 41)",
-  " (in 'nowcasting', line 838, column 0 to column 20)",
-  " (in 'nowcasting', line 839, column 0 to column 20)",
-  " (in 'nowcasting', line 840, column 0 to column 40)",
-  " (in 'nowcasting', line 844, column 0 to column 95)",
-  " (in 'nowcasting', line 845, column 0 to column 100)",
-  " (in 'nowcasting', line 846, column 0 to column 69)",
-  " (in 'nowcasting', line 847, column 0 to column 74)",
-  " (in 'nowcasting', line 849, column 0 to line 851, column 30)",
-  " (in 'nowcasting', line 853, column 0 to line 854, column 80)",
-  " (in 'nowcasting', line 856, column 0 to line 857, column 78)",
-  " (in 'nowcasting', line 859, column 0 to column 16)",
-  " (in 'nowcasting', line 862, column 0 to column 49)",
-  " (in 'nowcasting', line 863, column 0 to column 44)",
-  " (in 'nowcasting', line 865, column 0 to column 49)",
-  " (in 'nowcasting', line 866, column 0 to column 44)",
-  " (in 'nowcasting', line 868, column 0 to column 44)",
-  " (in 'nowcasting', line 869, column 0 to column 44)",
-  " (in 'nowcasting', line 871, column 0 to column 109)",
-  " (in 'nowcasting', line 872, column 0 to column 109)",
-  " (in 'nowcasting', line 873, column 0 to column 104)",
-  " (in 'nowcasting', line 887, column 4 to column 187)",
-  " (in 'nowcasting', line 886, column 9 to line 888, column 3)",
-  " (in 'nowcasting', line 885, column 4 to column 92)",
-  " (in 'nowcasting', line 884, column 23 to line 886, column 3)",
-  " (in 'nowcasting', line 884, column 9 to line 888, column 3)",
-  " (in 'nowcasting', line 883, column 4 to column 49)",
-  " (in 'nowcasting', line 882, column 24 to line 884, column 3)",
-  " (in 'nowcasting', line 882, column 9 to line 888, column 3)",
-  " (in 'nowcasting', line 881, column 4 to column 115)",
-  " (in 'nowcasting', line 880, column 24 to line 882, column 3)",
-  " (in 'nowcasting', line 880, column 9 to line 888, column 3)",
-  " (in 'nowcasting', line 879, column 4 to column 40)",
-  " (in 'nowcasting', line 878, column 16 to line 880, column 3)",
-  " (in 'nowcasting', line 878, column 2 to line 888, column 3)",
-  " (in 'nowcasting', line 877, column 16 to line 889, column 1)",
-  " (in 'nowcasting', line 877, column 0 to line 889, column 1)",
-  " (in 'nowcasting', line 891, column 2 to column 19)",
-  " (in 'nowcasting', line 703, column 0 to column 23)",
-  " (in 'nowcasting', line 704, column 0 to column 24)",
-  " (in 'nowcasting', line 705, column 0 to column 24)",
-  " (in 'nowcasting', line 706, column 0 to column 20)",
-  " (in 'nowcasting', line 708, column 6 to column 12)",
-  " (in 'nowcasting', line 708, column 0 to column 30)",
-  " (in 'nowcasting', line 709, column 6 to column 12)",
-  " (in 'nowcasting', line 709, column 0 to column 30)",
-  " (in 'nowcasting', line 710, column 6 to column 12)",
-  " (in 'nowcasting', line 710, column 0 to column 28)",
-  " (in 'nowcasting', line 738, column 0 to column 18)",
+  " (in 'nowcasting', line 814, column 0 to column 36)",
+  " (in 'nowcasting', line 815, column 0 to column 38)",
+  " (in 'nowcasting', line 816, column 0 to column 40)",
+  " (in 'nowcasting', line 818, column 0 to column 41)",
+  " (in 'nowcasting', line 819, column 0 to column 38)",
+  " (in 'nowcasting', line 821, column 0 to column 31)",
+  " (in 'nowcasting', line 822, column 0 to column 36)",
+  " (in 'nowcasting', line 824, column 0 to column 35)",
+  " (in 'nowcasting', line 825, column 0 to column 41)",
+  " (in 'nowcasting', line 827, column 0 to column 20)",
+  " (in 'nowcasting', line 828, column 0 to column 20)",
+  " (in 'nowcasting', line 829, column 0 to column 40)",
+  " (in 'nowcasting', line 833, column 0 to column 95)",
+  " (in 'nowcasting', line 834, column 0 to column 100)",
+  " (in 'nowcasting', line 835, column 0 to column 69)",
+  " (in 'nowcasting', line 836, column 0 to column 74)",
+  " (in 'nowcasting', line 838, column 0 to line 840, column 30)",
+  " (in 'nowcasting', line 842, column 0 to line 843, column 80)",
+  " (in 'nowcasting', line 845, column 0 to line 846, column 16)",
+  " (in 'nowcasting', line 848, column 0 to column 16)",
+  " (in 'nowcasting', line 851, column 0 to column 49)",
+  " (in 'nowcasting', line 852, column 0 to column 44)",
+  " (in 'nowcasting', line 854, column 0 to column 49)",
+  " (in 'nowcasting', line 855, column 0 to column 44)",
+  " (in 'nowcasting', line 857, column 0 to column 44)",
+  " (in 'nowcasting', line 858, column 0 to column 44)",
+  " (in 'nowcasting', line 860, column 0 to column 109)",
+  " (in 'nowcasting', line 861, column 0 to column 109)",
+  " (in 'nowcasting', line 862, column 0 to column 104)",
+  " (in 'nowcasting', line 876, column 4 to column 187)",
+  " (in 'nowcasting', line 875, column 9 to line 877, column 3)",
+  " (in 'nowcasting', line 874, column 4 to column 92)",
+  " (in 'nowcasting', line 873, column 23 to line 875, column 3)",
+  " (in 'nowcasting', line 873, column 9 to line 877, column 3)",
+  " (in 'nowcasting', line 872, column 4 to column 49)",
+  " (in 'nowcasting', line 871, column 24 to line 873, column 3)",
+  " (in 'nowcasting', line 871, column 9 to line 877, column 3)",
+  " (in 'nowcasting', line 870, column 4 to column 118)",
+  " (in 'nowcasting', line 869, column 24 to line 871, column 3)",
+  " (in 'nowcasting', line 869, column 9 to line 877, column 3)",
+  " (in 'nowcasting', line 868, column 4 to column 85)",
+  " (in 'nowcasting', line 867, column 16 to line 869, column 3)",
+  " (in 'nowcasting', line 867, column 2 to line 877, column 3)",
+  " (in 'nowcasting', line 866, column 16 to line 878, column 1)",
+  " (in 'nowcasting', line 866, column 0 to line 878, column 1)",
+  " (in 'nowcasting', line 880, column 2 to column 19)",
+  " (in 'nowcasting', line 692, column 0 to column 23)",
+  " (in 'nowcasting', line 693, column 0 to column 24)",
+  " (in 'nowcasting', line 694, column 0 to column 24)",
+  " (in 'nowcasting', line 695, column 0 to column 20)",
+  " (in 'nowcasting', line 697, column 6 to column 12)",
+  " (in 'nowcasting', line 697, column 0 to column 30)",
+  " (in 'nowcasting', line 698, column 6 to column 12)",
+  " (in 'nowcasting', line 698, column 0 to column 30)",
+  " (in 'nowcasting', line 699, column 6 to column 12)",
+  " (in 'nowcasting', line 699, column 0 to column 28)",
+  " (in 'nowcasting', line 727, column 0 to column 18)",
+  " (in 'nowcasting', line 728, column 0 to column 18)",
+  " (in 'nowcasting', line 729, column 0 to column 18)",
+  " (in 'nowcasting', line 732, column 0 to column 26)",
+  " (in 'nowcasting', line 733, column 0 to column 35)",
+  " (in 'nowcasting', line 734, column 0 to column 18)",
+  " (in 'nowcasting', line 735, column 0 to column 27)",
+  " (in 'nowcasting', line 737, column 0 to column 26)",
+  " (in 'nowcasting', line 738, column 0 to column 35)",
   " (in 'nowcasting', line 739, column 0 to column 18)",
-  " (in 'nowcasting', line 740, column 0 to column 18)",
-  " (in 'nowcasting', line 743, column 0 to column 26)",
-  " (in 'nowcasting', line 744, column 0 to column 35)",
-  " (in 'nowcasting', line 745, column 0 to column 18)",
-  " (in 'nowcasting', line 746, column 0 to column 27)",
-  " (in 'nowcasting', line 748, column 0 to column 26)",
-  " (in 'nowcasting', line 749, column 0 to column 35)",
-  " (in 'nowcasting', line 750, column 0 to column 18)",
-  " (in 'nowcasting', line 751, column 0 to column 27)",
-  " (in 'nowcasting', line 753, column 0 to column 19)",
-  " (in 'nowcasting', line 754, column 0 to column 28)",
-  " (in 'nowcasting', line 755, column 0 to column 19)",
-  " (in 'nowcasting', line 756, column 0 to column 28)",
-  " (in 'nowcasting', line 757, column 0 to column 18)",
-  " (in 'nowcasting', line 758, column 0 to column 27)",
-  " (in 'nowcasting', line 759, column 0 to column 18)",
-  " (in 'nowcasting', line 761, column 0 to column 32)",
-  " (in 'nowcasting', line 762, column 0 to column 26)",
-  " (in 'nowcasting', line 763, column 0 to column 28)",
-  " (in 'nowcasting', line 764, column 0 to column 28)",
-  " (in 'nowcasting', line 765, column 0 to column 36)",
-  " (in 'nowcasting', line 766, column 0 to column 34)",
+  " (in 'nowcasting', line 740, column 0 to column 27)",
+  " (in 'nowcasting', line 742, column 0 to column 19)",
+  " (in 'nowcasting', line 743, column 0 to column 28)",
+  " (in 'nowcasting', line 744, column 0 to column 19)",
+  " (in 'nowcasting', line 745, column 0 to column 28)",
+  " (in 'nowcasting', line 746, column 0 to column 18)",
+  " (in 'nowcasting', line 747, column 0 to column 27)",
+  " (in 'nowcasting', line 748, column 0 to column 18)",
+  " (in 'nowcasting', line 750, column 0 to column 32)",
+  " (in 'nowcasting', line 751, column 0 to column 26)",
+  " (in 'nowcasting', line 752, column 0 to column 28)",
+  " (in 'nowcasting', line 753, column 0 to column 28)",
+  " (in 'nowcasting', line 754, column 0 to column 36)",
+  " (in 'nowcasting', line 755, column 0 to column 34)",
+  " (in 'nowcasting', line 756, column 0 to column 34)",
+  " (in 'nowcasting', line 760, column 0 to column 34)",
+  " (in 'nowcasting', line 762, column 0 to column 14)",
+  " (in 'nowcasting', line 763, column 0 to column 14)",
+  " (in 'nowcasting', line 764, column 0 to column 14)",
+  " (in 'nowcasting', line 766, column 0 to column 33)",
   " (in 'nowcasting', line 767, column 0 to column 34)",
-  " (in 'nowcasting', line 771, column 0 to column 34)",
-  " (in 'nowcasting', line 773, column 0 to column 14)",
-  " (in 'nowcasting', line 774, column 0 to column 14)",
-  " (in 'nowcasting', line 775, column 0 to column 14)",
-  " (in 'nowcasting', line 777, column 0 to column 33)",
-  " (in 'nowcasting', line 778, column 0 to column 34)",
-  " (in 'nowcasting', line 779, column 0 to column 34)",
-  " (in 'nowcasting', line 780, column 0 to column 33)",
-  " (in 'nowcasting', line 781, column 0 to column 43)",
-  " (in 'nowcasting', line 782, column 0 to column 41)",
-  " (in 'nowcasting', line 784, column 0 to column 41)",
-  " (in 'nowcasting', line 785, column 0 to column 36)",
-  " (in 'nowcasting', line 786, column 0 to column 41)",
-  " (in 'nowcasting', line 787, column 0 to column 43)",
-  " (in 'nowcasting', line 788, column 0 to column 41)",
-  " (in 'nowcasting', line 789, column 0 to column 36)",
-  " (in 'nowcasting', line 790, column 0 to column 41)",
-  " (in 'nowcasting', line 791, column 0 to column 43)",
-  " (in 'nowcasting', line 793, column 6 to column 12)",
-  " (in 'nowcasting', line 793, column 0 to column 36)",
-  " (in 'nowcasting', line 794, column 6 to column 12)",
-  " (in 'nowcasting', line 794, column 0 to column 34)",
-  " (in 'nowcasting', line 806, column 2 to column 276)",
-  " (in 'nowcasting', line 805, column 7 to line 807, column 1)",
-  " (in 'nowcasting', line 804, column 2 to column 99)",
-  " (in 'nowcasting', line 803, column 46 to line 805, column 1)",
-  " (in 'nowcasting', line 803, column 7 to line 807, column 1)",
-  " (in 'nowcasting', line 802, column 2 to column 75)",
-  " (in 'nowcasting', line 801, column 44 to line 803, column 1)",
-  " (in 'nowcasting', line 801, column 7 to line 807, column 1)",
-  " (in 'nowcasting', line 800, column 2 to column 49)",
-  " (in 'nowcasting', line 799, column 39 to line 801, column 1)",
-  " (in 'nowcasting', line 799, column 7 to line 807, column 1)",
-  " (in 'nowcasting', line 797, column 2 to column 32)",
-  " (in 'nowcasting', line 798, column 2 to column 30)",
-  " (in 'nowcasting', line 796, column 20 to line 799, column 1)",
-  " (in 'nowcasting', line 796, column 0 to line 807, column 1)",
-  " (in 'nowcasting', line 808, column 7 to column 17)",
-  " (in 'nowcasting', line 808, column 19 to column 29)",
-  " (in 'nowcasting', line 808, column 0 to column 39)",
-  " (in 'nowcasting', line 809, column 7 to column 17)",
-  " (in 'nowcasting', line 809, column 19 to column 29)",
-  " (in 'nowcasting', line 809, column 0 to column 42)",
-  " (in 'nowcasting', line 819, column 2 to column 205)",
-  " (in 'nowcasting', line 818, column 45 to line 820, column 1)",
-  " (in 'nowcasting', line 818, column 7 to line 820, column 1)",
-  " (in 'nowcasting', line 813, column 2 to column 97)",
-  " (in 'nowcasting', line 814, column 2 to column 98)",
-  " (in 'nowcasting', line 816, column 2 to line 817, column 39)",
-  " (in 'nowcasting', line 811, column 36 to line 818, column 1)",
-  " (in 'nowcasting', line 811, column 0 to line 820, column 1)",
-  " (in 'nowcasting', line 825, column 7 to column 12)",
-  " (in 'nowcasting', line 826, column 25 to column 29)",
-  " (in 'nowcasting', line 827, column 25 to column 29)",
-  " (in 'nowcasting', line 829, column 7 to column 17)",
-  " (in 'nowcasting', line 830, column 25 to column 29)",
-  " (in 'nowcasting', line 832, column 7 to column 12)",
-  " (in 'nowcasting', line 833, column 7 to column 17)",
+  " (in 'nowcasting', line 768, column 0 to column 34)",
+  " (in 'nowcasting', line 769, column 0 to column 33)",
+  " (in 'nowcasting', line 770, column 0 to column 43)",
+  " (in 'nowcasting', line 771, column 0 to column 41)",
+  " (in 'nowcasting', line 773, column 0 to column 41)",
+  " (in 'nowcasting', line 774, column 0 to column 36)",
+  " (in 'nowcasting', line 775, column 0 to column 41)",
+  " (in 'nowcasting', line 776, column 0 to column 43)",
+  " (in 'nowcasting', line 777, column 0 to column 41)",
+  " (in 'nowcasting', line 778, column 0 to column 36)",
+  " (in 'nowcasting', line 779, column 0 to column 41)",
+  " (in 'nowcasting', line 780, column 0 to column 43)",
+  " (in 'nowcasting', line 782, column 6 to column 12)",
+  " (in 'nowcasting', line 782, column 0 to column 36)",
+  " (in 'nowcasting', line 783, column 6 to column 12)",
+  " (in 'nowcasting', line 783, column 0 to column 34)",
+  " (in 'nowcasting', line 795, column 2 to column 276)",
+  " (in 'nowcasting', line 794, column 7 to line 796, column 1)",
+  " (in 'nowcasting', line 793, column 2 to column 99)",
+  " (in 'nowcasting', line 792, column 46 to line 794, column 1)",
+  " (in 'nowcasting', line 792, column 7 to line 796, column 1)",
+  " (in 'nowcasting', line 791, column 2 to column 75)",
+  " (in 'nowcasting', line 790, column 44 to line 792, column 1)",
+  " (in 'nowcasting', line 790, column 7 to line 796, column 1)",
+  " (in 'nowcasting', line 789, column 2 to column 49)",
+  " (in 'nowcasting', line 788, column 39 to line 790, column 1)",
+  " (in 'nowcasting', line 788, column 7 to line 796, column 1)",
+  " (in 'nowcasting', line 786, column 2 to column 32)",
+  " (in 'nowcasting', line 787, column 2 to column 30)",
+  " (in 'nowcasting', line 785, column 20 to line 788, column 1)",
+  " (in 'nowcasting', line 785, column 0 to line 796, column 1)",
+  " (in 'nowcasting', line 797, column 7 to column 17)",
+  " (in 'nowcasting', line 797, column 19 to column 29)",
+  " (in 'nowcasting', line 797, column 0 to column 39)",
+  " (in 'nowcasting', line 798, column 7 to column 17)",
+  " (in 'nowcasting', line 798, column 19 to column 29)",
+  " (in 'nowcasting', line 798, column 0 to column 42)",
+  " (in 'nowcasting', line 808, column 2 to column 205)",
+  " (in 'nowcasting', line 807, column 45 to line 809, column 1)",
+  " (in 'nowcasting', line 807, column 7 to line 809, column 1)",
+  " (in 'nowcasting', line 802, column 2 to column 97)",
+  " (in 'nowcasting', line 803, column 2 to column 98)",
+  " (in 'nowcasting', line 805, column 2 to line 806, column 39)",
+  " (in 'nowcasting', line 800, column 36 to line 807, column 1)",
+  " (in 'nowcasting', line 800, column 0 to line 809, column 1)",
+  " (in 'nowcasting', line 814, column 7 to column 12)",
+  " (in 'nowcasting', line 815, column 25 to column 29)",
+  " (in 'nowcasting', line 816, column 25 to column 29)",
+  " (in 'nowcasting', line 818, column 7 to column 17)",
+  " (in 'nowcasting', line 819, column 25 to column 29)",
+  " (in 'nowcasting', line 821, column 7 to column 12)",
+  " (in 'nowcasting', line 822, column 7 to column 17)",
+  " (in 'nowcasting', line 824, column 7 to column 12)",
+  " (in 'nowcasting', line 824, column 14 to column 27)",
+  " (in 'nowcasting', line 825, column 7 to column 17)",
+  " (in 'nowcasting', line 825, column 19 to column 33)",
+  " (in 'nowcasting', line 829, column 16 to column 33)",
+  " (in 'nowcasting', line 833, column 7 to column 12)",
+  " (in 'nowcasting', line 834, column 7 to column 17)",
   " (in 'nowcasting', line 835, column 7 to column 12)",
-  " (in 'nowcasting', line 835, column 14 to column 27)",
   " (in 'nowcasting', line 836, column 7 to column 17)",
-  " (in 'nowcasting', line 836, column 19 to column 33)",
-  " (in 'nowcasting', line 840, column 16 to column 33)",
-  " (in 'nowcasting', line 844, column 7 to column 12)",
-  " (in 'nowcasting', line 845, column 7 to column 17)",
-  " (in 'nowcasting', line 846, column 7 to column 12)",
-  " (in 'nowcasting', line 847, column 7 to column 17)",
-  " (in 'nowcasting', line 849, column 7 to column 12)",
-  " (in 'nowcasting', line 849, column 14 to column 23)",
-  " (in 'nowcasting', line 853, column 7 to column 12)",
-  " (in 'nowcasting', line 853, column 14 to column 23)",
-  " (in 'nowcasting', line 856, column 6 to column 12)",
+  " (in 'nowcasting', line 838, column 7 to column 12)",
+  " (in 'nowcasting', line 838, column 14 to column 23)",
+  " (in 'nowcasting', line 842, column 7 to column 12)",
+  " (in 'nowcasting', line 842, column 14 to column 23)",
+  " (in 'nowcasting', line 845, column 6 to column 12)",
   " (in 'nowcasting', line 30, column 4 to column 13)",
   " (in 'nowcasting', line 29, column 9 to line 31, column 3)",
   " (in 'nowcasting', line 28, column 4 to column 13)",
@@ -299,249 +299,241 @@ static constexpr std::array<const char*, 511> locations_array__ =
   " (in 'nowcasting', line 345, column 2 to column 57)",
   " (in 'nowcasting', line 346, column 2 to column 11)",
   " (in 'nowcasting', line 303, column 3 to line 347, column 1)",
-  " (in 'nowcasting', line 356, column 8 to column 14)",
-  " (in 'nowcasting', line 356, column 2 to column 30)",
-  " (in 'nowcasting', line 366, column 4 to column 194)",
-  " (in 'nowcasting', line 365, column 9 to line 367, column 3)",
-  " (in 'nowcasting', line 364, column 6 to column 97)",
-  " (in 'nowcasting', line 362, column 4 to line 364, column 97)",
-  " (in 'nowcasting', line 361, column 26 to line 365, column 3)",
-  " (in 'nowcasting', line 361, column 9 to line 367, column 3)",
-  " (in 'nowcasting', line 360, column 6 to column 129)",
-  " (in 'nowcasting', line 358, column 4 to line 360, column 129)",
-  " (in 'nowcasting', line 357, column 20 to line 361, column 3)",
-  " (in 'nowcasting', line 357, column 2 to line 367, column 3)",
-  " (in 'nowcasting', line 368, column 2 to column 18)",
-  " (in 'nowcasting', line 352, column 47 to line 369, column 1)",
-  " (in 'nowcasting', line 372, column 2 to column 16)",
-  " (in 'nowcasting', line 371, column 26 to line 373, column 1)",
-  " (in 'nowcasting', line 375, column 2 to column 16)",
-  " (in 'nowcasting', line 374, column 30 to line 376, column 1)",
-  " (in 'nowcasting', line 380, column 4 to column 33)",
-  " (in 'nowcasting', line 381, column 10 to column 16)",
-  " (in 'nowcasting', line 381, column 4 to column 25)",
-  " (in 'nowcasting', line 383, column 6 to column 33)",
-  " (in 'nowcasting', line 382, column 4 to line 383, column 33)",
-  " (in 'nowcasting', line 384, column 4 to column 13)",
-  " (in 'nowcasting', line 378, column 47 to line 385, column 1)",
-  " (in 'nowcasting', line 389, column 4 to column 33)",
-  " (in 'nowcasting', line 390, column 10 to column 16)",
-  " (in 'nowcasting', line 390, column 4 to column 25)",
-  " (in 'nowcasting', line 392, column 6 to column 37)",
-  " (in 'nowcasting', line 391, column 4 to line 392, column 37)",
-  " (in 'nowcasting', line 393, column 4 to column 13)",
-  " (in 'nowcasting', line 387, column 51 to line 394, column 1)",
-  " (in 'nowcasting', line 397, column 2 to column 30)",
-  " (in 'nowcasting', line 396, column 28 to line 398, column 1)",
-  " (in 'nowcasting', line 400, column 2 to column 36)",
-  " (in 'nowcasting', line 399, column 32 to line 401, column 1)",
-  " (in 'nowcasting', line 405, column 4 to column 33)",
-  " (in 'nowcasting', line 406, column 10 to column 16)",
-  " (in 'nowcasting', line 406, column 4 to column 25)",
-  " (in 'nowcasting', line 408, column 6 to column 35)",
-  " (in 'nowcasting', line 407, column 4 to line 408, column 35)",
-  " (in 'nowcasting', line 409, column 4 to column 13)",
-  " (in 'nowcasting', line 403, column 49 to line 410, column 1)",
-  " (in 'nowcasting', line 414, column 4 to column 33)",
-  " (in 'nowcasting', line 415, column 10 to column 16)",
-  " (in 'nowcasting', line 415, column 4 to column 25)",
-  " (in 'nowcasting', line 417, column 6 to column 39)",
-  " (in 'nowcasting', line 416, column 4 to line 417, column 39)",
-  " (in 'nowcasting', line 418, column 4 to column 13)",
-  " (in 'nowcasting', line 412, column 53 to line 419, column 1)",
-  " (in 'nowcasting', line 422, column 2 to column 31)",
-  " (in 'nowcasting', line 421, column 39 to line 423, column 1)",
-  " (in 'nowcasting', line 425, column 2 to column 31)",
-  " (in 'nowcasting', line 424, column 43 to line 426, column 1)",
-  " (in 'nowcasting', line 430, column 4 to column 33)",
-  " (in 'nowcasting', line 431, column 10 to column 16)",
-  " (in 'nowcasting', line 431, column 4 to column 25)",
-  " (in 'nowcasting', line 433, column 6 to column 41)",
-  " (in 'nowcasting', line 432, column 4 to line 433, column 41)",
-  " (in 'nowcasting', line 434, column 4 to column 13)",
-  " (in 'nowcasting', line 428, column 65 to line 435, column 1)",
-  " (in 'nowcasting', line 439, column 4 to column 33)",
-  " (in 'nowcasting', line 440, column 10 to column 16)",
-  " (in 'nowcasting', line 440, column 4 to column 25)",
-  " (in 'nowcasting', line 442, column 6 to column 45)",
-  " (in 'nowcasting', line 441, column 4 to line 442, column 45)",
-  " (in 'nowcasting', line 443, column 4 to column 13)",
-  " (in 'nowcasting', line 437, column 69 to line 444, column 1)",
-  " (in 'nowcasting', line 447, column 2 to column 38)",
-  " (in 'nowcasting', line 446, column 41 to line 448, column 1)",
-  " (in 'nowcasting', line 450, column 2 to column 44)",
-  " (in 'nowcasting', line 449, column 45 to line 451, column 1)",
-  " (in 'nowcasting', line 455, column 4 to column 33)",
-  " (in 'nowcasting', line 456, column 10 to column 16)",
-  " (in 'nowcasting', line 456, column 4 to column 25)",
-  " (in 'nowcasting', line 458, column 6 to column 43)",
-  " (in 'nowcasting', line 457, column 4 to line 458, column 43)",
-  " (in 'nowcasting', line 459, column 4 to column 13)",
-  " (in 'nowcasting', line 453, column 67 to line 460, column 1)",
-  " (in 'nowcasting', line 464, column 4 to column 33)",
-  " (in 'nowcasting', line 465, column 10 to column 16)",
-  " (in 'nowcasting', line 465, column 4 to column 25)",
-  " (in 'nowcasting', line 467, column 6 to column 47)",
-  " (in 'nowcasting', line 466, column 4 to line 467, column 47)",
-  " (in 'nowcasting', line 468, column 4 to column 13)",
-  " (in 'nowcasting', line 462, column 71 to line 469, column 1)",
-  " (in 'nowcasting', line 480, column 2 to column 30)",
-  " (in 'nowcasting', line 479, column 50 to line 481, column 1)",
-  " (in 'nowcasting', line 483, column 2 to column 45)",
-  " (in 'nowcasting', line 482, column 54 to line 484, column 1)",
-  " (in 'nowcasting', line 488, column 4 to column 33)",
-  " (in 'nowcasting', line 489, column 10 to column 16)",
-  " (in 'nowcasting', line 489, column 4 to column 25)",
-  " (in 'nowcasting', line 491, column 6 to column 47)",
-  " (in 'nowcasting', line 490, column 4 to line 491, column 47)",
-  " (in 'nowcasting', line 492, column 4 to column 13)",
-  " (in 'nowcasting', line 486, column 81 to line 493, column 1)",
-  " (in 'nowcasting', line 497, column 4 to column 33)",
-  " (in 'nowcasting', line 498, column 10 to column 16)",
-  " (in 'nowcasting', line 498, column 4 to column 25)",
-  " (in 'nowcasting', line 500, column 6 to column 51)",
-  " (in 'nowcasting', line 499, column 4 to line 500, column 51)",
-  " (in 'nowcasting', line 501, column 4 to column 13)",
-  " (in 'nowcasting', line 495, column 85 to line 502, column 1)",
-  " (in 'nowcasting', line 504, column 2 to column 44)",
-  " (in 'nowcasting', line 503, column 52 to line 505, column 1)",
-  " (in 'nowcasting', line 507, column 2 to column 50)",
-  " (in 'nowcasting', line 506, column 56 to line 508, column 1)",
-  " (in 'nowcasting', line 512, column 4 to column 33)",
-  " (in 'nowcasting', line 513, column 10 to column 16)",
-  " (in 'nowcasting', line 513, column 4 to column 25)",
-  " (in 'nowcasting', line 515, column 6 to column 49)",
-  " (in 'nowcasting', line 514, column 4 to line 515, column 49)",
-  " (in 'nowcasting', line 516, column 4 to column 13)",
-  " (in 'nowcasting', line 510, column 83 to line 517, column 1)",
-  " (in 'nowcasting', line 521, column 4 to column 33)",
-  " (in 'nowcasting', line 522, column 10 to column 16)",
-  " (in 'nowcasting', line 522, column 4 to column 25)",
-  " (in 'nowcasting', line 524, column 6 to column 53)",
-  " (in 'nowcasting', line 523, column 4 to line 524, column 53)",
-  " (in 'nowcasting', line 525, column 4 to column 13)",
-  " (in 'nowcasting', line 519, column 87 to line 526, column 1)",
-  " (in 'nowcasting', line 530, column 9 to column 16)",
-  " (in 'nowcasting', line 530, column 18 to column 25)",
-  " (in 'nowcasting', line 530, column 2 to column 35)",
-  " (in 'nowcasting', line 555, column 4 to column 189)",
-  " (in 'nowcasting', line 554, column 9 to line 556, column 3)",
-  " (in 'nowcasting', line 550, column 8 to column 63)",
-  " (in 'nowcasting', line 549, column 26 to line 551, column 7)",
-  " (in 'nowcasting', line 549, column 6 to line 551, column 7)",
-  " (in 'nowcasting', line 548, column 24 to line 552, column 5)",
-  " (in 'nowcasting', line 548, column 4 to line 552, column 5)",
-  " (in 'nowcasting', line 553, column 4 to column 19)",
-  " (in 'nowcasting', line 547, column 29 to line 554, column 3)",
-  " (in 'nowcasting', line 547, column 9 to line 556, column 3)",
-  " (in 'nowcasting', line 543, column 8 to column 57)",
-  " (in 'nowcasting', line 542, column 26 to line 544, column 7)",
-  " (in 'nowcasting', line 542, column 6 to line 544, column 7)",
-  " (in 'nowcasting', line 541, column 24 to line 545, column 5)",
-  " (in 'nowcasting', line 541, column 4 to line 545, column 5)",
-  " (in 'nowcasting', line 546, column 4 to column 19)",
-  " (in 'nowcasting', line 540, column 27 to line 547, column 3)",
-  " (in 'nowcasting', line 540, column 9 to line 556, column 3)",
-  " (in 'nowcasting', line 536, column 8 to column 49)",
-  " (in 'nowcasting', line 535, column 26 to line 537, column 7)",
-  " (in 'nowcasting', line 535, column 6 to line 537, column 7)",
-  " (in 'nowcasting', line 534, column 24 to line 538, column 5)",
-  " (in 'nowcasting', line 534, column 4 to line 538, column 5)",
-  " (in 'nowcasting', line 539, column 4 to column 19)",
-  " (in 'nowcasting', line 533, column 22 to line 540, column 3)",
-  " (in 'nowcasting', line 533, column 9 to line 556, column 3)",
-  " (in 'nowcasting', line 532, column 4 to column 13)",
-  " (in 'nowcasting', line 531, column 20 to line 533, column 3)",
-  " (in 'nowcasting', line 531, column 2 to line 556, column 3)",
-  " (in 'nowcasting', line 529, column 38 to line 557, column 1)",
-  " (in 'nowcasting', line 573, column 9 to column 19)",
-  " (in 'nowcasting', line 573, column 21 to column 31)",
-  " (in 'nowcasting', line 573, column 2 to column 81)",
-  " (in 'nowcasting', line 576, column 4 to column 54)",
-  " (in 'nowcasting', line 575, column 2 to line 576, column 54)",
-  " (in 'nowcasting', line 577, column 2 to column 17)",
-  " (in 'nowcasting', line 559, column 50 to line 578, column 1)",
-  " (in 'nowcasting', line 596, column 9 to column 19)",
-  " (in 'nowcasting', line 596, column 21 to column 31)",
-  " (in 'nowcasting', line 596, column 2 to column 78)",
-  " (in 'nowcasting', line 598, column 9 to column 19)",
-  " (in 'nowcasting', line 598, column 21 to column 31)",
-  " (in 'nowcasting', line 598, column 2 to column 111)",
-  " (in 'nowcasting', line 602, column 6 to column 110)",
-  " (in 'nowcasting', line 601, column 60 to line 603, column 5)",
-  " (in 'nowcasting', line 601, column 4 to line 603, column 5)",
-  " (in 'nowcasting', line 600, column 21 to line 604, column 3)",
-  " (in 'nowcasting', line 600, column 2 to line 604, column 3)",
-  " (in 'nowcasting', line 605, column 2 to column 12)",
-  " (in 'nowcasting', line 580, column 92 to line 606, column 1)",
-  " (in 'nowcasting', line 623, column 9 to column 19)",
-  " (in 'nowcasting', line 623, column 21 to column 31)",
-  " (in 'nowcasting', line 623, column 2 to column 81)",
-  " (in 'nowcasting', line 625, column 9 to column 19)",
-  " (in 'nowcasting', line 625, column 21 to column 31)",
-  " (in 'nowcasting', line 625, column 2 to column 111)",
-  " (in 'nowcasting', line 626, column 9 to column 19)",
-  " (in 'nowcasting', line 626, column 21 to column 31)",
-  " (in 'nowcasting', line 626, column 2 to column 117)",
-  " (in 'nowcasting', line 629, column 4 to column 116)",
-  " (in 'nowcasting', line 628, column 2 to line 629, column 116)",
-  " (in 'nowcasting', line 635, column 8 to column 25)",
-  " (in 'nowcasting', line 634, column 13 to line 636, column 7)",
-  " (in 'nowcasting', line 633, column 8 to column 51)",
-  " (in 'nowcasting', line 632, column 29 to line 634, column 7)",
-  " (in 'nowcasting', line 632, column 6 to line 636, column 7)",
-  " (in 'nowcasting', line 631, column 27 to line 637, column 5)",
-  " (in 'nowcasting', line 631, column 4 to line 637, column 5)",
-  " (in 'nowcasting', line 630, column 25 to line 638, column 3)",
-  " (in 'nowcasting', line 630, column 2 to line 638, column 3)",
-  " (in 'nowcasting', line 639, column 2 to column 15)",
-  " (in 'nowcasting', line 608, column 94 to line 640, column 1)",
-  " (in 'nowcasting', line 646, column 10 to column 34)",
-  " (in 'nowcasting', line 646, column 4 to column 52)",
-  " (in 'nowcasting', line 647, column 4 to column 18)",
-  " (in 'nowcasting', line 648, column 4 to column 21)",
-  " (in 'nowcasting', line 651, column 6 to column 60)",
-  " (in 'nowcasting', line 652, column 6 to column 66)",
-  " (in 'nowcasting', line 656, column 8 to column 38)",
-  " (in 'nowcasting', line 655, column 13 to line 657, column 7)",
-  " (in 'nowcasting', line 654, column 8 to column 63)",
-  " (in 'nowcasting', line 653, column 28 to line 655, column 7)",
-  " (in 'nowcasting', line 653, column 6 to line 657, column 7)",
-  " (in 'nowcasting', line 649, column 23 to line 658, column 5)",
-  " (in 'nowcasting', line 649, column 4 to line 658, column 5)",
-  " (in 'nowcasting', line 659, column 4 to column 22)",
-  " (in 'nowcasting', line 644, column 28 to line 660, column 1)",
-  " (in 'nowcasting', line 666, column 10 to column 34)",
-  " (in 'nowcasting', line 666, column 4 to column 52)",
-  " (in 'nowcasting', line 667, column 4 to column 18)",
-  " (in 'nowcasting', line 668, column 4 to column 21)",
-  " (in 'nowcasting', line 671, column 6 to column 60)",
-  " (in 'nowcasting', line 672, column 6 to column 66)",
-  " (in 'nowcasting', line 676, column 8 to column 38)",
-  " (in 'nowcasting', line 675, column 13 to line 677, column 7)",
-  " (in 'nowcasting', line 674, column 8 to column 61)",
-  " (in 'nowcasting', line 673, column 28 to line 675, column 7)",
-  " (in 'nowcasting', line 673, column 6 to line 677, column 7)",
-  " (in 'nowcasting', line 669, column 23 to line 678, column 5)",
-  " (in 'nowcasting', line 669, column 4 to line 678, column 5)",
-  " (in 'nowcasting', line 679, column 4 to column 22)",
-  " (in 'nowcasting', line 664, column 28 to line 680, column 1)",
-  " (in 'nowcasting', line 685, column 10 to column 19)",
-  " (in 'nowcasting', line 685, column 21 to column 26)",
-  " (in 'nowcasting', line 685, column 4 to column 83)",
-  " (in 'nowcasting', line 693, column 12 to column 99)",
-  " (in 'nowcasting', line 692, column 17 to line 694, column 11)",
-  " (in 'nowcasting', line 691, column 12 to column 120)",
-  " (in 'nowcasting', line 690, column 31 to line 692, column 11)",
-  " (in 'nowcasting', line 690, column 10 to line 694, column 11)",
-  " (in 'nowcasting', line 689, column 30 to line 695, column 9)",
-  " (in 'nowcasting', line 689, column 8 to line 695, column 9)",
-  " (in 'nowcasting', line 687, column 29 to line 696, column 7)",
-  " (in 'nowcasting', line 687, column 6 to line 696, column 7)",
-  " (in 'nowcasting', line 686, column 27 to line 697, column 5)",
-  " (in 'nowcasting', line 686, column 4 to line 697, column 5)",
-  " (in 'nowcasting', line 698, column 4 to column 28)",
-  " (in 'nowcasting', line 683, column 44 to line 699, column 1)"};
+  " (in 'nowcasting', line 354, column 8 to column 14)",
+  " (in 'nowcasting', line 354, column 2 to column 30)",
+  " (in 'nowcasting', line 356, column 4 to column 95)",
+  " (in 'nowcasting', line 355, column 2 to line 356, column 95)",
+  " (in 'nowcasting', line 357, column 2 to column 18)",
+  " (in 'nowcasting', line 350, column 72 to line 358, column 1)",
+  " (in 'nowcasting', line 361, column 2 to column 16)",
+  " (in 'nowcasting', line 360, column 26 to line 362, column 1)",
+  " (in 'nowcasting', line 364, column 2 to column 16)",
+  " (in 'nowcasting', line 363, column 30 to line 365, column 1)",
+  " (in 'nowcasting', line 369, column 4 to column 33)",
+  " (in 'nowcasting', line 370, column 10 to column 16)",
+  " (in 'nowcasting', line 370, column 4 to column 25)",
+  " (in 'nowcasting', line 372, column 6 to column 33)",
+  " (in 'nowcasting', line 371, column 4 to line 372, column 33)",
+  " (in 'nowcasting', line 373, column 4 to column 13)",
+  " (in 'nowcasting', line 367, column 47 to line 374, column 1)",
+  " (in 'nowcasting', line 378, column 4 to column 33)",
+  " (in 'nowcasting', line 379, column 10 to column 16)",
+  " (in 'nowcasting', line 379, column 4 to column 25)",
+  " (in 'nowcasting', line 381, column 6 to column 37)",
+  " (in 'nowcasting', line 380, column 4 to line 381, column 37)",
+  " (in 'nowcasting', line 382, column 4 to column 13)",
+  " (in 'nowcasting', line 376, column 51 to line 383, column 1)",
+  " (in 'nowcasting', line 386, column 2 to column 30)",
+  " (in 'nowcasting', line 385, column 28 to line 387, column 1)",
+  " (in 'nowcasting', line 389, column 2 to column 36)",
+  " (in 'nowcasting', line 388, column 32 to line 390, column 1)",
+  " (in 'nowcasting', line 394, column 4 to column 33)",
+  " (in 'nowcasting', line 395, column 10 to column 16)",
+  " (in 'nowcasting', line 395, column 4 to column 25)",
+  " (in 'nowcasting', line 397, column 6 to column 35)",
+  " (in 'nowcasting', line 396, column 4 to line 397, column 35)",
+  " (in 'nowcasting', line 398, column 4 to column 13)",
+  " (in 'nowcasting', line 392, column 49 to line 399, column 1)",
+  " (in 'nowcasting', line 403, column 4 to column 33)",
+  " (in 'nowcasting', line 404, column 10 to column 16)",
+  " (in 'nowcasting', line 404, column 4 to column 25)",
+  " (in 'nowcasting', line 406, column 6 to column 39)",
+  " (in 'nowcasting', line 405, column 4 to line 406, column 39)",
+  " (in 'nowcasting', line 407, column 4 to column 13)",
+  " (in 'nowcasting', line 401, column 53 to line 408, column 1)",
+  " (in 'nowcasting', line 411, column 2 to column 31)",
+  " (in 'nowcasting', line 410, column 39 to line 412, column 1)",
+  " (in 'nowcasting', line 414, column 2 to column 31)",
+  " (in 'nowcasting', line 413, column 43 to line 415, column 1)",
+  " (in 'nowcasting', line 419, column 4 to column 33)",
+  " (in 'nowcasting', line 420, column 10 to column 16)",
+  " (in 'nowcasting', line 420, column 4 to column 25)",
+  " (in 'nowcasting', line 422, column 6 to column 41)",
+  " (in 'nowcasting', line 421, column 4 to line 422, column 41)",
+  " (in 'nowcasting', line 423, column 4 to column 13)",
+  " (in 'nowcasting', line 417, column 65 to line 424, column 1)",
+  " (in 'nowcasting', line 428, column 4 to column 33)",
+  " (in 'nowcasting', line 429, column 10 to column 16)",
+  " (in 'nowcasting', line 429, column 4 to column 25)",
+  " (in 'nowcasting', line 431, column 6 to column 45)",
+  " (in 'nowcasting', line 430, column 4 to line 431, column 45)",
+  " (in 'nowcasting', line 432, column 4 to column 13)",
+  " (in 'nowcasting', line 426, column 69 to line 433, column 1)",
+  " (in 'nowcasting', line 436, column 2 to column 38)",
+  " (in 'nowcasting', line 435, column 41 to line 437, column 1)",
+  " (in 'nowcasting', line 439, column 2 to column 44)",
+  " (in 'nowcasting', line 438, column 45 to line 440, column 1)",
+  " (in 'nowcasting', line 444, column 4 to column 33)",
+  " (in 'nowcasting', line 445, column 10 to column 16)",
+  " (in 'nowcasting', line 445, column 4 to column 25)",
+  " (in 'nowcasting', line 447, column 6 to column 43)",
+  " (in 'nowcasting', line 446, column 4 to line 447, column 43)",
+  " (in 'nowcasting', line 448, column 4 to column 13)",
+  " (in 'nowcasting', line 442, column 67 to line 449, column 1)",
+  " (in 'nowcasting', line 453, column 4 to column 33)",
+  " (in 'nowcasting', line 454, column 10 to column 16)",
+  " (in 'nowcasting', line 454, column 4 to column 25)",
+  " (in 'nowcasting', line 456, column 6 to column 47)",
+  " (in 'nowcasting', line 455, column 4 to line 456, column 47)",
+  " (in 'nowcasting', line 457, column 4 to column 13)",
+  " (in 'nowcasting', line 451, column 71 to line 458, column 1)",
+  " (in 'nowcasting', line 469, column 2 to column 30)",
+  " (in 'nowcasting', line 468, column 50 to line 470, column 1)",
+  " (in 'nowcasting', line 472, column 2 to column 45)",
+  " (in 'nowcasting', line 471, column 54 to line 473, column 1)",
+  " (in 'nowcasting', line 477, column 4 to column 33)",
+  " (in 'nowcasting', line 478, column 10 to column 16)",
+  " (in 'nowcasting', line 478, column 4 to column 25)",
+  " (in 'nowcasting', line 480, column 6 to column 47)",
+  " (in 'nowcasting', line 479, column 4 to line 480, column 47)",
+  " (in 'nowcasting', line 481, column 4 to column 13)",
+  " (in 'nowcasting', line 475, column 81 to line 482, column 1)",
+  " (in 'nowcasting', line 486, column 4 to column 33)",
+  " (in 'nowcasting', line 487, column 10 to column 16)",
+  " (in 'nowcasting', line 487, column 4 to column 25)",
+  " (in 'nowcasting', line 489, column 6 to column 51)",
+  " (in 'nowcasting', line 488, column 4 to line 489, column 51)",
+  " (in 'nowcasting', line 490, column 4 to column 13)",
+  " (in 'nowcasting', line 484, column 85 to line 491, column 1)",
+  " (in 'nowcasting', line 493, column 2 to column 44)",
+  " (in 'nowcasting', line 492, column 52 to line 494, column 1)",
+  " (in 'nowcasting', line 496, column 2 to column 50)",
+  " (in 'nowcasting', line 495, column 56 to line 497, column 1)",
+  " (in 'nowcasting', line 501, column 4 to column 33)",
+  " (in 'nowcasting', line 502, column 10 to column 16)",
+  " (in 'nowcasting', line 502, column 4 to column 25)",
+  " (in 'nowcasting', line 504, column 6 to column 49)",
+  " (in 'nowcasting', line 503, column 4 to line 504, column 49)",
+  " (in 'nowcasting', line 505, column 4 to column 13)",
+  " (in 'nowcasting', line 499, column 83 to line 506, column 1)",
+  " (in 'nowcasting', line 510, column 4 to column 33)",
+  " (in 'nowcasting', line 511, column 10 to column 16)",
+  " (in 'nowcasting', line 511, column 4 to column 25)",
+  " (in 'nowcasting', line 513, column 6 to column 53)",
+  " (in 'nowcasting', line 512, column 4 to line 513, column 53)",
+  " (in 'nowcasting', line 514, column 4 to column 13)",
+  " (in 'nowcasting', line 508, column 87 to line 515, column 1)",
+  " (in 'nowcasting', line 519, column 9 to column 16)",
+  " (in 'nowcasting', line 519, column 18 to column 25)",
+  " (in 'nowcasting', line 519, column 2 to column 35)",
+  " (in 'nowcasting', line 544, column 4 to column 189)",
+  " (in 'nowcasting', line 543, column 9 to line 545, column 3)",
+  " (in 'nowcasting', line 539, column 8 to column 63)",
+  " (in 'nowcasting', line 538, column 26 to line 540, column 7)",
+  " (in 'nowcasting', line 538, column 6 to line 540, column 7)",
+  " (in 'nowcasting', line 537, column 24 to line 541, column 5)",
+  " (in 'nowcasting', line 537, column 4 to line 541, column 5)",
+  " (in 'nowcasting', line 542, column 4 to column 19)",
+  " (in 'nowcasting', line 536, column 29 to line 543, column 3)",
+  " (in 'nowcasting', line 536, column 9 to line 545, column 3)",
+  " (in 'nowcasting', line 532, column 8 to column 57)",
+  " (in 'nowcasting', line 531, column 26 to line 533, column 7)",
+  " (in 'nowcasting', line 531, column 6 to line 533, column 7)",
+  " (in 'nowcasting', line 530, column 24 to line 534, column 5)",
+  " (in 'nowcasting', line 530, column 4 to line 534, column 5)",
+  " (in 'nowcasting', line 535, column 4 to column 19)",
+  " (in 'nowcasting', line 529, column 27 to line 536, column 3)",
+  " (in 'nowcasting', line 529, column 9 to line 545, column 3)",
+  " (in 'nowcasting', line 525, column 8 to column 49)",
+  " (in 'nowcasting', line 524, column 26 to line 526, column 7)",
+  " (in 'nowcasting', line 524, column 6 to line 526, column 7)",
+  " (in 'nowcasting', line 523, column 24 to line 527, column 5)",
+  " (in 'nowcasting', line 523, column 4 to line 527, column 5)",
+  " (in 'nowcasting', line 528, column 4 to column 19)",
+  " (in 'nowcasting', line 522, column 22 to line 529, column 3)",
+  " (in 'nowcasting', line 522, column 9 to line 545, column 3)",
+  " (in 'nowcasting', line 521, column 4 to column 13)",
+  " (in 'nowcasting', line 520, column 20 to line 522, column 3)",
+  " (in 'nowcasting', line 520, column 2 to line 545, column 3)",
+  " (in 'nowcasting', line 518, column 38 to line 546, column 1)",
+  " (in 'nowcasting', line 562, column 9 to column 19)",
+  " (in 'nowcasting', line 562, column 21 to column 31)",
+  " (in 'nowcasting', line 562, column 2 to column 81)",
+  " (in 'nowcasting', line 565, column 4 to column 54)",
+  " (in 'nowcasting', line 564, column 2 to line 565, column 54)",
+  " (in 'nowcasting', line 566, column 2 to column 17)",
+  " (in 'nowcasting', line 548, column 50 to line 567, column 1)",
+  " (in 'nowcasting', line 585, column 9 to column 19)",
+  " (in 'nowcasting', line 585, column 21 to column 31)",
+  " (in 'nowcasting', line 585, column 2 to column 78)",
+  " (in 'nowcasting', line 587, column 9 to column 19)",
+  " (in 'nowcasting', line 587, column 21 to column 31)",
+  " (in 'nowcasting', line 587, column 2 to column 111)",
+  " (in 'nowcasting', line 591, column 6 to column 110)",
+  " (in 'nowcasting', line 590, column 60 to line 592, column 5)",
+  " (in 'nowcasting', line 590, column 4 to line 592, column 5)",
+  " (in 'nowcasting', line 589, column 21 to line 593, column 3)",
+  " (in 'nowcasting', line 589, column 2 to line 593, column 3)",
+  " (in 'nowcasting', line 594, column 2 to column 12)",
+  " (in 'nowcasting', line 569, column 92 to line 595, column 1)",
+  " (in 'nowcasting', line 612, column 9 to column 19)",
+  " (in 'nowcasting', line 612, column 21 to column 31)",
+  " (in 'nowcasting', line 612, column 2 to column 81)",
+  " (in 'nowcasting', line 614, column 9 to column 19)",
+  " (in 'nowcasting', line 614, column 21 to column 31)",
+  " (in 'nowcasting', line 614, column 2 to column 111)",
+  " (in 'nowcasting', line 615, column 9 to column 19)",
+  " (in 'nowcasting', line 615, column 21 to column 31)",
+  " (in 'nowcasting', line 615, column 2 to column 117)",
+  " (in 'nowcasting', line 618, column 4 to column 116)",
+  " (in 'nowcasting', line 617, column 2 to line 618, column 116)",
+  " (in 'nowcasting', line 624, column 8 to column 25)",
+  " (in 'nowcasting', line 623, column 13 to line 625, column 7)",
+  " (in 'nowcasting', line 622, column 8 to column 51)",
+  " (in 'nowcasting', line 621, column 29 to line 623, column 7)",
+  " (in 'nowcasting', line 621, column 6 to line 625, column 7)",
+  " (in 'nowcasting', line 620, column 27 to line 626, column 5)",
+  " (in 'nowcasting', line 620, column 4 to line 626, column 5)",
+  " (in 'nowcasting', line 619, column 25 to line 627, column 3)",
+  " (in 'nowcasting', line 619, column 2 to line 627, column 3)",
+  " (in 'nowcasting', line 628, column 2 to column 15)",
+  " (in 'nowcasting', line 597, column 94 to line 629, column 1)",
+  " (in 'nowcasting', line 635, column 10 to column 34)",
+  " (in 'nowcasting', line 635, column 4 to column 52)",
+  " (in 'nowcasting', line 636, column 4 to column 18)",
+  " (in 'nowcasting', line 637, column 4 to column 21)",
+  " (in 'nowcasting', line 640, column 6 to column 60)",
+  " (in 'nowcasting', line 641, column 6 to column 66)",
+  " (in 'nowcasting', line 645, column 8 to column 38)",
+  " (in 'nowcasting', line 644, column 13 to line 646, column 7)",
+  " (in 'nowcasting', line 643, column 8 to column 63)",
+  " (in 'nowcasting', line 642, column 28 to line 644, column 7)",
+  " (in 'nowcasting', line 642, column 6 to line 646, column 7)",
+  " (in 'nowcasting', line 638, column 23 to line 647, column 5)",
+  " (in 'nowcasting', line 638, column 4 to line 647, column 5)",
+  " (in 'nowcasting', line 648, column 4 to column 22)",
+  " (in 'nowcasting', line 633, column 28 to line 649, column 1)",
+  " (in 'nowcasting', line 655, column 10 to column 34)",
+  " (in 'nowcasting', line 655, column 4 to column 52)",
+  " (in 'nowcasting', line 656, column 4 to column 18)",
+  " (in 'nowcasting', line 657, column 4 to column 21)",
+  " (in 'nowcasting', line 660, column 6 to column 60)",
+  " (in 'nowcasting', line 661, column 6 to column 66)",
+  " (in 'nowcasting', line 665, column 8 to column 38)",
+  " (in 'nowcasting', line 664, column 13 to line 666, column 7)",
+  " (in 'nowcasting', line 663, column 8 to column 61)",
+  " (in 'nowcasting', line 662, column 28 to line 664, column 7)",
+  " (in 'nowcasting', line 662, column 6 to line 666, column 7)",
+  " (in 'nowcasting', line 658, column 23 to line 667, column 5)",
+  " (in 'nowcasting', line 658, column 4 to line 667, column 5)",
+  " (in 'nowcasting', line 668, column 4 to column 22)",
+  " (in 'nowcasting', line 653, column 28 to line 669, column 1)",
+  " (in 'nowcasting', line 674, column 10 to column 19)",
+  " (in 'nowcasting', line 674, column 21 to column 26)",
+  " (in 'nowcasting', line 674, column 4 to column 83)",
+  " (in 'nowcasting', line 682, column 12 to column 99)",
+  " (in 'nowcasting', line 681, column 17 to line 683, column 11)",
+  " (in 'nowcasting', line 680, column 12 to column 120)",
+  " (in 'nowcasting', line 679, column 31 to line 681, column 11)",
+  " (in 'nowcasting', line 679, column 10 to line 683, column 11)",
+  " (in 'nowcasting', line 678, column 30 to line 684, column 9)",
+  " (in 'nowcasting', line 678, column 8 to line 684, column 9)",
+  " (in 'nowcasting', line 676, column 29 to line 685, column 7)",
+  " (in 'nowcasting', line 676, column 6 to line 685, column 7)",
+  " (in 'nowcasting', line 675, column 27 to line 686, column 5)",
+  " (in 'nowcasting', line 675, column 4 to line 686, column 5)",
+  " (in 'nowcasting', line 687, column 4 to column 28)",
+  " (in 'nowcasting', line 672, column 44 to line 688, column 1)"};
 int max_int(const int& a, const int& b, std::ostream* pstream__);
 int min_int(const int& a, const int& b, std::ostream* pstream__);
 template <typename T0__, typename T1__,
@@ -659,23 +651,14 @@ state_space_model(const int& num_steps, const int& num_delays, const int&
                   const T13__& sd_mu, const T14__& sd_nu, const T15__&
                   xi_mu_arg__, const T16__& xi_nu_arg__, std::ostream*
                   pstream__);
-template <typename T2__, typename T3__, typename T4__, typename T9__,
+template <typename T2__,
           stan::require_all_t<stan::is_eigen_matrix_dynamic<T2__>,
-                              stan::is_vt_not_complex<T2__>,
-                              stan::is_stan_scalar<T3__>,
-                              stan::is_stan_scalar<T4__>,
-                              stan::is_col_vector<T9__>,
-                              stan::is_vt_not_complex<T9__>>* = nullptr>
-std::vector<
-  stan::promote_args_t<stan::base_type_t<T2__>, T3__, T4__,
-    stan::base_type_t<T9__>>>
+                              stan::is_vt_not_complex<T2__>>* = nullptr>
+std::vector<stan::promote_args_t<stan::base_type_t<T2__>>>
 get_val_for_model(const int& n_rows, const int& num_delays, const T2__&
-                  m_arg__, const std::vector<T3__>& cases_real_trans,
-                  const std::vector<T4__>& cases_int,
-                  const std::vector<std::vector<int>>& case_idx, const int&
-                  s_col, const int& d_col, const int& t_col, const T9__&
-                  sd_m_arg__, const int& is_continuous, const int&
-                  is_discrete, std::ostream* pstream__);
+                  m_arg__, const std::vector<std::vector<int>>& case_idx,
+                  const int& s_col, const int& d_col, const int& t_col,
+                  std::ostream* pstream__);
 template <typename T0__,
           stan::require_all_t<stan::is_stan_scalar<T0__>>* = nullptr>
 stan::promote_args_t<T0__>
@@ -1504,28 +1487,17 @@ state_space_model(const int& num_steps, const int& num_delays, const int&
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
   }
 }
-template <typename T2__, typename T3__, typename T4__, typename T9__,
+template <typename T2__,
           stan::require_all_t<stan::is_eigen_matrix_dynamic<T2__>,
-                              stan::is_vt_not_complex<T2__>,
-                              stan::is_stan_scalar<T3__>,
-                              stan::is_stan_scalar<T4__>,
-                              stan::is_col_vector<T9__>,
-                              stan::is_vt_not_complex<T9__>>*>
-std::vector<
-  stan::promote_args_t<stan::base_type_t<T2__>, T3__, T4__,
-    stan::base_type_t<T9__>>>
+                              stan::is_vt_not_complex<T2__>>*>
+std::vector<stan::promote_args_t<stan::base_type_t<T2__>>>
 get_val_for_model(const int& n_rows, const int& num_delays, const T2__&
-                  m_arg__, const std::vector<T3__>& cases_real_trans,
-                  const std::vector<T4__>& cases_int,
-                  const std::vector<std::vector<int>>& case_idx, const int&
-                  s_col, const int& d_col, const int& t_col, const T9__&
-                  sd_m_arg__, const int& is_continuous, const int&
-                  is_discrete, std::ostream* pstream__) {
-  using local_scalar_t__ = stan::promote_args_t<stan::base_type_t<T2__>,
-                             T3__, T4__, stan::base_type_t<T9__>>;
+                  m_arg__, const std::vector<std::vector<int>>& case_idx,
+                  const int& s_col, const int& d_col, const int& t_col,
+                  std::ostream* pstream__) {
+  using local_scalar_t__ = stan::promote_args_t<stan::base_type_t<T2__>>;
   int current_statement__ = 0;
   const auto& m = stan::math::to_ref(m_arg__);
-  const auto& sd_m = stan::math::to_ref(sd_m_arg__);
   static constexpr bool propto__ = true;
   // suppress unused var warning
   (void) propto__;
@@ -1537,55 +1509,23 @@ get_val_for_model(const int& n_rows, const int& num_delays, const T2__&
     stan::math::validate_non_negative_index("dist_val", "n_rows", n_rows);
     std::vector<local_scalar_t__> dist_val =
       std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
-    current_statement__ = 279;
-    if (is_continuous) {
-      current_statement__ = 277;
-      for (int n = 1; n <= n_rows; ++n) {
-        current_statement__ = 276;
-        stan::model::assign(dist_val,
-          ((stan::model::rvalue(cases_real_trans, "cases_real_trans",
-              stan::model::index_uni(n)) -
-          stan::model::rvalue(m, "m",
-            stan::model::index_uni(((num_delays *
-              (stan::model::rvalue(case_idx, "case_idx",
-                 stan::model::index_uni(n), stan::model::index_uni(s_col)) -
-              1)) +
-              stan::model::rvalue(case_idx, "case_idx",
-                stan::model::index_uni(n), stan::model::index_uni(d_col)))),
-            stan::model::index_uni(
-              stan::model::rvalue(case_idx, "case_idx",
-                stan::model::index_uni(n), stan::model::index_uni(t_col)))))
-          / stan::model::rvalue(sd_m, "sd_m", stan::model::index_uni(1))),
-          "assigning variable dist_val", stan::model::index_uni(n));
-      }
-    } else {
-      current_statement__ = 275;
-      if (is_discrete) {
-        current_statement__ = 273;
-        for (int n = 1; n <= n_rows; ++n) {
-          current_statement__ = 272;
-          stan::model::assign(dist_val,
-            stan::model::rvalue(m, "m",
-              stan::model::index_uni(((num_delays *
-                (stan::model::rvalue(case_idx, "case_idx",
-                   stan::model::index_uni(n), stan::model::index_uni(s_col))
-                - 1)) +
-                stan::model::rvalue(case_idx, "case_idx",
-                  stan::model::index_uni(n), stan::model::index_uni(d_col)))),
-              stan::model::index_uni(
-                stan::model::rvalue(case_idx, "case_idx",
-                  stan::model::index_uni(n), stan::model::index_uni(t_col)))),
-            "assigning variable dist_val", stan::model::index_uni(n));
-        }
-      } else {
-        current_statement__ = 270;
-        std::stringstream errmsg_stream__;
-        stan::math::stan_print(&errmsg_stream__,
-          "Invalid distribution @get_val_for_model. This is an internal error of the `diseasenowcasting` package. Please report to `https://github.com/RodrigoZepeda/diseasenowcasting/issues`");
-        throw std::domain_error(errmsg_stream__.str());
-      }
+    current_statement__ = 271;
+    for (int n = 1; n <= n_rows; ++n) {
+      current_statement__ = 270;
+      stan::model::assign(dist_val,
+        stan::model::rvalue(m, "m",
+          stan::model::index_uni(((num_delays *
+            (stan::model::rvalue(case_idx, "case_idx",
+               stan::model::index_uni(n), stan::model::index_uni(s_col)) -
+            1)) +
+            stan::model::rvalue(case_idx, "case_idx",
+              stan::model::index_uni(n), stan::model::index_uni(d_col)))),
+          stan::model::index_uni(
+            stan::model::rvalue(case_idx, "case_idx",
+              stan::model::index_uni(n), stan::model::index_uni(t_col)))),
+        "assigning variable dist_val", stan::model::index_uni(n));
     }
-    current_statement__ = 280;
+    current_statement__ = 272;
     return dist_val;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1603,7 +1543,7 @@ log_transform(const T0__& x, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 282;
+    current_statement__ = 274;
     return stan::math::log(x);
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1621,7 +1561,7 @@ inv_log_transform(const T0__& y, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 284;
+    current_statement__ = 276;
     return stan::math::exp(y);
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1639,20 +1579,20 @@ log_transform(const std::vector<double>& x, std::ostream* pstream__) {
   (void) DUMMY_VAR__;
   try {
     int n_rows = std::numeric_limits<int>::min();
-    current_statement__ = 286;
+    current_statement__ = 278;
     n_rows = stan::math::num_elements(x);
-    current_statement__ = 287;
+    current_statement__ = 279;
     stan::math::validate_non_negative_index("y", "n_rows", n_rows);
     std::vector<local_scalar_t__> y =
       std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
-    current_statement__ = 290;
+    current_statement__ = 282;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 289;
+      current_statement__ = 281;
       stan::model::assign(y,
         log_transform(stan::model::rvalue(x, "x", stan::model::index_uni(n)),
           pstream__), "assigning variable y", stan::model::index_uni(n));
     }
-    current_statement__ = 291;
+    current_statement__ = 283;
     return y;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1670,21 +1610,21 @@ inv_log_transform(const std::vector<double>& y, std::ostream* pstream__) {
   (void) DUMMY_VAR__;
   try {
     int n_rows = std::numeric_limits<int>::min();
-    current_statement__ = 293;
+    current_statement__ = 285;
     n_rows = stan::math::num_elements(y);
-    current_statement__ = 294;
+    current_statement__ = 286;
     stan::math::validate_non_negative_index("x", "n_rows", n_rows);
     std::vector<local_scalar_t__> x =
       std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
-    current_statement__ = 297;
+    current_statement__ = 289;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 296;
+      current_statement__ = 288;
       stan::model::assign(x,
         inv_log_transform(
           stan::model::rvalue(y, "y", stan::model::index_uni(n)), pstream__),
         "assigning variable x", stan::model::index_uni(n));
     }
-    current_statement__ = 298;
+    current_statement__ = 290;
     return x;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1702,7 +1642,7 @@ log1p_transform(const T0__& x, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 300;
+    current_statement__ = 292;
     return log_transform((x + 1), pstream__);
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1720,7 +1660,7 @@ inv_log1p_transform(const T0__& y, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 302;
+    current_statement__ = 294;
     return (inv_log_transform(y, pstream__) - 1.0);
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1738,21 +1678,21 @@ log1p_transform(const std::vector<double>& x, std::ostream* pstream__) {
   (void) DUMMY_VAR__;
   try {
     int n_rows = std::numeric_limits<int>::min();
-    current_statement__ = 304;
+    current_statement__ = 296;
     n_rows = stan::math::num_elements(x);
-    current_statement__ = 305;
+    current_statement__ = 297;
     stan::math::validate_non_negative_index("y", "n_rows", n_rows);
     std::vector<local_scalar_t__> y =
       std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
-    current_statement__ = 308;
+    current_statement__ = 300;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 307;
+      current_statement__ = 299;
       stan::model::assign(y,
         log1p_transform(
           stan::model::rvalue(x, "x", stan::model::index_uni(n)), pstream__),
         "assigning variable y", stan::model::index_uni(n));
     }
-    current_statement__ = 309;
+    current_statement__ = 301;
     return y;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1770,21 +1710,21 @@ inv_log1p_transform(const std::vector<double>& y, std::ostream* pstream__) {
   (void) DUMMY_VAR__;
   try {
     int n_rows = std::numeric_limits<int>::min();
-    current_statement__ = 311;
+    current_statement__ = 303;
     n_rows = stan::math::num_elements(y);
-    current_statement__ = 312;
+    current_statement__ = 304;
     stan::math::validate_non_negative_index("x", "n_rows", n_rows);
     std::vector<local_scalar_t__> x =
       std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
-    current_statement__ = 315;
+    current_statement__ = 307;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 314;
+      current_statement__ = 306;
       stan::model::assign(x,
         inv_log1p_transform(
           stan::model::rvalue(y, "y", stan::model::index_uni(n)), pstream__),
         "assigning variable x", stan::model::index_uni(n));
     }
-    current_statement__ = 316;
+    current_statement__ = 308;
     return x;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1804,7 +1744,7 @@ softplus_transform(const T0__& x, const T1__& k, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 318;
+    current_statement__ = 310;
     return (k * stan::math::log((stan::math::exp((x / k)) - 1.0)));
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1824,7 +1764,7 @@ inv_softplus_transform(const T0__& y, const T1__& k, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 320;
+    current_statement__ = 312;
     return (k * stan::math::log((1.0 + stan::math::exp((y / k)))));
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1843,21 +1783,21 @@ softplus_transform(const std::vector<double>& x, const double& k,
   (void) DUMMY_VAR__;
   try {
     int n_rows = std::numeric_limits<int>::min();
-    current_statement__ = 322;
+    current_statement__ = 314;
     n_rows = stan::math::num_elements(x);
-    current_statement__ = 323;
+    current_statement__ = 315;
     stan::math::validate_non_negative_index("y", "n_rows", n_rows);
     std::vector<local_scalar_t__> y =
       std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
-    current_statement__ = 326;
+    current_statement__ = 318;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 325;
+      current_statement__ = 317;
       stan::model::assign(y,
         softplus_transform(
           stan::model::rvalue(x, "x", stan::model::index_uni(n)), k,
           pstream__), "assigning variable y", stan::model::index_uni(n));
     }
-    current_statement__ = 327;
+    current_statement__ = 319;
     return y;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1876,21 +1816,21 @@ inv_softplus_transform(const std::vector<double>& y, const double& k,
   (void) DUMMY_VAR__;
   try {
     int n_rows = std::numeric_limits<int>::min();
-    current_statement__ = 329;
+    current_statement__ = 321;
     n_rows = stan::math::num_elements(y);
-    current_statement__ = 330;
+    current_statement__ = 322;
     stan::math::validate_non_negative_index("x", "n_rows", n_rows);
     std::vector<local_scalar_t__> x =
       std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
-    current_statement__ = 333;
+    current_statement__ = 325;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 332;
+      current_statement__ = 324;
       stan::model::assign(x,
         inv_softplus_transform(
           stan::model::rvalue(y, "y", stan::model::index_uni(n)), k,
           pstream__), "assigning variable x", stan::model::index_uni(n));
     }
-    current_statement__ = 334;
+    current_statement__ = 326;
     return x;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1910,7 +1850,7 @@ softplus1p_transform(const T0__& x, const T1__& k, std::ostream* pstream__) {
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 336;
+    current_statement__ = 328;
     return softplus_transform((x + 1), k, pstream__);
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1931,7 +1871,7 @@ inv_softplus1p_transform(const T0__& y, const T1__& k, std::ostream*
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 338;
+    current_statement__ = 330;
     return (inv_softplus_transform(y, k, pstream__) - 1.0);
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1950,21 +1890,21 @@ softplus1p_transform(const std::vector<double>& x, const double& k,
   (void) DUMMY_VAR__;
   try {
     int n_rows = std::numeric_limits<int>::min();
-    current_statement__ = 340;
+    current_statement__ = 332;
     n_rows = stan::math::num_elements(x);
-    current_statement__ = 341;
+    current_statement__ = 333;
     stan::math::validate_non_negative_index("y", "n_rows", n_rows);
     std::vector<local_scalar_t__> y =
       std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
-    current_statement__ = 344;
+    current_statement__ = 336;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 343;
+      current_statement__ = 335;
       stan::model::assign(y,
         softplus1p_transform(
           stan::model::rvalue(x, "x", stan::model::index_uni(n)), k,
           pstream__), "assigning variable y", stan::model::index_uni(n));
     }
-    current_statement__ = 345;
+    current_statement__ = 337;
     return y;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -1983,21 +1923,21 @@ inv_softplus1p_transform(const std::vector<double>& y, const double& k,
   (void) DUMMY_VAR__;
   try {
     int n_rows = std::numeric_limits<int>::min();
-    current_statement__ = 347;
+    current_statement__ = 339;
     n_rows = stan::math::num_elements(y);
-    current_statement__ = 348;
+    current_statement__ = 340;
     stan::math::validate_non_negative_index("x", "n_rows", n_rows);
     std::vector<local_scalar_t__> x =
       std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
-    current_statement__ = 351;
+    current_statement__ = 343;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 350;
+      current_statement__ = 342;
       stan::model::assign(x,
         inv_softplus1p_transform(
           stan::model::rvalue(y, "y", stan::model::index_uni(n)), k,
           pstream__), "assigning variable x", stan::model::index_uni(n));
     }
-    current_statement__ = 352;
+    current_statement__ = 344;
     return x;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2019,7 +1959,7 @@ dhyperbolic_transform(const T0__& x, const T1__& k, const T2__& c,
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 354;
+    current_statement__ = 346;
     return ((stan::math::pow(x, 2) - k) / (c * x));
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2041,7 +1981,7 @@ inv_dhyperbolic_transform(const T0__& y, const T1__& k, const T2__& c,
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 356;
+    current_statement__ = 348;
     return (((c * y) / 2.0) +
            stan::math::sqrt((stan::math::pow(((c * y) / 2.0), 2) + k)));
   } catch (const std::exception& e) {
@@ -2061,21 +2001,21 @@ dhyperbolic_transform(const std::vector<double>& x, const double& k,
   (void) DUMMY_VAR__;
   try {
     int n_rows = std::numeric_limits<int>::min();
-    current_statement__ = 358;
+    current_statement__ = 350;
     n_rows = stan::math::num_elements(x);
-    current_statement__ = 359;
+    current_statement__ = 351;
     stan::math::validate_non_negative_index("y", "n_rows", n_rows);
     std::vector<local_scalar_t__> y =
       std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
-    current_statement__ = 362;
+    current_statement__ = 354;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 361;
+      current_statement__ = 353;
       stan::model::assign(y,
         dhyperbolic_transform(
           stan::model::rvalue(x, "x", stan::model::index_uni(n)), k, c,
           pstream__), "assigning variable y", stan::model::index_uni(n));
     }
-    current_statement__ = 363;
+    current_statement__ = 355;
     return y;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2094,21 +2034,21 @@ inv_dhyperbolic_transform(const std::vector<double>& y, const double& k,
   (void) DUMMY_VAR__;
   try {
     int n_rows = std::numeric_limits<int>::min();
-    current_statement__ = 365;
+    current_statement__ = 357;
     n_rows = stan::math::num_elements(y);
-    current_statement__ = 366;
+    current_statement__ = 358;
     stan::math::validate_non_negative_index("x", "n_rows", n_rows);
     std::vector<local_scalar_t__> x =
       std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
-    current_statement__ = 369;
+    current_statement__ = 361;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 368;
+      current_statement__ = 360;
       stan::model::assign(x,
         inv_dhyperbolic_transform(
           stan::model::rvalue(y, "y", stan::model::index_uni(n)), k, c,
           pstream__), "assigning variable x", stan::model::index_uni(n));
     }
-    current_statement__ = 370;
+    current_statement__ = 362;
     return x;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2130,7 +2070,7 @@ dhyperbolic1p_transform(const T0__& x, const T1__& k, const T2__& c,
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 372;
+    current_statement__ = 364;
     return dhyperbolic_transform((x + 1), k, c, pstream__);
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2152,7 +2092,7 @@ inv_dhyperbolic1p_transform(const T0__& y, const T1__& k, const T2__& c,
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 374;
+    current_statement__ = 366;
     return (inv_dhyperbolic_transform(y, k, c, pstream__) - 1.0);
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2171,21 +2111,21 @@ dhyperbolic1p_transform(const std::vector<double>& x, const double& k,
   (void) DUMMY_VAR__;
   try {
     int n_rows = std::numeric_limits<int>::min();
-    current_statement__ = 376;
+    current_statement__ = 368;
     n_rows = stan::math::num_elements(x);
-    current_statement__ = 377;
+    current_statement__ = 369;
     stan::math::validate_non_negative_index("y", "n_rows", n_rows);
     std::vector<local_scalar_t__> y =
       std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
-    current_statement__ = 380;
+    current_statement__ = 372;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 379;
+      current_statement__ = 371;
       stan::model::assign(y,
         dhyperbolic1p_transform(
           stan::model::rvalue(x, "x", stan::model::index_uni(n)), k, c,
           pstream__), "assigning variable y", stan::model::index_uni(n));
     }
-    current_statement__ = 381;
+    current_statement__ = 373;
     return y;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2204,21 +2144,21 @@ inv_dhyperbolic1p_transform(const std::vector<double>& y, const double& k,
   (void) DUMMY_VAR__;
   try {
     int n_rows = std::numeric_limits<int>::min();
-    current_statement__ = 383;
+    current_statement__ = 375;
     n_rows = stan::math::num_elements(y);
-    current_statement__ = 384;
+    current_statement__ = 376;
     stan::math::validate_non_negative_index("x", "n_rows", n_rows);
     std::vector<local_scalar_t__> x =
       std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
-    current_statement__ = 387;
+    current_statement__ = 379;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 386;
+      current_statement__ = 378;
       stan::model::assign(x,
         inv_dhyperbolic1p_transform(
           stan::model::rvalue(y, "y", stan::model::index_uni(n)), k, c,
           pstream__), "assigning variable x", stan::model::index_uni(n));
     }
-    current_statement__ = 388;
+    current_statement__ = 380;
     return x;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2245,27 +2185,27 @@ transform_state_space_model(const T0__& m_arg__, const int& identity_link,
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 390;
+    current_statement__ = 382;
     stan::math::validate_non_negative_index("m_trans", "rows(m)",
       stan::math::rows(m));
-    current_statement__ = 391;
+    current_statement__ = 383;
     stan::math::validate_non_negative_index("m_trans", "cols(m)",
       stan::math::cols(m));
     Eigen::Matrix<local_scalar_t__,-1,-1> m_trans =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(stan::math::rows(m),
         stan::math::cols(m), DUMMY_VAR__);
-    current_statement__ = 421;
+    current_statement__ = 413;
     if (identity_link) {
-      current_statement__ = 419;
+      current_statement__ = 411;
       return m;
     } else {
-      current_statement__ = 418;
+      current_statement__ = 410;
       if (log_link) {
-        current_statement__ = 415;
+        current_statement__ = 407;
         for (int i = 1; i <= stan::math::rows(m); ++i) {
-          current_statement__ = 413;
+          current_statement__ = 405;
           for (int j = 1; j <= stan::math::cols(m); ++j) {
-            current_statement__ = 411;
+            current_statement__ = 403;
             stan::model::assign(m_trans,
               inv_log_transform(
                 stan::model::rvalue(m, "m", stan::model::index_uni(i),
@@ -2274,16 +2214,16 @@ transform_state_space_model(const T0__& m_arg__, const int& identity_link,
               stan::model::index_uni(j));
           }
         }
-        current_statement__ = 416;
+        current_statement__ = 408;
         return m_trans;
       } else {
-        current_statement__ = 410;
+        current_statement__ = 402;
         if (softplus_link) {
-          current_statement__ = 407;
+          current_statement__ = 399;
           for (int i = 1; i <= stan::math::rows(m); ++i) {
-            current_statement__ = 405;
+            current_statement__ = 397;
             for (int j = 1; j <= stan::math::cols(m); ++j) {
-              current_statement__ = 403;
+              current_statement__ = 395;
               stan::model::assign(m_trans,
                 inv_softplus_transform(
                   stan::model::rvalue(m, "m", stan::model::index_uni(i),
@@ -2292,16 +2232,16 @@ transform_state_space_model(const T0__& m_arg__, const int& identity_link,
                 stan::model::index_uni(j));
             }
           }
-          current_statement__ = 408;
+          current_statement__ = 400;
           return m_trans;
         } else {
-          current_statement__ = 402;
+          current_statement__ = 394;
           if (dist_hyper_link) {
-            current_statement__ = 399;
+            current_statement__ = 391;
             for (int i = 1; i <= stan::math::rows(m); ++i) {
-              current_statement__ = 397;
+              current_statement__ = 389;
               for (int j = 1; j <= stan::math::cols(m); ++j) {
-                current_statement__ = 395;
+                current_statement__ = 387;
                 stan::model::assign(m_trans,
                   inv_dhyperbolic_transform(
                     stan::model::rvalue(m, "m", stan::model::index_uni(i),
@@ -2310,10 +2250,10 @@ transform_state_space_model(const T0__& m_arg__, const int& identity_link,
                   stan::model::index_uni(j));
               }
             }
-            current_statement__ = 400;
+            current_statement__ = 392;
             return m_trans;
           } else {
-            current_statement__ = 393;
+            current_statement__ = 385;
             std::stringstream errmsg_stream__;
             stan::math::stan_print(&errmsg_stream__,
               "Invalid link @transform_state_space_model. This is an internal error of the `diseasenowcasting` package. Report to `https://github.com/RodrigoZepeda/diseasenowcasting/issues`");
@@ -2339,22 +2279,22 @@ count_cases(const std::vector<std::vector<int>>& case_idx, const int&
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 423;
+    current_statement__ = 415;
     stan::math::validate_non_negative_index("n_count", "num_strata",
       num_strata);
-    current_statement__ = 424;
+    current_statement__ = 416;
     stan::math::validate_non_negative_index("n_count", "num_delays",
       num_delays);
     Eigen::Matrix<local_scalar_t__,-1,-1> n_count =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(num_strata, num_delays,
         DUMMY_VAR__);
-    current_statement__ = 425;
+    current_statement__ = 417;
     stan::model::assign(n_count,
       stan::math::rep_matrix(0, num_strata, num_delays),
       "assigning variable n_count");
-    current_statement__ = 427;
+    current_statement__ = 419;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 426;
+      current_statement__ = 418;
       stan::model::assign(n_count,
         (stan::model::rvalue(n_count, "n_count",
            stan::model::index_uni(
@@ -2371,7 +2311,7 @@ count_cases(const std::vector<std::vector<int>>& case_idx, const int&
           stan::model::rvalue(case_idx, "case_idx",
             stan::model::index_uni(n), stan::model::index_uni(d_col))));
     }
-    current_statement__ = 428;
+    current_statement__ = 420;
     return n_count;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2391,33 +2331,33 @@ mean_cases(const std::vector<double>& cases_real,
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 430;
+    current_statement__ = 422;
     stan::math::validate_non_negative_index("mu", "num_strata", num_strata);
-    current_statement__ = 431;
+    current_statement__ = 423;
     stan::math::validate_non_negative_index("mu", "num_delays", num_delays);
     Eigen::Matrix<local_scalar_t__,-1,-1> mu =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(num_strata, num_delays,
         DUMMY_VAR__);
-    current_statement__ = 432;
+    current_statement__ = 424;
     stan::model::assign(mu,
       stan::math::rep_matrix(0.0, num_strata, num_delays),
       "assigning variable mu");
-    current_statement__ = 433;
+    current_statement__ = 425;
     stan::math::validate_non_negative_index("n_count", "num_strata",
       num_strata);
-    current_statement__ = 434;
+    current_statement__ = 426;
     stan::math::validate_non_negative_index("n_count", "num_delays",
       num_delays);
     Eigen::Matrix<local_scalar_t__,-1,-1> n_count =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(num_strata, num_delays,
         DUMMY_VAR__);
-    current_statement__ = 435;
+    current_statement__ = 427;
     stan::model::assign(n_count,
       count_cases(case_idx, num_strata, num_delays, n_rows, d_col, s_col,
         pstream__), "assigning variable n_count");
-    current_statement__ = 440;
+    current_statement__ = 432;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 438;
+      current_statement__ = 430;
       if (stan::math::logical_gt(
             stan::model::rvalue(n_count, "n_count",
               stan::model::index_uni(
@@ -2427,7 +2367,7 @@ mean_cases(const std::vector<double>& cases_real,
                 stan::model::rvalue(case_idx, "case_idx",
                   stan::model::index_uni(n), stan::model::index_uni(d_col)))),
             0.0)) {
-        current_statement__ = 436;
+        current_statement__ = 428;
         stan::model::assign(mu,
           (stan::model::rvalue(mu, "mu",
              stan::model::index_uni(
@@ -2455,7 +2395,7 @@ mean_cases(const std::vector<double>& cases_real,
               stan::model::index_uni(n), stan::model::index_uni(d_col))));
       }
     }
-    current_statement__ = 441;
+    current_statement__ = 433;
     return mu;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2475,44 +2415,44 @@ sd_cases(const std::vector<double>& cases_real,
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 443;
+    current_statement__ = 435;
     stan::math::validate_non_negative_index("sigma", "num_strata", num_strata);
-    current_statement__ = 444;
+    current_statement__ = 436;
     stan::math::validate_non_negative_index("sigma", "num_delays", num_delays);
     Eigen::Matrix<local_scalar_t__,-1,-1> sigma =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(num_strata, num_delays,
         DUMMY_VAR__);
-    current_statement__ = 445;
+    current_statement__ = 437;
     stan::model::assign(sigma,
       stan::math::rep_matrix(0.0, num_strata, num_delays),
       "assigning variable sigma");
-    current_statement__ = 446;
+    current_statement__ = 438;
     stan::math::validate_non_negative_index("n_count", "num_strata",
       num_strata);
-    current_statement__ = 447;
+    current_statement__ = 439;
     stan::math::validate_non_negative_index("n_count", "num_delays",
       num_delays);
     Eigen::Matrix<local_scalar_t__,-1,-1> n_count =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(num_strata, num_delays,
         DUMMY_VAR__);
-    current_statement__ = 448;
+    current_statement__ = 440;
     stan::model::assign(n_count,
       count_cases(case_idx, num_strata, num_delays, n_rows, d_col, s_col,
         pstream__), "assigning variable n_count");
-    current_statement__ = 449;
+    current_statement__ = 441;
     stan::math::validate_non_negative_index("mu", "num_strata", num_strata);
-    current_statement__ = 450;
+    current_statement__ = 442;
     stan::math::validate_non_negative_index("mu", "num_delays", num_delays);
     Eigen::Matrix<local_scalar_t__,-1,-1> mu =
       Eigen::Matrix<local_scalar_t__,-1,-1>::Constant(num_strata, num_delays,
         DUMMY_VAR__);
-    current_statement__ = 451;
+    current_statement__ = 443;
     stan::model::assign(mu,
       mean_cases(cases_real, case_idx, num_strata, num_delays, n_rows, d_col,
         s_col, pstream__), "assigning variable mu");
-    current_statement__ = 453;
+    current_statement__ = 445;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 452;
+      current_statement__ = 444;
       stan::model::assign(sigma,
         (stan::model::rvalue(sigma, "sigma",
            stan::model::index_uni(
@@ -2539,15 +2479,15 @@ sd_cases(const std::vector<double>& cases_real,
           stan::model::rvalue(case_idx, "case_idx",
             stan::model::index_uni(n), stan::model::index_uni(d_col))));
     }
-    current_statement__ = 462;
+    current_statement__ = 454;
     for (int d = 1; d <= num_delays; ++d) {
-      current_statement__ = 460;
+      current_statement__ = 452;
       for (int s = 1; s <= num_strata; ++s) {
-        current_statement__ = 458;
+        current_statement__ = 450;
         if (stan::math::logical_gt(
               stan::model::rvalue(n_count, "n_count",
                 stan::model::index_uni(s), stan::model::index_uni(d)), 0.0)) {
-          current_statement__ = 456;
+          current_statement__ = 448;
           stan::model::assign(sigma,
             stan::math::sqrt(
               (stan::model::rvalue(sigma, "sigma", stan::model::index_uni(s),
@@ -2557,13 +2497,13 @@ sd_cases(const std::vector<double>& cases_real,
             "assigning variable sigma", stan::model::index_uni(s),
             stan::model::index_uni(d));
         } else {
-          current_statement__ = 454;
+          current_statement__ = 446;
           stan::model::assign(sigma, 0.0, "assigning variable sigma",
             stan::model::index_uni(s), stan::model::index_uni(d));
         }
       }
     }
-    current_statement__ = 463;
+    current_statement__ = 455;
     return sigma;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2593,7 +2533,7 @@ normalize_cases(const std::vector<double>& cases_real,
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 465;
+    current_statement__ = 457;
     stan::math::validate_non_negative_index("normalized",
       "num_elements(cases_real)", stan::math::num_elements(cases_real));
     std::vector<local_scalar_t__> normalized =
@@ -2601,9 +2541,9 @@ normalize_cases(const std::vector<double>& cases_real,
         DUMMY_VAR__);
     local_scalar_t__ mu_value = DUMMY_VAR__;
     local_scalar_t__ sigma_value = DUMMY_VAR__;
-    current_statement__ = 477;
+    current_statement__ = 469;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 469;
+      current_statement__ = 461;
       mu_value = stan::model::rvalue(mu, "mu",
                    stan::model::index_uni(
                      stan::model::rvalue(case_idx, "case_idx",
@@ -2613,7 +2553,7 @@ normalize_cases(const std::vector<double>& cases_real,
                      stan::model::rvalue(case_idx, "case_idx",
                        stan::model::index_uni(n),
                        stan::model::index_uni(d_col))));
-      current_statement__ = 470;
+      current_statement__ = 462;
       sigma_value = stan::model::rvalue(sigma, "sigma",
                       stan::model::index_uni(
                         stan::model::rvalue(case_idx, "case_idx",
@@ -2623,22 +2563,22 @@ normalize_cases(const std::vector<double>& cases_real,
                         stan::model::rvalue(case_idx, "case_idx",
                           stan::model::index_uni(n),
                           stan::model::index_uni(d_col))));
-      current_statement__ = 475;
+      current_statement__ = 467;
       if (stan::math::logical_gt(sigma_value, 0.0)) {
-        current_statement__ = 473;
+        current_statement__ = 465;
         stan::model::assign(normalized,
           ((stan::model::rvalue(cases_real, "cases_real",
               stan::model::index_uni(n)) - mu_value) / sigma_value),
           "assigning variable normalized", stan::model::index_uni(n));
       } else {
-        current_statement__ = 471;
+        current_statement__ = 463;
         stan::model::assign(normalized,
           stan::model::rvalue(cases_real, "cases_real",
             stan::model::index_uni(n)), "assigning variable normalized",
           stan::model::index_uni(n));
       }
     }
-    current_statement__ = 478;
+    current_statement__ = 470;
     return normalized;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2668,7 +2608,7 @@ inv_normalize_cases(const std::vector<double>& normalized,
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 480;
+    current_statement__ = 472;
     stan::math::validate_non_negative_index("real_cases",
       "num_elements(normalized)", stan::math::num_elements(normalized));
     std::vector<local_scalar_t__> real_cases =
@@ -2676,9 +2616,9 @@ inv_normalize_cases(const std::vector<double>& normalized,
         DUMMY_VAR__);
     local_scalar_t__ mu_value = DUMMY_VAR__;
     local_scalar_t__ sigma_value = DUMMY_VAR__;
-    current_statement__ = 492;
+    current_statement__ = 484;
     for (int n = 1; n <= n_rows; ++n) {
-      current_statement__ = 484;
+      current_statement__ = 476;
       mu_value = stan::model::rvalue(mu, "mu",
                    stan::model::index_uni(
                      stan::model::rvalue(case_idx, "case_idx",
@@ -2688,7 +2628,7 @@ inv_normalize_cases(const std::vector<double>& normalized,
                      stan::model::rvalue(case_idx, "case_idx",
                        stan::model::index_uni(n),
                        stan::model::index_uni(d_col))));
-      current_statement__ = 485;
+      current_statement__ = 477;
       sigma_value = stan::model::rvalue(sigma, "sigma",
                       stan::model::index_uni(
                         stan::model::rvalue(case_idx, "case_idx",
@@ -2698,22 +2638,22 @@ inv_normalize_cases(const std::vector<double>& normalized,
                         stan::model::rvalue(case_idx, "case_idx",
                           stan::model::index_uni(n),
                           stan::model::index_uni(d_col))));
-      current_statement__ = 490;
+      current_statement__ = 482;
       if (stan::math::logical_gt(sigma_value, 0.0)) {
-        current_statement__ = 488;
+        current_statement__ = 480;
         stan::model::assign(real_cases,
           ((stan::model::rvalue(normalized, "normalized",
               stan::model::index_uni(n)) * sigma_value) + mu_value),
           "assigning variable real_cases", stan::model::index_uni(n));
       } else {
-        current_statement__ = 486;
+        current_statement__ = 478;
         stan::model::assign(real_cases,
           stan::model::rvalue(normalized, "normalized",
             stan::model::index_uni(n)), "assigning variable real_cases",
           stan::model::index_uni(n));
       }
     }
-    current_statement__ = 493;
+    current_statement__ = 485;
     return real_cases;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -2748,30 +2688,30 @@ inv_normalize_cases_2(const std::vector<std::vector<T0__>>& normalized_mat,
   // suppress unused var warning
   (void) DUMMY_VAR__;
   try {
-    current_statement__ = 495;
+    current_statement__ = 487;
     stan::math::validate_non_negative_index("unnormalized_mat", "num_steps",
       num_steps);
-    current_statement__ = 496;
+    current_statement__ = 488;
     stan::math::validate_non_negative_index("unnormalized_mat", "tsize",
       tsize);
     std::vector<std::vector<local_scalar_t__>> unnormalized_mat =
       std::vector<std::vector<local_scalar_t__>>(num_steps,
         std::vector<local_scalar_t__>(tsize, DUMMY_VAR__));
-    current_statement__ = 497;
+    current_statement__ = 489;
     stan::model::assign(unnormalized_mat,
       stan::math::rep_array(0, num_steps, tsize),
       "assigning variable unnormalized_mat");
-    current_statement__ = 508;
+    current_statement__ = 500;
     for (int s = 1; s <= num_strata; ++s) {
-      current_statement__ = 506;
+      current_statement__ = 498;
       for (int d = 1; d <= num_delays; ++d) {
-        current_statement__ = 504;
+        current_statement__ = 496;
         for (int t = 1; t <= num_steps; ++t) {
-          current_statement__ = 502;
+          current_statement__ = 494;
           if (stan::math::logical_gt(
                 stan::model::rvalue(sigma, "sigma",
                   stan::model::index_uni(s), stan::model::index_uni(d)), 0.0)) {
-            current_statement__ = 500;
+            current_statement__ = 492;
             stan::model::assign(unnormalized_mat,
               ((stan::model::rvalue(normalized_mat, "normalized_mat",
                   stan::model::index_uni(t),
@@ -2784,7 +2724,7 @@ inv_normalize_cases_2(const std::vector<std::vector<T0__>>& normalized_mat,
               stan::model::index_uni(t),
               stan::model::index_uni(((num_delays * (s - 1)) + d)));
           } else {
-            current_statement__ = 498;
+            current_statement__ = 490;
             stan::model::assign(unnormalized_mat,
               stan::model::rvalue(normalized_mat, "normalized_mat",
                 stan::model::index_uni(t),
@@ -2796,7 +2736,7 @@ inv_normalize_cases_2(const std::vector<std::vector<T0__>>& normalized_mat,
         }
       }
     }
-    current_statement__ = 509;
+    current_statement__ = 501;
     return unnormalized_mat;
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -3575,10 +3515,8 @@ public:
         std::vector<local_scalar_t__>(n_rows, DUMMY_VAR__);
       current_statement__ = 19;
       stan::model::assign(dist_val,
-        get_val_for_model(n_rows, num_delays, m_trans, cases_real_trans,
-          stan::math::promote_scalar<double>(cases_int), case_idx, s_col,
-          d_col, t_col, sd_m, is_continuous, is_discrete, pstream__),
-        "assigning variable dist_val");
+        get_val_for_model(n_rows, num_delays, m_trans, case_idx, s_col,
+          d_col, t_col, pstream__), "assigning variable dist_val");
       local_scalar_t__ lprior = DUMMY_VAR__;
       current_statement__ = 20;
       lprior = 0;
@@ -3618,15 +3556,21 @@ public:
           current_statement__ = 43;
           if (is_normal) {
             current_statement__ = 41;
-            lp_accum__.add(stan::math::std_normal_lpdf<false>(dist_val));
+            lp_accum__.add(stan::math::normal_lpdf<false>(cases_real_trans,
+                             dist_val,
+                             stan::math::rep_vector(
+                               stan::model::rvalue(sd_m, "sd_m",
+                                 stan::model::index_uni(1)), n_rows)));
           } else {
             current_statement__ = 40;
             if (is_student) {
               current_statement__ = 38;
-              lp_accum__.add(stan::math::student_t_lpdf<false>(dist_val,
-                               stan::math::rep_vector(dof, n_rows),
-                               stan::math::rep_vector(0.0, n_rows),
-                               stan::math::rep_vector(1.0, n_rows)));
+              lp_accum__.add(stan::math::student_t_lpdf<false>(
+                               cases_real_trans,
+                               stan::math::rep_vector(dof, n_rows), dist_val,
+                               stan::math::rep_vector((1.0 /
+                                 stan::model::rvalue(sd_m, "sd_m",
+                                   stan::model::index_uni(1))), n_rows)));
             } else {
               current_statement__ = 37;
               if (is_poisson) {
@@ -3837,10 +3781,8 @@ public:
           control_c_transform, pstream__), "assigning variable m_trans");
       current_statement__ = 19;
       stan::model::assign(dist_val,
-        get_val_for_model(n_rows, num_delays, m_trans, cases_real_trans,
-          stan::math::promote_scalar<double>(cases_int), case_idx, s_col,
-          d_col, t_col, sd_m, is_continuous, is_discrete, pstream__),
-        "assigning variable dist_val");
+        get_val_for_model(n_rows, num_delays, m_trans, case_idx, s_col,
+          d_col, t_col, pstream__), "assigning variable dist_val");
       current_statement__ = 20;
       lprior = 0;
       current_statement__ = 21;

@@ -28,77 +28,45 @@ set_priors(
 )
 }
 \arguments{
-\item{mu_degree}{Integer. Degree of the epidemic trend.}
+\item{mu_p}{Integer. Degree of the epidemic trend.}
 
-\item{nu_degree}{Integer. Degree of the delay trend.}
+\item{mu_q}{Integer. Degree of the errors in the epidemic trend.}
 
-\item{p}{Integer. The number of lags to consider for an autocorrelated AR(p) model}
+\item{nu_p}{Integer. Degree of the delay trend}
 
-\item{q}{Integer. The number of lags to consider for a moving average MA(q) model}
+\item{mu_intercept_param_1}{Real. Mean of the epidemic intercept.}
 
-\item{mu_is_constant}{Logical. Indicates whether the epidemic trend is constant.}
+\item{mu_intercept_param_2}{Positive real. Variance of the epidemic intercept.}
 
-\item{nu_is_constant}{Logical. Indicates whether the delay trend is constant.}
+\item{mu_0_param_1}{Real. Mean of the initial value of the epidemic trend.}
 
-\item{mu_sd_prior}{Character. Prior for the epidemic trend error.}
+\item{mu_0_param_2}{Positive Real. Variance of the initial value of the epidemic trend.}
 
-\item{nu_sd_prior}{Character. Prior for the delay trend error.}
+\item{nu_intercept_param_1}{Real. Mean of the delay intercept.}
 
-\item{mu_sd_param_1}{Numeric. First parameter for the epidemic trend error.}
+\item{nu_intercept_param_2}{Positive real. Variance of the delay intercept.}
 
-\item{mu_sd_param_2}{Numeric. Second parameter for the epidemic trend error.}
+\item{nu_0_param_1}{Real. Mean of the initial value of the disease trend.}
 
-\item{nu_sd_param_1}{Numeric. First parameter for the delay trend error.}
+\item{nu_0_param_2}{Positive Real. Variance of the initial value of the disease trend.}
 
-\item{nu_sd_param_2}{Numeric. Second parameter for the delay trend error.}
+\item{sd_mu_param_1}{Positive real. Initial value for the mean of the standard deviation of the epidemic trend.}
 
-\item{mu_0_mean_hyperprior}{Prior distribution for the mean of the epidemic trend.}
+\item{sd_mu_param_2}{Positive real. Initial value for the variance of the standard deviation of the epidemic trend.}
 
-\item{mu_0_sd_hyperprior}{Prior distribution for the standard deviation of the epidemic trend.}
+\item{sd_nu_param_1}{Positive real. Initial value for the mean of the standard deviation of the disease trend.}
 
-\item{mu_0_mean_param_1}{Character. Prior for the initial epidemic trend mean's first parameter.}
+\item{sd_nu_param_2}{Positive real. Initial value for the variance of the standard deviation of the disease trend.}
 
-\item{mu_0_mean_param_2}{Character. Prior for the initial epidemic trend mean's second parameter.}
+\item{sd_m_param_1}{Positive real. Initial value for the mean of the standard deviation of the observed cases (not considered if distribution is Poisson)}
 
-\item{mu_0_sd_param_1}{Character. Prior for the initial epidemic trend standard deviation's first parameter.}
+\item{sd_m_param_2}{Positive real. Initial value for the variance of the standard deviation of the observed cases (not considered if distribution is Poisson)}
 
-\item{mu_0_sd_param_2}{Character. Prior for the initial epidemic trend standard deviation's second parameter.}
+\item{dof}{Degrees of freedom if the distribution used in [nowcast()] is Student (default = 7).}
 
-\item{nu_0_mean_hyperprior}{Prior distribution for the mean of the delay trend. Default is normal.}
+\item{control_k_transform}{Parameter for the `dhyperbolic` or `softplus` link functions.}
 
-\item{nu_0_sd_hyperprior}{Prior distribution for the standard deviation of the delay trend.}
-
-\item{nu_0_mean_param_1}{Character. Prior for the initial delay trend mean's first parameter.}
-
-\item{nu_0_mean_param_2}{Character. Prior for the initial delay trend mean's second parameter.}
-
-\item{nu_0_sd_param_1}{Character. Prior for the initial delay trend standard deviation's first parameter.}
-
-\item{nu_0_sd_param_2}{Character. Prior for the initial delay trend standard deviation's second parameter.}
-
-\item{r_prior}{Character. Prior for the negative binomial precision parameter.}
-
-\item{r_param_1}{Numeric. First parameter for the dispersion prior if negative binomial.}
-
-\item{r_param_2}{Numeric. Second parameter for the dispersion prior if negative binomial.}
-
-\item{phi_AR_param_1}{Numeric. Prior for the AR coefficients' first parameter.}
-
-\item{phi_AR_param_2}{Numeric. Prior for the AR coefficients' second parameter.}
-
-\item{phi_AR_prior}{String Prior distirbution name for the AR coefficients.}
-
-\item{theta_MA_param_1}{Numeric. Prior for the MA coefficients' first parameter.}
-
-\item{theta_MA_param_2}{Numeric. Prior for the MA coefficients' second parameter.}
-
-\item{theta_MA_prior}{String Prior distirbution name for the MA coefficients.}
-
-\item{xi_sd_param_1}{Numeric. Prior for the error (in log-scale) first parameter}
-
-\item{xi_sd_param_2}{Numeric. Prior for the error (in log-scale) second parameter}
-
-\item{xi_sd_prior}{String Prior distribution name for the errors}
+\item{control_c_transform}{Parameter for the `dhyperbolic` link function.}
 }
 \value{
 A list with all the priors for the [nowcast()] function.
@@ -111,7 +79,7 @@ as a list.
 #Get the default priors
 set_priors()
 
-#Change the distribution of the priors sd for the epidemic trend as well as the degree of the delays
-set_priors(nu_degree = 2, mu_sd_prior = "cauchy")
+#Change the priors
+set_priors(mu_intercept_param_1 = 2, mu_q = 3)
 
 }

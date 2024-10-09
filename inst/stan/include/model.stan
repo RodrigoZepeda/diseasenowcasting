@@ -1,9 +1,9 @@
 //Add observations
 if (!prior_only){
   if (is_normal){
-    target += std_normal_lpdf(dist_val);
+    target += normal_lpdf(cases_real_trans | dist_val, rep_vector(sd_m[1] , n_rows));
   } else if (is_student){
-    target += student_t_lpdf(dist_val | rep_vector(dof, n_rows), rep_vector(0.0, n_rows), rep_vector(1.0, n_rows));
+    target += student_t_lpdf(cases_real_trans | rep_vector(dof, n_rows), dist_val, rep_vector(1.0 / sd_m[1], n_rows));
   } else if (is_poisson){
     target += poisson_lpmf(cases_int | dist_val);
   } else if (is_negbin){

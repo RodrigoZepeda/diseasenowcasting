@@ -37,11 +37,19 @@
 #' @param refresh Refresh parameter for [rstan::sampling()]
 #'
 #' @param method Fitting method either `sampling` (recommended for inference), `variational`
-#' (recommended for testing) or `optimization`. The `sampling` method calls [rstan::sampling()] while the
-#' `variational` calls [rstan::vb()] and `optimization` calls [rstan::optimizing()]
+#' (recommended for testing) or `optimization`. The `sampling` method calls [rstan::sampling()]
+#' while the `variational` calls [rstan::vb()] and `optimization` calls [rstan::optimizing()]
 #'
 #' @param priors A list of all of the nowcast priors. You can use [set_priors()] to change
 #' the priors of the function (see details)
+#'
+#' @param link_x Link function for the epidemic process (see section On links).
+#'
+#' @param link_y Link function for the data (see section On links).
+#'
+#' @param normalize_data Whether the data `y` should be normalized (substracted its mean and divided
+#' by standard deviation) for fitting. This option is only valid if using a continuous model
+#' (Normal or Student).
 #'
 #' @param ... Additional arguments to pass to [rstan::sampling()]
 #'

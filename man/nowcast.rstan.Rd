@@ -41,6 +41,14 @@ such that each row has a column for onset date, report date, and}
 
 \item{dist}{Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"}
 
+\item{link_x}{Link function for the epidemic process (see section On links).}
+
+\item{link_y}{Link function for the data (see section On links).}
+
+\item{normalize_data}{Whether the data `y` should be normalized (substracted its mean and divided
+by standard deviation) for fitting. This option is only valid if using a continuous model
+(Normal or Student).}
+
 \item{prior_only}{Boolean variable indicating whether to compute only the prior distribution}
 
 \item{control}{Control parameter for [rstan::sampling()]}
@@ -48,8 +56,8 @@ such that each row has a column for onset date, report date, and}
 \item{refresh}{Refresh parameter for [rstan::sampling()]}
 
 \item{method}{Fitting method either `sampling` (recommended for inference), `variational`
-(recommended for testing) or `optimization`. The `sampling` method calls [rstan::sampling()] while the
-`variational` calls [rstan::vb()] and `optimization` calls [rstan::optimizing()]}
+(recommended for testing) or `optimization`. The `sampling` method calls [rstan::sampling()]
+while the `variational` calls [rstan::vb()] and `optimization` calls [rstan::optimizing()]}
 
 \item{priors}{A list of all of the nowcast priors. You can use [set_priors()] to change
 the priors of the function (see details)}

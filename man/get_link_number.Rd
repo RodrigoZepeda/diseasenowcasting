@@ -10,6 +10,10 @@ get_link_number(link)
 A number for the distribution code for Stan's `data`.
 }
 \description{
-Function for sets the link required
+The following links are implemented:
+* identity: g(x) = x
+* log: g(x) = log(x)
+* softplus: g(x) = k*log(1 + exp(x/k))
+* dhyperbolic: g(x) = c*x/2 + sqrt( (c*x/2)^2 + k)
 }
 \keyword{internal}
