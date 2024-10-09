@@ -4,7 +4,7 @@
 \alias{get_priors_from_init}
 \title{Function for setting the initial values from priors for simulation}
 \usage{
-get_priors_from_init(priors, num_strata, num_delays, num_steps, dist)
+get_priors_from_init(priors, num_strata, num_delays, num_steps)
 }
 \arguments{
 \item{priors}{A list of all of the nowcast priors. You can use [set_priors()] to change
@@ -15,8 +15,6 @@ the priors of the function (see details)}
 \item{num_delays}{Integer. Number of delay strata. Default is 8.}
 
 \item{num_steps}{Integer. Number of time steps to simulate. Default is 10.}
-
-\item{dist}{Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"}
 }
 \value{
 An init function that generates initial values based upon the priors to send to

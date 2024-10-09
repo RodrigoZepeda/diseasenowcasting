@@ -18,6 +18,7 @@
 #' @importFrom stats rnorm
 #' @importFrom stats rpois
 #' @importFrom stats rt
+#' @importFrom stats runif
 #' @importFrom stats rweibull
 #' @importFrom stats sd
 ## usethis namespace: end

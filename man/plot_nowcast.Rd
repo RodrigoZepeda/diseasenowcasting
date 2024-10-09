@@ -21,11 +21,12 @@ data(denguedat)
 now <- as.Date("1990-10-01")
 
 # perform nowcasting
-predictions <- nowcast(denguedat, "onset_week", "report_week", now = now, method = "optimization",
-seed = 2495624, iter = 10)
+predictions <- nowcast(denguedat, "onset_week", "report_week",
+  now = now, method = "optimization",
+  seed = 2495624, iter = 10
+)
 
 # create summary dataframe
 plot_nowcast(predictions)
-
 
 }

@@ -10,11 +10,14 @@ nowcast(
   report_date,
   strata = NULL,
   dist = c("NegativeBinomial", "Poisson", "Normal", "Student"),
+  link_x = default_x_link(dist),
+  link_y = default_y_link(dist),
   now = NULL,
   units = NULL,
   max_delay = Inf,
   prior_only = FALSE,
   proportion_reported = 1,
+  normalize_data = (dist \%in\% c("Normal", "Student")),
   refresh = 250 * rlang::is_interactive(),
   control = control_default(),
   method = c("sampling", "variational", "optimization"),
@@ -36,6 +39,10 @@ such that each row has a column for onset date, report date, and}
 
 \item{dist}{Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"}
 
+\item{link_x}{Link function for the epidemic process (see section On links).}
+
+\item{link_y}{Link function for the data (see section On links).}
+
 \item{now}{An object of datatype \code{Date} indicating the date at which
 to perform the nowcast.}
 
@@ -53,13 +60,17 @@ For asymptomatic diseases where not all cases will ever be reported,
 or for outbreaks in which severe under-reporting is expected, change this
  to less than 1.}
 
+\item{normalize_data}{Whether the data `y` should be normalized (substracted its mean and divided
+by standard deviation) for fitting. This option is only valid if using a continuous model
+(Normal or Student).}
+
 \item{refresh}{Refresh parameter for [rstan::sampling()]}
 
 \item{control}{Control parameter for [rstan::sampling()]}
 
 \item{method}{Fitting method either `sampling` (recommended for inference), `variational`
-(recommended for testing) or `optimization`. The `sampling` method calls [rstan::sampling()] while the
-`variational` calls [rstan::vb()] and `optimization` calls [rstan::optimizing()]}
+(recommended for testing) or `optimization`. The `sampling` method calls [rstan::sampling()]
+while the `variational` calls [rstan::vb()] and `optimization` calls [rstan::optimizing()]}
 
 \item{priors}{A list of all of the nowcast priors. You can use [set_priors()] to change
 the priors of the function (see details)}
