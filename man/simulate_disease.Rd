@@ -39,7 +39,7 @@ report dates, strata, delays, and the number of observed cases per time step.
 }
 \description{
 This function simulates a state-space process for testing purposes in a model with
-multiple delays and strata. It estimates the process over a spesupcified number of steps,
+multiple delays and strata. It estimates the process over a specified number of steps,
  with options for trend degrees, priors, and error distributions.
 }
 \examples{
