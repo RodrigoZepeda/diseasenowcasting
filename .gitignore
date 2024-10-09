@@ -9,3 +9,4 @@ src/*.so
 src/*.dll
 src/*.tmp
 src/functions.cpp
+src/functions.cpp

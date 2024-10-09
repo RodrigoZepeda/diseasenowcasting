@@ -4,6 +4,9 @@
 #'
 #' @param nowcast_output the output of the nowcast() function
 #'
+#' @return A summary tibble of the nowcast results,
+#' it specifies: onset time, Strata, Mean value, standard deviation, quantiles
+#'
 #' @examples
 #' # Load the data
 #' data(denguedat)
@@ -77,6 +80,9 @@ summary_nowcast <- function(nowcast_output) {
 #' Plots the predictions of the function nowcast() over the input observed values
 #'
 #' @param nowcast_output the output of the nowcast() function
+#'
+#' @return A a ggplot2 object that plots the evolution of the nowcast over the observed values,
+#' it creates a subplot for each strata
 #'
 #' @examples
 #' # Load the data
