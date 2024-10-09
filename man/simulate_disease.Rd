@@ -44,5 +44,6 @@ multiple delays and strata. It estimates the process over a spesupcified number 
 }
 \examples{
 # Simulate a disease for 20 time steps with delay of maximum 5 and 3 strata
+set.seed(48672)
 simulate_disease(num_steps = 20, num_delays = 5, num_strata = 3)
 }
