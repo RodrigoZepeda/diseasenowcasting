@@ -10,9 +10,8 @@ simulate_disease(
   num_strata = 2,
   initial_day = NULL,
   warmup_steps = 50,
-  dist = c("NegativeBinomial", "Poisson", "Normal", "Student"),
   units = c("daily", "weekly"),
-  priors = set_priors(),
+  priors = random_priors(mu_p = 2, nu_p = 1, mu_q = 1),
   ...
 )
 }
@@ -26,8 +25,6 @@ simulate_disease(
 \item{initial_day}{Date. If the simulation is to start on a specific day.}
 
 \item{warmup_steps}{Initial steps on model (to discard)}
-
-\item{dist}{Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"}
 
 \item{units}{Either `"daily"` (default) or `"weekly"`.}
 
@@ -47,5 +44,6 @@ multiple delays and strata. It estimates the process over a specified number of 
 }
 \examples{
 # Simulate a disease for 20 time steps with delay of maximum 5 and 3 strata
+set.seed(48672)
 simulate_disease(num_steps = 20, num_delays = 5, num_strata = 3)
 }

@@ -37,11 +37,19 @@
 #' @param refresh Refresh parameter for [rstan::sampling()]
 #'
 #' @param method Fitting method either `sampling` (recommended for inference), `variational`
-#' (recommended for testing) or `optimization`. The `sampling` method calls [rstan::sampling()] while the
-#' `variational` calls [rstan::vb()] and `optimization` calls [rstan::optimizing()]
+#' (recommended for testing) or `optimization`. The `sampling` method calls [rstan::sampling()]
+#' while the `variational` calls [rstan::vb()] and `optimization` calls [rstan::optimizing()]
 #'
 #' @param priors A list of all of the nowcast priors. You can use [set_priors()] to change
 #' the priors of the function (see details)
+#'
+#' @param link_x Link function for the epidemic process (see section On links).
+#'
+#' @param link_y Link function for the data (see section On links).
+#'
+#' @param normalize_data Whether the data `y` should be normalized (substracted its mean and divided
+#' by standard deviation) for fitting. This option is only valid if using a continuous model
+#' (Normal or Student).
 #'
 #' @param ... Additional arguments to pass to [rstan::sampling()]
 #'
@@ -55,14 +63,19 @@
 #' nowcast(denguedat, "onset_week", "report_week", now = now,
 #'   method = "optimization", seed = 2495624, iter = 10)
 #' @export
-nowcast <- function(.disease_data, onset_date, report_date,
+nowcast <- function(.disease_data,
+                    onset_date,
+                    report_date,
                     strata = NULL,
                     dist   = c("NegativeBinomial", "Poisson","Normal","Student"),
+                    link_x = default_x_link(dist),
+                    link_y = default_y_link(dist),
                     now = NULL,
                     units = NULL,
                     max_delay = Inf,
                     prior_only = FALSE,
                     proportion_reported = 1,
+                    normalize_data = (dist %in% c("Normal","Student")),
                     refresh = 250*rlang::is_interactive(),
                     control = control_default(),
                     method  = c("sampling","variational","optimization"),
@@ -87,6 +100,10 @@ nowcast <- function(.disease_data, onset_date, report_date,
 
   # Method
   method <- match.arg(method, c("sampling", "variational","optimization"))
+
+  #Link
+  link_x <- match.arg(link_x, c("log","identity","softplus","dhyperbolic"))
+  link_y <- match.arg(link_y, c("log","identity","softplus","dhyperbolic"))
 
   # Print message to user
   cli::cli_alert_info(
@@ -114,7 +131,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
     dplyr::pull(num_delays)
 
   #Get the specified prior distributions
-  priors        <- priors_to_numeric(.disease_data, priors)
+  #priors        <- priors_to_numeric(.disease_data, priors, dist)
 
   #Get the strata
   strata_list   <- preprocess_strata(.disease_data, strata)
@@ -128,6 +145,9 @@ nowcast <- function(.disease_data, onset_date, report_date,
                 num_delays = num_delays,
                 num_strata = num_strata,
                 dist       = dist,
+                link_x     = link_x,
+                link_y     = link_y,
+                normalize_data = normalize_data,
                 prior_only = prior_only,
                 refresh    = refresh,
                 control    = control,
@@ -171,101 +191,54 @@ nowcast <- function(.disease_data, onset_date, report_date,
 #'
 #' @keywords internal
 nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num_delays, num_strata,
-                          dist, prior_only, control, refresh, method, priors, ...) {
+                          dist, link_x, link_y, normalize_data,
+                          prior_only, control, refresh, method, priors, ...) {
 
   #Keep only the columns n, .tval, .delay, .strata
   .disease_data <- .disease_data |>
-    dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), !!as.symbol(".strata"))
+    dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), !!as.symbol(".strata")) |>
+    dplyr::arrange(!!as.symbol(".tval"), !!as.symbol(".strata"), !!as.symbol(".delay")) #IMPORTANT! Requirement for Stan model to be arranged by time, strata and delay in that order
 
   # Distribution
-  is_negative_binomial <- as.numeric(dist == "NegativeBinomial" | dist == "Normal")
+  distribution <- get_distribution_number(dist)
 
   # Cases and positions handled separately
   N_cases <- as.matrix(.disease_data)
 
-  stan_data <- list(
+  stan_data <- priors |>
+    append(
+      list(
 
-    #Data information
-    num_steps   = num_steps,
-    num_delays  = num_delays,
-    num_strata  = num_strata,
-    n_rows      = nrow(.disease_data),
-    N_cases     = N_cases[,2:4],
-    Cases       = as.matrix(N_cases[,1]),
+        #Data information
+        num_steps   = num_steps,
+        num_delays  = num_delays,
+        num_strata  = num_strata,
+        n_rows      = nrow(.disease_data),
+        case_idx    = N_cases[,2:4],
+        cases_real  = N_cases[,1],
+        cases_int   = as.integer(N_cases[,1]),
 
-    #Whether to compute only the prior
-    prior_only  = as.numeric(prior_only),
+        #Whether to compute only the prior
+        prior_only  = as.numeric(prior_only),
+        dist        = distribution,
+        link_x      = get_link_number(link_x),
+        link_y      = get_link_number(link_y),
+        normalize_data = normalize_data
 
-    #Trend specification
-    mu_degree      = priors$mu_degree,
-    nu_degree      = priors$nu_degree,
-    mu_is_constant = priors$mu_is_constant,
-    nu_is_constant = priors$nu_is_constant,
+  ))
 
-    #ARMA specification
-    p                    = priors$p,
-    q                    = priors$q,
-    phi_AR_param_1       = priors$phi_AR_param_1,
-    phi_AR_param_2       = priors$phi_AR_param_2,
-    phi_AR_prior         = priors$phi_AR_prior,
-    theta_MA_param_1     = priors$theta_MA_param_1,
-    theta_MA_param_2     = priors$theta_MA_param_2,
-    theta_MA_prior       = priors$theta_MA_prior,
-    xi_sd_param_1        = priors$xi_sd_param_1,
-    xi_sd_param_2        = priors$xi_sd_param_2,
-    xi_sd_prior          = priors$xi_sd_prior,
-
-    #Distribution information
-    is_negative_binomial = is_negative_binomial,
-    mu_sd_prior = priors$mu_sd_prior,
-    nu_sd_prior = priors$nu_sd_prior,
-    r_prior     = priors$r_prior,
-
-    #Prior parameters
-    r_param_1     = priors$r_param_1,
-    r_param_2     = priors$r_param_2,
-    mu_sd_param_1 = priors$mu_sd_param_1,
-    mu_sd_param_2 = priors$mu_sd_param_2,
-    nu_sd_param_1 = priors$nu_sd_param_1,
-    nu_sd_param_2 = priors$nu_sd_param_2,
-
-    mu_0_mean_param_1    = priors$mu_0_mean_param_1,
-    mu_0_mean_param_2    = priors$mu_0_mean_param_2,
-    mu_0_sd_param_1      = priors$mu_0_sd_param_1,
-    mu_0_sd_param_2      = priors$mu_0_sd_param_2,
-    nu_0_mean_param_1    = priors$nu_0_mean_param_1,
-    nu_0_mean_param_2    = priors$nu_0_mean_param_2,
-    nu_0_sd_param_1      = priors$nu_0_sd_param_1,
-    nu_0_sd_param_2      = priors$nu_0_sd_param_2,
-    mu_0_mean_hyperprior = priors$mu_0_mean_hyperprior,
-    nu_0_mean_hyperprior = priors$nu_0_mean_hyperprior,
-    mu_0_sd_hyperprior   = priors$mu_0_sd_hyperprior,
-    nu_0_sd_hyperprior   = priors$nu_0_sd_hyperprior,
-
-    max_log_tol_val      = 15,
-    precision_tol        = 1.e-3
-  )
-
-  #Select the model
-  if (dist %in% c("NegativeBinomial","Poisson")){
-    model_stan <- stanmodels$nowcast_discrete
-    gq_stan    <- stanmodels$discrete_generated_quantities
-  } else {
-    model_stan <- stanmodels$nowcast_continuous
-    gq_stan    <- stanmodels$continuous_generated_quantities
-  }
 
   if (method[1] == "sampling"){
-    stan_fit <- rstan::sampling(model_stan, data = stan_data,
+    stan_fit <- rstan::sampling(stanmodels$nowcasting, data = stan_data,
                            control = control,
                            refresh = refresh,
                            ...)
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "variational") {
-    stan_fit <- rstan::vb(model_stan, data = stan_data, refresh = refresh,...)
+    stan_fit <- rstan::vb(stanmodels$nowcasting, data = stan_data, refresh = refresh,...)
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "optimization") {
-    stan_fit <- rstan::optimizing(model_stan, data = stan_data, refresh = refresh, ...)
+    stan_fit <- rstan::optimizing(stanmodels$nowcasting, data = stan_data, refresh = refresh, ...)
 
     # Work around to get draws from the optimized params for gq
     draws           <- matrix(rep(stan_fit$par, 1000), ncol = length(stan_fit$par), byrow = TRUE)
@@ -276,20 +249,20 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
   }
 
   #Get the generated quantities
-  generated_quantities <- rstan::gqs(gq_stan, data = stan_data, draws = draws)
+  generated_quantities <- rstan::gqs(stanmodels$generated_quantities, data = stan_data, draws = draws)
 
-  flag <- generated_quantities |>
-    posterior::as_draws() |>
-    posterior::subset_draws("lambda_higher_than_maxval_flag") |>
-    posterior::summarise_draws(max) |>
-    dplyr::pull(max)
+  # flag <- generated_quantities |>
+  #   posterior::as_draws() |>
+  #   posterior::subset_draws("lambda_higher_than_maxval_flag") |>
+  #   posterior::summarise_draws(max) |>
+  #   dplyr::pull(max)
 
-  if (flag >= 1){
-    cli::cli_alert_warning(
-      "Some values of lambda have been truncated as they are too large. This might be attributed
-      to a high variance of your data or on the prior. Consider reducing the prior variance."
-    )
-  }
+  # if (flag >= 1){
+  #   cli::cli_alert_warning(
+  #     "Some values of lambda have been truncated as they are too large. This might be attributed
+  #     to a high variance of your data or on the prior. Consider reducing the prior variance."
+  #   )
+  # }
 
   return(
     list(

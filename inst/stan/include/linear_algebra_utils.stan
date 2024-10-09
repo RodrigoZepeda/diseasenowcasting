@@ -1,5 +1,3 @@
-#include include/license.stan
-
 matrix create_block_diagonal(matrix A, matrix B){
   /*
   * Create a block diagonal matrix from matrix A and matrix B
@@ -138,3 +136,37 @@ vector append_vec_2_val(real val, vector A){
   return B;
 }
 
+
+vector rowwise_mat_2_vec(matrix A){
+  /*
+  * Create a vector from a matrix (rowwise)
+  *
+  * @details Given matrix A creates a vector by concatenating the rows
+  *
+  * @param A The matrix to convert to vector
+  *
+  * @return The vector B given by;
+  * B = (a_{1,1}, a_{1,2}, ..., a_{1,n}, a_{2,1}, a_{2,2}, .... a_{2,n}, ..., a_{m,1}, ..., a_{m,n})
+  */
+  vector[num_elements(A)] B;
+  for (d in 1:rows(A))
+    B[(cols(A)*(d - 1) + 1):(cols(A)*d)] = A[d,:]';
+
+  return B;
+
+}
+
+vector colwise_mat_2_vec(matrix A){
+  /*
+  * Create a vector from a matrix (rowwise)
+  *
+  * @details Given matrix A creates a vector by concatenating the rows
+  *
+  * @param A The matrix to convert to vector
+  *
+  * @return The vector B given by;
+  * B = (a_{1,1}, a_{2,1}, ..., a_{m,1}, a_{1,2}, a_{2,2}, .... a_{m,2}, ..., a_{1,n}, ..., a_{m,n})
+  */
+  return rowwise_mat_2_vec(A');
+
+}

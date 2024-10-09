@@ -20,19 +20,18 @@
 #'
 #' @examples
 #' # Simulate a disease for 20 time steps with delay of maximum 5 and 3 strata
+#' set.seed(48672)
 #' simulate_disease(num_steps = 20, num_delays = 5, num_strata = 3)
-simulate_disease <- function(num_steps  = 10,
-                             num_delays = 8,
-                             num_strata = 2,
-                             initial_day = NULL,
+simulate_disease <- function(num_steps    = 10,
+                             num_delays   = 8,
+                             num_strata   = 2,
+                             initial_day  = NULL,
                              warmup_steps = 50,
-                             dist   = c("NegativeBinomial", "Poisson","Normal","Student"),
-                             units  = c("daily", "weekly"),
-                             priors = set_priors(),
+                             units        = c("daily", "weekly"),
+                             priors       = random_priors(mu_p = 2, nu_p = 1, mu_q = 1),
                              ...){
 
 
-  dist     <- match.arg(dist, c("NegativeBinomial", "Poisson","Normal","Student"))
   warmup_steps <- ifelse(!is.numeric(warmup_steps) | warmup_steps < 0,
                          cli::cli_abort("Invalid warmup_steps. Set to an integer >= 0"),
                          ceiling(warmup_steps))
@@ -63,24 +62,30 @@ simulate_disease <- function(num_steps  = 10,
 
   #Generate fake dataset
   ss_process <- nowcast(disease_data, onset_date = "onset_date", report_date = "report_date",
-                        strata = ".strata", prior_only = TRUE,
+                        strata = ".strata",
                         priors = priors,
+                        prior_only = F,
                         algorithm = "Fixed_param",
-                        refresh = 0,
-                        dist = dist,
                         chains = 1,
-                        init = get_priors_from_init(priors, num_strata, num_delays, num_steps, dist),
+                        normalize_data = FALSE,
+                        iter = 1000,
+                        init = get_priors_from_init(priors = priors,
+                                                    num_strata = num_strata,
+                                                    num_delays = num_delays,
+                                                    num_steps = num_steps + warmup_steps),
                         ...)
 
   #Create the simulation tibble
   simulations <- ss_process$generated_quantities |>
     posterior::as_draws() |>
-    posterior::subset_draws("N_predict_raw") |>
+    posterior::subset_draws(c("N_mat_predict_real", "N_mat_predict_int")) |>
     posterior::summarise_draws() |>
     dplyr::mutate(!!as.symbol(".pos")  := as.numeric(stringr::str_remove_all(!!as.symbol("variable"),".*\\[.*,|\\]"))) |>
     dplyr::mutate(!!as.symbol(".tval") := as.numeric(stringr::str_remove_all(!!as.symbol("variable"),".*\\[|,.*\\]"))) |>
     dplyr::filter(!!as.symbol(".tval") >= !!warmup_steps) |>
     dplyr::select(!!as.symbol(".tval"), !!as.symbol(".pos"), !!as.symbol("median")) |>
+    dplyr::group_by(!!as.symbol(".tval"), !!as.symbol(".pos")) |>
+    dplyr::summarise(!!as.symbol("median") := sum(!!as.symbol("median")), .groups = "drop") |>
     dplyr::left_join(
       tidyr::expand_grid(
         .delay     =  seq(0, num_delays - 1, by = 1),
@@ -94,11 +99,10 @@ simulate_disease <- function(num_steps  = 10,
     dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("onset_date")  +
                     lubridate::days(!!scale_val*!!as.symbol(".delay"))) |>
     dplyr::rename(!!as.symbol("n") := !!as.symbol("median")) |>
-    dplyr::select(-!!as.symbol(".tval"), -!!as.symbol(".pos"), -!!as.symbol(".delay"))
+    dplyr::select(-!!as.symbol(".tval"), -!!as.symbol(".pos"), -!!as.symbol(".delay")) |>
+    dplyr::mutate_at("n", ceiling) |>
+    dplyr::mutate_at("n", abs)
 
-  if (dist %in% c("NegativeBinomial", "Poisson")){
-    simulations <- simulations |> dplyr::mutate_at("n", ceiling)
-  }
 
   return(simulations)
 

@@ -9,7 +9,7 @@
 preprocess_strata <- function(.disease_data, strata){
 
   #Create the strata column
-  if (is.null(strata) || strata == "" || ncol(.disease_data) == 3){
+  if (is.null(strata) || (length(strata) == 1 && strata == "") || ncol(.disease_data) == 3){
     .disease_data <- .disease_data |>
       dplyr::mutate(!!as.symbol(".strata") := "No strata")
     strata        <- ".strata"

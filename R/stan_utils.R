@@ -53,3 +53,32 @@ get_prior_code_stan <- function(prior_name){
 control_default <- function(){
   list(adapt_delta = 0.95, max_treedepth = 12)
 }
+
+#' Return the default links for the model
+#'
+#' The functions return the corresponding default links for the data model
+#' @inheritParams nowcast
+#' @rdname default_link
+#' @return The name of the default link for a distribution
+#' @keywords internal
+
+#' @title Default y link
+#' @keywords internal
+default_y_link <- function(dist){
+  if (dist %in% c("Normal","Student")){
+    return ("identity")
+  } else {
+    return ("identity")
+  }
+}
+
+#' @title Default x link
+#' @keywords internal
+default_x_link <- function(dist){
+  if (dist %in% c("Normal","Student")){
+    return ("identity")
+  } else {
+    return ("dhyperbolic")
+  }
+}
+
