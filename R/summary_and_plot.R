@@ -4,8 +4,7 @@
 #'
 #' @param nowcast_output the output of the nowcast() function
 #'
-# @return A summary tibble of the nowcast results,
-#' it specifies: onset time, Strata, Mean value, standard deviation, quantiles
+
 #'
 #' @examples
 #' # Load the data
@@ -26,11 +25,11 @@
 #'
 #' @export
 summary_nowcast <- function(nowcast_output) {
-  # set column names for summary                    #### avoid renaming the unnecessary. a bunch of quantiles and stratas.
+  # set column names for summary
   strata_unified_col <- ".strata_unified"
   mean_col <- "mean"
   sd_col <- "sd"
-  q05_col <- "q5" ## need to go, must be handled by posterior::summarise_draw
+  q05_col <- "q5"
   q95_col <- "q95"
   mean_col_new <- "Mean"
   sd_col_new <- "SD"
@@ -38,17 +37,8 @@ summary_nowcast <- function(nowcast_output) {
   q95_col_new <- "q95"
   # Get names from input data
   onset_date_name <- nowcast_output$data$call_parameters$onset_date
-  # Get strata names if present
-  if (is.null(nowcast_output$data$call_parameters$strata)) {
-    strata_names <- "Strata"
-  } else if (length(nowcast_output$data$call_parameters$strata)==1) {
-    strata_names <- nowcast_output$data$call_parameters$strata
-  } else {
-    strata_names <- nowcast_output$data$call_parameters$strata
-    print("multi")
-  }
-
-
+  # check if strata column in present
+  strata_name <- strata_name <- if (!is.null(nowcast_output$data$call_parameters$strata)) nowcast_output$data$call_parameters$strata else "Strata"
   date_dic <- nowcast_output$data$preprocessed_data |>
     dplyr::select(!!as.symbol(".tval"), dplyr::all_of(onset_date_name)) |>
     dplyr::distinct()
@@ -56,8 +46,7 @@ summary_nowcast <- function(nowcast_output) {
   predictions_summary <- nowcast_output$generated_quantities |>
     posterior::as_draws() |>
     posterior::subset_draws("N_predict") |>
-    posterior::summarise_draws("mean","sd",~quantile(.x, probs = c(0.4, 0.6))) |> #just need to parametrize this
-    #posterior::summarise_draws() |>
+    posterior::summarise_draws() |>
     # Extract strata and time values
     dplyr::mutate(
       .strata = as.numeric(stringr::str_remove_all(!!as.symbol("variable"), ".*\\[.*,|\\]")),
@@ -73,14 +62,14 @@ summary_nowcast <- function(nowcast_output) {
       !!as.symbol("mean"), !!as.symbol("sd"), !!as.symbol("q5"), !!as.symbol("q95")
     ) |>
     # strata_name is a variable
-    #dplyr::rename_with(~strata_name, .cols = !!rlang::sym(strata_unified_col)) |>    ### this needs to go
+    dplyr::rename_with(~strata_name, .cols = !!rlang::sym(strata_unified_col)) |>
     # Specify a string for each remaining column
-    #dplyr::rename(                                                                  ### this needs to go
-    #  !!rlang::sym(mean_col_new) := !!rlang::sym(mean_col),
-    #  !!rlang::sym(sd_col_new) := !!rlang::sym(sd_col),
-    #  !!rlang::sym(q05_col_new) := !!rlang::sym(q05_col),
-    #  !!rlang::sym(q95_col_new) := !!rlang::sym(q95_col)
-    #)
+    dplyr::rename(
+      !!rlang::sym(mean_col_new) := !!rlang::sym(mean_col),
+      !!rlang::sym(sd_col_new) := !!rlang::sym(sd_col),
+      !!rlang::sym(q05_col_new) := !!rlang::sym(q05_col),
+      !!rlang::sym(q95_col_new) := !!rlang::sym(q95_col)
+    )
 
   return(predictions_summary)
 }
@@ -96,8 +85,7 @@ summary_nowcast <- function(nowcast_output) {
 #'
 #' @param nowcast_output the output of the nowcast() function
 #'
-# @return A a ggplot2 object that plots the evolution of the nowcast over the observed values,
-#' it creates a subplot for each strata
+
 #'
 #' @examples
 #' # Load the data
