@@ -16,18 +16,19 @@ preprocess_strata <- function(.disease_data, strata){
   }
 
   .disease_data <- .disease_data |>
-    tidyr::unite(col = ".strata_unified", dplyr::all_of(strata), sep = " - ") |>
+    tidyr::unite(col = ".strata_unified", dplyr::all_of(strata), sep = " - ", remove = FALSE) |>
     dplyr::mutate(!!as.symbol(".strata") := as.numeric(as.factor(!!as.symbol(".strata_unified")))) |>
     dplyr::mutate_at(".delay", function(x) x + 1)
 
   #Get the strata dictionary
   .strata_dict <- .disease_data |>
-    dplyr::distinct(!!as.symbol(".strata_unified"),!!as.symbol(".strata"))
+    dplyr::distinct_at(c(".strata_unified", ".strata", strata))
 
   #Return the number of strata
   num_strata <- .strata_dict |>
     dplyr::tally() |>
     dplyr::pull()
 
-  return(list(num_strata = num_strata, .strata_dict = .strata_dict, .disease_data = .disease_data))
+  return(list(num_strata = num_strata, .strata_dict = .strata_dict,
+              .disease_data = .disease_data))
 }
