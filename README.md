@@ -18,57 +18,41 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 
 ``` r
 library(diseasenowcasting)
-library(ggplot2)
 library(dplyr)
-library(posterior)
 
 set.seed(32658235)
 
 # Create a fake disease process
-num_steps  <- 15
+num_steps  <- 50
 num_strata <- 2
 num_delays <- 10
 sims       <- simulate_disease(num_steps = num_steps, num_strata = num_strata,
-                               num_delays = num_delays)
+                               num_delays = num_delays) |> 
+  rename(strata = .strata)
 
 # Now use model to predict disease process. If no strata is required omit the strata option
-predictions <- nowcast(sims, "onset_date", "report_date", strata = ".strata", 
-                       chains = 4, cores = 4)
+ncast <- nowcast(sims, "onset_date", "report_date", strata = "strata", cores = 4)
 
 #Get the predicted values in a nice format
-predicted_values <- predictions$generated_quantities |>
-  as_draws() |>
-  subset_draws("N_predict") |>
-  summarise_draws() |>
-  mutate(.strata = as.numeric(stringr::str_remove_all(variable,".*\\[.*,|\\]"))) |>
-  mutate(.tval = as.numeric(stringr::str_remove_all(variable,".*\\[|,.*\\]"))) |> 
-  left_join(
-    predictions$data$preprocessed_data |> distinct(.tval, onset_date)
-  ) |>
-  left_join(
-    predictions$data$strata_dict
-  ) |> 
-  mutate(.strata = .strata_unified)
-  
-# Sum over all delays
-data_delays <- sims |>
-  group_by(onset_date, .strata) |>
-  summarise(n = sum(n)) 
+predicted_values <- summary_nowcast(ncast)
+predicted_values
+#> # A tibble: 102 × 6
+#>    onset_date strata  Mean    SD   q05   q95
+#>    <date>     <chr>  <dbl> <dbl> <dbl> <dbl>
+#>  1 2024-08-09 s1         6     0     6     6
+#>  2 2024-08-10 s1         6     0     6     6
+#>  3 2024-08-11 s1         6     0     6     6
+#>  4 2024-08-12 s1         5     0     5     5
+#>  5 2024-08-13 s1         6     0     6     6
+#>  6 2024-08-14 s1         6     0     6     6
+#>  7 2024-08-15 s1         5     0     5     5
+#>  8 2024-08-16 s1         6     0     6     6
+#>  9 2024-08-17 s1         5     0     5     5
+#> 10 2024-08-18 s1         3     0     3     3
+#> # ℹ 92 more rows
 
-# Create plot
-ggplot(data_delays) +
-  geom_ribbon(aes(x = onset_date, ymin = q5, ymax = q95, fill = as.character(.strata)), 
-              data = predicted_values, linetype = "dotted", alpha = 0.5) +
-  geom_line(aes(x = onset_date, y = n, color = as.character(.strata))) +
-  geom_line(aes(x = onset_date, y = mean, color = as.character(.strata)), 
-            data = predicted_values, linetype = "dotted") +
-  theme_bw() +
-  scale_color_manual("Strata", values = c("tomato3", "forestgreen")) +
-  scale_fill_manual("Strata", values = c("tomato3", "forestgreen")) +
-  labs(
-    x = "Time",
-    y = "Cases"
-  )
+#You can also create a plot of the nowcast
+plot_nowcast(ncast)
 ```
 
 <img src="man/figures/README-unnamed-chunk-2-1.png" width="100%" />
