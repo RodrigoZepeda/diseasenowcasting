@@ -10,3 +10,5 @@ src/*.dll
 src/*.tmp
 src/functions.cpp
 src/functions.cpp
+R/RcppExports.R
+src/RcppExports.cpp
