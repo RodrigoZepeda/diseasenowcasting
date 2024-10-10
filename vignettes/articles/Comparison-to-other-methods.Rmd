@@ -33,50 +33,45 @@ test_nowcast <- NobBS(data = denguedat, units = "1 week", now = now,
 
 and compare against the `diseasenowcasting` package:
 
-```{r, message=FALSE}
+```{r, message=FALSE, warning=FALSE}
 library(diseasenowcasting)
-library(posterior)
-library(tidyverse)
 
-predictions <- nowcast(denguedat, "onset_week", "report_week",
-                       now = now, method = "variational", refresh = FALSE)
+ncast <- nowcast(denguedat, "onset_week", "report_week", 
+                 now = now, method = "variational", refresh = FALSE)
 ```
 
 which, after formating, 
 
 ```{r}
 #Get the predicted values in a nice format
-predicted_values <- predictions$generated_quantities |>
-  posterior::as_draws() |>
-  posterior::subset_draws("N_predict") |>
-  posterior::summarise_draws() |>
-  dplyr::mutate(.strata = as.numeric(stringr::str_remove_all(variable,".*\\[.*,|\\]"))) |>
-  dplyr::mutate(.tval = as.numeric(stringr::str_remove_all(variable,".*\\[|,.*\\]"))) |>
-  dplyr::left_join(
-    predictions$data$preprocessed_data |>
-      dplyr::distinct(.tval, onset_week)
-  )
-
-obs <- predictions$data$preprocessed_data |>
-  dplyr::group_by(onset_week) |>
-  dplyr::summarise(n = sum(n))
+predicted_values <- summary_nowcast(ncast)
 ```
 
 Result in a better prediction than the `NobBS` default one:
 
 ```{r, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+
 # Create plot
 ggplot() +
-  geom_ribbon(aes(x = onset_week, ymin = q5, ymax = q95, fill = "diseasenowcasting"),
+  #Add the credible intervals
+  geom_ribbon(aes(x = onset_week, ymin = q05, ymax = q95, fill = "diseasenowcasting"),
               data = predicted_values, alpha = 0.25) +
+  #Add the intervals from Nobbs
   geom_ribbon(aes(x = onset_date, ymin = lower, ymax = upper, fill = "NobBS"),
               data = test_nowcast$estimates, alpha = 0.25) +
-  geom_line(aes(x = onset_week, y = n, color = "Train data", fill = "Train data"), data = obs) +
-  geom_line(aes(x = onset_week, y = mean, color = "diseasenowcasting"),
+  #Add the data used to train
+  geom_line(aes(x = onset_week, y = n, color = "Train data", fill = "Train data"), 
+            data = denguedat |> filter(report_week <= now) |> count(onset_week)) +
+  #Add the estimates from diseasenowcasting
+  geom_line(aes(x = onset_week, y = Mean, color = "diseasenowcasting"),
             data = predicted_values, linetype = "dotted") +
+  #Add the estimates from NoBbs
   geom_line(aes(x = onset_date, y = estimate, color = "NobBS"), data = test_nowcast$estimates) +
-  geom_point(aes(x = onset_week, y = n, color = "All data", fill = "All data"), data =
-              denguedat |>
+  #Add the actual observed cases
+  geom_point(aes(x = onset_week, y = n, color = "All data", fill = "All data"), 
+             data = denguedat |>
                dplyr::group_by(onset_week) |>
                dplyr::count() |>
                dplyr::filter(onset_week <= !!now)) +
