@@ -22,7 +22,7 @@ preprocess_strata <- function(.disease_data, strata){
 
   #Get the strata dictionary
   .strata_dict <- .disease_data |>
-    dplyr::distinct(!!as.symbol(".strata_unified"),!!as.symbol(".strata"))
+    dplyr::distinct(!!as.symbol(".strata_unified"), !!as.symbol(".strata"), dplyr::all_of(strata))
 
   #Return the number of strata
   num_strata <- .strata_dict |>
