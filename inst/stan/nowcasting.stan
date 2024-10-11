@@ -20,10 +20,10 @@ parameters {
 }
 
 transformed parameters {
+  #include include/transformed_parameters.stan
 }
 
 model {
-  #include include/transformed_parameters.stan
   #include include/model.stan
 
   // Add the priors

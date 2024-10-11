@@ -235,7 +235,7 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
                            ...)
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "variational") {
-    stan_fit <- rstan::vb(stanmodels$nowcasting, data = stan_data, refresh = refresh, ...)
+    stan_fit <- rstan::vb(stanmodels$nowcasting, data = stan_data, refresh = refresh,...)
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "optimization") {
     stan_fit <- rstan::optimizing(stanmodels$nowcasting, data = stan_data, refresh = refresh, ...)
