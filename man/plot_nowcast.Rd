@@ -7,7 +7,10 @@
 plot_nowcast(nowcast_output)
 }
 \arguments{
-\item{nowcast_output}{the output of the nowcast() function}
+\item{nowcast_output}{the output of the nowcast() function
+
+# @return A a ggplot2 object that plots the evolution of the nowcast over the observed values,
+it creates a subplot for each strata}
 }
 \description{
 Plots the predictions of the function nowcast() over the input observed values
