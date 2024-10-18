@@ -2,6 +2,16 @@ library(dplyr)
 library(tidyr)
 library(scoringutils)
 
+#' generate_nowcast_dates
+#'
+#' Generates dates for the backtesting procedure given the start_date, end_date and stride
+#'
+#' @param start_date start_date
+#'
+#' @param end_date end_date
+#'
+#' @param stride the number of time steps between two consecutive nowcasts
+#'
 generate_nowcast_dates <- function(start_date, end_date, units, stride) {
 
   if(is.null(start_date)) {
@@ -45,7 +55,7 @@ generate_nowcast_dates <- function(start_date, end_date, units, stride) {
 #' to retrain the model. Default 1 means retraining the model for each nowcast.
 #' NOT IMPLEMENTED YET - currently will be retrained at each time step.
 #'
-#' @param probs list of probabilities in [0,1] defining which quantile estimates
+#' @param quantiles list of quantiles in [0,1] defining which quantile estimates
 #' will be returned
 #'
 #' @param min_horizon the minimum horizon in [-Inf,0] to keep from each nowcast estimates
@@ -56,12 +66,24 @@ generate_nowcast_dates <- function(start_date, end_date, units, stride) {
 #'
 #' @inheritParams nowcast
 #'
+#' @examples
+#' # Load the data
+#' data(denguedat)
+#'
+#' # Run a backtest
+#' # change to method = "sampling" when working and remove the iter = 10 (or set to iter = 2000)
+# backtest(.disease_data=denguedat,
+#          onset_date="onset_week", report_date="report_week",
+#          start_date = as.Date('1990-01-22'), end_date = as.Date('1990-05-22'),
+#          stride = 4, min_horizon = -3,
+#          method = "optimization", dist = "Normal",
+#          refresh=0, model_name='model_Normal')
 #' @export
 backtest <- function(start_date = NULL,
                      end_date = NULL,
                      stride = 1,
                      retrain = 1,
-                     probs = c(0.025,0.05,0.25,0.50,0.75,0.95,0.975),
+                     quantiles = c(0.025,0.05,0.25,0.50,0.75,0.95,0.975),
                      min_horizon=0,
                      model_name  = NULL,
                      .disease_data, onset_date, report_date,
@@ -95,7 +117,7 @@ backtest <- function(start_date = NULL,
                            prior_only=prior_only, proportion_reported=proportion_reported,
                            refresh=refresh, control=control, method=method, priors=priors)
 
-    pred_summary <- summary_nowcast(predictions)
+    pred_summary <- summary_nowcast(predictions, quantiles=quantiles)
 
     pred_summary <- data.frame(now=now,pred_summary)
 
@@ -113,38 +135,85 @@ backtest <- function(start_date = NULL,
 }
 
 
+#' check_same_columns
+#'
+#' Checks that the given list of dataframes contains the same columns
+#'
+#' @param df_list list of dataframes
+#'
 check_same_columns <- function(df_list) {
   cols <- colnames(df_list[[1]])
   all_same <- all(sapply(df_list, function(df) identical(colnames(df), cols)))
   return(all_same)
 }
 
+# calc_mae <- function(backtest_summary) {
+#   backtest_summary$ae <- abs(backtest_summary$reported-backtest_summary$mean)
+#   mae_vals <- backtest_summary %>% group_by(horizon,strata,model) %>% summarize(MAE = mean(ae),.groups='drop')
+#   return (mae_vals)
+# }
+#
+# calc_rmse <- function(backtest_summary) {
+#   backtest_summary$se <- (backtest_summary$reported-backtest_summary$mean)^2
+#   rmse_vals <- backtest_summary %>% group_by(horizon,strata,model) %>% summarize(RMSE = sqrt(mean(se)),.groups='drop')
+#   return (rmse_vals)
+# }
+
+#' calc_mae
+#'
+#' Calculates mean absolute error (MAE)
+#'
+#' @param backtest_summary results of backtest call
+#'
 calc_mae <- function(backtest_summary) {
-  backtest_summary$ae <- abs(backtest_summary$reported-backtest_summary$Mean)
-  mae_vals <- backtest_summary %>% group_by(horizon,model) %>% summarize(MAE = mean(ae),.groups='drop')
+  df <- backtest_summary %>%
+    select(true_value=reported, prediction=mean, everything())
+  df$sample <- 1
+  mae_vals <- df %>%
+    score(metrics='ae_median') %>%
+    summarise_scores(by = c("horizon","strata","model")) %>%
+    select(horizon,strata,model,MAE='ae_median')
   return (mae_vals)
 }
 
+#' calc_rmse
+#'
+#' Calculates root mean squared error (RMSE)
+#'
+#' @param backtest_summary results of backtest call
+#'
 calc_rmse <- function(backtest_summary) {
-  backtest_summary$se <- (backtest_summary$reported-backtest_summary$Mean)^2
-  rmse_vals <- backtest_summary %>% group_by(horizon,model) %>% summarize(RMSE = sqrt(mean(se)),.groups='drop')
-  return (rmse_vals)
+  df <- backtest_summary %>%
+    select(true_value=reported, prediction=mean, everything())
+  df$sample <- 1
+  mae_vals <- df %>%
+    score(metrics='se_mean') %>%
+    summarise_scores(by = c("horizon","strata","model")) %>%
+    select(horizon,strata,model,RMSE='se_mean') %>%
+    mutate(RMSE=sqrt(RMSE))
+  return (mae_vals)
 }
 
+#' calc_wis
+#'
+#' Calculates weighted interval score (WIS)
+#'
+#' @param backtest_summary results of backtest call
+#'
 calc_wis <- function(backtest_summary) {
-  if(!('q50' %in% colnames(backtest_summary)))
-    backtest_summary$q50 <- backtest_summary$Mean
-  quantile_cols <- colnames(backtest_summary)[startsWith(colnames(backtest_summary), "q")]
+  if(!('X50.' %in% colnames(backtest_summary)))
+    backtest_summary$X50. <- backtest_summary$mean
+  quantile_cols <- colnames(backtest_summary)[grepl("^X.*\\.$", colnames(backtest_summary))]
   df <- backtest_summary %>%
     pivot_longer(cols=quantile_cols,names_to='quantile',values_to='prediction') %>%
-    mutate(quantile=as.numeric(sub("^q", "", quantile))/100) %>%
+    mutate(quantile=as.numeric(sub("^X(.*)\\.$", "\\1", quantile))/100)  %>%
     select(true_value=reported, everything())
 
   wis_vals <- df %>%
               check_forecasts() %>%
               score() %>%
-              summarise_scores(by = c("horizon","model")) %>%
-              select(horizon,model,WIS='interval_score')
+              summarise_scores(by = c("horizon","strata","model")) %>%
+              select(horizon,strata,model,WIS='interval_score')
   return (wis_vals)
 }
 
@@ -170,12 +239,14 @@ backtest_metrics <- function(backtest_summary, metrics, horizons=c(0))
     backtest_summary <- bind_rows(backtest_summary)
   }
 
-  models <- unique(backtest_summary$model)
-
   backtest_summary <- backtest_summary %>%
-    filter(horizon %in% horizons)
+    filter(horizon %in% horizons) %>%
+    rename(strata=Strata_unified)
 
-  metrics_table <- expand.grid(horizon=horizons, model=models)
+  models <- unique(backtest_summary$model)
+  stratas <- unique(backtest_summary$strata)
+  metrics_table <- expand.grid(horizon=horizons, strata=stratas, model=models)
+
   for(metric in metrics) {
     metric_results <- switch(
       metric,
@@ -184,7 +255,7 @@ backtest_metrics <- function(backtest_summary, metrics, horizons=c(0))
       WIS=calc_wis(backtest_summary),
       stop("Error: unsupported metric - " +metric +".")
     )
-    metrics_table <- merge(metrics_table, metric_results, by=c('horizon','model'))
+    metrics_table <- merge(metrics_table, metric_results, by=c('horizon','strata','model'))
   }
   metrics_table <- metrics_table %>%
                     arrange(model,horizon)

@@ -7,7 +7,6 @@ backtest_summary1 <- backtest(.disease_data=denguedat,
                               stride = 4,
                               min_horizon = -3,
                               method = "optimization", dist = "Normal",
-                              priors = set_priors(),
                               refresh=0,
                               model_name='model_Normal')
 
@@ -19,14 +18,13 @@ backtest_summary2 <- backtest(.disease_data=denguedat,
                               stride = 4,
                               min_horizon = -3,
                               method = "optimization", dist = "Poisson",
-                              priors = set_priors(),
                               refresh=0,
                               model_name='model_Poisson')
 
 
 metrics1 <- backtest_metrics(backtest_summary1, c('MAE','RMSE','WIS'), c(0,-1,-2,-3))
 metrics2 <- backtest_metrics(backtest_summary2, c('MAE','RMSE','WIS'), c(0,-1,-2,-3))
-metrics <- backtest_metrics(list(backtest_summary1,backtest_summary2),
+metrics12 <- backtest_metrics(list(backtest_summary1,backtest_summary2),
                              c('MAE','RMSE','WIS'), c(0,-1,-2,-3))
 
-print(metrics)
+print(metrics12)
