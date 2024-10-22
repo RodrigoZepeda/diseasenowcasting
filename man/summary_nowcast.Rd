@@ -2,22 +2,21 @@
 % Please edit documentation in R/summary_and_plot.R
 \name{summary_nowcast}
 \alias{summary_nowcast}
-\title{Makes a summary of `diseasenowcasting::nowcast()` output}
+\title{Makes a summary of your nowcast}
 \usage{
-summary_nowcast(nowcast_output, quantiles = NULL)
+summary_nowcast(nowcast_output, quantiles = c(0.025, 0.975))
 }
 \arguments{
-\item{nowcast_output}{the output of the `diseasenowcasting::nowcast()` function}
+\item{nowcast_output}{the output of the diseasenowcasting::nowcast() function}
 
-\item{quantiles}{a vector of to specify the quantiles to display.
-Default is c(0.05, 0.95).}
+\item{quantiles}{a vector to specify the quantiles to display.}
 }
 \value{
 A summary tibble of the nowcast results,
 it specifies: onset time, Strata, Mean value, standard deviation, quantiles
 }
 \description{
-Makes a tidy summary dataframe of the results of the function `diseasenowcasting::nowcast()`
+Makes a tidy summary dataframe of the results of the function diseasenowcasting::nowcast()
 }
 \examples{
 # Load the data

@@ -1,10 +1,9 @@
-#' Makes a summary of diseasenowcasting::nowcast() output
+#' Makes a summary of your nowcast
 #'
 #' Makes a tidy summary dataframe of the results of the function diseasenowcasting::nowcast()
 #'
 #' @param nowcast_output the output of the diseasenowcasting::nowcast() function
-#' @param quantiles a vector of to specify the quantiles to display.
-#' Default is c(0.05, 0.95).
+#' @param quantiles a vector to specify the quantiles to display.
 #'
 #' @return A summary tibble of the nowcast results,
 #' it specifies: onset time, Strata, Mean value, standard deviation, quantiles
@@ -28,11 +27,10 @@
 #'
 #' @export
 
-summary_nowcast <- function(nowcast_output, quantiles=NULL) {
+summary_nowcast <- function(nowcast_output,
+                            quantiles=c(0.025, 0.975)) {
 
-  quants <- if (is.null(quantiles)) c(0.05, 0.95) else quantiles
-  # Check if quantiles is a numeric vector with values between 0 and 1
-  if (!is.numeric(quants) || any(quants < 0 | quants > 1)) {
+  if (!is.numeric(quantiles) || any(quantiles < 0 | quantiles > 1)) {
     stop("quantiles must be a number or a numeric vector with values between 0 and 1.")
   }
 
@@ -46,7 +44,7 @@ summary_nowcast <- function(nowcast_output, quantiles=NULL) {
   predictions_summary <- nowcast_output$generated_quantities |>
     posterior::as_draws() |>
     posterior::subset_draws("N_predict") |>
-    posterior::summarise_draws("mean","sd",~quantile(.x, probs = quants)) |>
+    posterior::summarise_draws("mean","sd",~quantile(.x, probs = quantiles)) |>
     # Extract strata and time values
     dplyr::mutate(
       .strata = as.numeric(stringr::str_remove_all(!!as.symbol("variable"), ".*\\[.*,|\\]")),
@@ -83,8 +81,8 @@ summary_nowcast <- function(nowcast_output, quantiles=NULL) {
 #'
 #' @param nowcast_output The output of the diseasenowcasting::nowcast() function
 #'
-#' @param maincolor A string indicating the color for the barplots,
-#' Works with the default R colors of grDevices::colors(). Hex color codes works as well.
+#' @param color A string indicating the color for the barplots,
+#' Works with the default R colors of grDevices::colors(). Hex color codes works as well. Best results with dark colors
 #'
 #' @param datesbrakes A string giving the distance between x-axis breaks
 #' if `NULL`, one label per bar
@@ -102,8 +100,10 @@ summary_nowcast <- function(nowcast_output, quantiles=NULL) {
 #' It allows manual control over the layout of multiple strata in the plot.
 #' If `NULL`, the number of columns is automatically determined by ggplot2.
 #'
-#' @return ggplot2 barplots to show real cases and the predictions of the function diseasenowcasting::nowcast()
-#' it creates a subplot for each strata
+#' @param quantiles a vector of two values to specify the quantiles for the error bars.
+#'
+#' @return ggplot2 barplots to show real cases and the predictions of the function diseasenowcasting::nowcast().
+#' It creates a subplot for each strata
 #'
 #' @examples
 #' # Load the data
@@ -126,29 +126,30 @@ summary_nowcast <- function(nowcast_output, quantiles=NULL) {
 #' # other plotting options
 #' plot_nowcast(predictions, rowsfacet = 2,
 #'              datesbrakes = "2 weeks", casesbrakes = 15,
-#'              maincolor = "firebrick2")
+#'              color = "firebrick2")
 #'
 #' @importFrom grDevices col2rgb colors
 #' @export
 plot_nowcast <- function(nowcast_output,
-                         maincolor = "deepskyblue4",
+                         color = "deepskyblue4",
                          datesbrakes = NULL,
                          casesbrakes = 10,
                          rowsfacet = NULL,
-                         colsfacet = NULL
+                         colsfacet = NULL,
+                         quantiles=c(0.025, 0.975)
                          ) {
   # Check if the color is in the built-in colors or is a valid hex code
-  if (!(maincolor %in% colors() || grepl("^#([0-9A-Fa-f]{3}){1,2}$", maincolor))) {
+  if (!(color %in% colors() || grepl("^#([0-9A-Fa-f]{3}){1,2}$", color))) {
     # If it's not valid, try to convert to RGB and catch errors
     if (tryCatch({
-      col2rgb(maincolor)
+      col2rgb(color)
       TRUE  # If successful, return TRUE
     }, error = function(e) {
       FALSE  # If an error occurs, return FALSE
     })) {
-      # maincolor is valid as RGB
+      # color is valid as RGB
     } else {
-      stop("maincolor is not a valid color string in R.")
+      stop("color is not a valid color string in R.")
     }
   }
 
@@ -174,6 +175,13 @@ plot_nowcast <- function(nowcast_output,
     stop("colsfacet must be NULL or a positive integer.")
   }
 
+  # Check if quantiles is valid, and only specify two numbers
+  if (!is.numeric(quantiles) || any(quantiles < 0 | quantiles > 1)) {
+    stop("quantiles must be a number or a numeric vector with values between 0 and 1.")
+  }
+  if (length(quantiles)!=2) {
+    stop("must specify 2 quantiles for error bars")
+  }
 
   # Get names from input data
   onset_date_name <- nowcast_output$data$call_parameters$onset_date
@@ -187,8 +195,11 @@ plot_nowcast <- function(nowcast_output,
   stata_dic <- nowcast_output$data$strata_dict
 
   # Make summary
-  prediction_summary <- summary_nowcast(nowcast_output)
-
+  prediction_summary <- summary_nowcast(nowcast_output, quantiles = quantiles)
+  #get quantile labels for legend
+  quantile_labels <- paste0(
+    colnames(prediction_summary)[4], " - ", colnames(prediction_summary)[5], " CI"
+  )
   # Get input data and sum over all delays
   data_delays <- nowcast_output$data$preprocessed_data |>
     dplyr::group_by(!!as.symbol(".tval"), !!as.symbol(".strata")) |>
@@ -204,21 +215,21 @@ plot_nowcast <- function(nowcast_output,
     # Add real cases as solid bars (observed)
     ggplot2::geom_bar(
       ggplot2::aes(x = !!dplyr::sym(onset_date_name), y = !!as.symbol("n"), fill = "Reported"),
-      stat = "identity", position = "dodge", color = "white", alpha = 0.8
+      stat = "identity", position = "dodge", color = NA, alpha = 0.8
     ) +
 
     # Add predicted median as transparent bars (predicted)
     ggplot2::geom_bar(
       ggplot2::aes(x = !!dplyr::sym(onset_date_name), y = !!as.symbol("mean"), fill = "Estimated, not yet reported"),
-      stat = "identity", position = "dodge", alpha = 0.45, color = "white", data = prediction_summary
+      stat = "identity", position = "dodge", alpha = 0.45, color = NA, data = prediction_summary
     ) +
 
     # Add error bars for 95% CI
     ggplot2::geom_errorbar(
       ggplot2::aes(
         x = !!dplyr::sym(onset_date_name),
-        ymin = !!as.symbol("5%"),
-        ymax = !!as.symbol("95%"),
+        ymin = !!dplyr::pull(prediction_summary, 4),
+        ymax = !!dplyr::pull(prediction_summary, 5),
         group = !!as.symbol("Strata_unified")
       ),
       width = 0,
@@ -253,8 +264,8 @@ plot_nowcast <- function(nowcast_output,
     # Custom legend for fill colors
     ggplot2::scale_fill_manual(
       name = NULL,  # Remove legend title
-      values = c("Reported" = maincolor, "Estimated, not yet reported" = maincolor),
-      labels = c("Reported", "Estimated, not yet reported")
+      values = c("Reported" = color, "Estimated, not yet reported" = color),
+      labels = c("Reported", paste("Mean estimated, not yet reported\n    Error bars: ", quantile_labels, sep = ""))
     ) +
 
     # Manually control the legend to show different alpha levels
@@ -273,8 +284,9 @@ plot_nowcast <- function(nowcast_output,
     ) +
     ggplot2::theme_minimal() +
     ggplot2::theme(
-      axis.text.x = ggplot2::element_text(angle = 90),
+      axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 0),
       legend.position = "top",
+      legend.justification='right',
       legend.direction = "horizontal"
     )
 
