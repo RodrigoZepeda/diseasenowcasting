@@ -2,22 +2,23 @@
 % Please edit documentation in R/summary_and_plot.R
 \name{plot_nowcast}
 \alias{plot_nowcast}
-\title{Barplots for the diseasenowcasting::nowcast() output}
+\title{Plot your nowcast}
 \usage{
 plot_nowcast(
   nowcast_output,
-  maincolor = "deepskyblue4",
+  color = "deepskyblue4",
   datesbrakes = NULL,
   casesbrakes = 10,
   rowsfacet = NULL,
-  colsfacet = NULL
+  colsfacet = NULL,
+  quantiles = c(0.025, 0.975)
 )
 }
 \arguments{
 \item{nowcast_output}{The output of the diseasenowcasting::nowcast() function}
 
-\item{maincolor}{A string indicating the color for the barplots,
-Works with the default R colors of grDevices::colors(). Hex color codes works as well.}
+\item{color}{A string indicating the color for the barplots,
+Works with the default R colors of grDevices::colors(). Hex color codes works as well. Best results with dark colors}
 
 \item{datesbrakes}{A string giving the distance between x-axis breaks
 if `NULL`, one label per bar
@@ -28,16 +29,18 @@ optionally followed by 's'.}
 \item{casesbrakes}{Desired number of y-axis breaks. You may get slightly more or fewer breaks that requested.}
 
 \item{rowsfacet}{Number of rows for arranging facets when using ggplot2::facet_wrap().
-These parameters allow manual control over the layout of multiple strata in the plot.
+It allows manual control over the layout of multiple strata in the plot.
 If `NULL`, the number of rows is automatically determined by ggplot2.}
 
 \item{colsfacet}{Number of columns for arranging facets when using ggplot2::facet_wrap().
-These parameters allow manual control over the layout of multiple strata in the plot.
+It allows manual control over the layout of multiple strata in the plot.
 If `NULL`, the number of columns is automatically determined by ggplot2.}
+
+\item{quantiles}{a vector of two values to specify the quantiles for the error bars.}
 }
 \value{
-ggplot2 barplots to show real cases and the predictions of the function diseasenowcasting::nowcast()
-it creates a subplot for each strata
+ggplot2 barplots to show real cases and the predictions of the function diseasenowcasting::nowcast().
+It creates a subplot for each strata
 }
 \description{
 Create barplots to show real cases and the predictions of the function diseasenowcasting::nowcast()
@@ -63,7 +66,6 @@ plot_nowcast(predictions)
 # other plotting options
 plot_nowcast(predictions, rowsfacet = 2,
              datesbrakes = "2 weeks", casesbrakes = 15,
-             maincolor = "firebrick2"
-             )
+             color = "firebrick2")
 
 }
