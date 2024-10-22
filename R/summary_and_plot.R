@@ -1,8 +1,8 @@
-#' Makes a summary of nowcast() output
+#' Makes a summary of `diseasenowcasting::nowcast()` output
 #'
-#' Makes a tidy summary dataframe of the results of the function nowcast()
+#' Makes a tidy summary dataframe of the results of the function `diseasenowcasting::nowcast()`
 #'
-#' @param nowcast_output the output of the nowcast() function
+#' @param nowcast_output the output of the `diseasenowcasting::nowcast()` function
 #' @param quantiles a vector of to specify the quantiles to display.
 #' Default is c(0.05, 0.95).
 #'
@@ -77,28 +77,32 @@ summary_nowcast <- function(nowcast_output, quantiles=NULL) {
 
 
 
-#' Barplots for the `diseasenowcasting::nowcast()` output
+#' Barplots for the diseasenowcasting::nowcast() output
 #'
-#' Create barplots to show real cases and the predictions of the function `diseasenowcasting::nowcast()`
+#' Create barplots to show real cases and the predictions of the function diseasenowcasting::nowcast()
 #'
-#' @param nowcast_output The output of the `diseasenowcasting::nowcast()` function
+#' @param nowcast_output The output of the diseasenowcasting::nowcast() function
 #'
 #' @param maincolor A string indicating the color for the barplots,
-#' Works with the default R colors of `grDevices::colors()`. Hex color codes works as well.
+#' Works with the default R colors of grDevices::colors(). Hex color codes works as well.
 #'
 #' @param datesbrakes A string giving the distance between x-axis breaks
 #' if `NULL`, one label per bar
 #' Other valid examples are:
-#' `"2 weeks"`, or `"10 years"`, `'sec'`, `'min'`, `'hour'`, `'day'`, `'week'`, `'month'`, `'year'`,
+#' "2 weeks", or "10 years", 'sec', 'min', 'hour', 'day', 'week', 'month', 'year',
 #' optionally followed by 's'.
 #'
 #' @param casesbrakes Desired number of y-axis breaks. You may get slightly more or fewer breaks that requested.
 #'
-#' @param rowsfacet, colsfacet Number of rows and columns for arranging facets when using `ggplot2::facet_wrap()`.
+#' @param rowsfacet Number of rows for arranging facets when using ggplot2::facet_wrap().
 #' These parameters allow manual control over the layout of multiple strata in the plot.
-#' If `NULL`, the number of rows or columns is automatically determined by ggplot2.
+#' If `NULL`, the number of rows is automatically determined by ggplot2.
 #'
-#' @return ggplot2 barplots to show real cases and the predictions of the function `diseasenowcasting::nowcast()`
+#' #' @param colsfacet Number of columns for arranging facets when using ggplot2::facet_wrap().
+#' These parameters allow manual control over the layout of multiple strata in the plot.
+#' If `NULL`, the number of columns is automatically determined by ggplot2.
+#'
+#' @return ggplot2 barplots to show real cases and the predictions of the function diseasenowcasting::nowcast()
 #' it creates a subplot for each strata
 #'
 #' @examples
