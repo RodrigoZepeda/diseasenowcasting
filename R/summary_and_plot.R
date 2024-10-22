@@ -1,8 +1,8 @@
-#' Makes a summary of `diseasenowcasting::nowcast()` output
+#' Makes a summary of diseasenowcasting::nowcast() output
 #'
-#' Makes a tidy summary dataframe of the results of the function `diseasenowcasting::nowcast()`
+#' Makes a tidy summary dataframe of the results of the function diseasenowcasting::nowcast()
 #'
-#' @param nowcast_output the output of the `diseasenowcasting::nowcast()` function
+#' @param nowcast_output the output of the diseasenowcasting::nowcast() function
 #' @param quantiles a vector of to specify the quantiles to display.
 #' Default is c(0.05, 0.95).
 #'
@@ -31,9 +31,9 @@
 summary_nowcast <- function(nowcast_output, quantiles=NULL) {
 
   quants <- if (is.null(quantiles)) c(0.05, 0.95) else quantiles
-  # Check if quants is a numeric vector with values between 0 and 1
+  # Check if quantiles is a numeric vector with values between 0 and 1
   if (!is.numeric(quants) || any(quants < 0 | quants > 1)) {
-    stop("quants must be a numeric vector with values between 0 and 1.")
+    stop("quantiles must be a number or a numeric vector with values between 0 and 1.")
   }
 
   # Get names from input data
