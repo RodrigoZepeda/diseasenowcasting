@@ -10,8 +10,8 @@ backtest_metrics(backtest_summary, metrics, horizons = c(0))
 \item{backtest_summary}{Results of call to backtest or a list of results of backtest calls.}
 
 \item{metrics}{list of metrics which should be calculated.
-Currently supporting:MAE(mean absolute error), RMSE (root mean squared error),
-and WIS (weighted interval score)}
+Currently supporting: 'mae' (mean absolute error), 'rmse' (root mean squared error),
+and 'wis' (weighted interval score)}
 
 \item{horizons}{list of horizons for which the metrics be calculated.
 Default is to calculate metrics only for horizon 0.}

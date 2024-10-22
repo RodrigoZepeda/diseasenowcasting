@@ -9,7 +9,7 @@ backtest(
   end_date = NULL,
   stride = 1,
   retrain = 1,
-  probs = c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975),
+  quantiles = c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975),
   min_horizon = 0,
   model_name = NULL,
   .disease_data,
@@ -43,7 +43,7 @@ start and end,}
 to retrain the model. Default 1 means retraining the model for each nowcast.
 NOT IMPLEMENTED YET - currently will be retrained at each time step.}
 
-\item{probs}{list of probabilities in [0,1] defining which quantile estimates
+\item{quantiles}{list of quantiles in [0,1] defining which quantile estimates
 will be returned}
 
 \item{min_horizon}{the minimum horizon in [-Inf,0] to keep from each nowcast estimates
@@ -94,4 +94,11 @@ the priors of the function (see details)}
 }
 \description{
 Compute historical nowcasts for given time period
+}
+\examples{
+# Load the data
+data(denguedat)
+
+# Run a backtest
+# change to method = "sampling" when working and remove the iter = 10 (or set to iter = 2000)
 }

@@ -29,7 +29,8 @@ Imports:
     stats,
     stringr,
     tidyr,
-    ggplot2
+    ggplot2,
+    scoringutils
 Depends: 
     R (>= 4.2.0)
 RoxygenNote: 7.3.2

@@ -1,6 +1,3 @@
-library(dplyr)
-library(tidyr)
-library(scoringutils)
 
 #' generate_nowcast_dates
 #'
@@ -128,7 +125,9 @@ backtest <- function(start_date = NULL,
     pred_table <- rbind(pred_table,pred_summary)
   }
 
-  cases_per_date <- .disease_data %>% group_by(!!sym(onset_date)) %>% summarize(reported=n())
+  cases_per_date <- .disease_data |>
+                    dplyr::group_by(!!dplyr::sym(onset_date)) |>
+                    dplyr::summarize(reported=dplyr::n())
   backtest_summary <- merge(pred_table, cases_per_date, by = onset_date, all.x = TRUE)
   backtest_summary$model <- model_name
   return (backtest_summary)
@@ -149,54 +148,52 @@ check_same_columns <- function(df_list) {
 
 # calc_mae <- function(backtest_summary) {
 #   backtest_summary$ae <- abs(backtest_summary$reported-backtest_summary$mean)
-#   mae_vals <- backtest_summary %>% group_by(horizon,strata,model) %>% summarize(MAE = mean(ae),.groups='drop')
+#   mae_vals <- backtest_summary |> dplyr::group_by(horizon,strata,model) |> dplyr::summarize(MAE = mean(ae),.groups='drop')
 #   return (mae_vals)
 # }
 #
 # calc_rmse <- function(backtest_summary) {
 #   backtest_summary$se <- (backtest_summary$reported-backtest_summary$mean)^2
-#   rmse_vals <- backtest_summary %>% group_by(horizon,strata,model) %>% summarize(RMSE = sqrt(mean(se)),.groups='drop')
+#   rmse_vals <- backtest_summary |> dplyr::group_by(horizon,strata,model) |> dplyr::summarize(RMSE = sqrt(mean(se)),.groups='drop')
 #   return (rmse_vals)
 # }
 
 #' calc_mae
 #'
-#' Calculates mean absolute error (MAE)
+#' Calculates mean absolute error (mae)
 #'
 #' @param backtest_summary results of backtest call
 #'
 calc_mae <- function(backtest_summary) {
-  df <- backtest_summary %>%
-    select(true_value=reported, prediction=mean, everything())
-  df$sample <- 1
-  mae_vals <- df %>%
-    score(metrics='ae_median') %>%
-    summarise_scores(by = c("horizon","strata","model")) %>%
-    select(horizon,strata,model,MAE='ae_median')
+  mae_vals <- backtest_summary |>
+    dplyr::select(true_value=reported, prediction=mean, everything()) |>
+    dplyr::mutate(sample=1) |>
+    scoringutils::score(metrics='ae_median') |>
+    scoringutils::summarise_scores(by = c("horizon","strata","model")) |>
+    dplyr::select(horizon,strata,model,mae='ae_median')
   return (mae_vals)
 }
 
 #' calc_rmse
 #'
-#' Calculates root mean squared error (RMSE)
+#' Calculates root mean squared error (rmse)
 #'
 #' @param backtest_summary results of backtest call
 #'
 calc_rmse <- function(backtest_summary) {
-  df <- backtest_summary %>%
-    select(true_value=reported, prediction=mean, everything())
-  df$sample <- 1
-  mae_vals <- df %>%
-    score(metrics='se_mean') %>%
-    summarise_scores(by = c("horizon","strata","model")) %>%
-    select(horizon,strata,model,RMSE='se_mean') %>%
-    mutate(RMSE=sqrt(RMSE))
-  return (mae_vals)
+  rmse_vals <- backtest_summary |>
+    dplyr::select(true_value=reported, prediction=mean, everything()) |>
+    dplyr::mutate(sample=1) |>
+    scoringutils::score(metrics='se_mean') |>
+    scoringutils::summarise_scores(by = c("horizon","strata","model")) |>
+    dplyr::select(horizon,strata,model,rmse='se_mean') |>
+    dplyr::mutate(rmse=sqrt(rmse))
+  return (rmse_vals)
 }
 
 #' calc_wis
 #'
-#' Calculates weighted interval score (WIS)
+#' Calculates weighted interval score (wis)
 #'
 #' @param backtest_summary results of backtest call
 #'
@@ -204,16 +201,16 @@ calc_wis <- function(backtest_summary) {
   if(!('X50.' %in% colnames(backtest_summary)))
     backtest_summary$X50. <- backtest_summary$mean
   quantile_cols <- colnames(backtest_summary)[grepl("^X.*\\.$", colnames(backtest_summary))]
-  df <- backtest_summary %>%
-    pivot_longer(cols=quantile_cols,names_to='quantile',values_to='prediction') %>%
-    mutate(quantile=as.numeric(sub("^X(.*)\\.$", "\\1", quantile))/100)  %>%
-    select(true_value=reported, everything())
 
-  wis_vals <- df %>%
-              check_forecasts() %>%
-              score() %>%
-              summarise_scores(by = c("horizon","strata","model")) %>%
-              select(horizon,strata,model,WIS='interval_score')
+  wis_vals <- backtest_summary |>
+    tidyr::pivot_longer(cols=quantile_cols,names_to='quantile',values_to='prediction') |>
+    dplyr::mutate(quantile=as.numeric(sub("^X(.*)\\.$", "\\1", quantile))/100)  |>
+    dplyr::select(true_value=reported, everything()) |>
+    scoringutils::check_forecasts() |>
+    scoringutils::score() |>
+    scoringutils::summarise_scores(by = c("horizon","strata","model")) |>
+    dplyr::select(horizon,strata,model,wis='interval_score')
+
   return (wis_vals)
 }
 
@@ -224,8 +221,8 @@ calc_wis <- function(backtest_summary) {
 #' @param backtest_summary Results of call to backtest or a list of results of backtest calls.
 #'
 #' @param metrics list of metrics which should be calculated.
-#' Currently supporting:MAE(mean absolute error), RMSE (root mean squared error),
-#' and WIS (weighted interval score)
+#' Currently supporting: 'mae' (mean absolute error), 'rmse' (root mean squared error),
+#' and 'wis' (weighted interval score)
 #'
 #' @param horizons list of horizons for which the metrics be calculated.
 #' Default is to calculate metrics only for horizon 0.
@@ -236,12 +233,12 @@ backtest_metrics <- function(backtest_summary, metrics, horizons=c(0))
   if(is.list(backtest_summary)) {
     if(!check_same_columns(backtest_summary))
       stop('Error: models cannot be compared - differnt column names in elements of backtest_summary')
-    backtest_summary <- bind_rows(backtest_summary)
+    backtest_summary <- dplyr::bind_rows(backtest_summary)
   }
 
-  backtest_summary <- backtest_summary %>%
-    filter(horizon %in% horizons) %>%
-    rename(strata=Strata_unified)
+  backtest_summary <- backtest_summary |>
+                      dplyr::filter(horizon %in% horizons) |>
+                      dplyr::rename(strata=Strata_unified)
 
   models <- unique(backtest_summary$model)
   stratas <- unique(backtest_summary$strata)
@@ -250,14 +247,14 @@ backtest_metrics <- function(backtest_summary, metrics, horizons=c(0))
   for(metric in metrics) {
     metric_results <- switch(
       metric,
-      MAE=calc_mae(backtest_summary),
-      RMSE=calc_rmse(backtest_summary),
-      WIS=calc_wis(backtest_summary),
+      mae=calc_mae(backtest_summary),
+      rmse=calc_rmse(backtest_summary),
+      wis=calc_wis(backtest_summary),
       stop("Error: unsupported metric - " +metric +".")
     )
     metrics_table <- merge(metrics_table, metric_results, by=c('horizon','strata','model'))
   }
-  metrics_table <- metrics_table %>%
-                    arrange(model,horizon)
+  metrics_table <- metrics_table |>
+                   dplyr::arrange(model,horizon)
   return (metrics_table)
 }
