@@ -98,7 +98,7 @@ summary_nowcast <- function(nowcast_output, quantiles=NULL) {
 #' These parameters allow manual control over the layout of multiple strata in the plot.
 #' If `NULL`, the number of rows is automatically determined by ggplot2.
 #'
-#' #' @param colsfacet Number of columns for arranging facets when using ggplot2::facet_wrap().
+#' @param colsfacet Number of columns for arranging facets when using ggplot2::facet_wrap().
 #' These parameters allow manual control over the layout of multiple strata in the plot.
 #' If `NULL`, the number of columns is automatically determined by ggplot2.
 #'
@@ -129,7 +129,7 @@ summary_nowcast <- function(nowcast_output, quantiles=NULL) {
 #'              maincolor = "firebrick2"
 #'              )
 #'
-#'
+#' @importFrom grDevices col2rgb colors
 #' @export
 plot_nowcast <- function(nowcast_output,
                          maincolor = "deepskyblue4",

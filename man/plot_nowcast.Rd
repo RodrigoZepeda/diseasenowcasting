@@ -29,9 +29,9 @@ optionally followed by 's'.}
 
 \item{rowsfacet}{Number of rows for arranging facets when using ggplot2::facet_wrap().
 These parameters allow manual control over the layout of multiple strata in the plot.
-If `NULL`, the number of rows is automatically determined by ggplot2.
+If `NULL`, the number of rows is automatically determined by ggplot2.}
 
-#' @param colsfacet Number of columns for arranging facets when using ggplot2::facet_wrap().
+\item{colsfacet}{Number of columns for arranging facets when using ggplot2::facet_wrap().
 These parameters allow manual control over the layout of multiple strata in the plot.
 If `NULL`, the number of columns is automatically determined by ggplot2.}
 }
@@ -65,6 +65,5 @@ plot_nowcast(predictions, rowsfacet = 2,
              datesbrakes = "2 weeks", casesbrakes = 15,
              maincolor = "firebrick2"
              )
-
 
 }
