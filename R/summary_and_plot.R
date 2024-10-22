@@ -284,7 +284,7 @@ plot_nowcast <- function(nowcast_output,
     ) +
     ggplot2::theme_minimal() +
     ggplot2::theme(
-      axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 0),
+      axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 1),
       legend.position = "top",
       legend.justification='right',
       legend.direction = "horizontal"
