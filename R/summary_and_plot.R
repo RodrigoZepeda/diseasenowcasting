@@ -198,7 +198,7 @@ plot_nowcast <- function(nowcast_output,
   prediction_summary <- summary_nowcast(nowcast_output, quantiles = quantiles)
   #get quantile labels for legend
   quantile_labels <- paste0(
-    colnames(prediction_summary)[4], " - ", colnames(prediction_summary)[5], " CI"
+    colnames(prediction_summary)[4], " - ", colnames(prediction_summary)[5], " interval"
   )
   # Get input data and sum over all delays
   data_delays <- nowcast_output$data$preprocessed_data |>
@@ -265,7 +265,7 @@ plot_nowcast <- function(nowcast_output,
     ggplot2::scale_fill_manual(
       name = NULL,  # Remove legend title
       values = c("Reported" = color, "Estimated, not yet reported" = color),
-      labels = c("Reported", paste("Mean estimated, not yet reported\n    Error bars: ", quantile_labels, sep = ""))
+      labels = c("Reported", paste("Predicted, not yet reported\nError bars: ", quantile_labels, sep = ""))
     ) +
 
     # Manually control the legend to show different alpha levels
@@ -273,7 +273,7 @@ plot_nowcast <- function(nowcast_output,
       fill = ggplot2::guide_legend(
         override.aes = list(
           alpha = c(0.8, 0.45),  # Full opacity for "Reported", transparency for "Estimated"
-          color = "white"  # Make sure the legend matches the bar outlines
+          color = NA  # Make sure the legend matches the bar outlines
         )
       )
     ) +
