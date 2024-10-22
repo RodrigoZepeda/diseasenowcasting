@@ -77,7 +77,7 @@ summary_nowcast <- function(nowcast_output, quantiles=NULL) {
 
 
 
-#' Barplots for the diseasenowcasting::nowcast() output
+#' Plot your nowcast
 #'
 #' Create barplots to show real cases and the predictions of the function diseasenowcasting::nowcast()
 #'
@@ -95,11 +95,11 @@ summary_nowcast <- function(nowcast_output, quantiles=NULL) {
 #' @param casesbrakes Desired number of y-axis breaks. You may get slightly more or fewer breaks that requested.
 #'
 #' @param rowsfacet Number of rows for arranging facets when using ggplot2::facet_wrap().
-#' These parameters allow manual control over the layout of multiple strata in the plot.
+#' It allows manual control over the layout of multiple strata in the plot.
 #' If `NULL`, the number of rows is automatically determined by ggplot2.
 #'
 #' @param colsfacet Number of columns for arranging facets when using ggplot2::facet_wrap().
-#' These parameters allow manual control over the layout of multiple strata in the plot.
+#' It allows manual control over the layout of multiple strata in the plot.
 #' If `NULL`, the number of columns is automatically determined by ggplot2.
 #'
 #' @return ggplot2 barplots to show real cases and the predictions of the function diseasenowcasting::nowcast()
@@ -126,8 +126,7 @@ summary_nowcast <- function(nowcast_output, quantiles=NULL) {
 #' # other plotting options
 #' plot_nowcast(predictions, rowsfacet = 2,
 #'              datesbrakes = "2 weeks", casesbrakes = 15,
-#'              maincolor = "firebrick2"
-#'              )
+#'              maincolor = "firebrick2")
 #'
 #' @importFrom grDevices col2rgb colors
 #' @export
@@ -155,7 +154,7 @@ plot_nowcast <- function(nowcast_output,
 
   # Check if datesbrakes is either NULL or a valid specification
   if (!is.null(datesbrakes) &&
-      !grepl("^\\d+\\s*(second|minute|hour|day|week|month|year|weeks|months)$|^(week|month|year|weeks|months|years)$", datesbrakes)) {
+      !grepl("^\\d+\\s*(day|week|month|year|days|weeks|months|years)$|^(day|week|month|year|days|weeks|months|years)$", datesbrakes)) {
     stop('datesbrakes is not a valid string for date breaks.
          Examples are: "2 weeks", "10 days", "day", "months", "year"...')
   }
