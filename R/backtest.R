@@ -7,6 +7,10 @@
 #'
 #' @param end_date end_date
 #'
+#' @param units units
+#'
+#' @param stride stride
+#'
 #' @param stride the number of time steps between two consecutive nowcasts
 #'
 generate_nowcast_dates <- function(start_date, end_date, units, stride) {
@@ -126,8 +130,8 @@ backtest <- function(start_date = NULL,
   }
 
   cases_per_date <- .disease_data |>
-                    dplyr::group_by(!!dplyr::sym(onset_date)) |>
-                    dplyr::summarize(reported=dplyr::n())
+                    dplyr::group_by(!!as.symbol(onset_date)) |>
+                    dplyr::summarize(!!as.symbol("reported"):=dplyr::n())
   backtest_summary <- merge(pred_table, cases_per_date, by = onset_date, all.x = TRUE)
   backtest_summary$model <- model_name
   return (backtest_summary)
@@ -166,11 +170,14 @@ check_same_columns <- function(df_list) {
 #'
 calc_mae <- function(backtest_summary) {
   mae_vals <- backtest_summary |>
-    dplyr::select(true_value=reported, prediction=mean, everything()) |>
+    dplyr::select(!!as.symbol("prediction") := !!as.symbol("mean"), dplyr::everything()) |>
     dplyr::mutate(sample=1) |>
     scoringutils::score(metrics='ae_median') |>
     scoringutils::summarise_scores(by = c("horizon","strata","model")) |>
-    dplyr::select(horizon,strata,model,mae='ae_median')
+    dplyr::select(!!as.symbol("horizon"),
+                  !!as.symbol("strata"),
+                  !!as.symbol("model"),
+                  !!as.symbol("mae"):='ae_median')
   return (mae_vals)
 }
 
@@ -182,12 +189,15 @@ calc_mae <- function(backtest_summary) {
 #'
 calc_rmse <- function(backtest_summary) {
   rmse_vals <- backtest_summary |>
-    dplyr::select(true_value=reported, prediction=mean, everything()) |>
+    dplyr::select(!!as.symbol("prediction") := !!as.symbol("mean"), dplyr::everything()) |>
     dplyr::mutate(sample=1) |>
     scoringutils::score(metrics='se_mean') |>
     scoringutils::summarise_scores(by = c("horizon","strata","model")) |>
-    dplyr::select(horizon,strata,model,rmse='se_mean') |>
-    dplyr::mutate(rmse=sqrt(rmse))
+    dplyr::select(!!as.symbol("horizon"),
+                  !!as.symbol("strata"),
+                  !!as.symbol("model"),
+                  !!as.symbol("rmse"):='se_mean') |>
+    dplyr::mutate(rmse=sqrt(!!as.symbol("rmse")))
   return (rmse_vals)
 }
 
@@ -204,12 +214,14 @@ calc_wis <- function(backtest_summary) {
 
   wis_vals <- backtest_summary |>
     tidyr::pivot_longer(cols=quantile_cols,names_to='quantile',values_to='prediction') |>
-    dplyr::mutate(quantile=as.numeric(sub("^X(.*)\\.$", "\\1", quantile))/100)  |>
-    dplyr::select(true_value=reported, everything()) |>
+    dplyr::mutate(!!as.symbol("quantile"):=as.numeric(sub("^X(.*)\\.$", "\\1", !!as.symbol("quantile")))/100)  |>
     scoringutils::check_forecasts() |>
     scoringutils::score() |>
     scoringutils::summarise_scores(by = c("horizon","strata","model")) |>
-    dplyr::select(horizon,strata,model,wis='interval_score')
+    dplyr::select(!!as.symbol("horizon"),
+                  !!as.symbol("strata"),
+                  !!as.symbol("model"),
+                  !!as.symbol("wis"):='interval_score')
 
   return (wis_vals)
 }
@@ -237,8 +249,10 @@ backtest_metrics <- function(backtest_summary, metrics, horizons=c(0))
   }
 
   backtest_summary <- backtest_summary |>
-                      dplyr::filter(horizon %in% horizons) |>
-                      dplyr::rename(strata=Strata_unified)
+                      dplyr::filter(!!as.symbol("horizon") %in% horizons) |>
+                      dplyr::rename(!!as.symbol("strata") := !!as.symbol("Strata_unified")) |>
+                      dplyr::select(!!as.symbol("true_value") := !!as.symbol("reported"), dplyr::everything())
+
 
   models <- unique(backtest_summary$model)
   stratas <- unique(backtest_summary$strata)
@@ -255,6 +269,6 @@ backtest_metrics <- function(backtest_summary, metrics, horizons=c(0))
     metrics_table <- merge(metrics_table, metric_results, by=c('horizon','strata','model'))
   }
   metrics_table <- metrics_table |>
-                   dplyr::arrange(model,horizon)
+                   dplyr::arrange(!!as.symbol("model"),!!as.symbol("horizon"))
   return (metrics_table)
 }

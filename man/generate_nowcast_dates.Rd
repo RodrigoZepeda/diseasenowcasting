@@ -11,6 +11,8 @@ generate_nowcast_dates(start_date, end_date, units, stride)
 
 \item{end_date}{end_date}
 
+\item{units}{units}
+
 \item{stride}{the number of time steps between two consecutive nowcasts}
 }
 \description{
