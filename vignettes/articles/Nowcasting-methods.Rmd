@@ -13,6 +13,7 @@ library(tidyverse)
 library(ggtext)
 library(latex2exp)
 library(cowplot)
+library(MetBrewer)
 ```
 
 ## Intuitive explanation
