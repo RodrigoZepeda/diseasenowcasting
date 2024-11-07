@@ -215,7 +215,7 @@ calc_wis <- function(backtest_summary) {
   wis_vals <- backtest_summary |>
     tidyr::pivot_longer(cols=quantile_cols,names_to='quantile',values_to='prediction') |>
     dplyr::mutate(!!as.symbol("quantile"):=as.numeric(sub("^X(.*)\\.$", "\\1", !!as.symbol("quantile")))/100)  |>
-    scoringutils::check_forecasts() |>
+    #scoringutils::check_forecasts() |>
     scoringutils::score() |>
     scoringutils::summarise_scores(by = c("horizon","strata","model")) |>
     dplyr::select(!!as.symbol("horizon"),
