@@ -30,7 +30,7 @@ Imports:
     stringr,
     tidyr,
     ggplot2,
-    scoringutils
+    scoringutils (>= 2.0.0)
 Depends: 
     R (>= 4.2.0)
 RoxygenNote: 7.3.2
