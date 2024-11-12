@@ -131,7 +131,7 @@ backtest <- function(start_date = NULL,
 
   cases_per_date <- .disease_data |>
                     dplyr::group_by(!!as.symbol(onset_date)) |>
-                    dplyr::summarize(!!as.symbol("reported"):=dplyr::n())
+                    dplyr::summarize(!!as.symbol("observed"):=dplyr::n())
   backtest_summary <- merge(pred_table, cases_per_date, by = onset_date, all.x = TRUE)
   backtest_summary$model <- model_name
   return (backtest_summary)
@@ -151,13 +151,13 @@ check_same_columns <- function(df_list) {
 }
 
 # calc_mae <- function(backtest_summary) {
-#   backtest_summary$ae <- abs(backtest_summary$reported-backtest_summary$mean)
+#   backtest_summary$ae <- abs(backtest_summary$observed-backtest_summary$mean)
 #   mae_vals <- backtest_summary |> dplyr::group_by(horizon,strata,model) |> dplyr::summarize(MAE = mean(ae),.groups='drop')
 #   return (mae_vals)
 # }
 #
 # calc_rmse <- function(backtest_summary) {
-#   backtest_summary$se <- (backtest_summary$reported-backtest_summary$mean)^2
+#   backtest_summary$se <- (backtest_summary$observed-backtest_summary$mean)^2
 #   rmse_vals <- backtest_summary |> dplyr::group_by(horizon,strata,model) |> dplyr::summarize(RMSE = sqrt(mean(se)),.groups='drop')
 #   return (rmse_vals)
 # }
@@ -170,14 +170,15 @@ check_same_columns <- function(df_list) {
 #'
 calc_mae <- function(backtest_summary) {
   mae_vals <- backtest_summary |>
-    dplyr::select(!!as.symbol("prediction") := !!as.symbol("mean"), dplyr::everything()) |>
+    dplyr::select(!!as.symbol("predicted") := !!as.symbol("mean"), dplyr::everything()) |>
     dplyr::mutate(sample=1) |>
-    scoringutils::score(metrics='ae_median') |>
+    scoringutils::as_forecast_point() |>
+    scoringutils::score() |>
     scoringutils::summarise_scores(by = c("horizon","strata","model")) |>
     dplyr::select(!!as.symbol("horizon"),
                   !!as.symbol("strata"),
                   !!as.symbol("model"),
-                  !!as.symbol("mae"):='ae_median')
+                  !!as.symbol("mae"):='ae_point')
   return (mae_vals)
 }
 
@@ -189,14 +190,15 @@ calc_mae <- function(backtest_summary) {
 #'
 calc_rmse <- function(backtest_summary) {
   rmse_vals <- backtest_summary |>
-    dplyr::select(!!as.symbol("prediction") := !!as.symbol("mean"), dplyr::everything()) |>
+    dplyr::select(!!as.symbol("predicted") := !!as.symbol("mean"), dplyr::everything()) |>
     dplyr::mutate(sample=1) |>
-    scoringutils::score(metrics='se_mean') |>
+    scoringutils::as_forecast_point() |>
+    scoringutils::score() |>
     scoringutils::summarise_scores(by = c("horizon","strata","model")) |>
     dplyr::select(!!as.symbol("horizon"),
                   !!as.symbol("strata"),
                   !!as.symbol("model"),
-                  !!as.symbol("rmse"):='se_mean') |>
+                  !!as.symbol("rmse"):='se_point') |>
     dplyr::mutate(rmse=sqrt(!!as.symbol("rmse")))
   return (rmse_vals)
 }
@@ -213,15 +215,15 @@ calc_wis <- function(backtest_summary) {
   quantile_cols <- colnames(backtest_summary)[grepl("^X.*\\.$", colnames(backtest_summary))]
 
   wis_vals <- backtest_summary |>
-    tidyr::pivot_longer(cols=quantile_cols,names_to='quantile',values_to='prediction') |>
-    dplyr::mutate(!!as.symbol("quantile"):=as.numeric(sub("^X(.*)\\.$", "\\1", !!as.symbol("quantile")))/100)  |>
-    #scoringutils::check_forecasts() |>
+    tidyr::pivot_longer(cols=quantile_cols,names_to='quantile_level',values_to='predicted') |>
+    dplyr::mutate(!!as.symbol("quantile_level"):=as.numeric(sub("^X(.*)\\.$", "\\1", !!as.symbol("quantile_level")))/100)  |>
+    scoringutils::as_forecast_quantile() |>
     scoringutils::score() |>
     scoringutils::summarise_scores(by = c("horizon","strata","model")) |>
     dplyr::select(!!as.symbol("horizon"),
                   !!as.symbol("strata"),
                   !!as.symbol("model"),
-                  !!as.symbol("wis"):='interval_score')
+                  !!as.symbol("wis"))
 
   return (wis_vals)
 }
@@ -250,8 +252,7 @@ backtest_metrics <- function(backtest_summary, metrics, horizons=c(0))
 
   backtest_summary <- backtest_summary |>
                       dplyr::filter(!!as.symbol("horizon") %in% horizons) |>
-                      dplyr::rename(!!as.symbol("strata") := !!as.symbol("Strata_unified")) |>
-                      dplyr::select(!!as.symbol("true_value") := !!as.symbol("reported"), dplyr::everything())
+                      dplyr::rename(!!as.symbol("strata") := !!as.symbol("Strata_unified"))
 
 
   models <- unique(backtest_summary$model)
