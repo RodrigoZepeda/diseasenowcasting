@@ -28,7 +28,7 @@ sims       <- simulate_disease(num_steps = 100, num_strata = num_strata,
 }
 
 ggplot() +
-  geom_point(aes(x = onset_date, y = n, color = .strata),
+  geom_point(aes(x = true_date, y = n, color = .strata),
             data = sims$simulations) +
   theme_bw() +
   scale_y_continuous(labels = scales::comma_format())
@@ -47,12 +47,12 @@ lambdavals <- sims$stan_fit$model |>
   dplyr::mutate(!!as.symbol("delay") := as.numeric(stringr::str_remove_all(!!as.symbol("variable"),".*\\[|,.*\\]"))) |>
   dplyr::select(!!as.symbol(".tval"), !!as.symbol("delay"), !!as.symbol("median")) |>
   dplyr::left_join(
-    sims$stan_fit$data$preprocessed_data |> dplyr::distinct(onset_date, .tval)
+    sims$stan_fit$data$preprocessed_data |> dplyr::distinct(true_date, .tval)
   )
 
 ggplot() +
-  geom_line(aes(x = onset_date, y = median, color = as.character(delay)),
-            data = lambdavals |> filter(onset_date < max(onset_date))) +
+  geom_line(aes(x = true_date, y = median, color = as.character(delay)),
+            data = lambdavals |> filter(true_date < max(true_date))) +
   theme_bw() +
   scale_y_continuous(labels = scales::comma_format())
 

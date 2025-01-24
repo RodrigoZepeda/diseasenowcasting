@@ -20,7 +20,7 @@ ggplot(data_delays) +
   theme_bw()
 
 #Check the data
-predictions <- nowcast(sims, "onset_date", "report_date", method = "optimization")
+predictions <- nowcast(sims, "true_date", "report_date", method = "optimization")
 
 #Get the predicted values in a nice format
 predicted_values <- predictions$generated_quantities |>

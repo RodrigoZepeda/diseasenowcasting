@@ -10,7 +10,7 @@ simulate_disease(
   num_strata = 2,
   initial_day = NULL,
   warmup_steps = 50,
-  dist = c("NegativeBinomial", "Poisson"),
+  dist = c("NegativeBinomial", "Poisson", "Normal", "Student"),
   units = c("daily", "weekly"),
   priors = set_priors()
 )

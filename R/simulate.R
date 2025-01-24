@@ -89,14 +89,14 @@ simulate_disease <- function(num_steps  = 10,
     .delay     =  seq(0, num_delays - 1, by = 1),
     .strata    =  paste0("s", seq(1, num_strata)),
   ) |>
-    dplyr::mutate(!!as.symbol("onset_date")  := !!initial_day +
+    dplyr::mutate(!!as.symbol("true_date")  := !!initial_day +
                     lubridate::days(!!scale_val*!!as.symbol(".tval"))) |>
-    dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("onset_date")  +
+    dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("true_date")  +
                     lubridate::days(!!scale_val*!!as.symbol(".delay"))) |>
     dplyr::mutate(!!as.symbol("n") := !!1)
 
   #Generate fake dataset
-  ss_process <- nowcast(disease_data, onset_date = "onset_date", report_date = "report_date",
+  ss_process <- nowcast(disease_data, true_date = "true_date", report_date = "report_date",
                         strata = ".strata", prior_only = TRUE, priors = priors,
                         algorithm = "Fixed_param", dist = dist, chains = 1, refresh = 0)
 
@@ -117,9 +117,9 @@ simulate_disease <- function(num_steps  = 10,
         dplyr::mutate(!!as.symbol(".pos") := 1:dplyr::n()),
       by = ".pos"
     ) |>
-    dplyr::mutate(!!as.symbol("onset_date")  := !!initial_day +
+    dplyr::mutate(!!as.symbol("true_date")  := !!initial_day +
                     lubridate::days(!!scale_val*!!as.symbol(".tval"))) |>
-    dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("onset_date")  +
+    dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("true_date")  +
                     lubridate::days(!!scale_val*!!as.symbol(".delay"))) |>
     dplyr::rename(!!as.symbol("n") := !!as.symbol("median")) |>
     dplyr::select(-!!as.symbol(".tval"), -!!as.symbol(".pos"), -!!as.symbol(".delay")) |>

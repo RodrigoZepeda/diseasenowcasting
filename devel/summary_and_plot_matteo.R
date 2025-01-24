@@ -6,7 +6,7 @@ library(diseasenowcasting)
 #num_steps=12
 #sims       <- simulate_process_for_testing(num_steps=num_steps,num_strata = num_strata, num_delays = num_delays)
 # Now use model to predict disease process. If no strata is required omit the strata option
-#predictions <- nowcast(sims, "onset_date", "report_date", cores = 4, strata = ".strata")
+#predictions <- nowcast(sims, "true_date", "report_date", cores = 4, strata = ".strata")
 
 load("~/Library/CloudStorage/OneDrive-ColumbiaUniversityIrvingMedicalCenter/7_Nowcast/repos/diseasenowcasting/diseasenowcasting/data/denguedat.rda")
 denguedat_sel=denguedat[denguedat$onset_week >= as.Date("1991-09-01") & denguedat$onset_week <= as.Date("1991-10-01"),]
@@ -28,7 +28,7 @@ predictions <- predictions_largelist$generated_quantities
 
 summary_nowcast <- function(x, ...) {
   #Get names from input data
-  onset_date_name <- predictions_largelist$data$call_parameters$onset_date
+  true_date_name <- predictions_largelist$data$call_parameters$true_date
   strata_name <- predictions_largelist$data$call_parameters$strata
   date_dic <- predictions_largelist$data$preprocessed_data |>
     dplyr::select(.tval, onset_week) |>
@@ -46,7 +46,7 @@ summary_nowcast <- function(x, ...) {
     # assign the onset dates
     dplyr::left_join(date_dic, by = ".tval") |>
     # Select and reorder the columns
-     dplyr::select(all_of(onset_date_name), .strata_unified, mean, sd, q5, q95)|>
+     dplyr::select(all_of(true_date_name), .strata_unified, mean, sd, q5, q95)|>
     # Rename the columns
     dplyr::rename(
                   !!strata_name := .strata_unified,
@@ -75,10 +75,10 @@ plot.summary <- function(predictions, ...) {
 
   # Create plot with facets
   ggplot2::ggplot(data_delays) +
-    ggplot2::geom_ribbon(ggplot2::aes(x = !!dplyr::sym(onset_date_name), ymin = q05, ymax = q95, fill =  !!dplyr::sym(strata_name)),
+    ggplot2::geom_ribbon(ggplot2::aes(x = !!dplyr::sym(true_date_name), ymin = q05, ymax = q95, fill =  !!dplyr::sym(strata_name)),
                 data = prediction_summary, linetype = "dotted", alpha = 0.5) +
-    ggplot2::geom_line(ggplot2::aes(x = !!dplyr::sym(onset_date_name), y = n, color = !!dplyr::sym(strata_name))) +
-    ggplot2::geom_line(ggplot2::aes(x = !!dplyr::sym(onset_date_name), y = Mean, color = !!dplyr::sym(strata_name)),
+    ggplot2::geom_line(ggplot2::aes(x = !!dplyr::sym(true_date_name), y = n, color = !!dplyr::sym(strata_name))) +
+    ggplot2::geom_line(ggplot2::aes(x = !!dplyr::sym(true_date_name), y = Mean, color = !!dplyr::sym(strata_name)),
               data = prediction_summary, linetype = "dotted") +
     ggplot2::facet_wrap(~ gender) + # Separate plot for each strata.   ## it needs to take the var strata_name!!!!!!!########
     ggplot2::theme_minimal() +

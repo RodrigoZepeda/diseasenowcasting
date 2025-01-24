@@ -32,7 +32,7 @@ sims       <- simulate_process_for_testing(num_steps = num_steps,
                                            num_strata = num_strata, num_delays = num_delays)
 
 # Now use model to predict disease process. If no strata is required omit the strata option
-predictions <- nowcast(sims, "onset_date", "report_date", strata = ".strata",
+predictions <- nowcast(sims, "true_date", "report_date", strata = ".strata",
                        method = "variational")
 #> Warning: Pareto k diagnostic value is 2.11. Resampling is disabled. Decreasing
 #> tol_rel_obj may help if variational algorithm has terminated prematurely.
@@ -46,7 +46,7 @@ predicted_values <- predictions$generated_quantities |>
   mutate(.strata = as.numeric(stringr::str_remove_all(variable,".*\\[.*,|\\]"))) |>
   mutate(.tval = as.numeric(stringr::str_remove_all(variable,".*\\[|,.*\\]"))) |> 
   left_join(
-    predictions$data$preprocessed_data |> distinct(.tval, onset_date)
+    predictions$data$preprocessed_data |> distinct(.tval, true_date)
   ) |>
   left_join(
     predictions$data$strata_dict
@@ -56,15 +56,15 @@ predicted_values <- predictions$generated_quantities |>
 
 # Sum over all delays
 data_delays <- sims |>
-  group_by(onset_date, .strata) |>
+  group_by(true_date, .strata) |>
   summarise(n = sum(n)) 
 
 # Create plot
 ggplot(data_delays) +
-  geom_ribbon(aes(x = onset_date, ymin = q5, ymax = q95, fill = as.character(.strata)), 
+  geom_ribbon(aes(x = true_date, ymin = q5, ymax = q95, fill = as.character(.strata)), 
               data = predicted_values, linetype = "dotted", alpha = 0.5) +
-  geom_line(aes(x = onset_date, y = n, color = as.character(.strata))) +
-  geom_line(aes(x = onset_date, y = mean, color = as.character(.strata)), 
+  geom_line(aes(x = true_date, y = n, color = as.character(.strata))) +
+  geom_line(aes(x = true_date, y = mean, color = as.character(.strata)), 
             data = predicted_values, linetype = "dotted") +
   theme_bw() +
   scale_color_manual("Strata", values = c("tomato3", "forestgreen")) +

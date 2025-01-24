@@ -12,11 +12,11 @@
 #'
 #' @param dist Distribution. Either "NegativeBinomial"  or "Poisson"
 #'
-#' @param onset_date In quotations, the name of the column of datatype
-#' \code{Date} designating the date of case onset. e.g. "onset_week"
+#' @param true_date In quotations, the name of the column designating the true date
+#' when the case happend e.g. "onset_week". The datatype of the column should be a \code{Date}.
 #'
-#' @param report_date In quotations, the name of the column of datatype
-#' \code{Date} designating the date of case report. e.g. "report_week"
+#' @param report_date In quotations, the name of the column designating the date
+#' the case was reported e.g. "report_week". The datatype of the column should be a \code{Date}.
 #'
 #' @param strata Character vector of names of the strata included in the data.
 #'
@@ -55,7 +55,7 @@
 #' nowcast(denguedat, "onset_week", "report_week", now = now,
 #'   method = "optimization", seed = 2495624, iter = 10)
 #' @export
-nowcast <- function(.disease_data, onset_date, report_date,
+nowcast <- function(.disease_data, true_date, report_date,
                     strata = NULL,
                     dist = c("NegativeBinomial", "Poisson","Normal","Student"),
                     now = NULL,
@@ -70,17 +70,17 @@ nowcast <- function(.disease_data, onset_date, report_date,
                     ...) {
 
   # Check that the columns of onset and report are columns of data and are dates
-  .disease_data <- check_date_columns(.disease_data, onset_date = onset_date, report_date = report_date)
+  .disease_data <- check_date_columns(.disease_data, true_date = true_date, report_date = report_date)
 
   # Check proportion reported
   # FIXME: The proportion reported currently doesn't do anything
   check_proportion_reported(proportion_reported)
 
   # Get `now` as the last date by default
-  now    <- infer_now(.disease_data, now = now, onset_date = onset_date)
+  now    <- infer_now(.disease_data, now = now, true_date = true_date)
 
   # Infer the units whether it is daily, weekly, monthly or yearly
-  units  <- infer_units(.disease_data, units = units, date_column = onset_date)
+  units  <- infer_units(.disease_data, units = units, date_column = true_date)
 
   # Match the distribution whether negative binomial or poisson
   dist   <- match.arg(dist, c("NegativeBinomial","Poisson","Normal","Student"))
@@ -95,7 +95,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
 
   # Get the data for processing
   .disease_data <- preprocess_for_nowcast(.disease_data,
-    onset_date = onset_date,
+    true_date = true_date,
     report_date = report_date,
     strata = strata,
     now = now,
@@ -122,7 +122,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
   num_strata    <- strata_list$num_strata
 
   stan_list <- nowcast.rstan(.disease_data,
-                onset_date,
+                true_date,
                 report_date,
                 num_steps  = num_steps,
                 num_delays = num_delays,
@@ -137,7 +137,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
 
   #Get the call values
   call_parameters = list(
-    onset_date  = onset_date,
+    true_date  = true_date,
     report_date = report_date,
     strata      = strata,
     now         = now,
@@ -170,7 +170,7 @@ nowcast <- function(.disease_data, onset_date, report_date,
 #' @param num_strata Number of strata in the model
 #'
 #' @keywords internal
-nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num_delays, num_strata,
+nowcast.rstan <- function(.disease_data, true_date, report_date, num_steps, num_delays, num_strata,
                           dist, prior_only, control, refresh, method, priors, ...) {
 
   #Keep only the columns n, .tval, .delay, .strata
@@ -297,7 +297,7 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
   if (flag > 0){
     cli::cli_alert_warning(
       "Some values of lambda have been truncated as they are too large. This might be attributed
-      to a high variance of your data or on the prior. Consider reducing the prior variance."
+      to a high variance of your data or on the prior. Consider reducing the prior's variance."
     )
   }
 

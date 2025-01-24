@@ -27,7 +27,7 @@ data("denguedat")
 now <- as.Date("1990-10-01")
 
 test_nowcast <- NobBS(data = denguedat, units = "1 week", now = now,
-                      onset_date = "onset_week", report_date = "report_week")
+                      true_date = "onset_week", report_date = "report_week")
 ```
 
 and compare against the `diseasenowcasting` package:
@@ -69,12 +69,12 @@ Result in a better prediction than the `NobBS` default one:
 ggplot() +
   geom_ribbon(aes(x = onset_week, ymin = q5, ymax = q95, fill = "diseasenowcasting"),
               data = predicted_values, alpha = 0.25) +
-  geom_ribbon(aes(x = onset_date, ymin = lower, ymax = upper, fill = "NobBS"),
+  geom_ribbon(aes(x = true_date, ymin = lower, ymax = upper, fill = "NobBS"),
               data = test_nowcast$estimates, alpha = 0.25) +
   geom_line(aes(x = onset_week, y = n, color = "Train data", fill = "Train data"), data = obs) +
   geom_line(aes(x = onset_week, y = mean, color = "diseasenowcasting"),
             data = predicted_values, linetype = "dotted") +
-  geom_line(aes(x = onset_date, y = estimate, color = "NobBS"), data = test_nowcast$estimates) +
+  geom_line(aes(x = true_date, y = estimate, color = "NobBS"), data = test_nowcast$estimates) +
   geom_point(aes(x = onset_week, y = n, color = "All data", fill = "All data"), data =
               denguedat |>
                dplyr::group_by(onset_week) |>

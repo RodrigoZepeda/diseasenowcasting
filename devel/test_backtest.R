@@ -1,6 +1,6 @@
 data(denguedat)
 backtest_summary1 <- backtest(.disease_data=denguedat,
-                              onset_date="onset_week",
+                              true_date="onset_week",
                               report_date="report_week",
                               start_date = as.Date('1990-01-22'),
                               end_date = as.Date('1990-05-22'),
@@ -11,7 +11,7 @@ backtest_summary1 <- backtest(.disease_data=denguedat,
                               model_name='model_Normal')
 
 backtest_summary2 <- backtest(.disease_data=denguedat,
-                              onset_date="onset_week",
+                              true_date="onset_week",
                               report_date="report_week",
                               start_date = as.Date('1990-01-22'),
                               end_date = as.Date('1990-05-22'),

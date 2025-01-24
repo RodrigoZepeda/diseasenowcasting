@@ -4,7 +4,7 @@
 \alias{check_now}
 \title{Check the `now` argument to be date}
 \usage{
-check_now(.disease_data, now, onset_date)
+check_now(.disease_data, now, true_date)
 }
 \arguments{
 \item{.disease_data}{A time series of reporting data in aggregated line list format
@@ -13,8 +13,8 @@ such that each row has a column for onset date, report date, and}
 \item{now}{An object of datatype \code{Date} indicating the date at which
 to perform the nowcast.}
 
-\item{onset_date}{In quotations, the name of the column of datatype
-\code{Date} designating the date of case onset. e.g. "onset_week"}
+\item{true_date}{In quotations, the name of the column designating the true date
+when the case happend e.g. "onset_week". The datatype of the column should be a \code{Date}.}
 }
 \value{
 (invisibly) TRUE if the `now` date is achievable

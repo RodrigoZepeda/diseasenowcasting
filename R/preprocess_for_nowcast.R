@@ -1,7 +1,7 @@
 #' Preprocess data.frame for generating a nowcast
 #'
-#' Function that takes a data frame with `onset_date` and `report_date` and generates all
-#' possible combinations of onset_dates and report_dates observable controlling by the covariates
+#' Function that takes a data frame with `true_date` and `report_date` and generates all
+#' possible combinations of true_dates and report_dates observable controlling by the covariates
 #' specified in `...`
 #'
 #' @inheritParams nowcast
@@ -57,7 +57,7 @@
 #' )
 #'
 #' @export
-preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, strata = NULL, now, units,
+preprocess_for_nowcast <- function(.disease_data, true_date, report_date, strata = NULL, now, units,
                                    max_delay = Inf, data_type = c("auto", "linelist", "count")) {
 
   # Get whether data is count or line data
@@ -70,16 +70,16 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, strat
   # Calculate the delay column
   .disease_data <- .disease_data |>
     dplyr::mutate(.delay = as.numeric(
-      difftime(!!as.symbol(report_date), !!as.symbol(onset_date), units = !!units)))
+      difftime(!!as.symbol(report_date), !!as.symbol(true_date), units = !!units)))
 
   # Get all possible onset dates in data
   min_date <- .disease_data |>
-    dplyr::summarise(min_date = min(!!as.symbol(onset_date))) |>
+    dplyr::summarise(min_date = min(!!as.symbol(true_date))) |>
     dplyr::pull(min_date)
 
   # Get the maximum prediction date
   max_date <- .disease_data |>
-    dplyr::summarise(max_date = max(!!as.symbol(onset_date))) |>
+    dplyr::summarise(max_date = max(!!as.symbol(true_date))) |>
     dplyr::pull(max_date)
   max_date <- min(max_date, now)
 
@@ -103,7 +103,7 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, strat
 
   # Expand the data frame to include all delays and all onsets
   all_delay_onsets <- tidyr::expand_grid(
-    !!as.symbol(onset_date) := all_onsets,
+    !!as.symbol(true_date) := all_onsets,
     !!as.symbol(".delay") := all_delays
   )
 
@@ -122,19 +122,19 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, strat
     all_delay_onsets <- all_delay_onsets |>
       dplyr::mutate(
         !!as.symbol(report_date) := lubridate::days(!!as.symbol(".delay")) +
-          !!as.symbol(onset_date)
+          !!as.symbol(true_date)
       )
   } else if (units == "weeks") {
     all_delay_onsets <- all_delay_onsets |>
       dplyr::mutate(
         !!as.symbol(report_date) := lubridate::weeks(!!as.symbol(".delay")) +
-          !!as.symbol(onset_date)
+          !!as.symbol(true_date)
       )
   }
 
   # Group data to generate counts
   .disease_data <- .disease_data |>
-    dplyr::group_by(!!as.symbol(onset_date), !!as.symbol(report_date), !!as.symbol(".delay"))
+    dplyr::group_by(!!as.symbol(true_date), !!as.symbol(report_date), !!as.symbol(".delay"))
 
   if (length(strata) > 0) {
     .disease_data <- .disease_data |>
@@ -153,7 +153,7 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, strat
 
   # Bind the data counts to the delay
   all_delay_onsets <- all_delay_onsets |>
-    dplyr::left_join(.disease_data, by = c(onset_date, report_date, ".delay", strata)) |>
+    dplyr::left_join(.disease_data, by = c(true_date, report_date, ".delay", strata)) |>
     dplyr::mutate(
       !!as.symbol("n") := tidyr::replace_na(!!as.symbol("n"), 0)
     )
@@ -163,10 +163,10 @@ preprocess_for_nowcast <- function(.disease_data, onset_date, report_date, strat
   # Get only the data that is lower than the delay,
   # Sort by date of onset and delay
   all_delay_onsets <- all_delay_onsets |>
-    dplyr::mutate(.tval = 1 + as.numeric(difftime(!!as.symbol(onset_date), !!min_date, units = !!units))) |>
+    dplyr::mutate(.tval = 1 + as.numeric(difftime(!!as.symbol(true_date), !!min_date, units = !!units))) |>
     dplyr::filter(!!as.symbol(report_date) <= max_date) |>
     dplyr::filter(!!as.symbol(".delay") <= !!max_delay) |>
-    dplyr::arrange(!!as.symbol(onset_date), !!as.symbol(".delay"))
+    dplyr::arrange(!!as.symbol(true_date), !!as.symbol(".delay"))
 
   all_delay_onsets <- all_delay_onsets |>
     dplyr::select(!!as.symbol("n"), !!as.symbol(".tval"), !!as.symbol(".delay"), tidyr::everything())
