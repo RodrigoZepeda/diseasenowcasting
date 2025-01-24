@@ -6,7 +6,7 @@
 \usage{
 preprocess_for_nowcast(
   .disease_data,
-  onset_date,
+  true_date,
   report_date,
   strata = NULL,
   now,
@@ -19,11 +19,11 @@ preprocess_for_nowcast(
 \item{.disease_data}{A time series of reporting data in aggregated line list format
 such that each row has a column for onset date, report date, and}
 
-\item{onset_date}{In quotations, the name of the column of datatype
-\code{Date} designating the date of case onset. e.g. "onset_week"}
+\item{true_date}{In quotations, the name of the column designating the true date
+when the case happend e.g. "onset_week". The datatype of the column should be a \code{Date}.}
 
-\item{report_date}{In quotations, the name of the column of datatype
-\code{Date} designating the date of case report. e.g. "report_week"}
+\item{report_date}{In quotations, the name of the column designating the date
+the case was reported e.g. "report_week". The datatype of the column should be a \code{Date}.}
 
 \item{strata}{Character vector of names of the strata included in the data.}
 
@@ -45,8 +45,8 @@ are added where `.tval` codifies the dates as numbers (starting at 0) and delay
 codifies the difference between onset and report.
 }
 \description{
-Function that takes a data frame with `onset_date` and `report_date` and generates all
-possible combinations of onset_dates and report_dates observable controlling by the covariates
+Function that takes a data frame with `true_date` and `report_date` and generates all
+possible combinations of true_dates and report_dates observable controlling by the covariates
 specified in `...`
 }
 \examples{

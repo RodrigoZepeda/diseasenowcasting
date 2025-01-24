@@ -10,3 +10,4 @@
 ^pkgdown$
 ^devel$
 ^vignettes/articles$
+^data-raw$

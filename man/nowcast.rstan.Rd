@@ -6,7 +6,7 @@
 \usage{
 nowcast.rstan(
   .disease_data,
-  onset_date,
+  true_date,
   report_date,
   num_steps,
   num_delays,
@@ -27,11 +27,11 @@ nowcast.rstan(
 \item{.disease_data}{A time series of reporting data in aggregated line list format
 such that each row has a column for onset date, report date, and}
 
-\item{onset_date}{In quotations, the name of the column of datatype
-\code{Date} designating the date of case onset. e.g. "onset_week"}
+\item{true_date}{In quotations, the name of the column designating the true date
+when the case happend e.g. "onset_week". The datatype of the column should be a \code{Date}.}
 
-\item{report_date}{In quotations, the name of the column of datatype
-\code{Date} designating the date of case report. e.g. "report_week"}
+\item{report_date}{In quotations, the name of the column designating the date
+the case was reported e.g. "report_week". The datatype of the column should be a \code{Date}.}
 
 \item{num_steps}{Number of time steps to run in the model}
 
