@@ -104,6 +104,85 @@ infer_data_type <- function(.disease_data, data_type) {
   return(data_type)
 }
 
+#' Automatically infer the temporal effect based on the units
+#'
+#' Function that returns a `temporal_effect` object if `t_effect` is `auto`. Else it only
+#' checks whether an object is a temporal effect and whether it makes sense
+#' given the units.
+#'
+#' @param units Either "weeks" or "days" for weekly or daily data.
+#'
+#' @param t_effect Either `"auto"` to infer the temporal effect or a `temporal_effect` object
+#' constructed with the [temporal_effect()] function.
+#' @param .default A character indicating whether the default should be for delay or epidemic process
+#' or for other (an empty effect)
+#'
+#' @return A `temporal_effect` object for the model
+#'
+#' @keywords internal
+infer_temporal_effect <- function(t_effect, units, .default = c("delay","epidemic","other")) {
+
+  # Check the inputed temporal effect
+  check_temporal_effect(t_effect)
+
+  # Check the default
+  if (all(t_effect == "auto")){
+
+    #If temporal effect is auto get the default
+    .default <- match.arg(.default, c("delay","epidemic","other"))
+
+    #Construct the default
+    if (units == "weeks" & .default == "delay"){
+
+      t_effect <- temporal_effects()
+
+    } else if (units == "weeks" & .default == "epidemic"){
+
+      t_effect <- temporal_effects(week_of_year = TRUE)
+
+    } else if (units == "days" & .default == "delay"){
+
+      t_effect <- temporal_effects(day_of_week = TRUE)
+
+    } else if (units == "days" & .default == "epidemic"){
+
+      t_effect <- temporal_effects(week_of_year = TRUE)
+
+    } else  {
+
+      t_effect <- temporal_effects()
+
+    }
+  }
+
+  # Check that options aren't weird----
+
+  # Check that weekly data doesn't have day of week effects
+  if (units == "weeks"){
+    if (unlist(t_effect["day_of_week"]) | unlist(t_effect["weekend"]) | unlist(t_effect["day_of_month"])){
+      cli::cli_alert_danger(
+        "Daily effects are not suggested for weekly data. Are you sure you are setting the {.code temporal_effects()} correctly?"
+      )
+    }
+  }
+
+  # Check that weekend and day of week effects aren't set up at the same time
+  if (unlist(t_effect["day_of_week"]) & unlist(t_effect["weekend"])){
+    cli::cli_alert_danger(
+      "Weekend effects are already included in day of the week effects. Are you sure you need both in your {.code temporal_effects()}?"
+    )
+  }
+
+  # Check that week and month effects aren't both included
+  if (unlist(t_effect["week_of_year"]) & unlist(t_effect["month_of_year"])){
+    cli::cli_alert_danger(
+      "Monthly effects are usually included in week of year effects. Are you sure you need both in your {.code temporal_effects()}?"
+    )
+  }
+
+  return(t_effect)
+}
+
 
 #' Transforms an array into a list of lists
 #'
@@ -160,4 +239,22 @@ array_to_list <- function(my_array, last_dim_as = "vector"){
   # Evaluate the generated expression
   return(eval(parse(text = expr)))
 
+}
+
+#' Check whether a date is a weekday vs weekend
+#'
+#' Function that checks whether a date object is a weekday or weekend.
+#'
+#' @param date A date object
+#'
+#' @examples
+#' is_weekday(as.Date("2020-04-22"))
+#' is_weekday(as.Date("2020-04-19"))
+#'
+#' @references
+#' From https://stackoverflow.com/a/60346779/5067372
+#'
+#' @export
+is_weekday <- function(date){
+  lubridate::wday(date, week_start = 1) < 6
 }

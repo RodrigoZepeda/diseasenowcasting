@@ -14,7 +14,7 @@ sims       <- simulate_disease(num_steps = 100,
 
 
 ggplot(sims) +
-  geom_line(aes(x = onset_date, y = n, color = .strata),
+  geom_line(aes(x = true_date, y = n, color = .strata),
             data = sims) +
   theme_bw() +
   scale_y_continuous(labels = scales::comma_format())

@@ -2,10 +2,12 @@
 % Please edit documentation in R/nowcast.R
 \name{nowcast.rstan}
 \alias{nowcast.rstan}
-\title{Nowcasting with the `rstan` engine}
+\title{Nowcasting with the \code{rstan} engine}
 \usage{
 nowcast.rstan(
   .disease_data,
+  .date_epidemic,
+  .date_delay,
   true_date,
   report_date,
   num_steps,
@@ -25,13 +27,13 @@ nowcast.rstan(
 }
 \arguments{
 \item{.disease_data}{A time series of reporting data in aggregated line list format
-such that each row has a column for onset date, report date, and}
+such that each row has a column for onset date, report date, and (optionally) strata}
 
-\item{true_date}{In quotations, the name of the column designating the true date
-when the case happend e.g. "onset_week". The datatype of the column should be a \code{Date}.}
+\item{true_date}{In quotations, the name of the column of datatype
+\code{Date} designating the date of case onset. e.g. "onset_week"}
 
-\item{report_date}{In quotations, the name of the column designating the date
-the case was reported e.g. "report_week". The datatype of the column should be a \code{Date}.}
+\item{report_date}{In quotations, the name of the column of datatype
+\code{Date} designating the date of case report. e.g. "report_week"}
 
 \item{num_steps}{Number of time steps to run in the model}
 
@@ -45,26 +47,26 @@ the case was reported e.g. "report_week". The datatype of the column should be a
 
 \item{link_y}{Link function for the data (see section On links).}
 
-\item{normalize_data}{Whether the data `y` should be normalized (substracted its mean and divided
+\item{normalize_data}{Whether the data \code{y} should be normalized (substracted its mean and divided
 by standard deviation) for fitting. This option is only valid if using a continuous model
 (Normal or Student).}
 
 \item{prior_only}{Boolean variable indicating whether to compute only the prior distribution}
 
-\item{control}{Control parameter for [rstan::sampling()]}
+\item{control}{Control parameter for \code{\link[rstan:stanmodel-method-sampling]{rstan::sampling()}}}
 
-\item{refresh}{Refresh parameter for [rstan::sampling()]}
+\item{refresh}{Refresh parameter for \code{\link[rstan:stanmodel-method-sampling]{rstan::sampling()}}}
 
-\item{method}{Fitting method either `sampling` (recommended for inference), `variational`
-(recommended for testing) or `optimization`. The `sampling` method calls [rstan::sampling()]
-while the `variational` calls [rstan::vb()] and `optimization` calls [rstan::optimizing()]}
+\item{method}{Fitting method either \code{sampling} (recommended for inference), \code{variational}
+(recommended for testing) or \code{optimization}. The \code{sampling} method calls \code{\link[rstan:stanmodel-method-sampling]{rstan::sampling()}}
+while the \code{variational} calls \code{\link[rstan:stanmodel-method-vb]{rstan::vb()}} and \code{optimization} calls \code{\link[rstan:stanmodel-method-optimizing]{rstan::optimizing()}}}
 
-\item{priors}{A list of all of the nowcast priors. You can use [set_priors()] to change
+\item{priors}{A list of all of the nowcast priors. You can use \code{\link[=set_priors]{set_priors()}} to change
 the priors of the function (see details)}
 
-\item{...}{Additional arguments to pass to [rstan::sampling()]}
+\item{...}{Additional arguments to pass to \code{\link[rstan:stanmodel-method-sampling]{rstan::sampling()}}}
 }
 \description{
-Nowcasting with the `rstan` engine
+Nowcasting with the \code{rstan} engine
 }
 \keyword{internal}

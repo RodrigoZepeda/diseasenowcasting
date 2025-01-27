@@ -2,26 +2,26 @@
 % Please edit documentation in R/utils.R
 \name{infer_now}
 \alias{infer_now}
-\title{Automatically infer which value is `now`.}
+\title{Automatically infer which value is \code{now}.}
 \usage{
 infer_now(.disease_data, now, true_date)
 }
 \arguments{
 \item{.disease_data}{A time series of reporting data in aggregated line list format
-such that each row has a column for onset date, report date, and}
+such that each row has a column for onset date, report date, and (optionally) strata}
 
 \item{now}{An object of datatype \code{Date} indicating the date at which
-to perform the nowcast.}
+to perlform the nowcast.}
 
-\item{true_date}{In quotations, the name of the column designating the true date
-when the case happend e.g. "onset_week". The datatype of the column should be a \code{Date}.}
+\item{true_date}{In quotations, the name of the column of datatype
+\code{Date} designating the date of case onset. e.g. "onset_week"}
 }
 \value{
-The `now` value for the [nowcasting()] which can be the last date of the data
+The \code{now} value for the \code{\link[=nowcasting]{nowcasting()}} which can be the last date of the data
 or specified by the user
 }
 \description{
-Function returns the maximum onset date of `.disease_data` if `now = NULL`. Else
+Function returns the maximum onset date of \code{.disease_data} if \code{now = NULL}. Else
 it check whether now is possible in the data.
 }
 \keyword{internal}

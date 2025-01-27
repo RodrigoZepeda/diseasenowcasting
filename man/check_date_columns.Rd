@@ -8,16 +8,16 @@ check_date_columns(.disease_data, true_date, report_date)
 }
 \arguments{
 \item{.disease_data}{A time series of reporting data in aggregated line list format
-such that each row has a column for onset date, report date, and}
+such that each row has a column for onset date, report date, and (optionally) strata}
 
-\item{true_date}{In quotations, the name of the column designating the true date
-when the case happend e.g. "onset_week". The datatype of the column should be a \code{Date}.}
+\item{true_date}{In quotations, the name of the column of datatype
+\code{Date} designating the date of case onset. e.g. "onset_week"}
 
-\item{report_date}{In quotations, the name of the column designating the date
-the case was reported e.g. "report_week". The datatype of the column should be a \code{Date}.}
+\item{report_date}{In quotations, the name of the column of datatype
+\code{Date} designating the date of case report. e.g. "report_week"}
 }
 \value{
-The `.disease_data` data.frame filtered for reports after onset.
+The \code{.disease_data} data.frame filtered for reports after onset.
 }
 \description{
 Check the onset and report dates

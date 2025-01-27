@@ -11,7 +11,7 @@ simulate_disease(
   initial_day = NULL,
   warmup_steps = 50,
   units = c("daily", "weekly"),
-  priors = random_priors(mu_p = 2, nu_p = 1, mu_q = 1),
+  priors = random_priors(mu_p = 2, nu_p = 1, mu_q = 1, has_cycle = F),
   ...
 )
 }
@@ -26,12 +26,12 @@ simulate_disease(
 
 \item{warmup_steps}{Initial steps on model (to discard)}
 
-\item{units}{Either `"daily"` (default) or `"weekly"`.}
+\item{units}{Either \code{"daily"} (default) or \code{"weekly"}.}
 
-\item{priors}{A list of all of the nowcast priors. You can use [set_priors()] to change
+\item{priors}{A list of all of the nowcast priors. You can use \code{\link[=set_priors]{set_priors()}} to change
 the priors of the function (see details)}
 
-\item{...}{Additional arguments to pass to [nowcast()]}
+\item{...}{Additional arguments to pass to \code{\link[=nowcast]{nowcast()}}}
 }
 \value{
 A tibble with simulated state-space process results, including the onset and
@@ -40,7 +40,7 @@ report dates, strata, delays, and the number of observed cases per time step.
 \description{
 This function simulates a state-space process for testing purposes in a model with
 multiple delays and strata. It estimates the process over a specified number of steps,
- with options for trend degrees, priors, and error distributions.
+with options for trend degrees, priors, and error distributions.
 }
 \examples{
 # Simulate a disease for 20 time steps with delay of maximum 5 and 3 strata

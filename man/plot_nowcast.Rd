@@ -2,18 +2,48 @@
 % Please edit documentation in R/summary_and_plot.R
 \name{plot_nowcast}
 \alias{plot_nowcast}
-\title{Create plots form the nowcast() output}
+\title{Plot your nowcast}
 \usage{
-plot_nowcast(nowcast_output)
+plot_nowcast(
+  nowcast_output,
+  color = "deepskyblue4",
+  datesbrakes = NULL,
+  casesbrakes = 10,
+  rowsfacet = NULL,
+  colsfacet = NULL,
+  quantiles = c(0.025, 0.975)
+)
 }
 \arguments{
-\item{nowcast_output}{the output of the nowcast() function
+\item{nowcast_output}{The output of the diseasenowcasting::nowcast() function}
 
-# @return A a ggplot2 object that plots the evolution of the nowcast over the observed values,
-it creates a subplot for each strata}
+\item{color}{A string indicating the color for the barplots,
+Works with the default R colors of grDevices::colors(). Hex color codes works as well. Best results with dark colors}
+
+\item{datesbrakes}{A string giving the distance between x-axis breaks
+if \code{NULL}, one label per bar
+Other valid examples are:
+"2 weeks", or "10 years", 'sec', 'min', 'hour', 'day', 'week', 'month', 'year',
+optionally followed by 's'.}
+
+\item{casesbrakes}{Desired number of y-axis breaks. You may get slightly more or fewer breaks that requested.}
+
+\item{rowsfacet}{Number of rows for arranging facets when using ggplot2::facet_wrap().
+It allows manual control over the layout of multiple strata in the plot.
+If \code{NULL}, the number of rows is automatically determined by ggplot2.}
+
+\item{colsfacet}{Number of columns for arranging facets when using ggplot2::facet_wrap().
+It allows manual control over the layout of multiple strata in the plot.
+If \code{NULL}, the number of columns is automatically determined by ggplot2.}
+
+\item{quantiles}{a vector of two values to specify the quantiles for the error bars.}
+}
+\value{
+ggplot2 barplots to show real cases and the predictions of the function diseasenowcasting::nowcast().
+It creates a subplot for each strata
 }
 \description{
-Plots the predictions of the function nowcast() over the input observed values
+Create barplots to show real cases and the predictions of the function diseasenowcasting::nowcast()
 }
 \examples{
 # Load the data
@@ -24,12 +54,20 @@ data(denguedat)
 now <- as.Date("1990-10-01")
 
 # perform nowcasting
-predictions <- nowcast(denguedat, "onset_week", "report_week",
-  now = now, method = "optimization",
-  seed = 2495624, iter = 10
-)
+predictions <- nowcast(denguedat, "onset_week", "report_week",strata = "gender",
+                      now = now, method = "optimization",
+                      seed = 2495624, iter = 10
+                      )
 
-# create summary dataframe
-plot_nowcast(predictions)
+
+# plot results requires ggplot2 package
+if (!requireNamespace("ggplot2", quietly = TRUE)){
+  plot_nowcast(predictions)
+
+  # other plotting options
+  plot_nowcast(predictions, rowsfacet = 2,
+               datesbrakes = "2 weeks", casesbrakes = 15,
+               color = "firebrick2")
+}
 
 }

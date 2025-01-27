@@ -2,22 +2,22 @@
 % Please edit documentation in R/utils.R
 \name{infer_data_type}
 \alias{infer_data_type}
-\title{Automatically infer the `data_type`}
+\title{Automatically infer the \code{data_type}}
 \usage{
 infer_data_type(.disease_data, data_type)
 }
 \arguments{
 \item{.disease_data}{A time series of reporting data in aggregated line list format
-such that each row has a column for onset date, report date, and}
+such that each row has a column for onset date, report date, and (optionally) strata}
 
-\item{data_type}{Either `linedata` if each row represents a test or `counts` if there
-is a column named `n` with counts of how many tests had that onset and report dates}
+\item{data_type}{Either \code{linedata} if each row represents a test or \code{counts} if there
+is a column named \code{n} with counts of how many tests had that onset and report dates}
 }
 \value{
-Whether the data is `count` or `linelist`
+Whether the data is \code{count} or \code{linelist}
 }
 \description{
 Infers whether the data is line-data or count-data whether it has (or has not)
-a column named `n`
+a column named \code{n}
 }
 \keyword{internal}

@@ -3,16 +3,22 @@
 #' Function that uses the [rstan::sampling()] engine to generate nowcasts.
 #'
 #' @param .disease_data A time series of reporting data in aggregated line list format
-#' such that each row has a column for onset date, report date, and
+#' such that each row has a column for onset date, report date, and (optionally) strata
+#'
+#' @param temporal_effects_delay Either `"auto"` or a [temporal_effects()] object specifying
+#' which effects have an influence on the delay.
+#'
+#' @param temporal_effects_epidemic Either `"auto"` or a [temporal_effects()] object specifying
+#' which effects have an influence on the epidemic process (delay independent).
 #'
 #' @param now An object of datatype \code{Date} indicating the date at which
-#' to perform the nowcast.
+#' to perlform the nowcast.
 #'
 #' @param units Time scale of reporting. Options: "1 day", "1 week".
 #'
 #' @param dist Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"
 #'
-#' @param onset_date In quotations, the name of the column of datatype
+#' @param true_date In quotations, the name of the column of datatype
 #' \code{Date} designating the date of case onset. e.g. "onset_week"
 #'
 #' @param report_date In quotations, the name of the column of datatype
@@ -64,9 +70,11 @@
 #'   method = "optimization", seed = 2495624, iter = 10)
 #' @export
 nowcast <- function(.disease_data,
-                    onset_date,
+                    true_date,
                     report_date,
                     strata = NULL,
+                    temporal_effects_delay = "auto",
+                    temporal_effects_epidemic = "auto",
                     dist   = c("NegativeBinomial", "Poisson","Normal","Student"),
                     link_x = default_x_link(dist),
                     link_y = default_y_link(dist),
@@ -83,17 +91,21 @@ nowcast <- function(.disease_data,
                     ...) {
 
   # Check that the columns of onset and report are columns of data and are dates
-  .disease_data <- check_date_columns(.disease_data, onset_date = onset_date, report_date = report_date)
+  .disease_data <- check_date_columns(.disease_data, true_date = true_date, report_date = report_date)
 
   # Check proportion reported
   # FIXME: The proportion reported currently doesn't do anything
   check_proportion_reported(proportion_reported)
 
   # Get `now` as the last date by default
-  now    <- infer_now(.disease_data, now = now, onset_date = onset_date)
+  now    <- infer_now(.disease_data, now = now, true_date = true_date)
 
   # Infer the units whether it is daily, weekly, monthly or yearly
-  units  <- infer_units(.disease_data, units = units, date_column = onset_date)
+  units  <- infer_units(.disease_data, units = units, date_column = true_date)
+
+  # Infer the temporal effects for the delay and the epidemic process
+  temporal_effects_delay    <- temporal_effects_delay |> infer_temporal_effect(units = units, .default = "delay")
+  temporal_effects_epidemic <- temporal_effects_epidemic |> infer_temporal_effect(units = units, .default = "epidemic")
 
   # Match the distribution whether negative binomial or poisson
   dist   <- match.arg(dist, c("NegativeBinomial", "Poisson","Normal","Student"))
@@ -112,13 +124,17 @@ nowcast <- function(.disease_data,
 
   # Get the data for processing
   .disease_data <- preprocess_for_nowcast(.disease_data,
-    onset_date = onset_date,
+    true_date = true_date,
     report_date = report_date,
     strata = strata,
     now = now,
     units = units,
     max_delay = max_delay
   )
+
+  # Get the delay data for epidemic process
+  .date_epidemic <- preprocess_dates(.disease_data, date = true_date, temporal_effects = temporal_effects_epidemic)
+  .date_delay    <- preprocess_dates(.disease_data, date = report_date, temporal_effects = temporal_effects_delay)
 
   # Get maximum time for model
   num_steps <- .disease_data |>
@@ -139,25 +155,27 @@ nowcast <- function(.disease_data,
   num_strata    <- strata_list$num_strata
 
   stan_list <- nowcast.rstan(.disease_data,
-                onset_date,
-                report_date,
-                num_steps  = num_steps,
-                num_delays = num_delays,
-                num_strata = num_strata,
-                dist       = dist,
-                link_x     = link_x,
-                link_y     = link_y,
+                .date_epidemic = .date_epidemic,
+                .date_delay    = .date_delay,
+                true_date      = true_date,
+                report_date    = report_date,
+                num_steps      = num_steps,
+                num_delays     = num_delays,
+                num_strata     = num_strata,
+                dist           = dist,
+                link_x         = link_x,
+                link_y         = link_y,
                 normalize_data = normalize_data,
-                prior_only = prior_only,
-                refresh    = refresh,
-                control    = control,
-                method     = method,
-                priors     = priors,
+                prior_only     = prior_only,
+                refresh        = refresh,
+                control        = control,
+                method         = method,
+                priors         = priors,
                 ...)
 
   #Get the call values
   call_parameters = list(
-    onset_date  = onset_date,
+    true_date  = true_date,
     report_date = report_date,
     strata      = strata,
     now         = now,
@@ -190,7 +208,8 @@ nowcast <- function(.disease_data,
 #' @param num_strata Number of strata in the model
 #'
 #' @keywords internal
-nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num_delays, num_strata,
+nowcast.rstan <- function(.disease_data, .date_epidemic, .date_delay,
+                          true_date, report_date, num_steps, num_delays, num_strata,
                           dist, link_x, link_y, normalize_data,
                           prior_only, control, refresh, method, priors, ...) {
 
@@ -208,6 +227,36 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
   stan_data <- priors |>
     append(
       list(
+
+        #Date effect information in the epidemic
+        has_day_of_week_epi   = has_date(.date_epidemic, "day_of_week"),
+        has_weekend_epi       = has_date(.date_epidemic, "weekend"),
+        has_day_of_month_epi  = has_date(.date_epidemic, "day_of_month"),
+        has_month_of_year_epi = has_date(.date_epidemic, "month_of_year"),
+        has_week_of_year_epi  = has_date(.date_epidemic, "week_of_year"),
+        has_holidays_epi      = has_date(.date_epidemic, "holidays"),
+
+        day_of_week_epi     = datecol(.date_epidemic, "day_of_week"),
+        weekend_epi         = datecol(.date_epidemic, "weekend"),
+        day_of_month_epi    = datecol(.date_epidemic, "day_of_month"),
+        month_of_year_epi   = datecol(.date_epidemic, "month_of_year"),
+        week_of_year_epi    = datecol(.date_epidemic, "week_of_year"),
+        holidays_epi        = datecol(.date_epidemic, "holidays"),
+
+        #Date effect information in the epidemic
+        # has_day_of_week_dly   = has_date(.date_delay, "day_of_week"),
+        # has_weekend_dly       = has_date(.date_delay, "weekend"),
+        # has_day_of_month_dly  = has_date(.date_delay, "day_of_month"),
+        # has_month_of_year_dly = has_date(.date_delay, "month_of_year"),
+        # has_week_of_year_dly  = has_date(.date_delay, "week_of_year"),
+        # has_holidays_dly      = has_date(.date_delay, "holidays"),
+        #
+        # day_of_week_dly     = datecol(.date_delay, "day_of_week"),
+        # weekend_dly         = datecol(.date_delay, "weekend"),
+        # day_of_month_dly    = datecol(.date_delay, "day_of_month"),
+        # month_of_year_dly   = datecol(.date_delay, "month_of_year"),
+        # week_of_year_dly    = datecol(.date_delay, "week_of_year"),
+        # holidays_dly        = datecol(.date_delay, "holidays"),
 
         #Data information
         num_steps   = num_steps,
@@ -227,15 +276,28 @@ nowcast.rstan <- function(.disease_data, onset_date, report_date, num_steps, num
 
   ))
 
+  #List of excluded parameters
+  exclude_params <- c("xi_mu", "xi_nu", "xi_cycle", "xi_ctilde", "mu_intercept",
+                      "nu_intercept", "mu_init", "nu_init", "c_init",
+                      "beta_dow_epi", "beta_wkend_epi", "beta_dom_epi",
+                      "beta_month_epi", "beta_week_epi", "beta_holidays_epi",
+                      "beta_dow_dly","beta_wkend_dly", "beta_dom_dly",
+                      "beta_month_dly", "beta_week_dly","beta_holidays_dly",
+                      "ctilde_init", "m", "m_trans", "dist_val")
 
   if (method[1] == "sampling"){
     stan_fit <- rstan::sampling(stanmodels$nowcasting, data = stan_data,
                            control = control,
                            refresh = refresh,
+                           #pars    = exclude_params,
+                           #include = FALSE,
                            ...)
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "variational") {
-    stan_fit <- rstan::vb(stanmodels$nowcasting, data = stan_data, refresh = refresh,...)
+    stan_fit <- rstan::vb(stanmodels$nowcasting, data = stan_data, refresh = refresh,
+                          #pars = exclude_params,
+                          #include = FALSE,
+                          ...)
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "optimization") {
     stan_fit <- rstan::optimizing(stanmodels$nowcasting, data = stan_data, refresh = refresh, ...)

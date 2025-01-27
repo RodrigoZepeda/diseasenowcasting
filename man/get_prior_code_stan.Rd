@@ -8,12 +8,12 @@ get_prior_code_stan(prior_name)
 }
 \arguments{
 \item{prior_name}{(character) The name of the prior distribution. Can be one of
-the following: `jeffreys` (non-informative), `standard_normal`, `normal`, `student_t`,
-`cauchy`, `exponential`, `gamma`, `inverse_gamma`, `lognormal`, `weibull`, `frechet`,
-`double_exponential`, `rayleigh`, `loglogistic`, `gumbel`.}
+the following: \code{jeffreys} (non-informative), \code{standard_normal}, \code{normal}, \code{student_t},
+\code{cauchy}, \code{exponential}, \code{gamma}, \code{inverse_gamma}, \code{lognormal}, \code{weibull}, \code{frechet},
+\code{double_exponential}, \code{rayleigh}, \code{loglogistic}, \code{gumbel}.}
 }
 \description{
-Takes a prior from one of the listed in `priors.stan` and
+Takes a prior from one of the listed in \code{priors.stan} and
 returns the number that codes it
 }
 \keyword{internal}

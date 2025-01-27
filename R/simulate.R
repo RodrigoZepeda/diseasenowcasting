@@ -28,16 +28,19 @@ simulate_disease <- function(num_steps    = 10,
                              initial_day  = NULL,
                              warmup_steps = 50,
                              units        = c("daily", "weekly"),
-                             priors       = random_priors(mu_p = 2, nu_p = 1, mu_q = 1),
+                             priors       = random_priors(mu_p = 2, nu_p = 1, mu_q = 1, has_cycle = F),
                              ...){
 
 
+  #Check the warm-up steps
   warmup_steps <- ifelse(!is.numeric(warmup_steps) | warmup_steps < 0,
                          cli::cli_abort("Invalid warmup_steps. Set to an integer >= 0"),
                          ceiling(warmup_steps))
 
-
+  #Check the units are either daily or weekly
   units     <- match.arg(units, c("daily", "weekly"))
+
+  #Set the scale according to units
   scale_val <- ifelse(units[1] == "weekly", 7, 1)
 
   if (is.null(initial_day)){
@@ -54,14 +57,14 @@ simulate_disease <- function(num_steps    = 10,
     .delay     =  seq(0, num_delays - 1, by = 1),
     .strata    =  paste0("s", seq(1, num_strata)),
   ) |>
-    dplyr::mutate(!!as.symbol("onset_date")  := !!initial_day +
+    dplyr::mutate(!!as.symbol("true_date")  := !!initial_day +
                     lubridate::days(!!scale_val*!!as.symbol(".tval"))) |>
-    dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("onset_date")  +
+    dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("true_date")  +
                     lubridate::days(!!scale_val*!!as.symbol(".delay"))) |>
     dplyr::mutate(!!as.symbol("n") := !!1)
 
   #Generate fake dataset
-  ss_process <- nowcast(disease_data, onset_date = "onset_date", report_date = "report_date",
+  ss_process <- nowcast(disease_data, true_date = "true_date", report_date = "report_date",
                         strata = ".strata",
                         priors = priors,
                         prior_only = F,
@@ -94,9 +97,9 @@ simulate_disease <- function(num_steps    = 10,
         dplyr::mutate(!!as.symbol(".pos") := 1:dplyr::n()),
       by = ".pos"
     ) |>
-    dplyr::mutate(!!as.symbol("onset_date")  := !!initial_day +
+    dplyr::mutate(!!as.symbol("true_date")  := !!initial_day +
                     lubridate::days(!!scale_val*!!as.symbol(".tval"))) |>
-    dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("onset_date")  +
+    dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("true_date")  +
                     lubridate::days(!!scale_val*!!as.symbol(".delay"))) |>
     dplyr::rename(!!as.symbol("n") := !!as.symbol("median")) |>
     dplyr::select(-!!as.symbol(".tval"), -!!as.symbol(".pos"), -!!as.symbol(".delay")) |>

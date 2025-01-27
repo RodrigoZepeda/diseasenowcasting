@@ -85,6 +85,29 @@ check_units <- function(units) {
   invisible(TRUE)
 }
 
+#' Check the `temporal_effect` argument among the options
+#'
+#' @inheritParams infer_temporal_effect
+#'
+#' @return (invisibly) `TRUE` if the temporal effect is valid
+#'
+#' @keywords internal
+check_temporal_effect <- function(t_effect){
+  if (!inherits(t_effect,"temporal_effect") && all(t_effect != "auto")){
+    cli::cli_abort(
+      "Invalid temporal effect. Please use the {.code temporal_effect} function to set up a temporal effect."
+    )
+  }
+
+  if (inherits(t_effect,"temporal_effect") && !is.null(t_effect[["holidays"]]) && !inherits(t_effect[["holidays"]],"almanac_rcalendar")){
+    cli::cli_abort(
+      "Invalid holidays. Please set up an {.code almanac::rcalendar} for the holidays using the {.code almanac} package."
+    )
+  }
+
+  invisible(TRUE)
+}
+
 #' Check the `proportion_reported` argument
 #'
 #' @inheritParams nowcast

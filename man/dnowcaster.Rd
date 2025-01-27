@@ -4,7 +4,7 @@
 \alias{dnowcaster}
 \title{Disease Nowcaster}
 \description{
-The Disease Nowcaster Class called `dnowcaster`. Provides a wrapper for all the nowcasters
+The Disease Nowcaster Class called \code{dnowcaster}. Provides a wrapper for all the nowcasters
 availables to homogenize summary functions, print functions, fitting and updating functions
 }
 \section{Usage}{
@@ -32,28 +32,28 @@ py$stop(force = FALSE)
 \code{file} File containing Python code to execute.
 
 \code{force} If \code{TRUE}, force the Python process to terminate
-  using a sytem call.
+using a sytem call.
 }
 
 \section{Methods}{
 
 \code{$new()} Initialize a Python interface. The Python process is not
-  started automatically.
+started automatically.
 
 \code{$start()} Start the Python process. The Python process runs
-  asynchronously.
+asynchronously.
 
 \code{$running} Check if the Python process is running.
 
 \code{$exec()} Execute the specified Python
-  commands and invisibly return printed Python output (if any).
-  Alternatively, the \code{file} argument can be used to specify
-  a file containing Python code. Note that there will be no return
-  value unless an explicit Python \code{print} statement is executed.
+commands and invisibly return printed Python output (if any).
+Alternatively, the \code{file} argument can be used to specify
+a file containing Python code. Note that there will be no return
+value unless an explicit Python \code{print} statement is executed.
 
 \code{$stop()} Stop the Python process by sending a request to the
-  Python process. If \code{force = TRUE}, the process will be
-  terminated using a system call instead.
+Python process. If \code{force = TRUE}, the process will be
+terminated using a system call instead.
 }
 
 \examples{

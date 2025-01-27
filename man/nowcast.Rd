@@ -6,9 +6,11 @@
 \usage{
 nowcast(
   .disease_data,
-  onset_date,
+  true_date,
   report_date,
   strata = NULL,
+  temporal_effects_delay = "auto",
+  temporal_effects_epidemic = "auto",
   dist = c("NegativeBinomial", "Poisson", "Normal", "Student"),
   link_x = default_x_link(dist),
   link_y = default_y_link(dist),
@@ -27,15 +29,21 @@ nowcast(
 }
 \arguments{
 \item{.disease_data}{A time series of reporting data in aggregated line list format
-such that each row has a column for onset date, report date, and}
+such that each row has a column for onset date, report date, and (optionally) strata}
 
-\item{onset_date}{In quotations, the name of the column of datatype
+\item{true_date}{In quotations, the name of the column of datatype
 \code{Date} designating the date of case onset. e.g. "onset_week"}
 
 \item{report_date}{In quotations, the name of the column of datatype
 \code{Date} designating the date of case report. e.g. "report_week"}
 
 \item{strata}{Character vector of names of the strata included in the data.}
+
+\item{temporal_effects_delay}{Either \code{"auto"} or a \code{\link[=temporal_effects]{temporal_effects()}} object specifying
+which effects have an influence on the delay.}
+
+\item{temporal_effects_epidemic}{Either \code{"auto"} or a \code{\link[=temporal_effects]{temporal_effects()}} object specifying
+which effects have an influence on the epidemic process (delay independent).}
 
 \item{dist}{Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"}
 
@@ -44,12 +52,12 @@ such that each row has a column for onset date, report date, and}
 \item{link_y}{Link function for the data (see section On links).}
 
 \item{now}{An object of datatype \code{Date} indicating the date at which
-to perform the nowcast.}
+to perlform the nowcast.}
 
 \item{units}{Time scale of reporting. Options: "1 day", "1 week".}
 
 \item{max_delay}{Maximum possible delay observed or considered for estimation
-of the delay distribution (numeric). Default: `Inf`}
+of the delay distribution (numeric). Default: \code{Inf}}
 
 \item{prior_only}{Boolean variable indicating whether to compute only the prior distribution}
 
@@ -58,27 +66,27 @@ of the delay distribution (numeric). Default: `Inf`}
 Default: 1, e.g. 100 percent of all cases will eventually be reported.
 For asymptomatic diseases where not all cases will ever be reported,
 or for outbreaks in which severe under-reporting is expected, change this
- to less than 1.}
+to less than 1.}
 
-\item{normalize_data}{Whether the data `y` should be normalized (substracted its mean and divided
+\item{normalize_data}{Whether the data \code{y} should be normalized (substracted its mean and divided
 by standard deviation) for fitting. This option is only valid if using a continuous model
 (Normal or Student).}
 
-\item{refresh}{Refresh parameter for [rstan::sampling()]}
+\item{refresh}{Refresh parameter for \code{\link[rstan:stanmodel-method-sampling]{rstan::sampling()}}}
 
-\item{control}{Control parameter for [rstan::sampling()]}
+\item{control}{Control parameter for \code{\link[rstan:stanmodel-method-sampling]{rstan::sampling()}}}
 
-\item{method}{Fitting method either `sampling` (recommended for inference), `variational`
-(recommended for testing) or `optimization`. The `sampling` method calls [rstan::sampling()]
-while the `variational` calls [rstan::vb()] and `optimization` calls [rstan::optimizing()]}
+\item{method}{Fitting method either \code{sampling} (recommended for inference), \code{variational}
+(recommended for testing) or \code{optimization}. The \code{sampling} method calls \code{\link[rstan:stanmodel-method-sampling]{rstan::sampling()}}
+while the \code{variational} calls \code{\link[rstan:stanmodel-method-vb]{rstan::vb()}} and \code{optimization} calls \code{\link[rstan:stanmodel-method-optimizing]{rstan::optimizing()}}}
 
-\item{priors}{A list of all of the nowcast priors. You can use [set_priors()] to change
+\item{priors}{A list of all of the nowcast priors. You can use \code{\link[=set_priors]{set_priors()}} to change
 the priors of the function (see details)}
 
-\item{...}{Additional arguments to pass to [rstan::sampling()]}
+\item{...}{Additional arguments to pass to \code{\link[rstan:stanmodel-method-sampling]{rstan::sampling()}}}
 }
 \description{
-Function that uses the [rstan::sampling()] engine to generate nowcasts.
+Function that uses the \code{\link[rstan:stanmodel-method-sampling]{rstan::sampling()}} engine to generate nowcasts.
 }
 \examples{
 # Load the data
