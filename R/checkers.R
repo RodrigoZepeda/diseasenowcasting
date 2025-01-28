@@ -5,18 +5,18 @@
 #' @inheritParams nowcast
 #' @return The `.disease_data` data.frame filtered for reports after onset.
 #' @keywords internal
-check_date_columns <- function(.disease_data, onset_date, report_date) {
+check_date_columns <- function(.disease_data, true_date, report_date) {
   # Check that columns are in data
-  if (!(onset_date %in% colnames(.disease_data))) {
-    cli::cli_abort("{.code onset_date = {.val {onset_date}}} not found in {.code data}")
+  if (!(true_date %in% colnames(.disease_data))) {
+    cli::cli_abort("{.code true_date = {.val {true_date}}} not found in {.code data}")
   } else if (!(report_date %in% colnames(.disease_data))) {
     cli::cli_abort("{.code report_date = {.val {report_date}}} not found in {.code data}")
   }
 
   # Check that they are dates
-  if (!lubridate::is.Date(.disease_data |> dplyr::pull(!!as.symbol(onset_date)))) {
+  if (!lubridate::is.Date(.disease_data |> dplyr::pull(!!as.symbol(true_date)))) {
     cli::cli_abort(
-      "{.code onset_date = {.val {onset_date}}} is not a {.emph Date}. Use {.code as.Date} to transform it."
+      "{.code true_date = {.val {true_date}}} is not a {.emph Date}. Use {.code as.Date} to transform it."
     )
   } else if (!lubridate::is.Date(.disease_data |> dplyr::pull(!!as.symbol(report_date)))) {
     cli::cli_abort(
@@ -25,18 +25,18 @@ check_date_columns <- function(.disease_data, onset_date, report_date) {
   }
 
   # Check that none has report before onset
-  if (any(.disease_data[, onset_date] > .disease_data[, report_date])) {
+  if (any(.disease_data[, true_date] > .disease_data[, report_date])) {
     # Get the number of observations before (for message)
     nbefore <- nrow(.disease_data)
 
     # Filter to keep only those with onset after report
     .disease_data <- .disease_data |>
-      dplyr::filter(onset_date <= report_date)
+      dplyr::filter(true_date <= report_date)
 
     # Get the number of observations before (for message)
     nafter <- nrow(.disease_data)
     cli::cli_warn(
-      "Some rows have a {.code report_date} ocurring before an {.code onset_date}. Dropping {.code n = {nbefore - nafter}} observations."
+      "Some rows have a {.code report_date} ocurring before an {.code true_date}. Dropping {.code n = {nbefore - nafter}} observations."
     )
   }
 
@@ -48,7 +48,7 @@ check_date_columns <- function(.disease_data, onset_date, report_date) {
 #' @inheritParams nowcast
 #' @return (invisibly) TRUE if the `now` date is achievable
 #' @keywords internal
-check_now <- function(.disease_data, now, onset_date) {
+check_now <- function(.disease_data, now, true_date) {
   # Check that now is a date
   if (!is.null(now) && !lubridate::is.Date(now)) {
     cli::cli_abort(
@@ -58,9 +58,9 @@ check_now <- function(.disease_data, now, onset_date) {
 
   # Check that now falls between dates
   if (!is.null(now)) {
-    if (now <= min(.disease_data[, onset_date]) | now > max(.disease_data[, onset_date])) {
+    if (now <= min(.disease_data[, true_date]) | now > max(.disease_data[, true_date])) {
       cli::cli_abort(
-        "{.code now = {.val {now}}} is outside the scope of the data's {.code onset_date}."
+        "{.code now = {.val {now}}} is outside the scope of the data's {.code true_date}."
       )
     }
   }
@@ -79,6 +79,29 @@ check_units <- function(units) {
   if (!is.null(units) && !(units %in% valid_units)) {
     cli::cli_abort(
       "Ivalid {.code units = {.val {units}}}. Specify one of the following: {.val {valid_units}}",
+    )
+  }
+
+  invisible(TRUE)
+}
+
+#' Check the `temporal_effect` argument among the options
+#'
+#' @inheritParams infer_temporal_effect
+#'
+#' @return (invisibly) `TRUE` if the temporal effect is valid
+#'
+#' @keywords internal
+check_temporal_effect <- function(t_effect){
+  if (!inherits(t_effect,"temporal_effect") && all(t_effect != "auto")){
+    cli::cli_abort(
+      "Invalid temporal effect. Please use the {.code temporal_effect} function to set up a temporal effect."
+    )
+  }
+
+  if (inherits(t_effect,"temporal_effect") && !is.null(t_effect[["holidays"]]) && !inherits(t_effect[["holidays"]],"almanac_rcalendar")){
+    cli::cli_abort(
+      "Invalid holidays. Please set up an {.code almanac::rcalendar} for the holidays using the {.code almanac} package."
     )
   }
 

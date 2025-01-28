@@ -2,7 +2,7 @@
 % Please edit documentation in R/checkers.R
 \name{check_units}
 \alias{check_units}
-\title{Check the `units` argument among the options}
+\title{Check the \code{units} argument among the options}
 \usage{
 check_units(units)
 }
@@ -10,9 +10,9 @@ check_units(units)
 \item{units}{Time scale of reporting. Options: "1 day", "1 week".}
 }
 \value{
-(invisibly) `TRUE` if the units are valid
+(invisibly) \code{TRUE} if the units are valid
 }
 \description{
-Check the `units` argument among the options
+Check the \code{units} argument among the options
 }
 \keyword{internal}

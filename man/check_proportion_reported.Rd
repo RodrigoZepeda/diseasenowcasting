@@ -2,7 +2,7 @@
 % Please edit documentation in R/checkers.R
 \name{check_proportion_reported}
 \alias{check_proportion_reported}
-\title{Check the `proportion_reported` argument}
+\title{Check the \code{proportion_reported} argument}
 \usage{
 check_proportion_reported(proportion_reported)
 }
@@ -12,12 +12,12 @@ check_proportion_reported(proportion_reported)
 Default: 1, e.g. 100 percent of all cases will eventually be reported.
 For asymptomatic diseases where not all cases will ever be reported,
 or for outbreaks in which severe under-reporting is expected, change this
- to less than 1.}
+to less than 1.}
 }
 \value{
-(invisibly) `TRUE` if the proportion is valid
+(invisibly) \code{TRUE} if the proportion is valid
 }
 \description{
-Check the `proportion_reported` argument
+Check the \code{proportion_reported} argument
 }
 \keyword{internal}

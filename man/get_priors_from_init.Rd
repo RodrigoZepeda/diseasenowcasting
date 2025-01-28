@@ -7,7 +7,7 @@
 get_priors_from_init(priors, num_strata, num_delays, num_steps)
 }
 \arguments{
-\item{priors}{A list of all of the nowcast priors. You can use [set_priors()] to change
+\item{priors}{A list of all of the nowcast priors. You can use \code{\link[=set_priors]{set_priors()}} to change
 the priors of the function (see details)}
 
 \item{num_strata}{Integer. Number of strata for the population. Default is 2.}
@@ -18,7 +18,7 @@ the priors of the function (see details)}
 }
 \value{
 An init function that generates initial values based upon the priors to send to
-any `rstan` sampling or optimization algorithm.
+any \code{rstan} sampling or optimization algorithm.
 }
 \description{
 Function for setting the initial values from priors for simulation

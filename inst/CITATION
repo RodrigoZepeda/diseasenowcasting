@@ -1,0 +1,6 @@
+bibentry(
+  bibtype  = "Manual",
+  title    = "{diseasenowcasting}: Nowcasting disease onset cases given report dates",
+  author   = "Rodrigo Zepeda-Tello, Rami Yaari, Matteo Perini",
+  year     = 2025,
+)

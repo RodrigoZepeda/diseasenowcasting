@@ -16,12 +16,33 @@ set_priors(
   nu_intercept_param_2 = 1,
   nu_0_param_1 = 0,
   nu_0_param_2 = 1,
+  has_cycle = FALSE,
+  c_0_param_1 = 0,
+  c_0_param_2 = 1,
+  ctilde_0_param_1 = 0,
+  ctilde_0_param_2 = 1,
   sd_mu_param_1 = 0,
   sd_mu_param_2 = 1,
   sd_nu_param_1 = 0,
   sd_nu_param_2 = 1,
+  sd_c_param_1 = 0,
+  sd_c_param_2 = 1,
+  sd_ctilde_param_1 = 0,
+  sd_ctilde_param_2 = 1,
   sd_m_param_1 = 0,
   sd_m_param_2 = 1,
+  sd_dow_epi_param_1 = 0,
+  sd_dow_epi_param_2 = 1,
+  sd_wkend_epi_param_1 = 0,
+  sd_wkend_epi_param_2 = 1,
+  sd_dom_epi_param_1 = 0,
+  sd_dom_epi_param_2 = 1,
+  sd_month_epi_param_1 = 0,
+  sd_month_epi_param_2 = 1,
+  sd_week_epi_param_1 = 0,
+  sd_week_epi_param_2 = 1,
+  sd_holidays_epi_param_1 = 0,
+  sd_holidays_epi_param_2 = 1,
   dof = 7,
   control_k_transform = 2,
   control_c_transform = 0.5
@@ -50,6 +71,16 @@ set_priors(
 
 \item{nu_0_param_2}{Positive Real. Variance of the initial value of the disease trend.}
 
+\item{has_cycle}{Boolean. Whether include a cycle component in the model.}
+
+\item{c_0_param_1}{Initial value for cycle parameter's mean}
+
+\item{c_0_param_2}{Initial value for cycle parameter's sd}
+
+\item{ctilde_0_param_1}{Initial value for cycle parameter's mean (latent cycle)}
+
+\item{ctilde_0_param_2}{Initial value for cycle parameter's sd (latent cycle)}
+
 \item{sd_mu_param_1}{Positive real. Initial value for the mean of the standard deviation of the epidemic trend.}
 
 \item{sd_mu_param_2}{Positive real. Initial value for the variance of the standard deviation of the epidemic trend.}
@@ -58,21 +89,53 @@ set_priors(
 
 \item{sd_nu_param_2}{Positive real. Initial value for the variance of the standard deviation of the disease trend.}
 
+\item{sd_c_param_1}{Mean value for the standard deviation's of c_0}
+
+\item{sd_c_param_2}{Standard deviation prior value for the standard deviation's of c_0}
+
+\item{sd_ctilde_param_1}{Mean value for the standard deviation's of c_0 tilde}
+
+\item{sd_ctilde_param_2}{Standard deviation prior value for the standard deviation's of c_0 tilde}
+
 \item{sd_m_param_1}{Positive real. Initial value for the mean of the standard deviation of the observed cases (not considered if distribution is Poisson)}
 
 \item{sd_m_param_2}{Positive real. Initial value for the variance of the standard deviation of the observed cases (not considered if distribution is Poisson)}
 
-\item{dof}{Degrees of freedom if the distribution used in [nowcast()] is Student (default = 7).}
+\item{sd_dow_epi_param_1}{Standard deviation's mean for day of the week effect}
 
-\item{control_k_transform}{Parameter for the `dhyperbolic` or `softplus` link functions.}
+\item{sd_dow_epi_param_2}{Standard deviation's sd for day of the week effect}
 
-\item{control_c_transform}{Parameter for the `dhyperbolic` link function.}
+\item{sd_wkend_epi_param_1}{Standard deviation's mean for weekend effect}
+
+\item{sd_wkend_epi_param_2}{Standard deviation's sd for weekend effect}
+
+\item{sd_dom_epi_param_1}{Standard deviation's mean for day of the month effect}
+
+\item{sd_dom_epi_param_2}{Standard deviation's sd for day of the month effect}
+
+\item{sd_month_epi_param_1}{Standard deviation's mean for month effect}
+
+\item{sd_month_epi_param_2}{Standard deviation's sd for month effect}
+
+\item{sd_week_epi_param_1}{Standard deviation's mean for epiweek effect}
+
+\item{sd_week_epi_param_2}{Standard deviation's sd for epiweek effect}
+
+\item{sd_holidays_epi_param_1}{Standard deviation's mean for holiday effect}
+
+\item{sd_holidays_epi_param_2}{Standard deviation's sd for holiday effect}
+
+\item{dof}{Degrees of freedom if the distribution used in \code{\link[=nowcast]{nowcast()}} is Student (default = 7).}
+
+\item{control_k_transform}{Parameter for the \code{dhyperbolic} or \code{softplus} link functions.}
+
+\item{control_c_transform}{Parameter for the \code{dhyperbolic} link function.}
 }
 \value{
-A list with all the priors for the [nowcast()] function.
+A list with all the priors for the \code{\link[=nowcast]{nowcast()}} function.
 }
 \description{
-Function to return the default values for the [nowcast()] function
+Function to return the default values for the \code{\link[=nowcast]{nowcast()}} function
 as a list.
 }
 \examples{

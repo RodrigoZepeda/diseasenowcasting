@@ -7,10 +7,10 @@
 random_priors(...)
 }
 \arguments{
-\item{...}{Any parameter used in [set_priors()] that will remain fixed (not random).}
+\item{...}{Any parameter used in \code{\link[=set_priors]{set_priors()}} that will remain fixed (not random).}
 }
 \description{
-Assign random priors. This is mostly used with the [simulate_process()] function.
+Assign random priors. This is mostly used with the \code{\link[=simulate_disease]{simulate_disease()}} function.
 }
 \examples{
 #Get random priors

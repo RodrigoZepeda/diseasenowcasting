@@ -6,20 +6,21 @@
 \usage{
 preprocess_for_nowcast(
   .disease_data,
-  onset_date,
+  true_date,
   report_date,
   strata = NULL,
   now,
   units,
   max_delay = Inf,
-  data_type = c("auto", "linelist", "count")
+  data_type = c("auto", "linelist", "count"),
+  verbose = TRUE
 )
 }
 \arguments{
 \item{.disease_data}{A time series of reporting data in aggregated line list format
-such that each row has a column for onset date, report date, and}
+such that each row has a column for onset date, report date, and (optionally) strata}
 
-\item{onset_date}{In quotations, the name of the column of datatype
+\item{true_date}{In quotations, the name of the column of datatype
 \code{Date} designating the date of case onset. e.g. "onset_week"}
 
 \item{report_date}{In quotations, the name of the column of datatype
@@ -28,26 +29,28 @@ such that each row has a column for onset date, report date, and}
 \item{strata}{Character vector of names of the strata included in the data.}
 
 \item{now}{An object of datatype \code{Date} indicating the date at which
-to perform the nowcast.}
+to perlform the nowcast.}
 
 \item{units}{Time scale of reporting. Options: "1 day", "1 week".}
 
 \item{max_delay}{Maximum possible delay observed or considered for estimation
-of the delay distribution (numeric). Default: `Inf`}
+of the delay distribution (numeric). Default: \code{Inf}}
 
-\item{data_type}{Either `linedata` if each row represents a test or `counts` if there
-is a column named `n` with counts of how many tests had that onset and report dates}
+\item{data_type}{Either \code{linedata} if each row represents a test or \code{counts} if there
+is a column named \code{n} with counts of how many tests had that onset and report dates}
+
+\item{verbose}{Boolean. Whether to print the data type assumptions.}
 }
 \value{
-A `data.frame` with all possible counts for all delay-onset combinations.
-The new column with the counts is named `n`. Additional columns `.tval` and `.delay`
-are added where `.tval` codifies the dates as numbers (starting at 0) and delay
+A \code{data.frame} with all possible counts for all delay-onset combinations.
+The new column with the counts is named \code{n}. Additional columns \code{.tval} and \code{.delay}
+are added where \code{.tval} codifies the dates as numbers (starting at 0) and delay
 codifies the difference between onset and report.
 }
 \description{
-Function that takes a data frame with `onset_date` and `report_date` and generates all
-possible combinations of onset_dates and report_dates observable controlling by the covariates
-specified in `...`
+Function that takes a data frame with \code{true_date} and \code{report_date} and generates all
+possible combinations of true_dates and report_dates observable controlling by the covariates
+specified in \code{...}
 }
 \examples{
 data(denguedat)

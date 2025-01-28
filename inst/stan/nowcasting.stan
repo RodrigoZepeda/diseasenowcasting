@@ -26,6 +26,6 @@ transformed parameters {
 model {
   #include include/model.stan
 
-  // Add the priors
+  //Add the priors
   target += lprior;
 }

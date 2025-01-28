@@ -2,7 +2,7 @@
 % Please edit documentation in R/stan_utils.R
 \name{control_default}
 \alias{control_default}
-\title{Return the default `STAN` control parameters for nowcasting}
+\title{Return the default \code{STAN} control parameters for nowcasting}
 \usage{
 control_default()
 }
@@ -10,6 +10,6 @@ control_default()
 A list with the default control parameters for running the sampling algorithm.
 }
 \description{
-The function estimates the default control parameters for running [rstan::sampling()].
+The function estimates the default control parameters for running \code{\link[rstan:stanmodel-method-sampling]{rstan::sampling()}}.
 }
 \keyword{internal}
