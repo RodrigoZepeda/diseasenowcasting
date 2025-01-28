@@ -121,9 +121,11 @@ nowcast <- function(.disease_data,
   link_y <- match.arg(link_y, c("log","identity","softplus","dhyperbolic"))
 
   # Print message to user
-  cli::cli_alert_info(
-    "Computing a nowcast for {.val {now}} per {.val {units}}"
-  )
+  if (refresh > 0){
+    cli::cli_alert_info(
+      "Computing a nowcast for {.val {now}} per {.val {units}}"
+    )
+  }
 
   # Get the data for processing
   .disease_data <- preprocess_for_nowcast(.disease_data,
@@ -132,7 +134,8 @@ nowcast <- function(.disease_data,
     strata = strata,
     now = now,
     units = units,
-    max_delay = max_delay
+    max_delay = max_delay,
+    verbose = refresh > 0
   )
 
   # Get the delay data for epidemic process
@@ -305,18 +308,22 @@ nowcast.rstan <- function(.disease_data, .date_epidemic, .date_delay,
                       "ctilde_init", "m", "m_trans", "dist_val")
 
   if (method[1] == "sampling"){
-    stan_fit <- rstan::sampling(stanmodels$nowcasting, data = stan_data,
-                           control = control,
-                           refresh = refresh,
-                           #pars    = exclude_params,
-                           #include = FALSE,
-                           ...)
+    suppressWarnings({
+      stan_fit <- rstan::sampling(stanmodels$nowcasting, data = stan_data,
+                             control = control,
+                             refresh = refresh,
+                             #pars    = exclude_params,
+                             #include = FALSE,
+                             ...)
+    })
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "variational") {
-    stan_fit <- rstan::vb(stanmodels$nowcasting, data = stan_data, refresh = refresh,
-                          #pars = exclude_params,
-                          #include = FALSE,
-                          ...)
+    suppressWarnings({
+      stan_fit <- rstan::vb(stanmodels$nowcasting, data = stan_data, refresh = refresh,
+                            #pars = exclude_params,
+                            #include = FALSE,
+                            ...)
+    })
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "optimization") {
     stan_fit <- rstan::optimizing(stanmodels$nowcasting, data = stan_data, refresh = refresh, ...)

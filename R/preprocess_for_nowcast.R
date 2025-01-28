@@ -9,6 +9,7 @@
 #' @param data_type Either `linedata` if each row represents a test or `counts` if there
 #' is a column named `n` with counts of how many tests had that onset and report dates
 #'
+#' @param verbose Boolean. Whether to print the data type assumptions.
 #'
 #' @returns A `data.frame` with all possible counts for all delay-onset combinations.
 #' The new column with the counts is named `n`. Additional columns `.tval` and `.delay`
@@ -58,10 +59,11 @@
 #'
 #' @export
 preprocess_for_nowcast <- function(.disease_data, true_date, report_date, strata = NULL, now, units,
-                                   max_delay = Inf, data_type = c("auto", "linelist", "count")) {
+                                   max_delay = Inf, data_type = c("auto", "linelist", "count"),
+                                   verbose = TRUE) {
 
   # Get whether data is count or line data
-  data_type <- infer_data_type(.disease_data, data_type = data_type)
+  data_type <- infer_data_type(.disease_data, data_type = data_type, verbose = verbose)
 
   # NOTE:
   # This part is done with dplyr otherwise if .disease_data were a tibble

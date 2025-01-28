@@ -12,7 +12,8 @@ preprocess_for_nowcast(
   now,
   units,
   max_delay = Inf,
-  data_type = c("auto", "linelist", "count")
+  data_type = c("auto", "linelist", "count"),
+  verbose = TRUE
 )
 }
 \arguments{
@@ -37,6 +38,8 @@ of the delay distribution (numeric). Default: \code{Inf}}
 
 \item{data_type}{Either \code{linedata} if each row represents a test or \code{counts} if there
 is a column named \code{n} with counts of how many tests had that onset and report dates}
+
+\item{verbose}{Boolean. Whether to print the data type assumptions.}
 }
 \value{
 A \code{data.frame} with all possible counts for all delay-onset combinations.

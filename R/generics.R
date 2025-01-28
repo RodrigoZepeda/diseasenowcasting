@@ -27,8 +27,7 @@
 #'
 #' @export
 
-summary.nowcaster <- function(nowcast_output,
-                            quantiles=c(0.025, 0.975)) {
+summary.nowcaster <- function(nowcast_output, quantiles=c(0.025, 0.975)) {
 
   if (!is.numeric(quantiles) || any(quantiles < 0 | quantiles > 1)) {
     stop("quantiles must be a number or a numeric vector with values between 0 and 1.")
@@ -203,7 +202,7 @@ plot.nowcaster <- function(nowcast_output,
   prediction_summary <- summary.nowcaster(nowcast_output, quantiles = quantiles)
   #get quantile labels for legend
   quantile_labels <- paste0(
-    colnames(prediction_summary)[4], " - ", colnames(prediction_summary)[5], " interval"
+    colnames(prediction_summary)[5], " - ", colnames(prediction_summary)[6], " interval"
   )
   # Get input data and sum over all delays
   data_delays <- nowcast_output$data$preprocessed_data |>
@@ -233,8 +232,8 @@ plot.nowcaster <- function(nowcast_output,
     ggplot2::geom_errorbar(
       ggplot2::aes(
         x = !!dplyr::sym(true_date_name),
-        ymin = !!dplyr::pull(prediction_summary, 4),
-        ymax = !!dplyr::pull(prediction_summary, 5),
+        ymin = !!dplyr::pull(prediction_summary, 5),
+        ymax = !!dplyr::pull(prediction_summary, 6),
         group = !!as.symbol("Strata_unified")
       ),
       width = 0,
@@ -361,6 +360,8 @@ print.nowcaster <- function(x, ...){
 #' @param new_data New `.disease_data` to use for fitting [nowcast()]. Ideally this should include
 #' the previous data + new observations in the same `data.frame`.
 #'
+#' @inheritParams nowcast
+#'
 #' @examples
 #' #' # Load the data
 #' data(denguedat)
@@ -376,17 +377,19 @@ print.nowcaster <- function(x, ...){
 #' update(ncast, new_data = first_3k)
 #'
 #' @export
-update.nowcaster <- function(object, new_data, now = NULL, ...){
+update.nowcaster <- function(object, new_data, now = NULL, refresh = 250*rlang::is_interactive(), ...){
 
   #Get the call parameters
   call_parameters <- object[["data"]][["call_parameters"]] |> append(list(.disease_data = new_data))
 
-  #Update the now
-  call_parameters[["now"]] <- now
+  #Update the now and refresh
+  call_parameters[["now"]]        <- now
+  call_parameters[["refresh"]]    <- refresh
+
+  #Set to null those parameters that are not from call
   call_parameters[["num_delays"]] <- NULL
   call_parameters[["num_strata"]] <- NULL
-  call_parameters[["num_steps"]] <- NULL
-
+  call_parameters[["num_steps"]]  <- NULL
 
   do.call(nowcast, args = call_parameters)
 

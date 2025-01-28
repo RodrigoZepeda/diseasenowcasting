@@ -16,6 +16,7 @@ backtest(
   quantiles = c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975),
   min_horizon = 0,
   model_name = NULL,
+  refresh = 250 * rlang::is_interactive(),
   ...
 )
 }
@@ -47,6 +48,8 @@ will be returned}
 
 \item{model_name}{A model name that will be used to identify the results of the
 backtest with the given parameters in a subsequent call to \code{\link[=backtest_metrics]{backtest_metrics()}}}
+
+\item{refresh}{Refresh parameter for \code{\link[rstan:stanmodel-method-sampling]{rstan::sampling()}}}
 
 \item{...}{Additional arguments to pass to \code{\link[=update.nowcaster]{update.nowcaster()}}}
 }

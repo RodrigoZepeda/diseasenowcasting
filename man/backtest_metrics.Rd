@@ -4,14 +4,10 @@
 \alias{backtest_metrics}
 \title{backtest_metrics}
 \usage{
-backtest_metrics(
-  backtest_summary,
-  metrics = c("mae", "rmse", "wis"),
-  horizons = 0
-)
+backtest_metrics(..., metrics = c("mae", "rmse", "wis"), horizons = 0)
 }
 \arguments{
-\item{backtest_summary}{Results of call to backtest or a list of results of backtest calls.}
+\item{...}{Results of calls to backtest.}
 
 \item{metrics}{list of metrics which should be calculated.
 Currently supporting: 'mae' (mean absolute error), 'rmse' (root mean squared error),
@@ -43,6 +39,6 @@ btest1 <- backtest(ncast, dates_to_test = as.Date("1990-06-11"), model_name = "C
 btest2 <- backtest(ncast, dates_to_test = as.Date("1990-06-11"), model_name = "Normal")
 
 # Compare the models to select the best model
-backtest_metrics(list(btest1, btest2))
+backtest_metrics(btest1, btest2)
 }
 }

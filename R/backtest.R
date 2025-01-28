@@ -33,8 +33,16 @@ generate_nowcast_dates <- function(start_date, end_date, ncast, stride, subsampl
   }
 
   # Generate the sequence of dates
-  units    <- ncast[["data"]][["call_parameters"]][["units"]]
-  date_seq <- seq(from = as.Date(start_date), to = as.Date(end_date), by = paste(stride, units))
+  units     <- ncast[["data"]][["call_parameters"]][["units"]]
+  true_date <- ncast[["data"]][["call_parameters"]][["true_date"]]
+
+  possible_date_seq  <- ncast[["data"]][["original_data"]] |>
+    dplyr::distinct_at(true_date) |>
+    dplyr::filter(!!as.symbol(true_date) >= as.Date(start_date)) |>
+    dplyr::filter(!!as.symbol(true_date) <= as.Date(end_date)) |>
+    dplyr::pull()
+
+  date_seq <- seq(from = min(possible_date_seq), to = max(possible_date_seq), by = paste(stride, units))
 
   # Sample
   if (!is.null(subsample)){
@@ -167,6 +175,8 @@ infer_end_date <- function(ncast, start_date){
 #'
 #' @param ... Additional arguments to pass to [update.nowcaster()]
 #'
+#' @inheritParams nowcast
+#'
 #' @return A tibble with as many rows as `dates_to_test` are given. Each row represents a different `now`
 #' with the following columns:
 #' * `now`: The date nowcasted
@@ -211,6 +221,7 @@ backtest <- function(ncast,
                      quantiles     = c(0.025, 0.05, 0.25, 0.50, 0.75, 0.95, 0.975),
                      min_horizon   = 0,
                      model_name    = NULL,
+                     refresh       = 250*rlang::is_interactive(),
                      ...) {
 
   #Check ncast is a nowcaster
@@ -234,17 +245,17 @@ backtest <- function(ncast,
     now <- as.Date(date)
 
     #Refit and use initial values from previous fit
-    predictions  <- update.nowcaster(ncast, new_data = ncast[["data"]][["original_data"]], now = now, ...)
+    predictions  <- update.nowcaster(ncast, new_data = ncast[["data"]][["original_data"]], now = now, refresh = refresh, ...)
 
     pred_summary <- summary.nowcaster(predictions, quantiles=quantiles)
 
-    pred_summary <- dplyr::tibble(now=now,pred_summary)
+    pred_summary <- dplyr::tibble(now=now, pred_summary)
 
     pred_summary$horizon <- as.numeric(difftime(pred_summary$onset_week, now, units=units))
 
     pred_summary <- pred_summary[pred_summary$horizon>=min_horizon,]
 
-    pred_table <- rbind(pred_table, pred_summary)
+    pred_table   <- rbind(pred_table, pred_summary)
   }
 
   cases_per_date <- ncast[["data"]][["original_data"]] |>

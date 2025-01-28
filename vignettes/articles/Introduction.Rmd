@@ -170,7 +170,7 @@ ncast
 You can generate plots of the `nowcast` with the `plot` function:
 
 ```{r}
-plot(ncast)
+plot(ncast, color = "#5F7E62")
 ```
 
 And get the predictions with the summary function
@@ -184,8 +184,16 @@ You can see how to add holiday effects, change the priors, and add further optio
 
 ## Evaluating the model
 
-Once a nowcast has been constructed you can use the [backtest()] function to evaluate what the current model would have predicted in the past vs what was actually observed. 
+Once a nowcast has been constructed you can use the [backtest()] function to evaluate what the current model would have predicted in the past vs what was actually observed. Here, for example, we are evaluating what the model predicted for May, June and July:
 
 ```{r}
+#This will take a while as it refits the model several times
+btest <- backtest(ncast, start_date = as.Date("1990/05/01"), end_date = as.Date("1990/07/31"), refresh = 0)
+```
 
+The [backtest_metrics()] function calculates the mean absolute error (`mae`), root mean squared error (`rmse`) and weighted interval scoring (`wis`):
+
+```{r}
+#This will take a while as it refits the model several times
+backtest_metrics(btest)
 ```

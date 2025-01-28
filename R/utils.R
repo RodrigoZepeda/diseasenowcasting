@@ -76,21 +76,25 @@ infer_units <- function(.disease_data, units, date_column) {
 #' @return Whether the data is `count` or `linelist`
 #'
 #' @keywords internal
-infer_data_type <- function(.disease_data, data_type) {
+infer_data_type <- function(.disease_data, data_type, verbose = FALSE) {
   # Get the data type
   data_type <- match.arg(data_type, c("auto", "linelist", "count"))
 
   # Check that there is no column `n` if linedata and that there is if counts
   if (data_type == "auto" & ("n" %in% colnames(.disease_data))) {
     data_type <- "count"
-    cli::cli_alert_info(
-      "Assuming data is count-data where counts are in column `n`. To change this set {.code data_type = {.val linelist}}"
-    )
+    if (verbose){
+      cli::cli_alert_info(
+        "Assuming data is count-data where counts are in column `n`. To change this set {.code data_type = {.val linelist}}"
+      )
+    }
   } else if (data_type == "auto" & !("n" %in% colnames(.disease_data))) {
     data_type <- "linelist"
-    cli::cli_alert_info(
-      "Assuming data is linelist-data where each observation is a test. If you are working with count-data set {.code data_type = {.val count}}"
-    )
+    if (verbose){
+      cli::cli_alert_info(
+        "Assuming data is linelist-data where each observation is a test. If you are working with count-data set {.code data_type = {.val count}}"
+      )
+    }
   } else if (data_type == "linelist" & "n" %in% colnames(.disease_data)) {
     cli::cli_warn(
       "Linelist data contains a column named `n` which will be overwritten. If you are working with count-data set {.code data_type = {.val count}}"

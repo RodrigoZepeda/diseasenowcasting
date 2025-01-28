@@ -4,7 +4,7 @@
 \alias{infer_data_type}
 \title{Automatically infer the \code{data_type}}
 \usage{
-infer_data_type(.disease_data, data_type)
+infer_data_type(.disease_data, data_type, verbose = FALSE)
 }
 \arguments{
 \item{.disease_data}{A time series of reporting data in aggregated line list format
@@ -12,6 +12,8 @@ such that each row has a column for onset date, report date, and (optionally) st
 
 \item{data_type}{Either \code{linedata} if each row represents a test or \code{counts} if there
 is a column named \code{n} with counts of how many tests had that onset and report dates}
+
+\item{verbose}{Boolean. Whether to print the data type assumptions.}
 }
 \value{
 Whether the data is \code{count} or \code{linelist}
