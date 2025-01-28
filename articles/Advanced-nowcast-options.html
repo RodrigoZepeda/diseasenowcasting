@@ -26,7 +26,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,19 +71,30 @@
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">734586</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rodrigozepeda.github.io/diseasenowcasting/">diseasenowcasting</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span></code></pre></div>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></code></pre></div>
 <p>This vignette will give you an overview of the advanced options in
 the <code><a href="../reference/nowcast.html">nowcast()</a></code> function of the
 <code>diseasenowcasting</code> package including the following:</p>
 <ol style="list-style-type: decimal">
-<li>Using strata.</li>
-<li>Adding time covariates.</li>
-<li>Adding holidays.</li>
-<li>Adding cycles.</li>
-<li>Changing the autorregresive components.</li>
-<li>Changing the distribution.</li>
-<li>Obtain a sample from the prior.</li>
-<li>Changing the priors.</li>
+<li>
+<a href="#using-strata">Using strata</a>.</li>
+<li>
+<a href="#adding-time-covariates">Adding time covariates</a>. 2.1.
+<a href="#adding-holidays">Adding holidays</a>.</li>
+<li>
+<a href="#adding-cycles">Adding cycles</a>.</li>
+<li>
+<a href="#changing-the-autorregresive-components">Changing the
+autorregresive components</a>.</li>
+<li>
+<a href="#changing-the-distribution">Changing the
+distribution</a>.</li>
+<li>
+<a href="#getting-a-sample-from-the-prior">Getting a sample from the
+prior</a>.</li>
+<li>
+<a href="#changing-the-priors">Changing the priors</a>.</li>
 </ol>
 <p>For this tutorial we will use the <code>mpoxdat</code> dataset
 contained in the package.</p>
@@ -131,33 +142,253 @@ stratified by race:</p>
 <span><span class="va">btest</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/backtest.html">backtest</a></span><span class="op">(</span><span class="va">ncast_race</span>, dates_to_test <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2022/08/04"</span><span class="op">)</span>, refresh <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span></code></pre></div>
 <p>and calculating metrics by the strata:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/calc_wis.html">calc_wis</a></span><span class="op">(</span><span class="va">btest</span><span class="op">)</span></span>
-<span><span class="co">#&gt;    horizon     Strata_unified                                model        now</span></span>
-<span><span class="co">#&gt;      &lt;num&gt;             &lt;char&gt;                               &lt;char&gt;     &lt;Date&gt;</span></span>
-<span><span class="co">#&gt; 1:       0              Asian model_2025-01-28_20h07m21s_198752210 2022-08-04</span></span>
-<span><span class="co">#&gt; 2:       0              Black model_2025-01-28_20h07m21s_198752210 2022-08-04</span></span>
-<span><span class="co">#&gt; 3:       0           Hispanic model_2025-01-28_20h07m21s_198752210 2022-08-04</span></span>
-<span><span class="co">#&gt; 4:       0 Non-Hispanic White model_2025-01-28_20h07m21s_198752210 2022-08-04</span></span>
-<span><span class="co">#&gt; 5:       0              Other model_2025-01-28_20h07m21s_198752210 2022-08-04</span></span>
-<span><span class="co">#&gt;         wis overprediction underprediction dispersion  bias</span></span>
-<span><span class="co">#&gt;       &lt;num&gt;          &lt;num&gt;           &lt;num&gt;      &lt;num&gt; &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1: 2.914464       0.000000       1.1428571   1.771607  -0.5</span></span>
-<span><span class="co">#&gt; 2: 2.671429       0.000000       0.1428571   2.528571  -0.5</span></span>
-<span><span class="co">#&gt; 3: 4.653571       1.142857       0.0000000   3.510714   0.5</span></span>
-<span><span class="co">#&gt; 4: 4.364286       1.000000       0.0000000   3.364286   0.5</span></span>
-<span><span class="co">#&gt; 5: 7.250000       0.000000       6.1428571   1.107143  -0.9</span></span>
-<span><span class="co">#&gt;    interval_coverage_50 interval_coverage_90 ae_median</span></span>
-<span><span class="co">#&gt;                   &lt;num&gt;                &lt;num&gt;     &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:                    1                    1         8</span></span>
-<span><span class="co">#&gt; 2:                    1                    1         1</span></span>
-<span><span class="co">#&gt; 3:                    1                    1         8</span></span>
-<span><span class="co">#&gt; 4:                    1                    1         7</span></span>
-<span><span class="co">#&gt; 5:                    0                    1        17</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/backtest_metrics.html">backtest_metrics</a></span><span class="op">(</span><span class="va">btest</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 5 × 14</span></span></span>
+<span><span class="co">#&gt;   horizon Strata_unified    model now          mse se_point   wis overprediction</span></span>
+<span><span class="co">#&gt;     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span> <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>       0 Asian             mode… 2022-08-04  6.21    38.6   2.91           0   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>       0 Black             mode… 2022-08-04  2.77     7.65  2.67           0   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>       0 Hispanic          mode… 2022-08-04 13.4    180.    4.65           1.14</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>       0 Non-Hispanic Whi… mode… 2022-08-04 12.1    147.    4.36           1   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span>       0 Other             mode… 2022-08-04 15.4    238.    7.25           0   </span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 6 more variables: underprediction &lt;dbl&gt;, dispersion &lt;dbl&gt;, bias &lt;dbl&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   interval_coverage_50 &lt;dbl&gt;, interval_coverage_90 &lt;dbl&gt;, ae_median &lt;dbl&gt;</span></span></span></code></pre></div>
+<p>All of the remaining examples will be estimated without covariates
+and without backtesting just to improve the speed of the tutorial.</p>
 </div>
 <div class="section level2">
-<h2 id="adding-time-covariates">Adding time covariates<a class="anchor" aria-label="anchor" href="#adding-time-covariates"></a>
+<h2 id="adding-temporal-effects">Adding temporal effects<a class="anchor" aria-label="anchor" href="#adding-temporal-effects"></a>
 </h2>
-<p>The</p>
+<p>Time covariates (called <strong>temporal effects</strong>) can be
+added to the epidemic process or to the delay process. Simple time
+covariates include <code>day_of_week</code> (codifying all days from
+Monday to Sunday), <code>weekend</code> (codifying only Saturday and
+Sunday), <code>day_of_month</code> (codifying the day from 1 to 30 or 31
+depending on the month), <code>month_of_year</code> (codifying January
+to December), <code>week_of_year</code> (codifying the epidemiological
+week of the year according to the CDC) and <code>holidays</code> which
+are explained in a later section.</p>
+<p>Temporal effects can be added with the
+<code><a href="../reference/temporal_effects.html">temporal_effects()</a></code> function where the covariates can be set
+either to be <code>TRUE</code> or <code>FALSE</code>:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/temporal_effects.html">temporal_effects</a></span><span class="op">(</span>day_of_week <span class="op">=</span> <span class="cn">TRUE</span>, week_of_year <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Temporal effect object</span> ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following effects are in place:</span></span>
+<span><span class="co">#&gt; • <span style="font-style: italic;">day_of_week</span></span></span>
+<span><span class="co">#&gt; • <span style="font-style: italic;">week_of_year</span></span></span>
+<span><span class="co">#&gt; </span></span></code></pre></div>
+<p>By default, the model tries to infer the best temporal effects for
+the given data and will throw a warning when they don’t make sense (for
+example adding day of the week effects to weekly data).</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co">#Add temporal effects for epidemic process</span></span>
+<span><span class="va">epidemic_effects</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/temporal_effects.html">temporal_effects</a></span><span class="op">(</span>day_of_week <span class="op">=</span> <span class="cn">TRUE</span>, week_of_year <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co">#Add temporal effects for delay process to have an effect on delay if weekend</span></span>
+<span><span class="va">delay_effects</span>   <span class="op">&lt;-</span> <span class="fu"><a href="../reference/temporal_effects.html">temporal_effects</a></span><span class="op">(</span>weekend <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">ncast_temp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">mpox_reduced</span>, true_date <span class="op">=</span> <span class="st">"dx_date"</span>, report_date <span class="op">=</span> <span class="st">"dx_report_date"</span>, </span>
+<span>                      temporal_effects_epidemic <span class="op">=</span> <span class="va">epidemic_effects</span>,</span>
+<span>                      temporal_effects_delay <span class="op">=</span> <span class="va">delay_effects</span>,</span>
+<span>                      refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>                      seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
+<p>The difference between epidemic and delay effects is as follows:</p>
+<ul>
+<li><p><strong>epidemic_effects</strong> Refer to the time-covariates
+that affect the <strong>epidemic process</strong>. For example, the
+epidemic process might be affected by the epidemiological week due to
+yearly seasonality of the disease such as in the case of influenza or
+dengue.</p></li>
+<li><p><strong>delay_effects</strong> Refer to the time-covariates that
+affect the <strong>reporting process</strong>. For example, the
+reporting process might be affected by laboratories not working at full
+capacity during the weekend or during holidays thus making the report
+slower for thus dates.</p></li>
+</ul>
+<div class="section level3">
+<h3 id="adding-holidays">Adding holidays<a class="anchor" aria-label="anchor" href="#adding-holidays"></a>
+</h3>
+<p><strong>Holidays</strong> can be added using an
+<code><a href="https://rdrr.io/pkg/almanac/man/rcalendar.html" class="external-link">almanac::rcalendar()</a></code> from the <a href="https://davisvaughan.github.io/almanac/" class="external-link"><code>alamanc</code>
+package</a>. Once a calendar has been created it can be integrated into
+the <code>holidays</code> temporal effect.</p>
+<p>For example here we use the US Federal Calendar
+(<code><a href="https://rdrr.io/pkg/almanac/man/cal_us_federal.html" class="external-link">almanac::cal_us_federal()</a></code>) already included in the almanac
+package:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/DavisVaughan/almanac" class="external-link">almanac</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co">#Add temporal effects for epidemic process</span></span>
+<span><span class="fu"><a href="../reference/temporal_effects.html">temporal_effects</a></span><span class="op">(</span>day_of_week <span class="op">=</span> <span class="cn">TRUE</span>, week_of_year <span class="op">=</span> <span class="cn">TRUE</span>, holidays <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/almanac/man/cal_us_federal.html" class="external-link">cal_us_federal</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Temporal effect object</span> ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The following effects are in place:</span></span>
+<span><span class="co">#&gt; • <span style="font-style: italic;">day_of_week</span></span></span>
+<span><span class="co">#&gt; • <span style="font-style: italic;">week_of_year</span></span></span>
+<span><span class="co">#&gt; • <span style="font-style: italic;">holidays</span></span></span>
+<span><span class="co">#&gt; </span></span></code></pre></div>
+<p>Thus we can run our new model accounting for holiday effects both in
+the reporting (due to labs not working at full capacity) and the
+epidemic (due to individuals behaving differently during holidays and
+thus changing the epidemic process):</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co">#Add temporal effects for epidemic process</span></span>
+<span><span class="va">epidemic_effects</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/temporal_effects.html">temporal_effects</a></span><span class="op">(</span>day_of_week <span class="op">=</span> <span class="cn">TRUE</span>, week_of_year <span class="op">=</span> <span class="cn">TRUE</span>, </span>
+<span>                                     holidays <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/almanac/man/cal_us_federal.html" class="external-link">cal_us_federal</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co">#Add temporal effects for delay process to have an effect on delay if weekend</span></span>
+<span><span class="va">delay_effects</span>   <span class="op">&lt;-</span> <span class="fu"><a href="../reference/temporal_effects.html">temporal_effects</a></span><span class="op">(</span>weekend <span class="op">=</span> <span class="cn">TRUE</span>, holidays <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/almanac/man/cal_us_federal.html" class="external-link">cal_us_federal</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">ncast_temp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">mpox_reduced</span>, true_date <span class="op">=</span> <span class="st">"dx_date"</span>, report_date <span class="op">=</span> <span class="st">"dx_report_date"</span>, </span>
+<span>                      temporal_effects_epidemic <span class="op">=</span> <span class="va">epidemic_effects</span>,</span>
+<span>                      temporal_effects_delay <span class="op">=</span> <span class="va">delay_effects</span>,</span>
+<span>                      refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>                      seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
+<p>And this is what the model looks like:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_temp</span>, datesbrakes <span class="op">=</span> <span class="st">"1 week"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ggtitle</a></span><span class="op">(</span><span class="st">"Model with temporal effects"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="Advanced-nowcast-options_files/figure-html/unnamed-chunk-13-1.png" width="700">
+Interested users can consult the almanac package’s <a href="https://davisvaughan.github.io/almanac/articles/holidays-calendars.html#calendars" class="external-link">documentation</a>
+on how to create a calendar.</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="adding-cycles">Adding cycles<a class="anchor" aria-label="anchor" href="#adding-cycles"></a>
+</h2>
+<p><strong>Cycles</strong> correspond to increases/decreases in the
+epidemic process that cannot be accounted for by seasonality. While
+<strong>seasonality</strong> increases/decreases during usually specific
+periods in time (say increase in dengue cases during rainy season),
+cycles correspond to stochastic increases/decreases that have no season
+(say if dengue cases one year rose during rainy season but the following
+year during dry season).</p>
+<p>Cycles can be added into the model by setting the
+<code>has_cycle</code> option to <code>TRUE</code>.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ncast_cycle</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">mpox_reduced</span>, true_date <span class="op">=</span> <span class="st">"dx_date"</span>, report_date <span class="op">=</span> <span class="st">"dx_report_date"</span>, </span>
+<span>                       temporal_effects_epidemic <span class="op">=</span> <span class="va">epidemic_effects</span>,</span>
+<span>                       temporal_effects_delay <span class="op">=</span> <span class="va">delay_effects</span>,</span>
+<span>                       has_cycle <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>                       refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>                       seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_cycle</span>, datesbrakes <span class="op">=</span> <span class="st">"1 week"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ggtitle</a></span><span class="op">(</span><span class="st">"Model with temporal effects and cycle"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="Advanced-nowcast-options_files/figure-html/unnamed-chunk-15-1.png" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="changing-the-autorregresive-components">Changing the autorregresive components<a class="anchor" aria-label="anchor" href="#changing-the-autorregresive-components"></a>
+</h2>
+<p>The nowcast includes autorregresive and moving average components for
+the delay and the epidemic process.</p>
+<p>The autorregresive components can be setup with the <code><a href="../reference/arma.html">AR()</a></code>
+function. These are interpreted on how much the epidemic process of the
+current observation depends on the cases of the previous observations.
+So for example, <code>AR(epidemic_trend = 2)</code> can be interpreted
+as the epidemic trend depending upon the previous two observations (the
+idea being that a lower or higher previous cases imply different things
+for the current prediction).</p>
+<p>Here:</p>
+<ul>
+<li><p><strong>epidemic_trend</strong> Refers to the trend in the
+epidemic (disease) process independently of the report date.</p></li>
+<li><p><strong>delay_trend</strong> Refers to the dependency in the
+delay of reporting. The idea being that if more cases were delayed in
+the previous observation, more cases will be delayed in the current
+observation.</p></li>
+</ul>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ncast_arma</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">mpox_reduced</span>, true_date <span class="op">=</span> <span class="st">"dx_date"</span>, report_date <span class="op">=</span> <span class="st">"dx_report_date"</span>, </span>
+<span>                      temporal_effects_epidemic <span class="op">=</span> <span class="va">epidemic_effects</span>,</span>
+<span>                      temporal_effects_delay    <span class="op">=</span> <span class="va">delay_effects</span>,</span>
+<span>                      has_cycle <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>                      autoregresive  <span class="op">=</span> <span class="fu"><a href="../reference/arma.html">AR</a></span><span class="op">(</span>epidemic_trend <span class="op">=</span> <span class="fl">2</span>, delay_trend <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>,</span>
+<span>                      moving_average <span class="op">=</span> <span class="fu"><a href="../reference/arma.html">MA</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span>,</span>
+<span>                      refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>                      seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
+<p>And the plot:</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_arma</span>, datesbrakes <span class="op">=</span> <span class="st">"1 week"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ggtitle</a></span><span class="op">(</span><span class="st">"Model with temporal effects, cycle, and custom ARMA"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="Advanced-nowcast-options_files/figure-html/unnamed-chunk-17-1.png" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="changing-the-distribution">Changing the distribution<a class="anchor" aria-label="anchor" href="#changing-the-distribution"></a>
+</h2>
+<p>By default the <code><a href="../reference/nowcast.html">nowcast()</a></code> uses a <strong>Negative
+Binomial</strong> distribution. However it can be changed with the
+<code>dist</code> parameter to be either a <code>Poisson</code>,
+<code>Normal</code> or <code>Student</code>. Each of these generate a
+slightly different model with the greatest effect seen on the
+variance.</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ncast_student</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">mpox_reduced</span>, true_date <span class="op">=</span> <span class="st">"dx_date"</span>, report_date <span class="op">=</span> <span class="st">"dx_report_date"</span>, </span>
+<span>                         temporal_effects_epidemic <span class="op">=</span> <span class="va">epidemic_effects</span>,</span>
+<span>                         temporal_effects_delay    <span class="op">=</span> <span class="va">delay_effects</span>,</span>
+<span>                         has_cycle <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>                         dist <span class="op">=</span> <span class="st">"Student"</span>, <span class="co">#&lt;- Changed the distribution</span></span>
+<span>                         refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>                         seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
+<p>This is what the predictions look like</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_student</span>, datesbrakes <span class="op">=</span> <span class="st">"1 week"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ggtitle</a></span><span class="op">(</span><span class="st">"Student model with temporal effects, cycle, and custom ARMA"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="Advanced-nowcast-options_files/figure-html/unnamed-chunk-19-1.png" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="changing-the-link-functions">Changing the link functions<a class="anchor" aria-label="anchor" href="#changing-the-link-functions"></a>
+</h2>
+</div>
+<div class="section level2">
+<h2 id="getting-a-sample-from-the-priors">Getting a sample from the priors<a class="anchor" aria-label="anchor" href="#getting-a-sample-from-the-priors"></a>
+</h2>
+<p>In a bayesian scenario, the priors establish the previously expected
+behaviour of the epidemic process before acquiring information. In cases
+where not enough information is present (for example at the start of an
+outbreak) the prior will dictate the expected behaviour of the
+model.</p>
+<p>To visualize the prior epidemic process you can set up the
+<code>prior_only</code> option of the nowcast to <code>TRUE</code>:</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ncast_prior</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">mpox_reduced</span>, true_date <span class="op">=</span> <span class="st">"dx_date"</span>, report_date <span class="op">=</span> <span class="st">"dx_report_date"</span>, </span>
+<span>                         temporal_effects_epidemic <span class="op">=</span> <span class="va">epidemic_effects</span>,</span>
+<span>                         temporal_effects_delay    <span class="op">=</span> <span class="va">delay_effects</span>,</span>
+<span>                         has_cycle <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>                         refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>                         prior_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>                         seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_prior</span>, datesbrakes <span class="op">=</span> <span class="st">"1 week"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ggtitle</a></span><span class="op">(</span><span class="st">"Default prior for model with temporal effects, cycle, and custom ARMA"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="Advanced-nowcast-options_files/figure-html/unnamed-chunk-21-1.png" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="changing-the-priors">Changing the priors<a class="anchor" aria-label="anchor" href="#changing-the-priors"></a>
+</h2>
+<p>Hyperparameters for the distribution’s priors can be changed with the
+<code><a href="../reference/set_priors.html">set_priors()</a></code> function. This function included a list of all
+of the hyperparameters used in the model as well as their values. One
+can change, for example, the hyperprior for the variance of the delay
+part of the process by changing <code>sd_nu_param_1</code> and
+<code>sd_nu_param_2</code>.</p>
+<p>In the following example, we add more variance to the delay:</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ncast_prior_2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">mpox_reduced</span>, true_date <span class="op">=</span> <span class="st">"dx_date"</span>, report_date <span class="op">=</span> <span class="st">"dx_report_date"</span>, </span>
+<span>                         temporal_effects_epidemic <span class="op">=</span> <span class="va">epidemic_effects</span>,</span>
+<span>                         temporal_effects_delay    <span class="op">=</span> <span class="va">delay_effects</span>,</span>
+<span>                         has_cycle <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>                         refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>                         prior_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>                         priors <span class="op">=</span> <span class="fu"><a href="../reference/set_priors.html">set_priors</a></span><span class="op">(</span>sd_nu_param_1 <span class="op">=</span> <span class="fl">0.0</span>, sd_nu_param_2 <span class="op">=</span> <span class="fl">100</span><span class="op">)</span>,</span>
+<span>                         seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_prior_2</span>, datesbrakes <span class="op">=</span> <span class="st">"1 week"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ggtitle</a></span><span class="op">(</span><span class="st">"Custom prior for model with temporal effects, cycle, and custom ARMA"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="Advanced-nowcast-options_files/figure-html/unnamed-chunk-23-1.png" width="700"></p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

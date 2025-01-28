@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -48,6 +48,9 @@
 <span>  strata <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  temporal_effects_delay <span class="op">=</span> <span class="st">"auto"</span>,</span>
 <span>  temporal_effects_epidemic <span class="op">=</span> <span class="st">"auto"</span>,</span>
+<span>  has_cycle <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  autoregresive <span class="op">=</span> <span class="fu"><a href="arma.html">AR</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  moving_average <span class="op">=</span> <span class="fu"><a href="arma.html">MA</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  dist <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"NegativeBinomial"</span>, <span class="st">"Poisson"</span>, <span class="st">"Normal"</span>, <span class="st">"Student"</span><span class="op">)</span>,</span>
 <span>  link_x <span class="op">=</span> <span class="fu"><a href="default_x_link.html">default_x_link</a></span><span class="op">(</span><span class="va">dist</span><span class="op">)</span>,</span>
 <span>  link_y <span class="op">=</span> <span class="fu"><a href="default_link.html">default_y_link</a></span><span class="op">(</span><span class="va">dist</span><span class="op">)</span>,</span>
@@ -96,6 +99,20 @@ which effects have an influence on the delay.</p></dd>
 <dt id="arg-temporal-effects-epidemic">temporal_effects_epidemic<a class="anchor" aria-label="anchor" href="#arg-temporal-effects-epidemic"></a></dt>
 <dd><p>Either <code>"auto"</code> or a <code><a href="temporal_effects.html">temporal_effects()</a></code> object specifying
 which effects have an influence on the epidemic process (delay independent).</p></dd>
+
+
+<dt id="arg-has-cycle">has_cycle<a class="anchor" aria-label="anchor" href="#arg-has-cycle"></a></dt>
+<dd><p>Boolean. Whether include a cycle component in the model.</p></dd>
+
+
+<dt id="arg-autoregresive">autoregresive<a class="anchor" aria-label="anchor" href="#arg-autoregresive"></a></dt>
+<dd><p>An <code><a href="arma.html">AR()</a></code> object with the autoregresive components for the epidemic
+and delay processes.</p></dd>
+
+
+<dt id="arg-moving-average">moving_average<a class="anchor" aria-label="anchor" href="#arg-moving-average"></a></dt>
+<dd><p>A <code><a href="arma.html">MA()</a></code> object with the moving average component for the epidemic
+and delay processes.</p></dd>
 
 
 <dt id="arg-dist">dist<a class="anchor" aria-label="anchor" href="#arg-dist"></a></dt>

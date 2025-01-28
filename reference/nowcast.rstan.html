@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,6 +54,9 @@
 <span>  <span class="va">link_x</span>,</span>
 <span>  <span class="va">link_y</span>,</span>
 <span>  <span class="va">normalize_data</span>,</span>
+<span>  <span class="va">has_cycle</span>,</span>
+<span>  <span class="va">autoregresive</span>,</span>
+<span>  <span class="va">moving_average</span>,</span>
 <span>  <span class="va">prior_only</span>,</span>
 <span>  <span class="va">control</span>,</span>
 <span>  <span class="va">refresh</span>,</span>
@@ -110,6 +113,20 @@ such that each row has a column for onset date, report date, and (optionally) st
 <dd><p>Whether the data <code>y</code> should be normalized (substracted its mean and divided
 by standard deviation) for fitting. This option is only valid if using a continuous model
 (Normal or Student).</p></dd>
+
+
+<dt id="arg-has-cycle">has_cycle<a class="anchor" aria-label="anchor" href="#arg-has-cycle"></a></dt>
+<dd><p>Boolean. Whether include a cycle component in the model.</p></dd>
+
+
+<dt id="arg-autoregresive">autoregresive<a class="anchor" aria-label="anchor" href="#arg-autoregresive"></a></dt>
+<dd><p>An <code><a href="arma.html">AR()</a></code> object with the autoregresive components for the epidemic
+and delay processes.</p></dd>
+
+
+<dt id="arg-moving-average">moving_average<a class="anchor" aria-label="anchor" href="#arg-moving-average"></a></dt>
+<dd><p>A <code><a href="arma.html">MA()</a></code> object with the moving average component for the epidemic
+and delay processes.</p></dd>
 
 
 <dt id="arg-prior-only">prior_only<a class="anchor" aria-label="anchor" href="#arg-prior-only"></a></dt>
