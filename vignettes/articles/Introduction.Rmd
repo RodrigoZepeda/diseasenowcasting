@@ -15,7 +15,7 @@ The `diseasenowcasting` package provides a disease-agnostic framework for nowcas
 
 In many applications, it is of interest to predict the **current** number of cases as there might be a lag in the registry. Examples of lags can be administrative such as tests taking time to yield results, sociological such as patients taking time to report at their healthcare facility after symptom onset or biological: symptoms not happening at the same time as colonization. In such cases you might end up with registries looking like the one in Figure 1: where the number of cases observed by today is an incomplete fraction of the overall number of cases that will eventually be registered.
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Current number of cases for a certain disease (left) vs the eventual number of registered cases for that disease (right)", out.width = '75%'}
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Current number of cases for a certain disease (left) vs the eventual number of registered cases for that disease (right)", out.width = '100%'}
 set.seed(24759)
 library(dplyr)
 library(ggplot2)
@@ -92,10 +92,10 @@ ggplot(cases) +
 
 This vignette will give you an overview of the basics of the `diseasenowcasting` package. The typical workflow involves the following steps: 
 
-1. Getting the data.
-2. Fitting a model.
-3. Evaluating the model.
-4. Updating with new data.
+1. [Getting the data](#getting-the-data).
+2. [Fitting a model](#fitting-a-model).
+3. [Evaluating the model](#evaluating-the-model).
+4. [Updating with new data](#updating-with-new-data).
 
 In this tutorial we will focus only on the steps in a reproducible manner and we will refer to specific vignettes for advanced usage on each of the steps. 
 
@@ -146,7 +146,7 @@ Both line-list and individual-level data can be used in the package. Also, the p
 
 ## 2. Fitting the nowcast
 
-You can use the [nowcast()] function to generate nowcasts for your data. In the following example we use only a fraction of `denguedat`: until October 1990 to speed things up (you can use the whole denguedat if you want):
+You can use the `nowcast()` function to generate nowcasts for your data. In the following example we use only a fraction of `denguedat`: until October 1990 to speed things up (you can use the whole denguedat if you want):
 
 ```{r}
 #Reduce the dataset
@@ -179,7 +179,9 @@ And get the predictions with the summary function
 summary(ncast)
 ```
 
-You can see how to add holiday effects, change the priors, and add further options to the model, in the Customizing your nowcast article. For now we will show you how to evaluate a nowcast once it has been prepared:
+You can see how to add holiday effects, change the priors, and add further options to the model, in the [Advanced nowcast options](https://rodrigozepeda.github.io/diseasenowcasting/articles/Advanced-nowcast-options.html). 
+
+For now we will show you how to evaluate a nowcast once it has been prepared:
 
 
 ## 3. Evaluating the model
@@ -191,7 +193,7 @@ Once a nowcast has been constructed you can use the [backtest()] function to eva
 btest <- backtest(ncast, start_date = as.Date("1990/05/01"), end_date = as.Date("1990/07/31"), refresh = 0)
 ```
 
-The [backtest_metrics()] function calculates the mean absolute error (`mae`), root mean squared error (`rmse`) and weighted interval scoring (`wis`):
+The `backtest_metrics()` function calculates the mean absolute error (`mae`), root mean squared error (`rmse`) and weighted interval scoring (`wis`):
 
 ```{r}
 #This will take a while as it refits the model several times
@@ -200,7 +202,7 @@ backtest_metrics(btest)
 
 ## 4. Updating with new data
 
-The [update()] function takes an existing nowcast and updates it with `new_data` to generate predictions for a more recent now. For example, consider now the `denguedat` information with one additional new week:
+The `update()` function takes an existing nowcast and updates it with `new_data` to generate predictions for a more recent now. For example, consider now the `denguedat` information with one additional new week:
 
 ```{r}
 #This new dataset contains a new additional week

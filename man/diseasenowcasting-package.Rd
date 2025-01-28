@@ -28,7 +28,7 @@ Authors:
 
 Other contributors:
 \itemize{
-  \item Tal Robin [contributor]
+  \item Tal Robin (\href{https://orcid.org/0000-0002-3128-2499}{ORCID}) [contributor]
   \item Teresa Yamana (\href{https://orcid.org/0000-0001-8349-3151}{ORCID}) [contributor]
   \item Columbia University in the City of New York [copyright holder, funder]
 }

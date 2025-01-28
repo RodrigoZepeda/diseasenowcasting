@@ -57,8 +57,10 @@ check_now <- function(.disease_data, now, true_date) {
   }
 
   # Check that now falls between dates
+  min_date <- .disease_data |> dplyr::summarise(!!as.symbol("min") := min(!!as.symbol(true_date))) |> dplyr::pull()
+  max_date <- .disease_data |> dplyr::summarise(!!as.symbol("max") := max(!!as.symbol(true_date))) |> dplyr::pull()
   if (!is.null(now)) {
-    if (now <= min(.disease_data[, true_date]) | now > max(.disease_data[, true_date])) {
+    if (now <= min_date | now > max_date) {
       cli::cli_abort(
         "{.code now = {.val {now}}} is outside the scope of the data's {.code true_date}."
       )

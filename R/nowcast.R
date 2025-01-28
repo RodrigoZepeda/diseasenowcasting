@@ -83,15 +83,16 @@ nowcast <- function(.disease_data,
                     max_delay = Inf,
                     prior_only = FALSE,
                     proportion_reported = 1,
-                    normalize_data = (dist %in% c("Normal","Student")),
+                    normalize_data = (dist[1] %in% c("Normal","Student")),
                     refresh = 250*rlang::is_interactive(),
                     control = control_default(),
                     method  = c("variational","sampling","optimization"),
                     priors  = set_priors(),
                     ...) {
 
-  # Save the original data frame
-  original_data <- .disease_data
+  # Ungroup the original data frame just in case
+  .disease_data <- .disease_data |> dplyr::ungroup()
+  original_data <- .disease_data #Save it to pass for update
 
   # Check that the columns of onset and report are columns of data and are dates
   .disease_data <- check_date_columns(.disease_data, true_date = true_date, report_date = report_date)
