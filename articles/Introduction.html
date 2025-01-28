@@ -26,7 +26,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +39,8 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/Introduction.html">Introduction to diseasenowcasting</a></li>
+<li><a class="dropdown-item" href="../articles/Advanced-nowcast-options.html">Advanced nowcast options</a></li>
+    <li><a class="dropdown-item" href="../articles/Introduction.html">Introduction to diseasenowcasting</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -83,7 +84,7 @@ you might end up with registries looking like the one in Figure 1: where
 the number of cases observed by today is an incomplete fraction of the
 overall number of cases that will eventually be registered.</p>
 <div class="figure">
-<img src="Introduction_files/figure-html/unnamed-chunk-2-1.png" alt="Current number of cases for a certain disease (left) vs the eventual number of registered cases for that disease (right)" width="75%"><p class="caption">
+<img src="Introduction_files/figure-html/unnamed-chunk-2-1.png" alt="Current number of cases for a certain disease (left) vs the eventual number of registered cases for that disease (right)" width="100%"><p class="caption">
 Current number of cases for a certain disease (left) vs the eventual
 number of registered cases for that disease (right)
 </p>
@@ -108,10 +109,14 @@ that we had only observed a fraction of them
 <code>diseasenowcasting</code> package. The typical workflow involves
 the following steps:</p>
 <ol style="list-style-type: decimal">
-<li>Getting the data.</li>
-<li>Fitting a model.</li>
-<li>Evaluating the model.</li>
-<li>Updating with new data.</li>
+<li>
+<a href="#getting-the-data">Getting the data</a>.</li>
+<li>
+<a href="#fitting-a-model">Fitting a model</a>.</li>
+<li>
+<a href="#evaluating-the-model">Evaluating the model</a>.</li>
+<li>
+<a href="#updating-with-new-data">Updating with new data</a>.</li>
 </ol>
 <p>In this tutorial we will focus only on the steps in a reproducible
 manner and we will refer to specific vignettes for advanced usage on
@@ -202,8 +207,8 @@ frames are usable in <code>diseasenowcasting</code>.</p>
 <div class="section level2">
 <h2 id="fitting-the-nowcast">2. Fitting the nowcast<a class="anchor" aria-label="anchor" href="#fitting-the-nowcast"></a>
 </h2>
-<p>You can use the [nowcast()] function to generate nowcasts for your
-data. In the following example we use only a fraction of
+<p>You can use the <code><a href="../reference/nowcast.html">nowcast()</a></code> function to generate nowcasts
+for your data. In the following example we use only a fraction of
 <code>denguedat</code>: until October 1990 to speed things up (you can
 use the whole denguedat if you want):</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
@@ -262,8 +267,9 @@ fitted model:</p>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> 1990-03-05    16     0     16    16    16 No strata     </span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 30 more rows</span></span></span></code></pre></div>
 <p>You can see how to add holiday effects, change the priors, and add
-further options to the model, in the Customizing your nowcast article.
-For now we will show you how to evaluate a nowcast once it has been
+further options to the model, in the <a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Advanced-nowcast-options.html">Advanced
+nowcast options</a>.</p>
+<p>For now we will show you how to evaluate a nowcast once it has been
 prepared:</p>
 </div>
 <div class="section level2">
@@ -276,9 +282,10 @@ what the model predicted for May, June and July:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#This will take a while as it refits the model several times</span></span>
 <span><span class="va">btest</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/backtest.html">backtest</a></span><span class="op">(</span><span class="va">ncast</span>, start_date <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990/05/01"</span><span class="op">)</span>, end_date <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990/07/31"</span><span class="op">)</span>, refresh <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span></code></pre></div>
-<p>The [backtest_metrics()] function calculates the mean absolute error
-(<code>mae</code>), root mean squared error (<code>rmse</code>) and
-weighted interval scoring (<code>wis</code>):</p>
+<p>The <code><a href="../reference/backtest_metrics.html">backtest_metrics()</a></code> function calculates the mean
+absolute error (<code>mae</code>), root mean squared error
+(<code>rmse</code>) and weighted interval scoring
+(<code>wis</code>):</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#This will take a while as it refits the model several times</span></span>
 <span><span class="fu"><a href="../reference/backtest_metrics.html">backtest_metrics</a></span><span class="op">(</span><span class="va">btest</span><span class="op">)</span></span>
@@ -304,10 +311,10 @@ weighted interval scoring (<code>wis</code>):</p>
 <div class="section level2">
 <h2 id="updating-with-new-data">4. Updating with new data<a class="anchor" aria-label="anchor" href="#updating-with-new-data"></a>
 </h2>
-<p>The [update()] function takes an existing nowcast and updates it with
-<code>new_data</code> to generate predictions for a more recent now. For
-example, consider now the <code>denguedat</code> information with one
-additional new week:</p>
+<p>The <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> function takes an existing nowcast and
+updates it with <code>new_data</code> to generate predictions for a more
+recent now. For example, consider now the <code>denguedat</code>
+information with one additional new week:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#This new dataset contains a new additional week</span></span>
 <span><span class="va">denguedat_fraction_updated</span> <span class="op">&lt;-</span> <span class="va">denguedat</span> <span class="op">|&gt;</span> </span>
