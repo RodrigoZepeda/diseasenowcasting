@@ -17,6 +17,9 @@ nowcast.rstan(
   link_x,
   link_y,
   normalize_data,
+  has_cycle,
+  autoregresive,
+  moving_average,
   prior_only,
   control,
   refresh,
@@ -50,6 +53,14 @@ such that each row has a column for onset date, report date, and (optionally) st
 \item{normalize_data}{Whether the data \code{y} should be normalized (substracted its mean and divided
 by standard deviation) for fitting. This option is only valid if using a continuous model
 (Normal or Student).}
+
+\item{has_cycle}{Boolean. Whether include a cycle component in the model.}
+
+\item{autoregresive}{An \code{\link[=AR]{AR()}} object with the autoregresive components for the epidemic
+and delay processes.}
+
+\item{moving_average}{A \code{\link[=MA]{MA()}} object with the moving average component for the epidemic
+and delay processes.}
 
 \item{prior_only}{Boolean variable indicating whether to compute only the prior distribution}
 

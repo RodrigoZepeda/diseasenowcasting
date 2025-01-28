@@ -13,18 +13,19 @@ knitr::opts_chunk$set(
 set.seed(734586)
 library(diseasenowcasting)
 library(dplyr)
+library(ggplot2)
 ```
 
 This vignette will give you an overview of the advanced options in the `nowcast()` function of the `diseasenowcasting` package including the following:
 
-1. Using strata.
-2. Adding time covariates.
-3. Adding holidays.
-3. Adding cycles.
-4. Changing the autorregresive components. 
-5. Changing the distribution.
-6. Obtain a sample from the prior. 
-7. Changing the priors. 
+1. [Using strata](#using-strata).
+2. [Adding time covariates](#adding-time-covariates).
+  2.1. [Adding holidays](#adding-holidays).
+3. [Adding cycles](#adding-cycles).
+4. [Changing the autorregresive components](#changing-the-autorregresive-components). 
+5. [Changing the distribution](#changing-the-distribution).
+6. [Getting a sample from the prior](#getting-a-sample-from-the-prior). 
+7. [Changing the priors](#changing-the-priors). 
 
 For this tutorial we will use the `mpoxdat` dataset contained in the package. 
 
@@ -70,9 +71,194 @@ btest <- backtest(ncast_race, dates_to_test = as.Date("2022/08/04"), refresh = 0
 and calculating metrics by the strata:
 
 ```{r}
-calc_wis(btest)
+backtest_metrics(btest)
 ```
 
-## Adding time covariates
+All of the remaining examples will be estimated without covariates and without backtesting just to improve the speed of the tutorial. 
 
-The
+## Adding temporal effects
+
+Time covariates (called **temporal effects**) can be added to the epidemic process or to the delay process. Simple time covariates include `day_of_week` (codifying all days from Monday to Sunday), `weekend` (codifying only Saturday and Sunday), `day_of_month` (codifying the day from 1 to 30 or 31 depending on the month), `month_of_year` (codifying January to December), `week_of_year` (codifying the epidemiological week of the year according to the CDC) and `holidays` which are explained in a later section. 
+
+Temporal effects can be added with the `temporal_effects()` function where the covariates can be set either to be `TRUE` or `FALSE`:
+
+```{r}
+temporal_effects(day_of_week = TRUE, week_of_year = TRUE)
+```
+
+By default, the model tries to infer the best temporal effects for the given data and will throw a warning when they don't make sense (for example adding day of the week effects to weekly data). 
+
+```{r, eval = FALSE}
+#Add temporal effects for epidemic process
+epidemic_effects <- temporal_effects(day_of_week = TRUE, week_of_year = TRUE)
+
+#Add temporal effects for delay process to have an effect on delay if weekend
+delay_effects   <- temporal_effects(weekend = TRUE)
+
+ncast_temp <- nowcast(mpox_reduced, true_date = "dx_date", report_date = "dx_report_date", 
+                      temporal_effects_epidemic = epidemic_effects,
+                      temporal_effects_delay = delay_effects,
+                      refresh = FALSE,
+                      seed = 87245)
+```
+
+The difference between epidemic and delay effects is as follows:
+
++ **epidemic_effects** Refer to the time-covariates that affect the **epidemic process**. For example, the epidemic process might be affected by the epidemiological week due to yearly seasonality of the disease such as in the case of influenza or dengue. 
+
++ **delay_effects** Refer to the time-covariates that affect the **reporting process**. For example, the reporting process might be affected by laboratories not working at full capacity during the weekend or during holidays thus making the report slower for thus dates.
+
+### Adding holidays 
+
+**Holidays** can be added using an `almanac::rcalendar()` from the [`alamanc` package](https://davisvaughan.github.io/almanac/). Once a calendar has been created it can be integrated into the `holidays` temporal effect. 
+
+For example here we use the US Federal Calendar (`almanac::cal_us_federal()`) already included in the almanac package:
+
+```{r}
+library(almanac)
+
+#Add temporal effects for epidemic process
+temporal_effects(day_of_week = TRUE, week_of_year = TRUE, holidays = cal_us_federal())
+```
+
+Thus we can run our new model accounting for holiday effects both in the reporting (due to labs not working at full capacity) and the epidemic (due to individuals behaving differently during holidays and thus changing the epidemic process):
+
+```{r}
+#Add temporal effects for epidemic process
+epidemic_effects <- temporal_effects(day_of_week = TRUE, week_of_year = TRUE, 
+                                     holidays = cal_us_federal())
+
+#Add temporal effects for delay process to have an effect on delay if weekend
+delay_effects   <- temporal_effects(weekend = TRUE, holidays = cal_us_federal())
+
+ncast_temp <- nowcast(mpox_reduced, true_date = "dx_date", report_date = "dx_report_date", 
+                      temporal_effects_epidemic = epidemic_effects,
+                      temporal_effects_delay = delay_effects,
+                      refresh = FALSE,
+                      seed = 87245)
+```
+
+And this is what the model looks like:
+
+```{r}
+plot(ncast_temp, datesbrakes = "1 week") +
+  ggtitle("Model with temporal effects")
+```
+Interested users can consult the almanac package's [documentation](https://davisvaughan.github.io/almanac/articles/holidays-calendars.html#calendars) on how to create a calendar. 
+
+## Adding cycles
+
+**Cycles** correspond to increases/decreases in the epidemic process that cannot be accounted for by seasonality. While **seasonality** increases/decreases during usually specific periods in time (say increase in dengue cases during rainy season), cycles correspond to stochastic increases/decreases that have no season (say if dengue cases one year rose during rainy season but the following year during dry season). 
+
+Cycles can be added into the model by setting the `has_cycle` option to `TRUE`. 
+
+```{r}
+ncast_cycle <- nowcast(mpox_reduced, true_date = "dx_date", report_date = "dx_report_date", 
+                       temporal_effects_epidemic = epidemic_effects,
+                       temporal_effects_delay = delay_effects,
+                       has_cycle = TRUE,
+                       refresh = FALSE,
+                       seed = 87245)
+```
+
+```{r}
+plot(ncast_cycle, datesbrakes = "1 week") +
+  ggtitle("Model with temporal effects and cycle")
+```
+
+## Changing the autorregresive components 
+
+The nowcast includes autorregresive and moving average components for the delay and the epidemic process. 
+
+The autorregresive components can be setup with the `AR()` function. These are interpreted on how much the epidemic process of the current observation depends on the cases of the previous observations. So for example,  `AR(epidemic_trend = 2)` can be interpreted as the epidemic trend depending upon the previous two observations (the idea being that a lower or higher previous cases imply different things for the current prediction). 
+
+Here:
+
++ **epidemic_trend** Refers to the trend in the epidemic (disease) process independently of the report date.
+
++ **delay_trend** Refers to the dependency in the delay of reporting. The idea being that if more cases were delayed in the previous observation, more cases will be delayed in the current observation.  
+
+
+```{r}
+ncast_arma <- nowcast(mpox_reduced, true_date = "dx_date", report_date = "dx_report_date", 
+                      temporal_effects_epidemic = epidemic_effects,
+                      temporal_effects_delay    = delay_effects,
+                      has_cycle = TRUE,
+                      autoregresive  = AR(epidemic_trend = 2, delay_trend = 2),
+                      moving_average = MA(2),
+                      refresh = FALSE,
+                      seed = 87245)
+```
+
+And the plot:
+
+```{r}
+plot(ncast_arma, datesbrakes = "1 week") +
+  ggtitle("Model with temporal effects, cycle, and custom ARMA")
+```
+
+## Changing the distribution 
+
+By default the `nowcast()` uses a **Negative Binomial** distribution. However it can be changed with the `dist` parameter to be either a `Poisson`, `Normal` or `Student`. Each of these generate a slightly different model with the greatest effect seen on the variance. 
+
+```{r}
+ncast_student <- nowcast(mpox_reduced, true_date = "dx_date", report_date = "dx_report_date", 
+                         temporal_effects_epidemic = epidemic_effects,
+                         temporal_effects_delay    = delay_effects,
+                         has_cycle = TRUE,
+                         dist = "Student", #<- Changed the distribution
+                         refresh = FALSE,
+                         seed = 87245)
+```
+
+This is what the predictions look like
+
+```{r}
+plot(ncast_student, datesbrakes = "1 week") +
+  ggtitle("Student model with temporal effects, cycle, and custom ARMA")
+```
+
+## Changing the link functions
+
+## Getting a sample from the priors
+
+In a bayesian scenario, the priors establish the previously expected behaviour of the epidemic process before acquiring information. In cases where not enough information is present (for example at the start of an outbreak) the prior will dictate the expected behaviour of the model. 
+
+To visualize the prior epidemic process you can set up the `prior_only` option of the nowcast to `TRUE`:
+
+```{r}
+ncast_prior <- nowcast(mpox_reduced, true_date = "dx_date", report_date = "dx_report_date", 
+                         temporal_effects_epidemic = epidemic_effects,
+                         temporal_effects_delay    = delay_effects,
+                         has_cycle = TRUE,
+                         refresh = FALSE,
+                         prior_only = TRUE,
+                         seed = 87245)
+```
+
+```{r}
+plot(ncast_prior, datesbrakes = "1 week") +
+  ggtitle("Default prior for model with temporal effects, cycle, and custom ARMA")
+```
+
+## Changing the priors
+
+Hyperparameters for the distribution's priors can be changed with the `set_priors()` function. This function included a list of all of the hyperparameters used in the model as well as their values. One can change, for example, the hyperprior for the variance of the delay part of the process by changing `sd_nu_param_1` and `sd_nu_param_2`. 
+
+In the following example, we add more variance to the delay:
+
+```{r}
+ncast_prior_2 <- nowcast(mpox_reduced, true_date = "dx_date", report_date = "dx_report_date", 
+                         temporal_effects_epidemic = epidemic_effects,
+                         temporal_effects_delay    = delay_effects,
+                         has_cycle = TRUE,
+                         refresh = FALSE,
+                         prior_only = TRUE,
+                         priors = set_priors(sd_nu_param_1 = 0.0, sd_nu_param_2 = 100),
+                         seed = 87245)
+```
+
+```{r}
+plot(ncast_prior_2, datesbrakes = "1 week") +
+  ggtitle("Custom prior for model with temporal effects, cycle, and custom ARMA")
+```

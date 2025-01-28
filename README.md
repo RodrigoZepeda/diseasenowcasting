@@ -81,4 +81,8 @@ You can read the following articles for a more in-depth introduction to
 the package:
 
 - [An introduction to the
-  package](https://rodrigozepeda.github.io/diseasenowcasting/articles/Introduction.html)
+  package:](https://rodrigozepeda.github.io/diseasenowcasting/articles/Introduction.html)
+  provides an overview of the main functions.
+- [Advanced nowcast
+  options:](https://rodrigozepeda.github.io/diseasenowcasting/articles/Advanced-nowcast-options.html)
+  provides an in-depth look at the `nowcast()` function and its options.
