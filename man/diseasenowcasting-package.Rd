@@ -22,14 +22,14 @@ Useful links:
 
 Authors:
 \itemize{
-  \item Rami Yaari
-  \item Matteo Perini
+  \item Rami Yaari (\href{https://orcid.org/0000-0002-8808-8937}{ORCID})
+  \item Matteo Perini (\href{https://orcid.org/0000-0002-9465-6216}{ORCID})
 }
 
 Other contributors:
 \itemize{
   \item Tal Robin [contributor]
-  \item Teresa Yamana [contributor]
+  \item Teresa Yamana (\href{https://orcid.org/0000-0001-8349-3151}{ORCID}) [contributor]
   \item Columbia University in the City of New York [copyright holder, funder]
 }
 

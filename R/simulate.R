@@ -21,14 +21,14 @@
 #' @examples
 #' # Simulate a disease for 20 time steps with delay of maximum 10 and 3 strata
 #' set.seed(48672)
-#' sims <- simulate_disease(num_steps = 20, num_delays = 10, num_strata = 3)
+#' sims <- simulate_disease(num_steps = 20, num_delays = 3, num_strata = 3)
 simulate_disease <- function(num_steps    = 10,
                              num_delays   = 8,
                              num_strata   = 2,
                              initial_day  = NULL,
                              warmup_steps = 50,
                              units        = c("daily", "weekly"),
-                             priors       = random_priors(mu_p = 4, nu_p = 2, mu_q = 3, has_cycle = TRUE),
+                             priors       = random_priors(mu_p = 1, nu_p = 1, mu_q = 1, has_cycle = FALSE),
                              ...){
 
 
