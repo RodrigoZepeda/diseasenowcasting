@@ -5,9 +5,6 @@
 \title{Get nowcast priors not controlling by distribution}
 \usage{
 set_priors(
-  mu_p = 1,
-  mu_q = 1,
-  nu_p = 1,
   mu_intercept_param_1 = 0,
   mu_intercept_param_2 = 1,
   mu_0_param_1 = 0,
@@ -16,7 +13,6 @@ set_priors(
   nu_intercept_param_2 = 1,
   nu_0_param_1 = 0,
   nu_0_param_2 = 1,
-  has_cycle = FALSE,
   c_0_param_1 = 0,
   c_0_param_2 = 1,
   ctilde_0_param_1 = 0,
@@ -49,12 +45,6 @@ set_priors(
 )
 }
 \arguments{
-\item{mu_p}{Integer. Degree of the epidemic trend.}
-
-\item{mu_q}{Integer. Degree of the errors in the epidemic trend.}
-
-\item{nu_p}{Integer. Degree of the delay trend}
-
 \item{mu_intercept_param_1}{Real. Mean of the epidemic intercept.}
 
 \item{mu_intercept_param_2}{Positive real. Variance of the epidemic intercept.}
@@ -70,8 +60,6 @@ set_priors(
 \item{nu_0_param_1}{Real. Mean of the initial value of the disease trend.}
 
 \item{nu_0_param_2}{Positive Real. Variance of the initial value of the disease trend.}
-
-\item{has_cycle}{Boolean. Whether include a cycle component in the model.}
 
 \item{c_0_param_1}{Initial value for cycle parameter's mean}
 
@@ -143,6 +131,6 @@ as a list.
 set_priors()
 
 #Change the priors
-set_priors(mu_intercept_param_1 = 2, mu_q = 3)
+set_priors(mu_intercept_param_1 = 2)
 
 }

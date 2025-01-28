@@ -3,14 +3,6 @@
 #' Function to return the default values for the [nowcast()] function
 #' as a list.
 #'
-#' @param mu_p Integer. Degree of the epidemic trend.
-#'
-#' @param mu_q Integer. Degree of the errors in the epidemic trend.
-#'
-#' @param nu_p Integer. Degree of the delay trend
-#'
-#' @param has_cycle Boolean. Whether include a cycle component in the model.
-#'
 #' @param mu_0_param_1 Real. Mean of the initial value of the epidemic trend.
 #'
 #' @param mu_0_param_2 Positive Real. Variance of the initial value of the epidemic trend.
@@ -92,13 +84,10 @@
 #' set_priors()
 #'
 #' #Change the priors
-#' set_priors(mu_intercept_param_1 = 2, mu_q = 3)
+#' set_priors(mu_intercept_param_1 = 2)
 #'
 #' @export
 set_priors <- function(
-    mu_p = 1,
-    mu_q = 1,
-    nu_p = 1,
     mu_intercept_param_1 = 0,
     mu_intercept_param_2 = 1,
     mu_0_param_1 = 0,
@@ -107,7 +96,6 @@ set_priors <- function(
     nu_intercept_param_2 = 1,
     nu_0_param_1 = 0,
     nu_0_param_2 = 1,
-    has_cycle = FALSE,
     c_0_param_1   = 0,
     c_0_param_2   = 1,
     ctilde_0_param_1 = 0,
@@ -162,7 +150,7 @@ set_priors <- function(
 #' @export
 random_priors <- function(...) {
 
-  constant_priors <- c("mu_p", "mu_q", "nu_p", "dof", "control_k_transform", "control_c_transform","has_cycle")
+  constant_priors <- c("dof", "control_k_transform", "control_c_transform")
 
   priors_means    <- set_priors()
 
@@ -280,4 +268,35 @@ get_priors_from_init <- function(priors, num_strata, num_delays, num_steps){
     )
   }
   return(initfun)
+}
+
+#' Control the autorregresive and moving average components
+#'
+#' Controls either the autoregresive [AR()] or the moving-average [MA()] components
+#' of the epidemic and delay process
+#'
+#' @param epidemic_trend Integer. Degree of the epidemic trend. Refers to the p parameter in an ARMA(p,q)
+#' for the epidemic process.
+#'
+#' @param epidemic_errors Integer. Degree of the errors in the epidemic trend. Refers to the q parameter
+#' in an ARMA(p,q) for the epidemic process.
+#'
+#' @param delay_trend Integer. Degree of the delay trend. Refers to the q parameter
+#' in an ARMA(p,q) for the delay process.
+#'
+#' @name arma
+#'
+#' @examples
+#' AR(2,2)
+#' MA(1)
+#'
+#' @export
+AR <- function(epidemic_trend = 1, delay_trend = 1){
+  list(mu_p = epidemic_trend, nu_p = delay_trend)
+}
+
+#' @rdname arma
+#' @export
+MA <- function(epidemic_errors = 1){
+list(mu_q = epidemic_errors)
 }

@@ -42,11 +42,11 @@ summary.nowcaster <- function(object, quantiles = c(0.05, 0.95), ...) {
   # Get names from input data
   true_date_name <- object[["data"]][["call_parameters"]][["true_date"]]
 
-  date_dic <- object$data$preprocessed_data |>
+  date_dic <- object[["data"]][["preprocessed_data"]] |>
     dplyr::select(!!as.symbol(".tval"), dplyr::all_of(true_date_name)) |>
     dplyr::distinct()
 
-  predictions_summary <- object$generated_quantities |>
+  predictions_summary <- object[["generated_quantities"]] |>
     posterior::as_draws() |>
     posterior::subset_draws("N_predict") |>
     posterior::summarise_draws("mean","sd","median", ~quantile(.x, probs = quantiles)) |>
@@ -56,7 +56,7 @@ summary.nowcaster <- function(object, quantiles = c(0.05, 0.95), ...) {
       .tval = as.numeric(stringr::str_remove_all(!!as.symbol("variable"), ".*\\[|,.*\\]"))
     ) |>
     # assign the input strata names
-    dplyr::left_join(object$data$strata_dict, by = ".strata") |>
+    dplyr::left_join(object[["data"]][["strata_dict"]], by = ".strata") |>
     # assign the onset dates
     dplyr::left_join(date_dic, by = ".tval") |>
     # Select and reorder the columns

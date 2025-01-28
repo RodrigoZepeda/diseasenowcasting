@@ -11,6 +11,9 @@ nowcast(
   strata = NULL,
   temporal_effects_delay = "auto",
   temporal_effects_epidemic = "auto",
+  has_cycle = FALSE,
+  autoregresive = AR(),
+  moving_average = MA(),
   dist = c("NegativeBinomial", "Poisson", "Normal", "Student"),
   link_x = default_x_link(dist),
   link_y = default_y_link(dist),
@@ -44,6 +47,14 @@ which effects have an influence on the delay.}
 
 \item{temporal_effects_epidemic}{Either \code{"auto"} or a \code{\link[=temporal_effects]{temporal_effects()}} object specifying
 which effects have an influence on the epidemic process (delay independent).}
+
+\item{has_cycle}{Boolean. Whether include a cycle component in the model.}
+
+\item{autoregresive}{An \code{\link[=AR]{AR()}} object with the autoregresive components for the epidemic
+and delay processes.}
+
+\item{moving_average}{A \code{\link[=MA]{MA()}} object with the moving average component for the epidemic
+and delay processes.}
 
 \item{dist}{Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"}
 

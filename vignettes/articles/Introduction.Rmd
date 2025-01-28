@@ -34,10 +34,9 @@ plt1 <- ggplot(cases) +
   labs(
     x = "Epidemiological week",
     y = "Cases",
-    title = "Current number of observed cases"
+    title = "Current observed cases"
   ) +
   theme_classic() +
-  theme(plot.title = element_markdown()) +
   scale_x_continuous(breaks = 1:11)
 
 plt2 <- ggplot(cases) +
@@ -47,10 +46,9 @@ plt2 <- ggplot(cases) +
   labs(
     x = "Epidemiological week",
     y = "Cases",
-    title = "Final number of cases per week"
+    title = "Final number of cases"
   ) +
   theme_classic() +
-  theme(plot.title = element_markdown()) +
   scale_x_continuous(breaks = 1:11)
   
 plot_grid(plt1, plt2)

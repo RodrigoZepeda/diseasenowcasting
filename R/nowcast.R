@@ -14,6 +14,12 @@
 #' @param now An object of datatype \code{Date} indicating the date at which
 #' to perlform the nowcast.
 #'
+#' @param autoregresive An [AR()] object with the autoregresive components for the epidemic
+#' and delay processes.
+#'
+#' @param moving_average A [MA()] object with the moving average component for the epidemic
+#' and delay processes.
+#'
 #' @param units Time scale of reporting. Options: "1 day", "1 week".
 #'
 #' @param dist Distribution. Either "NegativeBinomial", "Poisson", "Normal", or "Student"
@@ -35,6 +41,8 @@
 #' For asymptomatic diseases where not all cases will ever be reported,
 #' or for outbreaks in which severe under-reporting is expected, change this
 #'  to less than 1.
+#'
+#' @param has_cycle Boolean. Whether include a cycle component in the model.
 #'
 #' @param prior_only Boolean variable indicating whether to compute only the prior distribution
 #'
@@ -75,6 +83,9 @@ nowcast <- function(.disease_data,
                     strata = NULL,
                     temporal_effects_delay = "auto",
                     temporal_effects_epidemic = "auto",
+                    has_cycle = FALSE,
+                    autoregresive  = AR(),
+                    moving_average = MA(),
                     dist   = c("NegativeBinomial", "Poisson","Normal","Student"),
                     link_x = default_x_link(dist),
                     link_y = default_y_link(dist),
@@ -172,12 +183,15 @@ nowcast <- function(.disease_data,
                 dist           = dist,
                 link_x         = link_x,
                 link_y         = link_y,
+                has_cycle      = has_cycle,
                 normalize_data = normalize_data,
                 prior_only     = prior_only,
                 refresh        = refresh,
                 control        = control,
                 method         = method,
                 priors         = priors,
+                autoregresive  = autoregresive,
+                moving_average = moving_average,
                 ...)
 
   #Get the call values.
@@ -193,6 +207,7 @@ nowcast <- function(.disease_data,
     link_y      = link_y,
     now         = now,
     units       = units,
+    has_cycle   = has_cycle,
     max_delay   = max_delay,
     prior_only  = prior_only,
     proportion_reported = proportion_reported,
@@ -203,6 +218,8 @@ nowcast <- function(.disease_data,
     num_delays  = num_delays,
     num_steps   = num_steps,
     num_strata  = num_strata,
+    autoregresive  = autoregresive,
+    moving_average = moving_average,
     additional_args = ...
   )
 
@@ -233,7 +250,8 @@ nowcast <- function(.disease_data,
 #' @keywords internal
 nowcast.rstan <- function(.disease_data, .date_epidemic, .date_delay,
                           true_date, report_date, num_steps, num_delays, num_strata,
-                          dist, link_x, link_y, normalize_data,
+                          dist, link_x, link_y, normalize_data, has_cycle,
+                          autoregresive, moving_average,
                           prior_only, control, refresh, method, priors, ...) {
 
   #Keep only the columns n, .tval, .delay, .strata
@@ -248,6 +266,8 @@ nowcast.rstan <- function(.disease_data, .date_epidemic, .date_delay,
   N_cases <- as.matrix(.disease_data)
 
   stan_data <- priors |>
+    append(autoregresive) |>
+    append(moving_average) |>
     append(
       list(
 
@@ -290,12 +310,17 @@ nowcast.rstan <- function(.disease_data, .date_epidemic, .date_delay,
         cases_real  = N_cases[,1],
         cases_int   = as.integer(N_cases[,1]),
 
-        #Whether to compute only the prior
-        prior_only  = as.numeric(prior_only),
+        #Model structure:
+        has_cycle   = has_cycle,
+        normalize_data = normalize_data,
         dist        = distribution,
         link_x      = get_link_number(link_x),
         link_y      = get_link_number(link_y),
-        normalize_data = normalize_data
+
+        #Whether to compute only the prior
+        prior_only  = as.numeric(prior_only)
+
+
 
   ))
 
@@ -318,8 +343,7 @@ nowcast.rstan <- function(.disease_data, .date_epidemic, .date_delay,
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "variational") {
     suppressWarnings({
-      stan_fit <- rstan::vb(stanmodels$nowcasting, data = stan_data, refresh = refresh,
-                            ...)
+      stan_fit <- rstan::vb(stanmodels$nowcasting, data = stan_data, refresh = refresh, ...)
     })
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "optimization") {
@@ -334,20 +358,9 @@ nowcast.rstan <- function(.disease_data, .date_epidemic, .date_delay,
   }
 
   #Get the generated quantities
-  generated_quantities <- rstan::gqs(stanmodels$generated_quantities, data = stan_data, draws = draws)
-
-  # flag <- generated_quantities |>
-  #   posterior::as_draws() |>
-  #   posterior::subset_draws("lambda_higher_than_maxval_flag") |>
-  #   posterior::summarise_draws(max) |>
-  #   dplyr::pull(max)
-
-  # if (flag >= 1){
-  #   cli::cli_alert_warning(
-  #     "Some values of lambda have been truncated as they are too large. This might be attributed
-  #     to a high variance of your data or on the prior. Consider reducing the prior variance."
-  #   )
-  # }
+  suppressWarnings({
+    generated_quantities <- rstan::gqs(stanmodels$generated_quantities, data = stan_data, draws = draws)
+  })
 
   return(
     list(
