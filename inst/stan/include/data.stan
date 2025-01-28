@@ -118,8 +118,6 @@ real<lower=0> sd_week_epi_param_2;
 real sd_holidays_epi_param_1;
 real<lower=0> sd_holidays_epi_param_2;
 
-
-
 real<lower=0> dof; //Student-T degrees of freedom in the case of Student being the distribution dist.
 
 /*Model options---------------------------------------------------------------------------------*/

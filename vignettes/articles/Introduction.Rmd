@@ -92,7 +92,7 @@ ggplot(cases) +
 
 This vignette will give you an overview of the basics of the `diseasenowcasting` package. The typical workflow involves the following steps: 
 
-1. Preprocessing the data.
+1. Getting the data.
 2. Fitting a model.
 3. Evaluating the model.
 4. Updating with new data.
@@ -100,12 +100,14 @@ This vignette will give you an overview of the basics of the `diseasenowcasting`
 In this tutorial we will focus only on the steps in a reproducible manner and we will refer to specific vignettes for advanced usage on each of the steps. 
 
 ```{r setup, message=FALSE, warning=FALSE}
+set.seed(26758)
 library(diseasenowcasting)
+library(dplyr)
 ```
 
-## Preprocessing the data
+## Getting the data
 
-Data for the `nowcasting` function should be either individual-level data or line-list data. In any case at least two columns are required: the `true_date` and the `report_date`. 
+Data for the `nowcasting` function should be either individual-level data or line-list data. In any case at least two columns in `Date` format are required: the `true_date` and the `report_date`. 
 
 * `true_date` Refers to the date when the case happened. 
 * `report_date` Refers to the date when the case was reported.
@@ -142,14 +144,40 @@ mpoxdat |> head()
 
 Both line-list and individual-level data can be used in the package. Also, the package allows for different time granularity. The `denguedat` contains counts per week while `mpoxdat` has counts per day. Both weekly and daily time frames are usable in `diseasenowcasting`. 
 
-### Preprocess for nowcast
+### Fitting the nowcast
 
-Once you have acquired your data you'll have to preprocess it for the `nowcast` function. Preprocessing involves transforming the data into line-list data and adding three columns into your dataset:
+You can use the [nowcast()] function to generate nowcasts for your data. In the following example we use only a fraction of `denguedat`: until October 1990 to speed things up (you can use the whole denguedat if you want):
 
-* `n` The number of cases with those characteristics
+```{r}
+#Reduce the dataset
+denguedat_fraction <- denguedat |> 
+  filter(report_week <= as.Date("1990/10/01", format = "%Y/%m/%d"))
+```
 
-* `.tval` The `true_date` but transformed into integers with `min(true_date) = 1`.
+For the nowcast we specify which one is the `true_date` and which one corresponds to the `report_date`. Remember that the `true_date` should always be smaller or equal to the `report_date` as the assumption is that no cases can be reported before happening:
 
-* `.delay` The time difference between the `true_date` and the `report_date`. 
+```{r}
+#Generate the nowcast. Set verbose option t
+ncast <- nowcast(denguedat_fraction, true_date = "onset_week", report_date = "report_week")
+```
 
-The `preprocess_for_nowcast` function helps you transform your data. 
+The `ncast` object itself shows the characteristics of the fitted model:
+
+```{r}
+ncast
+```
+
+You can generate plots of the `nowcast` with the `plot` function:
+
+```{r}
+plot(ncast)
+```
+
+And get the predictions with the summary function
+
+```{r}
+summary(ncast)
+```
+
+
+

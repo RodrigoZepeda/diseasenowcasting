@@ -38,6 +38,6 @@ predictions <- nowcast(denguedat, true_date = "onset_week", report_date = "repor
                        seed = 398477)
 
 #Create a nice plot for the predictions
-plot_nowcast(predictions, datesbrakes = "1 month")
+plot(predictions, datesbrakes = "1 month")
 ```
 

@@ -46,7 +46,7 @@ temporal_effects(holidays = cal_us_federal())
 temporal_effects(day_of_week = TRUE, week_of_year = TRUE)
 
 #Set up a holiday effect on Christmass using the almanac package
-if(!requireNamespace("almanac", quietly = T)){
+if(!requireNamespace("almanac", quietly = TRUE)){
   cal <- rcalendar(hol_christmas())
   temporal_effects(holidays = cal)
 }

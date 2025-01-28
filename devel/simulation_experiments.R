@@ -6,7 +6,7 @@ t1 <- Sys.time()
 predictions <- nowcast(denguedat, "onset_week", "report_week",
                        method = "variational",
                        strata = "gender", now = now,
-                       temporal_effects_delay = temporal_effects(week_of_year = TRUE),
+                       #temporal_effects_delay = temporal_effects(week_of_year = TRUE),
                        #normalize_data = F,
                        priors = set_priors(has_cycle = F))
 t2 <- Sys.time()

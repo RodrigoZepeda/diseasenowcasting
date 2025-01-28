@@ -30,7 +30,7 @@
 #' temporal_effects(day_of_week = TRUE, week_of_year = TRUE)
 #'
 #' #Set up a holiday effect on Christmass using the almanac package
-#' if(!requireNamespace("almanac", quietly = T)){
+#' if(!requireNamespace("almanac", quietly = TRUE)){
 #'   cal <- rcalendar(hol_christmas())
 #'   temporal_effects(holidays = cal)
 #' }
@@ -74,19 +74,38 @@ temporal_effects <- function(day_of_week = FALSE, weekend = FALSE, day_of_month 
 #' print(temporal_effects(day_of_week = FALSE, week_of_year = FALSE))
 #'
 #' @export
-print.temporal_effect <- function(temporal_effect){
+print.temporal_effect <- function(x,...){
 
   #Get the length of the temporal effects:
-  effects_considered <- which(unlist(temporal_effect[names(temporal_effect) != "holidays"]))
-  is_holiday         <- !is.null(temporal_effect[["holidays"]])
-
   cli::cli_h2("Temporal effect object")
+
+  print_temporal_effect_internal(x, ...)
+
+}
+
+#' CLI for printing temporal effects
+#'
+#' Print function for printing the `temporal_effect`.
+#'
+#' @param temporal_effect A `temporal_effect` object created with [temporal_effects()]
+#'
+#' @examples
+#' print(temporal_effects(day_of_week = TRUE, week_of_year = TRUE))
+#' print(temporal_effects(day_of_week = FALSE, week_of_year = FALSE))
+#'
+#' @keywords internal
+print_temporal_effect_internal <- function(x,...){
+
+  #Get the length of the temporal effects:
+  effects_considered <- which(unlist(x[names(x) != "holidays"]))
+  is_holiday         <- !is.null(x[["holidays"]])
+
   if (length(effects_considered) + is_holiday > 0){
     cli::cli_par()
     cli::cli_text("The following effects are in place:")
     cli::cli_ul()
     for (eff in effects_considered){
-      cli::cli_li("{.emph {names(temporal_effect[eff])}} ")
+      cli::cli_li("{.emph {names(x[eff])}} ")
     }
     if (is_holiday){
       cli::cli_li("{.emph holidays}")
@@ -97,3 +116,5 @@ print.temporal_effect <- function(temporal_effect){
     cli::cli_text("No temporal effects are considered")
   }
 }
+
+

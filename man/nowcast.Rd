@@ -22,7 +22,7 @@ nowcast(
   normalize_data = (dist \%in\% c("Normal", "Student")),
   refresh = 250 * rlang::is_interactive(),
   control = control_default(),
-  method = c("sampling", "variational", "optimization"),
+  method = c("variational", "sampling", "optimization"),
   priors = set_priors(),
   ...
 )

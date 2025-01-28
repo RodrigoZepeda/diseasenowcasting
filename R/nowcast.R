@@ -86,7 +86,7 @@ nowcast <- function(.disease_data,
                     normalize_data = (dist %in% c("Normal","Student")),
                     refresh = 250*rlang::is_interactive(),
                     control = control_default(),
-                    method  = c("sampling","variational","optimization"),
+                    method  = c("variational","sampling","optimization"),
                     priors  = set_priors(),
                     ...) {
 
@@ -111,7 +111,7 @@ nowcast <- function(.disease_data,
   dist   <- match.arg(dist, c("NegativeBinomial", "Poisson","Normal","Student"))
 
   # Method
-  method <- match.arg(method, c("sampling", "variational","optimization"))
+  method <- match.arg(method, c("variational","sampling","optimization"))
 
   #Link
   link_x <- match.arg(link_x, c("log","identity","softplus","dhyperbolic"))
@@ -183,7 +183,9 @@ nowcast <- function(.disease_data,
     max_delay   = max_delay,
     num_delays  = num_delays,
     num_steps   = num_steps,
-    num_strata  = num_strata
+    num_strata  = num_strata,
+    temporal_effects_epidemic = temporal_effects_epidemic,
+    temporal_effects_delay = temporal_effects_delay
   )
 
   # Add to stan list
@@ -195,6 +197,8 @@ nowcast <- function(.disease_data,
         strata_dict       = strata_list$.strata_dict
       )
     )
+
+  class(stan_list) <- "nowcaster"
 
  return(stan_list)
 
