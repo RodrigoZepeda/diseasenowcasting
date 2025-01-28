@@ -254,9 +254,9 @@ backtest <- function(ncast,
 
     pred_summary <- dplyr::tibble(now=now, pred_summary)
 
-    pred_summary$horizon <- as.numeric(difftime(pred_summary$onset_week, now, units=units))
-
-    pred_summary <- pred_summary[pred_summary$horizon>=min_horizon,]
+    pred_summary <- pred_summary |>
+      dplyr::mutate(!!as.symbol("horizon") := as.numeric(difftime(!!as.symbol(true_date), !!now, units=!!units))) |>
+      dplyr::filter(!!as.symbol("horizon") >= !!min_horizon)
 
     pred_table   <- rbind(pred_table, pred_summary)
   }
@@ -266,9 +266,8 @@ backtest <- function(ncast,
                     dplyr::summarize(!!as.symbol("observed") := dplyr::n(), .groups = "drop")
 
   backtest_summary <- pred_table |>
-    dplyr::left_join(cases_per_date, by = true_date)
-
-  backtest_summary$model <- model_name
+    dplyr::left_join(cases_per_date, by = true_date) |>
+    dplyr::mutate(!!as.symbol("model") := !!model_name)
 
   return(backtest_summary)
 }

@@ -19,7 +19,7 @@ nowcast(
   max_delay = Inf,
   prior_only = FALSE,
   proportion_reported = 1,
-  normalize_data = (dist \%in\% c("Normal", "Student")),
+  normalize_data = (dist[1] \%in\% c("Normal", "Student")),
   refresh = 250 * rlang::is_interactive(),
   control = control_default(),
   method = c("variational", "sampling", "optimization"),
