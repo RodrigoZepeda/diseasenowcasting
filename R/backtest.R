@@ -1,12 +1,12 @@
-#' generate_nowcast_dates
+#' Generate nowcast dates
 #'
 #' Generates dates for the backtesting procedure given the start_date, end_date and stride
+#'
+#' @param ncast A nowcaster object generated with [nowcast()]
 #'
 #' @param start_date start_date
 #'
 #' @param end_date end_date
-#'
-#' @param units units
 #'
 #' @param stride the number of time steps between two consecutive nowcasts
 #'
@@ -91,7 +91,7 @@ infer_start_date <- function(ncast){
   }
 
   #Check the initial day is in nowcast
-  if (start_date <= ncast_min_date | now > ncast_max_date) {
+  if (start_date <= ncast_min_date | start_date > ncast_max_date) {
     cli::cli_abort(
       "Unable to automatically infer the initial date for backtesting. Please set up the `start_date` manually."
     )
@@ -160,15 +160,18 @@ infer_end_date <- function(ncast, start_date){
 #' @param dates_to_test Specific values of moments `now` to test the nowcast. If `dates_to_test`
 #' is given this overrides `start_date`, `end_date` and `stride`.
 #'
+#' @param subsample Either NULL or an integer specifying how large of a subsample from the
+#' `dates_to_test` to use for the `backtest`. If `NULL` (default) then it uses all of the dates.
+#'
 #' @param retrain Integer variable indicating the number of iterations for which
 #' to retrain the model. Default 1 means retraining the model for each nowcast.
 #' NOT IMPLEMENTED YET - currently will be retrained at each time step.
 #'
-#' @param quantiles list of quantiles in [0,1] defining which quantile estimates
+#' @param quantiles list of quantiles between 0 and 1 defining which quantile estimates
 #' will be returned
 #'
-#' @param min_horizon the minimum horizon in [-Inf,0] to keep from each nowcast estimates
-#' (e.g. min_horizon=-5 means estimates of up to previous 5 time steps from now will be kept)
+#' @param min_horizon the minimum horizon (value <= 0) to keep from each nowcast estimates
+#' (e.g. `min_horizon=-5` means estimates of up to previous 5 time steps from now will be kept)
 #'
 #' @param model_name A model name that will be used to identify the results of the
 #' backtest with the given parameters in a subsequent call to [backtest_metrics()]
@@ -506,8 +509,8 @@ calc_wis <- function(backtest_summary) {
 #'   method = "optimization", seed = 2495624, iter = 10, dist = "Normal")
 #'
 #' # Run a backtest for each of the models
-#' btest1 <- backtest(ncast, dates_to_test = as.Date("1990-06-11"), model_name = "Classic")
-#' btest2 <- backtest(ncast, dates_to_test = as.Date("1990-06-11"), model_name = "Normal")
+#' btest1 <- backtest(ncast1, dates_to_test = as.Date("1990-06-11"), model_name = "Classic")
+#' btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"), model_name = "Normal")
 #'
 #' # Compare the models to select the best model
 #' backtest_metrics(btest1, btest2)

@@ -67,7 +67,9 @@ temporal_effects <- function(day_of_week = FALSE, weekend = FALSE, day_of_month 
 #' Print function extension for a `temporal_effect` object created with [temporal_effects()].
 #' Prints all of the temporal characteristics for a model
 #'
-#' @param temporal_effect A `temporal_effect` object created with [temporal_effects()]
+#' @param x A `temporal_effect` object created with [temporal_effects()]
+#'
+#' @param ... Additional arguments to pass to `print_temporal_effect_internal` (currently don't do anything)
 #'
 #' @examples
 #' print(temporal_effects(day_of_week = TRUE, week_of_year = TRUE))
@@ -87,7 +89,9 @@ print.temporal_effect <- function(x,...){
 #'
 #' Print function for printing the `temporal_effect`.
 #'
-#' @param temporal_effect A `temporal_effect` object created with [temporal_effects()]
+#' @param x A `temporal_effect` object created with [temporal_effects()]
+#'
+#' @param ... Additional arguments to pass to print.
 #'
 #' @examples
 #' print(temporal_effects(day_of_week = TRUE, week_of_year = TRUE))

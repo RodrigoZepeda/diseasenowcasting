@@ -39,6 +39,46 @@
 #'
 #' @param sd_m_param_2 Positive real. Initial value for the variance of the standard deviation of the observed cases (not considered if distribution is Poisson)
 #'
+#' @param c_0_param_1 Initial value for cycle parameter's mean
+#'
+#' @param c_0_param_2 Initial value for cycle parameter's sd
+#'
+#' @param ctilde_0_param_1 Initial value for cycle parameter's mean (latent cycle)
+#'
+#' @param ctilde_0_param_2 Initial value for cycle parameter's sd (latent cycle)
+#'
+#' @param sd_c_param_1 Mean value for the standard deviation's of c_0
+#'
+#' @param sd_c_param_2 Standard deviation prior value for the standard deviation's of c_0
+#'
+#' @param sd_ctilde_param_1 Mean value for the standard deviation's of c_0 tilde
+#'
+#' @param sd_ctilde_param_2 Standard deviation prior value for the standard deviation's of c_0 tilde
+#'
+#' @param sd_dow_epi_param_1 Standard deviation's mean for day of the week effect
+#'
+#' @param sd_dow_epi_param_2 Standard deviation's sd for day of the week effect
+#'
+#' @param sd_wkend_epi_param_1 Standard deviation's mean for weekend effect
+#'
+#' @param sd_wkend_epi_param_2 Standard deviation's sd for weekend effect
+#'
+#' @param sd_dom_epi_param_1 Standard deviation's mean for day of the month effect
+#'
+#' @param sd_dom_epi_param_2 Standard deviation's sd for day of the month effect
+#'
+#' @param sd_month_epi_param_1 Standard deviation's mean for month effect
+#'
+#' @param sd_month_epi_param_2 Standard deviation's sd for month effect
+#'
+#' @param sd_week_epi_param_1 Standard deviation's mean for epiweek effect
+#'
+#' @param sd_week_epi_param_2 Standard deviation's sd for epiweek effect
+#'
+#' @param sd_holidays_epi_param_1 Standard deviation's mean for holiday effect
+#'
+#' @param sd_holidays_epi_param_2 Standard deviation's sd for holiday effect
+#'
 #' @param dof Degrees of freedom if the distribution used in [nowcast()] is Student (default = 7).
 #'
 #' @param control_k_transform Parameter for the `dhyperbolic` or `softplus` link functions.
@@ -109,7 +149,7 @@ set_priors <- function(
 #' Function to randomly set the priors
 #'
 #' @description
-#' Assign random priors. This is mostly used with the [simulate_process()] function.
+#' Assign random priors. This is mostly used with the [simulate_disease()] function.
 #'
 #' @param ... Any parameter used in [set_priors()] that will remain fixed (not random).
 #' @examples

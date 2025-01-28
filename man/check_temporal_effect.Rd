@@ -8,7 +8,7 @@ check_temporal_effect(t_effect)
 }
 \arguments{
 \item{t_effect}{Either \code{"auto"} to infer the temporal effect or a \code{temporal_effect} object
-constructed with the \code{\link[=temporal_effect]{temporal_effect()}} function.}
+constructed with the \code{\link[=temporal_effects]{temporal_effects()}} function.}
 }
 \value{
 (invisibly) \code{TRUE} if the temporal effect is valid

@@ -17,7 +17,7 @@ to perlform the nowcast.}
 \code{Date} designating the date of case onset. e.g. "onset_week"}
 }
 \value{
-The \code{now} value for the \code{\link[=nowcasting]{nowcasting()}} which can be the last date of the data
+The \code{now} value for the \code{\link[=nowcast]{nowcast()}} which can be the last date of the data
 or specified by the user
 }
 \description{

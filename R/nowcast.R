@@ -312,16 +312,12 @@ nowcast.rstan <- function(.disease_data, .date_epidemic, .date_delay,
       stan_fit <- rstan::sampling(stanmodels$nowcasting, data = stan_data,
                              control = control,
                              refresh = refresh,
-                             #pars    = exclude_params,
-                             #include = FALSE,
                              ...)
     })
     draws    <- as.matrix(stan_fit)
   } else if (method[1] == "variational") {
     suppressWarnings({
       stan_fit <- rstan::vb(stanmodels$nowcasting, data = stan_data, refresh = refresh,
-                            #pars = exclude_params,
-                            #include = FALSE,
                             ...)
     })
     draws    <- as.matrix(stan_fit)

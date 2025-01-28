@@ -34,7 +34,7 @@ data(denguedat)
 
 # Run a nowcast using the first 1000 data points
 first_1k <- denguedat[1:1000,]
-ncast <- nowcast(first_1k, "onset_week", "report_week", now = now,
+ncast <- nowcast(first_1k, "onset_week", "report_week",
   method = "optimization", seed = 2495624, iter = 10, refresh = 0)
 ncast
 

@@ -33,6 +33,9 @@ to end the historical nowcasting (last 'now' date to nowcast).}
 two consecutive nowcasts. Default 1 means nowcasting for each date between
 start and end,}
 
+\item{subsample}{Either NULL or an integer specifying how large of a subsample from the
+\code{dates_to_test} to use for the \code{backtest}. If \code{NULL} (default) then it uses all of the dates.}
+
 \item{dates_to_test}{Specific values of moments \code{now} to test the nowcast. If \code{dates_to_test}
 is given this overrides \code{start_date}, \code{end_date} and \code{stride}.}
 
@@ -40,11 +43,11 @@ is given this overrides \code{start_date}, \code{end_date} and \code{stride}.}
 to retrain the model. Default 1 means retraining the model for each nowcast.
 NOT IMPLEMENTED YET - currently will be retrained at each time step.}
 
-\item{quantiles}{list of quantiles in \link{0,1} defining which quantile estimates
+\item{quantiles}{list of quantiles between 0 and 1 defining which quantile estimates
 will be returned}
 
-\item{min_horizon}{the minimum horizon in \link{-Inf,0} to keep from each nowcast estimates
-(e.g. min_horizon=-5 means estimates of up to previous 5 time steps from now will be kept)}
+\item{min_horizon}{the minimum horizon (value <= 0) to keep from each nowcast estimates
+(e.g. \code{min_horizon=-5} means estimates of up to previous 5 time steps from now will be kept)}
 
 \item{model_name}{A model name that will be used to identify the results of the
 backtest with the given parameters in a subsequent call to \code{\link[=backtest_metrics]{backtest_metrics()}}}

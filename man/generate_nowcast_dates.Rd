@@ -2,7 +2,7 @@
 % Please edit documentation in R/backtest.R
 \name{generate_nowcast_dates}
 \alias{generate_nowcast_dates}
-\title{generate_nowcast_dates}
+\title{Generate nowcast dates}
 \usage{
 generate_nowcast_dates(start_date, end_date, ncast, stride, subsample = NULL)
 }
@@ -11,11 +11,11 @@ generate_nowcast_dates(start_date, end_date, ncast, stride, subsample = NULL)
 
 \item{end_date}{end_date}
 
+\item{ncast}{A nowcaster object generated with \code{\link[=nowcast]{nowcast()}}}
+
 \item{stride}{the number of time steps between two consecutive nowcasts}
 
 \item{subsample}{If an integer, how much to subsample the dates; if NULL then runs all dates.}
-
-\item{units}{units}
 }
 \description{
 Generates dates for the backtesting procedure given the start_date, end_date and stride

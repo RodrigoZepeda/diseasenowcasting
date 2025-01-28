@@ -11,3 +11,4 @@
 ^devel$
 ^vignettes/articles$
 ^data-raw$
+^presentations$

@@ -16,7 +16,7 @@ test_that("Testing `nowcast.R`", {
   suppressWarnings({
     expect_no_error(
       nowcast(sims, true_date = "onset_week", report_date = "report_week", chains = 1,
-            cores = 1, iter = 25)
+            cores = 1, iter = 1000, seed = 238479, method = "sampling")
     )
   })
 
@@ -42,7 +42,7 @@ test_that("Testing `nowcast.R`", {
   suppressWarnings({
     expect_no_error(
       nowcast(sims, true_date = "onset_week", report_date = "report_week", chains = 1,
-                     cores = 1, iter = 25, strata = "gender")
+                     cores = 1, iter = 25, strata = "gender", method = "sampling")
     )
   })
 

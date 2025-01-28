@@ -5,7 +5,7 @@
 #'
 #' @inheritParams nowcast
 #'
-#' @return The `now` value for the [nowcasting()] which can be the last date of the data
+#' @return The `now` value for the [nowcast()] which can be the last date of the data
 #' or specified by the user
 #'
 #' @keywords internal
@@ -117,7 +117,7 @@ infer_data_type <- function(.disease_data, data_type, verbose = FALSE) {
 #' @param units Either "weeks" or "days" for weekly or daily data.
 #'
 #' @param t_effect Either `"auto"` to infer the temporal effect or a `temporal_effect` object
-#' constructed with the [temporal_effect()] function.
+#' constructed with the [temporal_effects()] function.
 #' @param .default A character indicating whether the default should be for delay or epidemic process
 #' or for other (an empty effect)
 #'

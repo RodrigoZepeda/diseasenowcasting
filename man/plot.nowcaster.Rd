@@ -4,47 +4,40 @@
 \alias{plot.nowcaster}
 \title{Plot your nowcast}
 \usage{
-\method{plot}{nowcaster}(
-  nowcast_output,
-  color = "deepskyblue4",
-  datesbrakes = NULL,
-  casesbrakes = 10,
-  rowsfacet = NULL,
-  colsfacet = NULL,
-  quantiles = c(0.025, 0.975)
-)
+\method{plot}{nowcaster}(x, ...)
 }
 \arguments{
-\item{nowcast_output}{The output of the diseasenowcasting::nowcast() function}
+\item{x}{The output of the \code{\link[=nowcast]{nowcast()}} function}
 
-\item{color}{A string indicating the color for the barplots,
-Works with the default R colors of grDevices::colors(). Hex color codes works as well. Best results with dark colors}
-
-\item{datesbrakes}{A string giving the distance between x-axis breaks
-if \code{NULL}, one label per bar
-Other valid examples are:
-"2 weeks", or "10 years", 'sec', 'min', 'hour', 'day', 'week', 'month', 'year',
-optionally followed by 's'.}
-
-\item{casesbrakes}{Desired number of y-axis breaks. You may get slightly more or fewer breaks that requested.}
-
-\item{rowsfacet}{Number of rows for arranging facets when using ggplot2::facet_wrap().
-It allows manual control over the layout of multiple strata in the plot.
-If \code{NULL}, the number of rows is automatically determined by ggplot2.}
-
-\item{colsfacet}{Number of columns for arranging facets when using ggplot2::facet_wrap().
-It allows manual control over the layout of multiple strata in the plot.
-If \code{NULL}, the number of columns is automatically determined by ggplot2.}
-
-\item{quantiles}{a vector of two values to specify the quantiles for the error bars.}
+\item{...}{Additional parameters to pass to your plot}
 }
 \value{
-ggplot2 barplots to show real cases and the predictions of the function diseasenowcasting::nowcast().
-It creates a subplot for each strata
+A \code{\link[ggplot2:ggplot2-package]{ggplot2::ggplot2()}} object with barplots to show real cases and the predictions
+of the function \code{\link[=nowcast]{nowcast()}}. It creates a facet for each strata.
 }
 \description{
 Create barplots to show real cases and the predictions of the function diseasenowcasting::nowcast()
 }
+\section{Personalize your plot}{
+
+
+The following parameters can be used in the \code{...} section
+\itemize{
+\item \code{color} A string indicating the color for the barplots. Works with the default R colors of
+\code{\link[grDevices:colors]{grDevices::colors()}}. Hex color codes works as well. Best results with darker colors.
+\item \code{datesbrakes} A string giving the distance between x-axis breaks if not specified, one label
+per bar. Other valid examples are: "2 weeks", or "10 years", 'sec', 'min', 'hour', 'day', 'week',
+'month', 'year', optionally followed by 's'.
+\item \code{casesbrakes} Desired number of y-axis breaks. You may get slightly more or fewer breaks
+that requested due to dynamic adaptation.
+\item \code{rowsfacet} Number of rows for arranging facets when using \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}. It allows
+manual control over the layout of multiple strata in the plot.
+\item \code{colsfacet} Number of columns for arranging facets when using \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}. It
+allows manual control over the layout of multiple strata in the plot.
+\item \code{quantiles} a vector of two values to specify the quantiles for the error bars.
+}
+}
+
 \examples{
 # Load the data
 data(denguedat)

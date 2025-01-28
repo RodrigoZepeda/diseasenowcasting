@@ -12,7 +12,7 @@ infer_temporal_effect(
 }
 \arguments{
 \item{t_effect}{Either \code{"auto"} to infer the temporal effect or a \code{temporal_effect} object
-constructed with the \code{\link[=temporal_effect]{temporal_effect()}} function.}
+constructed with the \code{\link[=temporal_effects]{temporal_effects()}} function.}
 
 \item{units}{Either "weeks" or "days" for weekly or daily data.}
 

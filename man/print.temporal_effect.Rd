@@ -7,7 +7,9 @@
 \method{print}{temporal_effect}(x, ...)
 }
 \arguments{
-\item{temporal_effect}{A \code{temporal_effect} object created with \code{\link[=temporal_effects]{temporal_effects()}}}
+\item{x}{A \code{temporal_effect} object created with \code{\link[=temporal_effects]{temporal_effects()}}}
+
+\item{...}{Additional arguments to pass to \code{print_temporal_effect_internal} (currently don't do anything)}
 }
 \description{
 Print function extension for a \code{temporal_effect} object created with \code{\link[=temporal_effects]{temporal_effects()}}.

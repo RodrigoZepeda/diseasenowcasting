@@ -73,6 +73,14 @@ set_priors(
 
 \item{has_cycle}{Boolean. Whether include a cycle component in the model.}
 
+\item{c_0_param_1}{Initial value for cycle parameter's mean}
+
+\item{c_0_param_2}{Initial value for cycle parameter's sd}
+
+\item{ctilde_0_param_1}{Initial value for cycle parameter's mean (latent cycle)}
+
+\item{ctilde_0_param_2}{Initial value for cycle parameter's sd (latent cycle)}
+
 \item{sd_mu_param_1}{Positive real. Initial value for the mean of the standard deviation of the epidemic trend.}
 
 \item{sd_mu_param_2}{Positive real. Initial value for the variance of the standard deviation of the epidemic trend.}
@@ -81,9 +89,41 @@ set_priors(
 
 \item{sd_nu_param_2}{Positive real. Initial value for the variance of the standard deviation of the disease trend.}
 
+\item{sd_c_param_1}{Mean value for the standard deviation's of c_0}
+
+\item{sd_c_param_2}{Standard deviation prior value for the standard deviation's of c_0}
+
+\item{sd_ctilde_param_1}{Mean value for the standard deviation's of c_0 tilde}
+
+\item{sd_ctilde_param_2}{Standard deviation prior value for the standard deviation's of c_0 tilde}
+
 \item{sd_m_param_1}{Positive real. Initial value for the mean of the standard deviation of the observed cases (not considered if distribution is Poisson)}
 
 \item{sd_m_param_2}{Positive real. Initial value for the variance of the standard deviation of the observed cases (not considered if distribution is Poisson)}
+
+\item{sd_dow_epi_param_1}{Standard deviation's mean for day of the week effect}
+
+\item{sd_dow_epi_param_2}{Standard deviation's sd for day of the week effect}
+
+\item{sd_wkend_epi_param_1}{Standard deviation's mean for weekend effect}
+
+\item{sd_wkend_epi_param_2}{Standard deviation's sd for weekend effect}
+
+\item{sd_dom_epi_param_1}{Standard deviation's mean for day of the month effect}
+
+\item{sd_dom_epi_param_2}{Standard deviation's sd for day of the month effect}
+
+\item{sd_month_epi_param_1}{Standard deviation's mean for month effect}
+
+\item{sd_month_epi_param_2}{Standard deviation's sd for month effect}
+
+\item{sd_week_epi_param_1}{Standard deviation's mean for epiweek effect}
+
+\item{sd_week_epi_param_2}{Standard deviation's sd for epiweek effect}
+
+\item{sd_holidays_epi_param_1}{Standard deviation's mean for holiday effect}
+
+\item{sd_holidays_epi_param_2}{Standard deviation's sd for holiday effect}
 
 \item{dof}{Degrees of freedom if the distribution used in \code{\link[=nowcast]{nowcast()}} is Student (default = 7).}
 

@@ -19,16 +19,16 @@
 #' @export
 #'
 #' @examples
-#' # Simulate a disease for 20 time steps with delay of maximum 5 and 3 strata
+#' # Simulate a disease for 20 time steps with delay of maximum 10 and 3 strata
 #' set.seed(48672)
-#' simulate_disease(num_steps = 20, num_delays = 5, num_strata = 3)
+#' sims <- simulate_disease(num_steps = 20, num_delays = 10, num_strata = 3)
 simulate_disease <- function(num_steps    = 10,
                              num_delays   = 8,
                              num_strata   = 2,
                              initial_day  = NULL,
                              warmup_steps = 50,
                              units        = c("daily", "weekly"),
-                             priors       = random_priors(mu_p = 2, nu_p = 1, mu_q = 1, has_cycle = F),
+                             priors       = random_priors(mu_p = 4, nu_p = 2, mu_q = 3, has_cycle = TRUE),
                              ...){
 
 
@@ -69,6 +69,7 @@ simulate_disease <- function(num_steps    = 10,
                         priors = priors,
                         prior_only = F,
                         algorithm = "Fixed_param",
+                        method = "sampling",
                         chains = 1,
                         normalize_data = FALSE,
                         iter = 1000,
@@ -81,7 +82,7 @@ simulate_disease <- function(num_steps    = 10,
   #Create the simulation tibble
   simulations <- ss_process$generated_quantities |>
     posterior::as_draws() |>
-    posterior::subset_draws(c("N_mat_predict_real", "N_mat_predict_int")) |>
+    posterior::subset_draws(c("N_mat_predict")) |>
     posterior::summarise_draws() |>
     dplyr::mutate(!!as.symbol(".pos")  := as.numeric(stringr::str_remove_all(!!as.symbol("variable"),".*\\[.*,|\\]"))) |>
     dplyr::mutate(!!as.symbol(".tval") := as.numeric(stringr::str_remove_all(!!as.symbol("variable"),".*\\[|,.*\\]"))) |>
