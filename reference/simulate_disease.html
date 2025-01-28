@@ -7,11 +7,11 @@ with options for trend degrees, priors, and error distributions."><meta property
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-secondary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -25,8 +25,7 @@ with options for trend degrees, priors, and error distributions."><meta property
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/Introduction.html">Introduction to diseasenowcasting</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
-      </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
- <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
+      </ul><ul class="navbar-nav"><li class="nav-item"><a class="external-link nav-link" href="http://twitter.com/RodZepeda" aria-label="Twitter"><span class="fa fa-twitter"></span></a></li>
       </ul></div>
 
 
@@ -54,7 +53,7 @@ with options for trend degrees, priors, and error distributions.</p>
 <span>  initial_day <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  warmup_steps <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>  units <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"daily"</span>, <span class="st">"weekly"</span><span class="op">)</span>,</span>
-<span>  priors <span class="op">=</span> <span class="fu"><a href="random_priors.html">random_priors</a></span><span class="op">(</span>mu_p <span class="op">=</span> <span class="fl">4</span>, nu_p <span class="op">=</span> <span class="fl">2</span>, mu_q <span class="op">=</span> <span class="fl">3</span>, has_cycle <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  priors <span class="op">=</span> <span class="fu"><a href="random_priors.html">random_priors</a></span><span class="op">(</span>mu_p <span class="op">=</span> <span class="fl">1</span>, nu_p <span class="op">=</span> <span class="fl">1</span>, mu_q <span class="op">=</span> <span class="fl">1</span>, has_cycle <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -106,7 +105,7 @@ report dates, strata, delays, and the number of observed cases per time step.</p
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Simulate a disease for 20 time steps with delay of maximum 10 and 3 strata</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">48672</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">sims</span> <span class="op">&lt;-</span> <span class="fu">simulate_disease</span><span class="op">(</span>num_steps <span class="op">=</span> <span class="fl">20</span>, num_delays <span class="op">=</span> <span class="fl">10</span>, num_strata <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">sims</span> <span class="op">&lt;-</span> <span class="fu">simulate_disease</span><span class="op">(</span>num_steps <span class="op">=</span> <span class="fl">20</span>, num_delays <span class="op">=</span> <span class="fl">3</span>, num_strata <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
