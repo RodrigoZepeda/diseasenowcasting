@@ -4,17 +4,20 @@
 \alias{generate_nowcast_dates}
 \title{generate_nowcast_dates}
 \usage{
-generate_nowcast_dates(start_date, end_date, units, stride)
+generate_nowcast_dates(start_date, end_date, ncast, stride, subsample = NULL)
 }
 \arguments{
 \item{start_date}{start_date}
 
 \item{end_date}{end_date}
 
-\item{units}{units}
-
 \item{stride}{the number of time steps between two consecutive nowcasts}
+
+\item{subsample}{If an integer, how much to subsample the dates; if NULL then runs all dates.}
+
+\item{units}{units}
 }
 \description{
 Generates dates for the backtesting procedure given the start_date, end_date and stride
 }
+\keyword{internal}

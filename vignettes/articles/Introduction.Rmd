@@ -179,5 +179,13 @@ And get the predictions with the summary function
 summary(ncast)
 ```
 
+You can see how to add holiday effects, change the priors, and add further options to the model, in the Customizing your nowcast article. For now we will show you how to evaluate a nowcast once it has been prepared:
 
 
+## Evaluating the model
+
+Once a nowcast has been constructed you can use the [backtest()] function to evaluate what the current model would have predicted in the past vs what was actually observed. 
+
+```{r}
+
+```

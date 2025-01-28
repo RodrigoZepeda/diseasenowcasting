@@ -6,6 +6,8 @@
 \alias{diseasenowcasting-package}
 \title{diseasenowcasting: Nowcasting disease onset cases given report dates}
 \description{
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+
 Implements bayesian state-space models to nowcast incident cases for any disease given report dates while controlling by strata and covariates.
 }
 \seealso{

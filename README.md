@@ -25,10 +25,10 @@ data(denguedat)
 #Run the nowcast model stratified by gender
 predictions <- nowcast(denguedat, true_date = "onset_week", report_date = "report_week", 
                        method = "variational", now = as.Date("1990-10-01"), strata = "gender", 
-                       seed = 398477)
+                       seed = 398477, refresh = 0)
 
 #Create a nice plot for the predictions
-plot_nowcast(predictions, datesbrakes = "1 month")
+plot(predictions, datesbrakes = "1 month")
 ```
 
 <img src="man/figures/README-unnamed-chunk-2-1.png" width="100%" />

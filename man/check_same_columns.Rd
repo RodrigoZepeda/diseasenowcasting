@@ -2,7 +2,7 @@
 % Please edit documentation in R/backtest.R
 \name{check_same_columns}
 \alias{check_same_columns}
-\title{check_same_columns}
+\title{Check same columns}
 \usage{
 check_same_columns(df_list)
 }
@@ -12,3 +12,4 @@ check_same_columns(df_list)
 \description{
 Checks that the given list of dataframes contains the same columns
 }
+\keyword{internal}

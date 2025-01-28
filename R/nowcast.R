@@ -90,6 +90,9 @@ nowcast <- function(.disease_data,
                     priors  = set_priors(),
                     ...) {
 
+  # Save the original data frame
+  original_data <- .disease_data
+
   # Check that the columns of onset and report are columns of data and are dates
   .disease_data <- check_date_columns(.disease_data, true_date = true_date, report_date = report_date)
 
@@ -173,25 +176,37 @@ nowcast <- function(.disease_data,
                 priors         = priors,
                 ...)
 
-  #Get the call values
+  #Get the call values.
+  #!IMPORTANT This list should only include values used to call nowcast
   call_parameters = list(
-    true_date  = true_date,
+    true_date   = true_date,
     report_date = report_date,
     strata      = strata,
+    temporal_effects_epidemic = temporal_effects_epidemic,
+    temporal_effects_delay    = temporal_effects_delay,
+    dist        = dist,
+    link_x      = link_x,
+    link_y      = link_y,
     now         = now,
     units       = units,
     max_delay   = max_delay,
+    prior_only  = prior_only,
+    proportion_reported = proportion_reported,
+    normalize_data = normalize_data,
+    control     = control,
+    method      = method,
+    priors      = priors,
     num_delays  = num_delays,
     num_steps   = num_steps,
     num_strata  = num_strata,
-    temporal_effects_epidemic = temporal_effects_epidemic,
-    temporal_effects_delay = temporal_effects_delay
+    additional_args = ...
   )
 
   # Add to stan list
   stan_list$data <- stan_list$data |>
     append(
       list(
+        original_data     = original_data,
         preprocessed_data = .disease_data,
         call_parameters   = call_parameters,
         strata_dict       = strata_list$.strata_dict
