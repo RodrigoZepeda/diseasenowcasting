@@ -12,11 +12,12 @@
 <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="../apple-touch-icon-120x120.png">
 <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="../apple-touch-icon-76x76.png">
 <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="../apple-touch-icon-60x60.png">
-<script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<script src="../katex-auto.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Advanced nowcast options">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><link href="../deps/KaTex-0.16.10/katex.min.css" rel="stylesheet">
+<script src="../deps/KaTex-0.16.10/katex.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Advanced nowcast options">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -26,7 +27,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,18 +36,22 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/diseasenowcasting.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/Advanced-nowcast-options.html">Advanced nowcast options</a></li>
-    <li><a class="dropdown-item" href="../articles/Introduction.html">Introduction to diseasenowcasting</a></li>
+    <li><a class="dropdown-item" href="../articles/Comparison-to-other-methods.html">Comparison to other methods</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
-<li class="nav-item"><a class="external-link nav-link" href="http://twitter.com/RodZepeda" aria-label="Twitter"><span class="fa fa-twitter"></span></a></li>
+<li class="nav-item"><form class="form-inline" role="search">
+ <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
+</form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/RodrigoZepeda/diseasenowcasting/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -62,7 +67,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>Advanced nowcast options</h1>
             
       
-
+      <small class="dont-index">Source: <a href="https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/vignettes/articles/Advanced-nowcast-options.Rmd" class="external-link"><code>vignettes/articles/Advanced-nowcast-options.Rmd</code></a></small>
       <div class="d-none name"><code>Advanced-nowcast-options.Rmd</code></div>
     </div>
 
@@ -80,7 +85,8 @@ the <code><a href="../reference/nowcast.html">nowcast()</a></code> function of t
 <li>
 <a href="#using-strata">Using strata</a>.</li>
 <li>
-<a href="#adding-time-covariates">Adding time covariates</a>. 2.1.
+<a href="#adding-time-covariates">Adding time covariates</a>.</li>
+<li>
 <a href="#adding-holidays">Adding holidays</a>.</li>
 <li>
 <a href="#adding-cycles">Adding cycles</a>.</li>
@@ -95,6 +101,8 @@ distribution</a>.</li>
 prior</a>.</li>
 <li>
 <a href="#changing-the-priors">Changing the priors</a>.</li>
+<li>
+<a href="#changing-the-method">Changing the method</a>.</li>
 </ol>
 <p>For this tutorial we will use the <code>mpoxdat</code> dataset
 contained in the package.</p>
@@ -121,6 +129,12 @@ that case <code>n</code>:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mpox_reduced</span> <span class="op">&lt;-</span> <span class="va">mpoxdat</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">dx_report_date</span> <span class="op">&lt;</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2022/09/01"</span>, format <span class="op">=</span> <span class="st">"%Y/%m/%d"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong> Throughout this tutorial we will use the
+<code>method = "variational"</code> which is less exact than
+<code>"sampling"</code> just because of speed. Users should use the
+<code>"sampling"</code> for their final version.</p>
+</blockquote>
 <div class="section level2">
 <h2 id="using-strata">Using strata<a class="anchor" aria-label="anchor" href="#using-strata"></a>
 </h2>
@@ -130,7 +144,8 @@ we can specify <code>race</code> to obtain a <code>nowcast</code>
 stratified by race:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ncast_race</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">mpox_reduced</span>, true_date <span class="op">=</span> <span class="st">"dx_date"</span>, </span>
-<span>                      report_date <span class="op">=</span> <span class="st">"dx_report_date"</span>, strata <span class="op">=</span> <span class="st">"race"</span>, refresh <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span></code></pre></div>
+<span>                      report_date <span class="op">=</span> <span class="st">"dx_report_date"</span>, strata <span class="op">=</span> <span class="st">"race"</span>, refresh <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>                      method <span class="op">=</span> <span class="st">"variational"</span><span class="op">)</span></span></code></pre></div>
 <p>And subsequent operations including <code>summary</code>,
 <code>plots</code>:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
@@ -194,6 +209,7 @@ example adding day of the week effects to weekly data).</p>
 <span>                      temporal_effects_epidemic <span class="op">=</span> <span class="va">epidemic_effects</span>,</span>
 <span>                      temporal_effects_delay <span class="op">=</span> <span class="va">delay_effects</span>,</span>
 <span>                      refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>                      method <span class="op">=</span> <span class="st">"variational"</span>, <span class="co">#&lt;- Change to sampling when in production</span></span>
 <span>                      seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
 <p>The difference between epidemic and delay effects is as follows:</p>
 <ul>
@@ -246,6 +262,7 @@ thus changing the epidemic process):</p>
 <span>                      temporal_effects_epidemic <span class="op">=</span> <span class="va">epidemic_effects</span>,</span>
 <span>                      temporal_effects_delay <span class="op">=</span> <span class="va">delay_effects</span>,</span>
 <span>                      refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>                      method <span class="op">=</span> <span class="st">"variational"</span>, <span class="co">#&lt;- Change to sampling when in production</span></span>
 <span>                      seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
 <p>And this is what the model looks like:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
@@ -274,6 +291,7 @@ year during dry season).</p>
 <span>                       temporal_effects_delay <span class="op">=</span> <span class="va">delay_effects</span>,</span>
 <span>                       has_cycle <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>                       refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>                       method <span class="op">=</span> <span class="st">"variational"</span>, <span class="co">#&lt;- Change to sampling when in production</span></span>
 <span>                       seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_cycle</span>, datesbrakes <span class="op">=</span> <span class="st">"1 week"</span><span class="op">)</span> <span class="op">+</span></span>
@@ -309,6 +327,7 @@ observation.</p></li>
 <span>                      autoregresive  <span class="op">=</span> <span class="fu"><a href="../reference/arma.html">AR</a></span><span class="op">(</span>epidemic_trend <span class="op">=</span> <span class="fl">2</span>, delay_trend <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>,</span>
 <span>                      moving_average <span class="op">=</span> <span class="fu"><a href="../reference/arma.html">MA</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span>,</span>
 <span>                      refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>                      method <span class="op">=</span> <span class="st">"variational"</span>, <span class="co">#&lt;- Change to sampling when in production</span></span>
 <span>                      seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
 <p>And the plot:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
@@ -332,6 +351,7 @@ variance.</p>
 <span>                         has_cycle <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>                         dist <span class="op">=</span> <span class="st">"Student"</span>, <span class="co">#&lt;- Changed the distribution</span></span>
 <span>                         refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>                         method <span class="op">=</span> <span class="st">"variational"</span>, <span class="co">#&lt;- Change to sampling when in production</span></span>
 <span>                         seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
 <p>This is what the predictions look like</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
@@ -360,6 +380,7 @@ model.</p>
 <span>                         has_cycle <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>                         refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>                         prior_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>                         method <span class="op">=</span> <span class="st">"variational"</span>, <span class="co">#&lt;- Change to sampling when in production</span></span>
 <span>                         seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_prior</span>, datesbrakes <span class="op">=</span> <span class="st">"1 week"</span><span class="op">)</span> <span class="op">+</span></span>
@@ -384,11 +405,45 @@ part of the process by changing <code>sd_nu_param_1</code> and
 <span>                         refresh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>                         prior_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>                         priors <span class="op">=</span> <span class="fu"><a href="../reference/set_priors.html">set_priors</a></span><span class="op">(</span>sd_nu_param_1 <span class="op">=</span> <span class="fl">0.0</span>, sd_nu_param_2 <span class="op">=</span> <span class="fl">100</span><span class="op">)</span>,</span>
+<span>                         method <span class="op">=</span> <span class="st">"variational"</span>, <span class="co">#&lt;- Change to sampling when in production</span></span>
 <span>                         seed <span class="op">=</span> <span class="fl">87245</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_prior_2</span>, datesbrakes <span class="op">=</span> <span class="st">"1 week"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ggtitle</a></span><span class="op">(</span><span class="st">"Custom prior for model with temporal effects, cycle, and custom ARMA"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="Advanced-nowcast-options_files/figure-html/unnamed-chunk-23-1.png" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="changing-the-method">Changing the method<a class="anchor" aria-label="anchor" href="#changing-the-method"></a>
+</h2>
+<p>There are currently three methods for fitting the model: sampling,
+variational and optimization.</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Sampling</strong> is the most precise and the slowest.
+Performs MCMC sampling following Stan’s <a href="https://mc-stan.org/rstan/reference/stanmodel-method-sampling.html" class="external-link">sampling</a>
+routine. Internally it uses [rstan::sampling()].</li>
+</ol>
+<p>2.<strong>Variational</strong> method is less precise than sampling
+but faster. It can oftentimes yield results as good (in terms of
+prediction power) as the sampling by a reduced time cost. It uses
+[rstan::vb()] to get an approximate posterior.</p>
+<ol start="3" style="list-style-type: decimal">
+<li>
+<strong>Optimization</strong> is the least accurate and fastest and
+should only be used when prototyping. Performs maximum likelihood
+optimization with [rstan::optimizing()] to get an approximate point
+estimate. This method should only be used by developers for fast testing
+of a [nowcast()] object.</li>
+</ol>
+<p>The method can be changed with the <code>method</code> option. For
+example here we perform an optimization:</p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ncast_optim</span> <span class="op">&lt;-</span>  <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">mpox_reduced</span>, true_date <span class="op">=</span> <span class="st">"dx_date"</span>,  </span>
+<span>                        report_date <span class="op">=</span> <span class="st">"dx_report_date"</span>, strata <span class="op">=</span> <span class="st">"race"</span>, </span>
+<span>                        refresh <span class="op">=</span> <span class="fl">0</span>, method <span class="op">=</span> <span class="st">"optimization"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_optim</span><span class="op">)</span></span></code></pre></div>
+<p><img src="Advanced-nowcast-options_files/figure-html/unnamed-chunk-24-1.png" width="700"></p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
