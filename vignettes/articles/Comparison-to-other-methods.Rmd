@@ -22,10 +22,11 @@ You can go to the [Comparison](#comparison) section directly for the comparison 
 
 First we will call the libraries and generate the `diseasenowcasting` results. 
 
-```{r}
-library(dplyr)
-library(lubridate)
-library(diseasenowcasting)
+```{r, message=FALSE}
+library(diseasenowcasting, quietly = TRUE)
+library(ggplot2, quietly = TRUE)
+library(dplyr, quietly = TRUE)
+library(lubridate, quietly = TRUE)
 ```
 
 ## diseasenowcasting
@@ -92,7 +93,7 @@ ncast_wis_table <- ncast_wis_table |>
 ```
 
 ```{r, echo = FALSE}
-ncast_wis_table <- tibble::tibble(
+ncast_wis_table <- dplyr::tibble(
   now = as.Date(rep(
     c(
       "1990-11-12", "1991-11-04", "1994-06-20", "1995-10-16", "1999-03-08",
@@ -283,13 +284,13 @@ nobbs_wis_table
 ```{r}
 model_table <- nobbs_wis_table |> 
   mutate(method = "NoBbs") |> 
-  rename(`50%` = mean) |>  #The poimt estimate for scoring utils
+  rename(`50%` = mean) |>  #The point estimate for scoring utils
   bind_rows(ncast_wis_table |> mutate(method = "diseasenowcasting"))
 ```
 
 We use the `scoringutils` library to calculate the weighted interval scoring:
 
-```{r}
+```{r, message=FALSE}
 library(scoringutils, quietly = TRUE)
 library(tidyr)
 library(stringr)
