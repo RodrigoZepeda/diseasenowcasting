@@ -29,3 +29,14 @@ metrics12 <- backtest_metrics(list(backtest_summary1,backtest_summary2),
 
 print(metrics12)
 
+
+
+
+
+
+
+
+
+
+
+
