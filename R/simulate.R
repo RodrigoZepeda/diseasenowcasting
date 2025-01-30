@@ -28,7 +28,9 @@ simulate_disease <- function(num_steps    = 10,
                              initial_day  = NULL,
                              warmup_steps = 50,
                              units        = c("daily", "weekly"),
-                             priors       = random_priors(mu_p = 1, nu_p = 1, mu_q = 1, has_cycle = FALSE),
+                             priors       = random_priors(has_cycle = FALSE),
+                             autoregresive  = AR(),
+                             moving_average = MA(),
                              ...){
 
 
@@ -72,11 +74,15 @@ simulate_disease <- function(num_steps    = 10,
                         method = "sampling",
                         chains = 1,
                         normalize_data = FALSE,
+                        autoregresive = autoregresive,
+                        moving_average = moving_average,
                         iter = 1000,
-                        init = get_priors_from_init(priors = priors,
-                                                    num_strata = num_strata,
-                                                    num_delays = num_delays,
-                                                    num_steps = num_steps + warmup_steps),
+                        #init = get_priors_from_init(priors = priors,
+                        #                            num_strata = num_strata,
+                        #                            num_delays = num_delays,
+                        #                            num_steps = num_steps + warmup_steps,
+                        #                            autoregresive = autoregresive,
+                        #                            moving_average = moving_average),
                         ...)
 
   #Create the simulation tibble

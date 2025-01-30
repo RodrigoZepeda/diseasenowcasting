@@ -226,25 +226,25 @@ get_link_number <- function(link){
 #' any `rstan` sampling or optimization algorithm.
 #'
 #' @keywords internal
-get_priors_from_init <- function(priors, num_strata, num_delays, num_steps){
+get_priors_from_init <- function(priors, num_strata, num_delays, num_steps, autoregresive, moving_average){
   #Add the priors
   initfun <- function(...) {
 
     #Normalize phi_ar
-    if (priors$mu_p > 0){
-      phi_mu <- list(stats::runif(priors$mu_p, -1, 1))
+    if (autoregresive$mu_p > 0){
+      phi_mu <- list(stats::runif(autoregresive$mu_p, -1, 1))
     } else {
       phi_mu <- as.numeric()
     }
 
-    if (priors$mu_q > 0){
-      theta_mu <- list(stats::runif(priors$mu_q, -1, 1))
+    if (moving_average$mu_q > 0){
+      theta_mu <- list(stats::runif(moving_average$mu_q, -1, 1))
     } else {
       theta_mu <- as.numeric()
     }
 
-    if (priors$nu_p > 0){
-      phi_nu <- list(stats::runif(priors$nu_p, -1, 1))
+    if (autoregresive$nu_p > 0){
+      phi_nu <- list(stats::runif(autoregresive$nu_p, -1, 1))
     } else {
       phi_nu <- as.numeric()
     }

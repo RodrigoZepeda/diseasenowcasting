@@ -4,7 +4,14 @@
 \alias{get_priors_from_init}
 \title{Function for setting the initial values from priors for simulation}
 \usage{
-get_priors_from_init(priors, num_strata, num_delays, num_steps)
+get_priors_from_init(
+  priors,
+  num_strata,
+  num_delays,
+  num_steps,
+  autoregresive,
+  moving_average
+)
 }
 \arguments{
 \item{priors}{A list of all of the nowcast priors. You can use \code{\link[=set_priors]{set_priors()}} to change
@@ -15,6 +22,12 @@ the priors of the function (see details)}
 \item{num_delays}{Integer. Number of delay strata. Default is 8.}
 
 \item{num_steps}{Integer. Number of time steps to simulate. Default is 10.}
+
+\item{autoregresive}{An \code{\link[=AR]{AR()}} object with the autoregresive components for the epidemic
+and delay processes.}
+
+\item{moving_average}{A \code{\link[=MA]{MA()}} object with the moving average component for the epidemic
+and delay processes.}
 }
 \value{
 An init function that generates initial values based upon the priors to send to
