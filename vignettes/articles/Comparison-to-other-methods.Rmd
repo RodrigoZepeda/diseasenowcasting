@@ -32,7 +32,7 @@ library(diseasenowcasting)
 
 In this section we will generate the estimates that will be compared against the other packages. We will operate with the following baseline model:
 
-```{r}
+```{r, eval=FALSE}
 data(denguedat)
 now   <- as.Date("1990-10-15")
 ncast <- nowcast(denguedat, true_date = "onset_week", now = now,
@@ -43,7 +43,7 @@ ncast <- nowcast(denguedat, true_date = "onset_week", now = now,
 
 and use 10 different dates in the time series codified as `dates_to_test`: 
 
-```{r}
+```{r, eval=FALSE}
 set.seed(645287)
 dates_possible <- seq(min(denguedat$onset_week), max(denguedat$onset_week), by = "1 week")
 dates_to_test  <- sample(dates_possible, size = 10) |> sort()
@@ -153,13 +153,13 @@ ncast_wis_table
 
 ## NobBS
 
-```{r}
+```{r, eval=FALSE}
 library(NobBS)
 ```
 
 The usual call for the `NobBS` is as follows:
 
-```{r}
+```{r, eval=FALSE}
 nbbs_cast <- NobBS(data = denguedat, units = "1 week", now = now,
                    onset_date = "onset_week", report_date = "report_week")
 ```
