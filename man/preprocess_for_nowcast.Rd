@@ -62,7 +62,7 @@ preprocess_for_nowcast(denguedat, "onset_week", "report_week",
 
 # Complete one date when there was no onset week
 df <- data.frame(
-  onset_week  = as.Date(c("1994-09-19", "1994-10-03", "1994-10-03", "1994-10-10")),
+  onset_week  = as.Date(c("1994-09-19", "1994-10-03", "1994-10-03", "1994-10-03")),
   report_week = as.Date(c("1994-09-19", "1994-10-03", "1994-10-10", "1994-10-10"))
 )
 preprocess_for_nowcast(df, "onset_week", "report_week",

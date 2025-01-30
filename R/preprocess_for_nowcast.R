@@ -26,7 +26,7 @@
 #'
 #' # Complete one date when there was no onset week
 #' df <- data.frame(
-#'   onset_week  = as.Date(c("1994-09-19", "1994-10-03", "1994-10-03", "1994-10-10")),
+#'   onset_week  = as.Date(c("1994-09-19", "1994-10-03", "1994-10-03", "1994-10-03")),
 #'   report_week = as.Date(c("1994-09-19", "1994-10-03", "1994-10-10", "1994-10-10"))
 #' )
 #' preprocess_for_nowcast(df, "onset_week", "report_week",
@@ -80,10 +80,15 @@ preprocess_for_nowcast <- function(.disease_data, true_date, report_date, strata
     dplyr::pull(min_date)
 
   # Get the maximum prediction date
-  max_date <- .disease_data |>
+  max_date_true <- .disease_data |>
     dplyr::summarise(max_date = max(!!as.symbol(true_date))) |>
     dplyr::pull(max_date)
-  max_date <- min(max_date, now)
+
+  max_date_report <- .disease_data |>
+    dplyr::summarise(max_date = max(!!as.symbol(report_date))) |>
+    dplyr::pull(max_date)
+
+  max_date <- min(max(max_date_true, max_date_report), now)
 
   all_onsets <- seq(min_date, max_date, by = units)
 
@@ -129,8 +134,7 @@ preprocess_for_nowcast <- function(.disease_data, true_date, report_date, strata
   } else if (units == "weeks") {
     all_delay_onsets <- all_delay_onsets |>
       dplyr::mutate(
-        !!as.symbol(report_date) := lubridate::weeks(!!as.symbol(".delay")) +
-          !!as.symbol(true_date)
+        !!as.symbol(report_date) := lubridate::weeks(!!as.symbol(".delay")) + !!as.symbol(true_date)
       )
   }
 

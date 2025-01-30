@@ -97,7 +97,7 @@ nowcast <- function(.disease_data,
                     normalize_data = (dist[1] %in% c("Normal","Student")),
                     refresh = 250*rlang::is_interactive(),
                     control = control_default(),
-                    method  = c("variational","sampling","optimization"),
+                    method  = c("sampling","variational","optimization"),
                     priors  = set_priors(),
                     ...) {
 
@@ -113,7 +113,7 @@ nowcast <- function(.disease_data,
   check_proportion_reported(proportion_reported)
 
   # Get `now` as the last date by default
-  now    <- infer_now(.disease_data, now = now, true_date = true_date)
+  now    <- infer_now(.disease_data, now = now, true_date = true_date, report_date = report_date)
 
   # Infer the units whether it is daily, weekly, monthly or yearly
   units  <- infer_units(.disease_data, units = units, date_column = true_date)
@@ -126,7 +126,7 @@ nowcast <- function(.disease_data,
   dist   <- match.arg(dist, c("NegativeBinomial", "Poisson","Normal","Student"))
 
   # Method
-  method <- match.arg(method, c("variational","sampling","optimization"))
+  method <- match.arg(method, c("sampling","variational","optimization"))
 
   #Link
   link_x <- match.arg(link_x, c("log","identity","softplus","dhyperbolic"))

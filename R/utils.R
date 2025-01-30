@@ -9,15 +9,21 @@
 #' or specified by the user
 #'
 #' @keywords internal
-infer_now <- function(.disease_data, now, true_date) {
+infer_now <- function(.disease_data, now, true_date, report_date) {
   # Check now
-  check_now(.disease_data, now = now, true_date = true_date)
+  check_now(.disease_data, now = now, true_date = true_date, report_date = report_date)
 
   # Now should be the last observed moment in time
   if (is.null(now)) {
-    now <- .disease_data |>
-      dplyr::summarise(now = max(!!as.symbol(true_date))) |>
-      dplyr::pull(now)
+    max_report <- .disease_data |>
+      dplyr::summarise(!!as.symbol("max") := max(!!as.symbol(report_date))) |>
+      dplyr::pull()
+
+    max_true  <- .disease_data |>
+      dplyr::summarise(!!as.symbol("max") := max(!!as.symbol(true_date))) |>
+      dplyr::pull()
+
+    now <- max(max_report, max_true)
   }
 
   return(now)

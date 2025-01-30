@@ -48,7 +48,7 @@ check_date_columns <- function(.disease_data, true_date, report_date) {
 #' @inheritParams nowcast
 #' @return (invisibly) TRUE if the `now` date is achievable
 #' @keywords internal
-check_now <- function(.disease_data, now, true_date) {
+check_now <- function(.disease_data, now, true_date, report_date) {
   # Check that now is a date
   if (!is.null(now) && !lubridate::is.Date(now)) {
     cli::cli_abort(
@@ -57,10 +57,12 @@ check_now <- function(.disease_data, now, true_date) {
   }
 
   # Check that now falls between dates
-  min_date <- .disease_data |> dplyr::summarise(!!as.symbol("min") := min(!!as.symbol(true_date))) |> dplyr::pull()
-  max_date <- .disease_data |> dplyr::summarise(!!as.symbol("max") := max(!!as.symbol(true_date))) |> dplyr::pull()
+  min_date        <- .disease_data |> dplyr::summarise(!!as.symbol("min") := min(!!as.symbol(true_date))) |> dplyr::pull()
+  max_date_true   <- .disease_data |> dplyr::summarise(!!as.symbol("max") := max(!!as.symbol(true_date))) |> dplyr::pull()
+  max_date_report <- .disease_data |> dplyr::summarise(!!as.symbol("max") := max(!!as.symbol(report_date))) |> dplyr::pull()
+  max_date        <- max(max_date_true, max_date_report)
   if (!is.null(now)) {
-    if (now <= min_date | now > max_date) {
+    if (now < min_date | now > max_date) {
       cli::cli_abort(
         "{.code now = {.val {now}}} is outside the scope of the data's {.code true_date}."
       )

@@ -14,6 +14,7 @@ Implements bayesian state-space models to nowcast incident cases for any disease
 Useful links:
 \itemize{
   \item \url{https://rodrigozepeda.github.io/diseasenowcasting/}
+  \item \url{https://github.com/RodrigoZepeda/diseasenowcasting}
 }
 
 }

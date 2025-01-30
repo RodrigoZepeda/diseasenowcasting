@@ -35,7 +35,8 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::pkgdown, any::ggtext, any::cowplot, any::tidyverse, any::latex2exp, any::MetBrewer, any::NobBS, local::.
+          extra-packages: any::pkgdown, any::ggtext, any::cowplot, any::tidyr, any::stringr,
+            any::scoringutils, any::NobBS, any::lubridate, any::ggplot2, any::dplyr, local::.
           needs: website
 
       - name: Build site
