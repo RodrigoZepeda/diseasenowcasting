@@ -6,6 +6,7 @@ home:
 
 template:
   bootstrap: 5
+  math-rendering: katex
   bslib:
     primary: "#5F7E62"
     secondary: "#262626"
@@ -13,12 +14,7 @@ template:
     headings-color: "#334335"
 navbar:
   structure:
-    right: [twitter, github]
-  components:
-    twitter:
-      icon: fa-twitter
-      href: http://twitter.com/RodZepeda
-      aria-label: Twitter
+    right: [search, github]
   bg: secondary
 
 

@@ -1,0 +1,335 @@
+---
+title: "Comparison to other methods"
+---
+
+```{r, include = FALSE}
+set.seed(4357)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+In this article we compare our package against the results from:
+
++ The [NobBS](https://github.com/sarahhbellum/NobBS) package.
+<!--+ The [nowcaster](https://covid19br.github.io/nowcaster/index.html) package.-->
+<!--+ The [nowcasting](https://github.com/nmecsys/nowcasting) package.
++ The [epinowcast](https://package.epinowcast.org/articles/model.html) package.-->
+
+You can go to the [Comparison](#comparison) section directly for the comparison if you wish to skip the methods for comparing. 
+
+First we will call the libraries and generate the `diseasenowcasting` results. 
+
+```{r, message=FALSE}
+library(diseasenowcasting, quietly = TRUE)
+library(ggplot2, quietly = TRUE)
+library(dplyr, quietly = TRUE)
+library(lubridate, quietly = TRUE)
+```
+
+## diseasenowcasting
+
+In this section we will generate the estimates that will be compared against the other packages. We will operate with the following baseline model:
+
+```{r, eval=FALSE}
+data(denguedat)
+now   <- as.Date("1990-10-15")
+ncast <- nowcast(denguedat, true_date = "onset_week", now = now,
+                 report_date = "report_week", refresh = 0,
+                 method = "sampling", iter = 1000,
+                 seed = 27549, cores = 4, chains = 4)
+```
+
+and use 10 different dates in the time series codified as `dates_to_test`: 
+
+```{r, eval=FALSE}
+set.seed(645287)
+dates_possible <- seq(min(denguedat$onset_week), max(denguedat$onset_week), by = "1 week")
+dates_to_test  <- sample(dates_possible, size = 10) |> sort()
+
+#We will consider only periods of at most 3 years else it makes it really slow
+mindate <- min(denguedat$onset_week)
+```
+
+finally we will compute the nowcasts for those moments and save them into an object:
+
+```{r, eval=FALSE}
+#To save the results in 
+ncast_wis_table <- NULL
+
+#The diseasenowcasting version
+for (now in dates_to_test){
+
+  #Get current date as date
+  now <- as.Date(now)
+
+  #Get new data
+  new_data <- denguedat |> filter(report_week <= now & report_week >= max(now - years(3), mindate))
+
+  #Update the model
+  ncast_update  <- update(ncast, new_data = new_data, now = now)
+
+  #Get summary
+  ncast_summary <- summary(ncast_update, quantiles = c(0.025, 0.05, 0.25, 0.50, 0.75, 0.95, 0.975))
+
+  #Save summary
+  ncast_summary <- tibble(now = now, ncast_summary)
+
+  #Keep only last observation (nowcast)
+  ncast_summary <- ncast_summary |>
+    mutate(horizon = as.numeric(difftime(onset_week, !!now, units="weeks"))) |>
+    filter(horizon > -1)
+
+  #Update the table
+  ncast_wis_table <- rbind(ncast_wis_table, ncast_summary)
+
+}
+
+#Remove other columns
+ncast_wis_table <- ncast_wis_table |>
+  select(-sd, -median, -`50%`, -Strata_unified)
+```
+
+```{r, echo = FALSE}
+ncast_wis_table <- dplyr::tibble(
+  now = as.Date(rep(
+    c(
+      "1990-11-12", "1991-11-04", "1994-06-20", "1995-10-16", "1999-03-08",
+      "2002-07-01", "2004-02-09", "2008-01-21", "2010-05-31", "2010-08-02"
+    ),
+    each = 3L
+  )),
+  onset_week = as.Date(c(
+    "1990-10-29", "1990-11-05", "1990-11-12", "1991-10-21", "1991-10-28",
+    "1991-11-04", "1994-06-06", "1994-06-13", "1994-06-20", "1995-10-02",
+    "1995-10-09", "1995-10-16", "1999-02-22", "1999-03-01", "1999-03-08",
+    "2002-06-17", "2002-06-24", "2002-07-01", "2004-01-26", "2004-02-02",
+    "2004-02-09", "2008-01-07", "2008-01-14", "2008-01-21", "2010-05-17",
+    "2010-05-24", "2010-05-31", "2010-07-19", "2010-07-26", "2010-08-02"
+  )),
+  `2.5%` = c(
+    81, 89, 53, 163, 113, 80.975, 50, 41, 28.975, 53, 27, 28, 35, 35, 30, 4, 1, 1,
+    20, 14, 11, 18, 14.975000000000001, 9, 58, 32, 25, 299, 167.975, 72.975
+  ),
+  `5%` = c(
+    82, 92, 58, 165, 117, 87, 50.95, 43, 32, 53, 30, 32, 36, 37, 33, 4, 1, 2, 20,
+    14, 13, 19, 16, 11, 59, 35, 30.950000000000003, 301, 176, 85
+  ),
+  `25%` = c(
+    88, 101, 73, 170, 129, 109, 53, 50, 42, 56, 38, 46, 39, 45, 46, 5, 3, 4, 22,
+    19, 19, 22, 23, 22, 64, 49, 48.75, 311, 206, 131
+  ),
+  `50%` = c(
+    92, 110, 86.5, 176, 139, 125, 56, 55, 50, 60, 45, 56, 42, 52, 57, 6, 5, 7,
+    23.5, 22, 25, 26, 30, 31, 70, 62, 63, 321, 237, 171
+  ),
+  `75%` = c(
+    98, 120, 102, 182, 150, 142, 59, 62, 58, 65, 54, 69, 45, 60, 70, 8, 8, 12, 26,
+    27, 31, 33, 39, 42, 77, 76.25, 81, 334, 274, 223
+  ),
+  `95%` = c(
+    110, 135, 128, 193, 167.04999999999995, 171, 66, 74, 75, 75,
+    70.04999999999995, 88, 53, 76, 93, 12.049999999999955, 14, 19, 31, 34, 42, 45,
+    57.049999999999955, 63, 91, 108.04999999999995, 115, 362, 345,
+    313.04999999999995
+  ),
+  `97.5%` = c(
+    114, 140.02499999999986, 138, 196, 174, 182, 68, 78.02499999999986,
+    79.02499999999986, 79, 76, 95, 55, 82, 102, 15, 16, 23, 33, 37, 46, 50,
+    64.02499999999986, 71.02499999999986, 98, 124, 129, 374.02499999999986, 385,
+    343.02499999999986
+  ),
+  horizon = rep(c(-2, -1, 0), 10),
+) |> 
+  filter(horizon > -1)
+```
+
+This is what it looks like: 
+
+```{r}
+ncast_wis_table
+```
+
+## NobBS
+
+```{r, eval=FALSE}
+library(NobBS)
+```
+
+The usual call for the `NobBS` is as follows:
+
+```{r, eval=FALSE}
+nbbs_cast <- NobBS(data = denguedat, units = "1 week", now = now,
+                   onset_date = "onset_week", report_date = "report_week")
+```
+
+Here we repeat the process of analyzing multiple dates to calculate the prediction's accuracy:
+
+
+```{r, eval=FALSE}
+set.seed(2507284)
+
+nobbs_wis_table <- NULL
+for (now in dates_to_test){
+
+  now <- as.Date(now)
+
+  #Get new data
+  new_data <- denguedat |> filter(report_week <= now & report_week >= max(now - years(3), mindate))
+
+  #Update the model calculating the quantiles at 95, 90 and 50%.
+  #The new Nobbs version doesn't require you to estimate three times to get quantiles
+  #but I am assuming the user has the CRAN version
+  nbbs_cast_95 <- NobBS(data = new_data, units = "1 week", now = now,
+                     onset_date = "onset_week", report_date = "report_week",
+                     specs = list(conf = 0.95))
+
+  nbbs_cast_90 <- NobBS(data = new_data, units = "1 week", now = now,
+                        onset_date = "onset_week", report_date = "report_week",
+                        specs = list(conf = 0.9))
+
+  nbbs_cast_50 <- NobBS(data = new_data, units = "1 week", now = now,
+                        onset_date = "onset_week", report_date = "report_week",
+                        specs = list(conf = 0.5))
+
+  #Bind all into a single table
+  nbbs_cast <- nbbs_cast_95[["estimates"]] |>
+    select(estimate, lower, upper, onset_date, n.reported) |>
+    rename(`97.5%` = upper, `2.5%` = lower, mean = estimate, observed = n.reported) |>
+    left_join(
+      nbbs_cast_50[["estimates"]] |>
+      select(lower, upper, onset_date) |>
+      rename(`75%` = upper, `25%` = lower), by = "onset_date"
+    ) |>
+    left_join(
+      nbbs_cast_90[["estimates"]] |>
+        select(lower, upper, onset_date) |>
+        rename(`95%` = upper, `5%` = lower), by = "onset_date"
+    ) |>
+    mutate(horizon = as.numeric(difftime(onset_date, !!now, units="weeks"))) |>
+    filter(horizon > -1) |>
+    mutate(now = !!now) |>
+    rename(onset_week = onset_date)
+
+  nobbs_wis_table <- rbind(nobbs_wis_table, nbbs_cast)
+
+}
+```
+
+```{r, echo = FALSE}
+nobbs_wis_table <- data.frame(
+  mean = c(
+    97, 138, 175, 198, 166, 206, 64, 67, 72, 66, 42, 51, 46, 51, 47, 5, 4, 5, 25,
+    24, 28, 24, 22, 21, 79, 63, 66, 420, 434, 477
+  ),
+  `2.5%` = c(
+    88, 118, 114, 184, 144, 141, 56, 53, 43, 58, 30, 26.97500000000022, 39, 39,
+    25, 4, 1, 1, 21, 17, 13, 19, 14, 8, 69, 46, 34, 391, 374, 278
+  ),
+  `97.5%` = c(
+    108, 161, 267, 218, 192, 293, 73, 85, 114, 76, 58, 93, 55, 67, 81, 8, 9, 14,
+    31, 35, 52, 31, 34, 44, 92, 85, 117, 458, 504, 787
+  ),
+  onset_week = as.Date(c(
+    "1990-10-29", "1990-11-05", "1990-11-12", "1991-10-21", "1991-10-28",
+    "1991-11-04", "1994-06-06", "1994-06-13", "1994-06-20", "1995-10-02",
+    "1995-10-09", "1995-10-16", "1999-02-22", "1999-03-01", "1999-03-08",
+    "2002-06-17", "2002-06-24", "2002-07-01", "2004-01-26", "2004-02-02",
+    "2004-02-09", "2008-01-07", "2008-01-14", "2008-01-21", "2010-05-17",
+    "2010-05-24", "2010-05-31", "2010-07-19", "2010-07-26", "2010-08-02"
+  )),
+  observed = c(
+    76L, 74L, 16L, 156L, 86L, 18L, 49L, 32L, 5L, 51L, 16L, 3L, 33L, 23L, 1L, 4L,
+    1L, NA, 20L, 11L, 2L, 17L, 9L, NA, 56L, 19L, 1L, 293L, 131L, 6L
+  ),
+  `25%` = c(
+    93, 130, 152, 193, 157, 182, 61, 62, 61, 63, 37, 41, 43, 46, 38, 4, 3, 3, 24,
+    21, 22, 22, 19, 15, 75, 57, 53, 410, 412, 399
+  ),
+  `75%` = c(
+    101, 145, 203, 204, 174, 233, 66, 73, 84, 69, 47, 63, 49, 56, 57, 6, 5, 8, 27,
+    27, 35, 26, 26, 27, 83, 70, 81, 432, 457, 566
+  ),
+  `5%` = c(
+    89, 121, 122, 186, 147, 150.94999999999987, 57, 55, 47, 59, 32, 30, 40, 40,
+    28, 4, 1, 1, 22, 18, 15, 20, 15, 9, 70, 48, 38, 395, 383, 305
+  ),
+  `95%` = c(
+    106, 157, 249, 214, 187, 277, 71, 81.04999999999927, 107, 74, 55, 84, 53, 64,
+    74, 8, 8, 12, 30, 33, 47, 30, 32, 39, 89, 81, 108, 452, 492, 727
+  ),
+  horizon = rep(c(-2, -1, 0), 10),
+  now = as.Date(rep(
+    c(
+      "1990-11-12", "1991-11-04", "1994-06-20", "1995-10-16", "1999-03-08",
+      "2002-07-01", "2004-02-09", "2008-01-21", "2010-05-31", "2010-08-02"
+    ),
+    each = 3L
+  )),
+  check.names = FALSE
+) |> 
+  filter(horizon > -1)
+```
+
+This is what it looks like: 
+
+```{r}
+nobbs_wis_table
+```
+
+## Comparison
+
+```{r}
+model_table <- nobbs_wis_table |> 
+  mutate(method = "NoBbs") |> 
+  rename(`50%` = mean) |>  #The point estimate for scoring utils
+  bind_rows(ncast_wis_table |> mutate(method = "diseasenowcasting"))
+```
+
+We use the `scoringutils` library to calculate the weighted interval scoring:
+
+```{r, message=FALSE}
+library(scoringutils, quietly = TRUE)
+library(tidyr)
+library(stringr)
+
+summary_table <- model_table |> 
+    mutate(observed = replace_na(observed, 0)) |> 
+    pivot_longer(cols = ends_with("%"), names_to = 'quantile_level', values_to = 'predicted') |>
+    mutate(quantile_level = as.numeric(str_remove_all(quantile_level, "\\%"))/100)  |>
+    as_forecast_quantile() |>
+    score() |>
+    summarise_scores(by = c("horizon","method","now"))
+```
+
+And format for presenting
+```{r}
+wis_table <- summary_table |> 
+  pivot_wider(id_cols = c("horizon","now"), names_from = "method", values_from = "wis") |> 
+  mutate(nowcat = factor(now, ordered = TRUE))
+```
+
+Finally the results show that `diseasenowcasting` is either close to `NoBbs` or performs better than `NoBbs`:
+
+```{r}
+ggplot(wis_table) +
+  geom_point(aes(x = nowcat, y = diseasenowcasting, color = "diseasenowcasting")) + 
+  geom_point(aes(x = nowcat, y = NoBbs, color = "NoBbs")) + 
+  geom_hline(aes(yintercept = mean(NoBbs), color = "NoBbs"), linetype = "dashed") +
+  geom_hline(aes(yintercept = mean(diseasenowcasting), color = "diseasenowcasting"), linetype = "dashed") +
+  theme_bw() +
+  labs(
+    x = "Nowcasted date",
+    y = "Weighted interval scoring",
+    title = "Weighted interval scoring for the nowcast"
+  ) +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 1)
+  ) +
+  scale_color_manual("package", values = c("deepskyblue3","tomato3"))
+```
+
+

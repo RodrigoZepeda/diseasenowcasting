@@ -11,7 +11,9 @@ simulate_disease(
   initial_day = NULL,
   warmup_steps = 50,
   units = c("daily", "weekly"),
-  priors = random_priors(mu_p = 1, nu_p = 1, mu_q = 1, has_cycle = FALSE),
+  priors = random_priors(has_cycle = FALSE),
+  autoregresive = AR(),
+  moving_average = MA(),
   ...
 )
 }
@@ -30,6 +32,12 @@ simulate_disease(
 
 \item{priors}{A list of all of the nowcast priors. You can use \code{\link[=set_priors]{set_priors()}} to change
 the priors of the function (see details)}
+
+\item{autoregresive}{An \code{\link[=AR]{AR()}} object with the autoregresive components for the epidemic
+and delay processes.}
+
+\item{moving_average}{A \code{\link[=MA]{MA()}} object with the moving average component for the epidemic
+and delay processes.}
 
 \item{...}{Additional arguments to pass to \code{\link[=nowcast]{nowcast()}}}
 }

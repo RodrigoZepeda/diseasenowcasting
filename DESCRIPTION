@@ -1,7 +1,7 @@
 Package: diseasenowcasting
 Type: Package
 Title: Nowcasting disease onset cases given report dates
-Version: 0.2.3
+Version: 0.2.4
 Authors@R: 
     c(person("Rodrigo", "Zepeda-Tello", , "rzepeda17@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-4471-5270")),
@@ -56,5 +56,5 @@ LinkingTo:
 SystemRequirements: GNU make
 Config/testthat/edition: 3
 Config/testthat/parallel: true
-URL: https://rodrigozepeda.github.io/diseasenowcasting/
+URL: https://rodrigozepeda.github.io/diseasenowcasting/, https://github.com/RodrigoZepeda/diseasenowcasting
 Config/Needs/website: rmarkdown
