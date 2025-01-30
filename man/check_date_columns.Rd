@@ -4,20 +4,20 @@
 \alias{check_date_columns}
 \title{Check the onset and report dates}
 \usage{
-check_date_columns(.disease_data, onset_date, report_date)
+check_date_columns(.disease_data, true_date, report_date)
 }
 \arguments{
 \item{.disease_data}{A time series of reporting data in aggregated line list format
-such that each row has a column for onset date, report date, and}
+such that each row has a column for onset date, report date, and (optionally) strata}
 
-\item{onset_date}{In quotations, the name of the column of datatype
+\item{true_date}{In quotations, the name of the column of datatype
 \code{Date} designating the date of case onset. e.g. "onset_week"}
 
 \item{report_date}{In quotations, the name of the column of datatype
 \code{Date} designating the date of case report. e.g. "report_week"}
 }
 \value{
-The `.disease_data` data.frame filtered for reports after onset.
+The \code{.disease_data} data.frame filtered for reports after onset.
 }
 \description{
 Check the onset and report dates

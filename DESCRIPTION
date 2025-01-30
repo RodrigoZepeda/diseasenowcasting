@@ -1,14 +1,18 @@
 Package: diseasenowcasting
 Type: Package
 Title: Nowcasting disease onset cases given report dates
-Version: 0.1.0
+Version: 0.2.4
 Authors@R: 
     c(person("Rodrigo", "Zepeda-Tello", , "rzepeda17@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-4471-5270")),
-      person("Rami", "Yaari", role = c("aut")),
-      person("Matteo", "Perini", role = c("aut")),
-      person("Tal", "Robin", role = c("ctb")),
-      person("Teresa", "Yamana", role = c("ctb")),
+      person("Rami", "Yaari", role = c("aut"),
+           comment = c(ORCID = "0000-0002-8808-8937")),
+      person("Matteo", "Perini", role = c("aut"),
+           comment = c(ORCID = "0000-0002-9465-6216")),
+      person("Tal", "Robin", role = c("ctb"),
+           comment = c(ORCID = "0000-0002-3128-2499")),
+      person("Teresa", "Yamana", role = c("ctb"),
+           comment = c(ORCID = "0000-0001-8349-3151")),
       person(given = "Columbia University in the City of New York", role = c("cph", "fnd")))
 Description: Implements bayesian state-space models to nowcast incident cases for any 
   disease given report dates while controlling by strata and covariates.  
@@ -26,16 +30,20 @@ Imports:
     rlang,
     rstan (>= 2.18),
     rstantools (>= 2.4.0),
-    scales,
+    scoringutils (>= 2.0.0),
     stats,
     stringr,
     tidyr,
-    ggplot2,
-    scoringutils
+    almanac
 Depends: 
     R (>= 4.2.0)
+Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Suggests: 
+    cowplot,
+    ggplot2,
+    scales,
+    ggtext,
     testthat (>= 3.0.0)
 Biarch: true
 LinkingTo: 
@@ -48,5 +56,5 @@ LinkingTo:
 SystemRequirements: GNU make
 Config/testthat/edition: 3
 Config/testthat/parallel: true
-URL: https://rodrigozepeda.github.io/diseasenowcasting/
+URL: https://rodrigozepeda.github.io/diseasenowcasting/, https://github.com/RodrigoZepeda/diseasenowcasting
 Config/Needs/website: rmarkdown

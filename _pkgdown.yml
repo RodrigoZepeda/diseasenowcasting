@@ -1,4 +1,20 @@
 url: https://rodrigozepeda.github.io/diseasenowcasting/
+
+home:
+  title: diseasenowcasting package
+  description: Nowcast time series of epidemiological cases.
+
 template:
   bootstrap: 5
+  math-rendering: katex
+  bslib:
+    primary: "#5F7E62"
+    secondary: "#262626"
+    success: "#DA6529"
+    headings-color: "#334335"
+navbar:
+  structure:
+    right: [search, github]
+  bg: secondary
+
 

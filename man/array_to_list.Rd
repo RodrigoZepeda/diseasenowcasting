@@ -17,6 +17,6 @@ A list of lists with the same structure as the array
 }
 \description{
 Function that takes an array and transforms it into lists of lists
-this is mainly for interacting with [Rcpp::cppFunction()].
+this is mainly for interacting with \code{\link[Rcpp:cppFunction]{Rcpp::cppFunction()}}.
 }
 \keyword{internal}

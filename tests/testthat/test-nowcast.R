@@ -15,15 +15,15 @@ test_that("Testing `nowcast.R`", {
   #Check sampling inference works
   suppressWarnings({
     expect_no_error(
-      nowcast(sims, onset_date = "onset_week", report_date = "report_week", chains = 1,
-            cores = 1, iter = 25)
+      nowcast(sims, true_date = "onset_week", report_date = "report_week", chains = 1,
+            cores = 1, iter = 1000, seed = 238479, method = "sampling")
     )
   })
 
   #Check variational inference works
   suppressWarnings({
     expect_no_error(
-      nowcast(sims, onset_date = "onset_week", report_date = "report_week",
+      nowcast(sims, true_date = "onset_week", report_date = "report_week",
                    method = "variational")
     )
   })
@@ -31,7 +31,7 @@ test_that("Testing `nowcast.R`", {
   #Check optim inference works
   suppressWarnings({
     expect_no_error(
-      nowcast(sims, onset_date = "onset_week", report_date = "report_week",
+      nowcast(sims, true_date = "onset_week", report_date = "report_week",
               method = "optimization")
     )
   })
@@ -41,22 +41,22 @@ test_that("Testing `nowcast.R`", {
   #Check sampling inference works
   suppressWarnings({
     expect_no_error(
-      nowcast(sims, onset_date = "onset_week", report_date = "report_week", chains = 1,
-                     cores = 1, iter = 25, strata = "gender")
+      nowcast(sims, true_date = "onset_week", report_date = "report_week", chains = 1,
+                     cores = 1, iter = 25, strata = "gender", method = "sampling")
     )
   })
 
   #Check variational inference works
   suppressWarnings({
     expect_no_error(
-      nowcast(sims, onset_date = "onset_week", report_date = "report_week",
+      nowcast(sims, true_date = "onset_week", report_date = "report_week",
                    method = "variational", strata = "gender")
     )
   })
 
   suppressWarnings({
     expect_no_error(
-      nowcast(sims, onset_date = "onset_week", report_date = "report_week",
+      nowcast(sims, true_date = "onset_week", report_date = "report_week",
               method = "optimization", strata = "gender")
     )
   })

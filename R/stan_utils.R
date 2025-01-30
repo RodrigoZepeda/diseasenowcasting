@@ -65,7 +65,7 @@ control_default <- function(){
 #' @title Default y link
 #' @keywords internal
 default_y_link <- function(dist){
-  if (dist %in% c("Normal","Student")){
+  if (dist[1] %in% c("Normal","Student")){
     return ("identity")
   } else {
     return ("identity")
@@ -75,7 +75,7 @@ default_y_link <- function(dist){
 #' @title Default x link
 #' @keywords internal
 default_x_link <- function(dist){
-  if (dist %in% c("Normal","Student")){
+  if (dist[1] %in% c("Normal","Student")){
     return ("identity")
   } else {
     return ("dhyperbolic")

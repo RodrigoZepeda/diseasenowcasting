@@ -1,5 +1,6 @@
-array[num_steps, tsize] int N_mat_predict_int   = rep_array(0, num_steps, tsize);
-array[num_steps, tsize] real N_mat_predict_real = rep_array(0, num_steps, tsize);
+/*Instantiate initial values*/
+array[is_discrete ? num_steps : 0, is_discrete ? tsize : 0] int N_mat_predict_int   = rep_array(0, is_discrete ? num_steps : 0, is_discrete ? tsize : 0);
+array[is_continuous ? num_steps : 0, is_continuous ? tsize : 0] real N_mat_predict_real = rep_array(0, is_continuous ? num_steps : 0, is_continuous ? tsize : 0);
 matrix[num_steps, tsize] N_mat_predict          = rep_matrix(0, num_steps, tsize);
 matrix[num_steps, num_strata] N_predict_raw     = rep_matrix(0, num_steps, num_strata);
 matrix[num_steps, num_strata] N_predict         = rep_matrix(0, num_steps, num_strata);
