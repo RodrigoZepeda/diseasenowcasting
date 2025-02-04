@@ -1,8 +1,6 @@
 data(denguedat)
 
 
-
-
 denguedat_red=denguedat[denguedat$report_week<=as.Date('1990-05-22'),]
 backncast= nowcast(.disease_data=denguedat_red,
                    true_date="onset_week",
@@ -35,17 +33,48 @@ backtest_summary2 <- backtest(backncast,
                               model_name='model_Poisson')
 
 
-metrics12 <- backtest_metrics(backtest_summary1,backtest_summary2)
+#plot backtest: basically the same as regualar plot + the observed as a line.
+# as default plot horizon 0 but make the user choose.
 
 
 
 
 
 
+metrics12 <- backtest_metrics(backtest_summary1,backtest_summary2, horizons = c(0,-1))
+
+
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+
+#need to selct the horizon. default is 0
+sel_hoz=0
+sel_mtr=c("wis", "ae_median")
+
+mtr <-
+
+# plot_backtest_metrics
+#something like this
+#https://rodrigozepeda.github.io/diseasenowcasting/articles/Comparison-to-other-methods.html
+#strata in row and metrics in the column of a facet_wrap. decide the default metrics
+
+# Ensure 'now' is of Date type
+  mtr$now <- as.Date(mtr$now)
+
+# Convert data to long format for ggplot2
+long_mtr <- filter(metrics12, horizon == sel_hoz) %>%
+  pivot_longer(cols = any_of(sel_mtr), names_to = "metric", values_to = "value")
+
+# Plot the data
+ggplot(long_mtr, aes(x = now, y = value, color = model)) +
+  geom_point() +
+  facet_grid(Strata_unified ~ metric, scales = "free_y") +
+  theme_minimal() +
+  labs(title = "Comparison of Metrics over Time by Strata and Model", x = "Date", y = "Value") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 
 
-
-
-
+##add to the vignettes > articles > diseasenowcasting.Rmd > 3. Evaluating the model
