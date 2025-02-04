@@ -1,5 +1,18 @@
 data(denguedat)
-backtest_summary1 <- backtest(.disease_data=denguedat,
+
+
+
+
+denguedat_red=denguedat[denguedat$report_week<=as.Date('1990-05-22'),]
+backncast= nowcast(.disease_data=denguedat_red,
+                   true_date="onset_week",
+                   report_date="report_week",
+                   method = "optimization", dist = "Normal",
+                   refresh=0)
+
+
+
+backtest_summary1 <- backtest(backncast,
                               true_date="onset_week",
                               report_date="report_week",
                               start_date = as.Date('1990-01-22'),
@@ -10,7 +23,7 @@ backtest_summary1 <- backtest(.disease_data=denguedat,
                               refresh=0,
                               model_name='model_Normal')
 
-backtest_summary2 <- backtest(.disease_data=denguedat,
+backtest_summary2 <- backtest(backncast,
                               true_date="onset_week",
                               report_date="report_week",
                               start_date = as.Date('1990-01-22'),
@@ -22,12 +35,8 @@ backtest_summary2 <- backtest(.disease_data=denguedat,
                               model_name='model_Poisson')
 
 
-metrics1 <- backtest_metrics(backtest_summary1, c('mae','rmse','wis'), c(0,-1,-2,-3))
-metrics2 <- backtest_metrics(backtest_summary2, c('mae','rmse','wis'), c(0,-1,-2,-3))
-metrics12 <- backtest_metrics(list(backtest_summary1,backtest_summary2),
-                             c('mae','rmse','wis'), c(0,-1,-2,-3))
+metrics12 <- backtest_metrics(backtest_summary1,backtest_summary2)
 
-print(metrics12)
 
 
 
