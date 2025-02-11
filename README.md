@@ -90,3 +90,50 @@ the package:
   methods:](https://rodrigozepeda.github.io/diseasenowcasting/articles/Comparison-to-other-methods.html)
   provides a comparison in terms of metrics to other nowcasting
   packages.
+
+## Developing
+
+If you are interested on developing the package, after downloading the
+repository you might need to run
+
+``` r
+rstantools::rstan_config()
+```
+
+before the
+
+``` r
+devtools::load_all(".")
+```
+
+in order for the `C++` files to be generated for your specific system.
+
+### Developing issues with RStudio
+
+In RStudio there might be an error message when loading the package of
+
+    Error file too big
+
+a workaround is to include the following line on the `configure`
+
+``` bash
+echo "PKG_CXXFLAGS += -Wa,-mbig-obj" >> ./src/Makevars
+```
+
+and `configure.win` files:
+
+``` bash
+echo "PKG_CXXFLAGS += -Wa,-mbig-obj" >> ./src/Makevars.win
+```
+
+Then, use `R` from the terminal and run:
+
+``` r
+⁠pkgbuild::compile_dll(debug = FALSE)
+```
+
+Afterwards, in a new `R` session in RStudio you can finally load:
+
+``` r
+devtools::load_all(".")
+```
