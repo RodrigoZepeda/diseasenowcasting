@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.5</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -120,6 +120,32 @@
 <li>
 <a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Comparison-to-other-methods.html">Comparison to other methods:</a> provides a comparison in terms of metrics to other nowcasting packages.</li>
 </ul>
+</div>
+<div class="section level2">
+<h2 id="developing">Developing<a class="anchor" aria-label="anchor" href="#developing"></a>
+</h2>
+<p>If you are interested on developing the package, after downloading the repository you might need to run</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">rstantools</span><span class="fu">::</span><span class="fu"><a href="https://mc-stan.org/rstantools/reference/rstan_config.html" class="external-link">rstan_config</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>before the</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">load_all</span><span class="op">(</span><span class="st">"."</span><span class="op">)</span></span></code></pre></div>
+<p>in order for the <code>C++</code> files to be generated for your specific system.</p>
+<div class="section level3">
+<h3 id="developing-issues-with-rstudio">Developing issues with RStudio<a class="anchor" aria-label="anchor" href="#developing-issues-with-rstudio"></a>
+</h3>
+<p>In RStudio there might be an error message when loading the package of</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>Error file too big</span></code></pre></div>
+<p>a workaround is to include the following line on the <code>configure</code></p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"PKG_CXXFLAGS += -Wa,-mbig-obj"</span> <span class="op">&gt;&gt;</span> ./src/Makevars</span></code></pre></div>
+<p>and <code>configure.win</code> files:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"PKG_CXXFLAGS += -Wa,-mbig-obj"</span> <span class="op">&gt;&gt;</span> ./src/Makevars.win</span></code></pre></div>
+<p>Then, use <code>R</code> from the terminal and run:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>⁠pkgbuild<span class="sc">::</span><span class="fu">compile_dll</span>(<span class="at">debug =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<p>Afterwards, in a new <code>R</code> session in RStudio you can finally load:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">load_all</span><span class="op">(</span><span class="st">"."</span><span class="op">)</span></span></code></pre></div>
+</div>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
