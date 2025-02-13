@@ -1,20 +1,3 @@
-<<<<<<< Updated upstream
-data(denguedat)
-backtest_summary1 <- backtest(.disease_data=denguedat,
-                              onset_date="onset_week",
-                              report_date="report_week",
-                              start_date = as.Date('1990-01-22'),
-                              end_date = as.Date('1990-05-22'),
-                              stride = 4,
-                              min_horizon = -3,
-                              method = "optimization", dist = "Normal",
-                              refresh=0,
-                              model_name='model_Normal')
-
-backtest_summary2 <- backtest(.disease_data=denguedat,
-                              onset_date="onset_week",
-                              report_date="report_week",
-=======
 library(dplyr)
 
 data(denguedat)
@@ -48,7 +31,6 @@ backtest_summary1 <- backtest(ncast1,
                               model_name='model_NB')
 
 backtest_summary2 <- backtest(ncast2,
->>>>>>> Stashed changes
                               start_date = as.Date('1990-01-22'),
                               end_date = as.Date('1990-05-22'),
                               stride = 4,

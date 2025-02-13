@@ -129,14 +129,6 @@ backtest <- function(start_date = NULL,
     pred_table <- rbind(pred_table,pred_summary)
   }
 
-<<<<<<< Updated upstream
-  cases_per_date <- .disease_data |>
-                    dplyr::group_by(!!as.symbol(onset_date)) |>
-                    dplyr::summarize(!!as.symbol("observed"):=dplyr::n())
-  backtest_summary <- merge(pred_table, cases_per_date, by = onset_date, all.x = TRUE)
-  backtest_summary$model <- model_name
-  return (backtest_summary)
-=======
   stratas <- names(ncast[['data']][['strata_dict']][,-c(1,2)])
 
   cases_per_date <- ncast[["data"]][["original_data"]] |>
@@ -234,7 +226,6 @@ aggregate_backtest_summary <- function(backtest_summary, remove_strata) {
   desc_cols <- c("model","now",true_date,"horizon",kept_strata,"Strata_unified")
   backtest_summary_agg <- backtest_summary_agg[,c(desc_cols,value_cols)]
   return (backtest_summary_agg)
->>>>>>> Stashed changes
 }
 
 
@@ -250,25 +241,16 @@ check_same_columns <- function(df_list) {
   return(all_same)
 }
 
-# calc_mae <- function(backtest_summary) {
-#   backtest_summary$ae <- abs(backtest_summary$observed-backtest_summary$mean)
-#   mae_vals <- backtest_summary |> dplyr::group_by(horizon,strata,model) |> dplyr::summarize(MAE = mean(ae),.groups='drop')
-#   return (mae_vals)
-# }
-#
-# calc_rmse <- function(backtest_summary) {
-#   backtest_summary$se <- (backtest_summary$observed-backtest_summary$mean)^2
-#   rmse_vals <- backtest_summary |> dplyr::group_by(horizon,strata,model) |> dplyr::summarize(RMSE = sqrt(mean(se)),.groups='drop')
-#   return (rmse_vals)
-# }
-
 #' calc_mae
 #'
 #' Calculates mean absolute error (mae)
 #'
 #' @param backtest_summary results of backtest call
 #'
-<<<<<<< Updated upstream
+#' @return The mean absolute error for each of the runs in [backtest()].
+#'
+#' @export
+#'
 calc_mae <- function(backtest_summary) {
   mae_vals <- backtest_summary |>
     dplyr::select(!!as.symbol("predicted") := !!as.symbol("mean"), dplyr::everything()) |>
@@ -281,26 +263,15 @@ calc_mae <- function(backtest_summary) {
                   !!as.symbol("model"),
                   !!as.symbol("mae"):='ae_point')
   return (mae_vals)
-=======
-#' @return The Absolute Percent Error for each of the runs in [backtest()].
+}
+
+#' calc_ape
 #'
-#' @examples
-#' # Load the data
-#' data(denguedat)
+#' Calculates absolute percent error (ape)
 #'
-#' # Run a nowcast with very few iterations
-#' # change to method = "sampling" when working and remove the iter = 10 (or set to iter = 2000)
-#' now <- as.Date("1990-10-01")
-#' ncast <- nowcast(denguedat, "onset_week", "report_week", now = now,
-#'   method = "optimization", seed = 2495624, iter = 10)
+#' @param backtest_summary results of backtest call
 #'
-#' # Run a backtest for the model checking the model fit for two dates:
-#' btest <- backtest(ncast, dates_to_test = c(as.Date("1990-06-11"), as.Date("1990-06-18")))
-#'
-#' # Get the ape with the scoring utils package
-#' if (requireNamespace("scoringutils", quietly = TRUE)){
-#'   calc_ape(btest)
-#' }
+#' @return The absolute percent error for each of the runs in [backtest()].
 #'
 #' @export
 calc_ape <- function(backtest_summary) {
@@ -319,7 +290,6 @@ calc_ape <- function(backtest_summary) {
   }
 
   return (ape_vals)
->>>>>>> Stashed changes
 }
 
 #' calc_rmse
@@ -327,6 +297,10 @@ calc_ape <- function(backtest_summary) {
 #' Calculates root mean squared error (rmse)
 #'
 #' @param backtest_summary results of backtest call
+#'
+#' @return The root mean squared error for each of the runs in [backtest()].
+#'
+#' @export
 #'
 calc_rmse <- function(backtest_summary) {
   rmse_vals <- backtest_summary |>
@@ -348,6 +322,10 @@ calc_rmse <- function(backtest_summary) {
 #' Calculates weighted interval score (wis)
 #'
 #' @param backtest_summary results of backtest call
+#'
+#' @return The weighted interval score for each of the runs in [backtest()].
+#'
+#' @export
 #'
 calc_wis <- function(backtest_summary) {
   if(!('X50.' %in% colnames(backtest_summary)))
@@ -376,32 +354,22 @@ calc_wis <- function(backtest_summary) {
 #'
 #' @param metrics list of metrics which should be calculated.
 #' Currently supporting: 'mae' (mean absolute error), 'rmse' (root mean squared error),
-#' and 'wis' (weighted interval score)
+#' 'ape' (absolute percent error) and 'wis' (weighted interval score)
 #'
 #' @param horizons list of horizons for which the metrics be calculated.
 #' Default is to calculate metrics only for horizon 0.
 #'
 #' @export
-<<<<<<< Updated upstream
-backtest_metrics <- function(backtest_summary, metrics, horizons=c(0))
-{
-  if(is.list(backtest_summary)) {
-    if(!check_same_columns(backtest_summary))
-      stop('Error: models cannot be compared - differnt column names in elements of backtest_summary')
-    backtest_summary <- dplyr::bind_rows(backtest_summary)
-=======
 backtest_metrics <- function(..., metrics = c("mae","rmse","ape","wis"), horizons = 0){
 
   ##Check the models are compatible
   if(!check_same_columns(list(...))){
       cli::cli_abort('Models cannot be compared - different column names in elements of backtest_summary')
->>>>>>> Stashed changes
   }
 
   backtest_summary <- backtest_summary |>
                       dplyr::filter(!!as.symbol("horizon") %in% horizons) |>
                       dplyr::rename(!!as.symbol("strata") := !!as.symbol("Strata_unified"))
-
 
   models <- unique(backtest_summary$model)
   stratas <- unique(backtest_summary$strata)
@@ -410,26 +378,15 @@ backtest_metrics <- function(..., metrics = c("mae","rmse","ape","wis"), horizon
   for(metric in metrics) {
     metric_results <- switch(
       metric,
-<<<<<<< Updated upstream
-      mae=calc_mae(backtest_summary),
-      rmse=calc_rmse(backtest_summary),
-      wis=calc_wis(backtest_summary),
-      stop("Error: unsupported metric - " +metric +".")
-=======
       mae  = calc_mae(backtest_summary),
       rmse = calc_rmse(backtest_summary),
       ape = calc_ape(backtest_summary),
       wis  = calc_wis(backtest_summary),
       cli::cli_abort("Unsupported metric: {.val {metric}}.")
->>>>>>> Stashed changes
     )
     metrics_table <- merge(metrics_table, metric_results, by=c('horizon','strata','model'))
   }
   metrics_table <- metrics_table |>
-<<<<<<< Updated upstream
-                   dplyr::arrange(!!as.symbol("model"),!!as.symbol("horizon"))
-  return (metrics_table)
-=======
     dplyr::arrange(!!as.symbol("model"),!!as.symbol("horizon"))
 
   desc_cols <- c("model","now","horizon","Strata_unified")
@@ -437,5 +394,4 @@ backtest_metrics <- function(..., metrics = c("mae","rmse","ape","wis"), horizon
   metrics_table <- metrics_table[,c(desc_cols,value_cols)]
 
   return(metrics_table)
->>>>>>> Stashed changes
 }
