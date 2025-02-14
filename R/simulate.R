@@ -19,25 +19,30 @@
 #' @export
 #'
 #' @examples
-#' # Simulate a disease for 20 time steps with delay of maximum 5 and 3 strata
+#' # Simulate a disease for 20 time steps with delay of maximum 10 and 3 strata
 #' set.seed(48672)
-#' simulate_disease(num_steps = 20, num_delays = 5, num_strata = 3)
+#' sims <- simulate_disease(num_steps = 20, num_delays = 3, num_strata = 3)
 simulate_disease <- function(num_steps    = 10,
                              num_delays   = 8,
                              num_strata   = 2,
                              initial_day  = NULL,
                              warmup_steps = 50,
                              units        = c("daily", "weekly"),
-                             priors       = random_priors(mu_p = 2, nu_p = 1, mu_q = 1),
+                             priors       = random_priors(has_cycle = FALSE),
+                             autoregresive  = AR(),
+                             moving_average = MA(),
                              ...){
 
 
+  #Check the warm-up steps
   warmup_steps <- ifelse(!is.numeric(warmup_steps) | warmup_steps < 0,
                          cli::cli_abort("Invalid warmup_steps. Set to an integer >= 0"),
                          ceiling(warmup_steps))
 
-
+  #Check the units are either daily or weekly
   units     <- match.arg(units, c("daily", "weekly"))
+
+  #Set the scale according to units
   scale_val <- ifelse(units[1] == "weekly", 7, 1)
 
   if (is.null(initial_day)){
@@ -54,31 +59,36 @@ simulate_disease <- function(num_steps    = 10,
     .delay     =  seq(0, num_delays - 1, by = 1),
     .strata    =  paste0("s", seq(1, num_strata)),
   ) |>
-    dplyr::mutate(!!as.symbol("onset_date")  := !!initial_day +
+    dplyr::mutate(!!as.symbol("true_date")  := !!initial_day +
                     lubridate::days(!!scale_val*!!as.symbol(".tval"))) |>
-    dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("onset_date")  +
+    dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("true_date")  +
                     lubridate::days(!!scale_val*!!as.symbol(".delay"))) |>
     dplyr::mutate(!!as.symbol("n") := !!1)
 
   #Generate fake dataset
-  ss_process <- nowcast(disease_data, onset_date = "onset_date", report_date = "report_date",
+  ss_process <- nowcast(disease_data, true_date = "true_date", report_date = "report_date",
                         strata = ".strata",
                         priors = priors,
                         prior_only = F,
                         algorithm = "Fixed_param",
+                        method = "sampling",
                         chains = 1,
                         normalize_data = FALSE,
+                        autoregresive = autoregresive,
+                        moving_average = moving_average,
                         iter = 1000,
-                        init = get_priors_from_init(priors = priors,
-                                                    num_strata = num_strata,
-                                                    num_delays = num_delays,
-                                                    num_steps = num_steps + warmup_steps),
+                        #init = get_priors_from_init(priors = priors,
+                        #                            num_strata = num_strata,
+                        #                            num_delays = num_delays,
+                        #                            num_steps = num_steps + warmup_steps,
+                        #                            autoregresive = autoregresive,
+                        #                            moving_average = moving_average),
                         ...)
 
   #Create the simulation tibble
   simulations <- ss_process$generated_quantities |>
     posterior::as_draws() |>
-    posterior::subset_draws(c("N_mat_predict_real", "N_mat_predict_int")) |>
+    posterior::subset_draws(c("N_mat_predict")) |>
     posterior::summarise_draws() |>
     dplyr::mutate(!!as.symbol(".pos")  := as.numeric(stringr::str_remove_all(!!as.symbol("variable"),".*\\[.*,|\\]"))) |>
     dplyr::mutate(!!as.symbol(".tval") := as.numeric(stringr::str_remove_all(!!as.symbol("variable"),".*\\[|,.*\\]"))) |>
@@ -94,9 +104,9 @@ simulate_disease <- function(num_steps    = 10,
         dplyr::mutate(!!as.symbol(".pos") := 1:dplyr::n()),
       by = ".pos"
     ) |>
-    dplyr::mutate(!!as.symbol("onset_date")  := !!initial_day +
+    dplyr::mutate(!!as.symbol("true_date")  := !!initial_day +
                     lubridate::days(!!scale_val*!!as.symbol(".tval"))) |>
-    dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("onset_date")  +
+    dplyr::mutate(!!as.symbol("report_date") := !!as.symbol("true_date")  +
                     lubridate::days(!!scale_val*!!as.symbol(".delay"))) |>
     dplyr::rename(!!as.symbol("n") := !!as.symbol("median")) |>
     dplyr::select(-!!as.symbol(".tval"), -!!as.symbol(".pos"), -!!as.symbol(".delay")) |>

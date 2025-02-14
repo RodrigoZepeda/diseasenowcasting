@@ -7,8 +7,30 @@
 calc_mae(backtest_summary)
 }
 \arguments{
-\item{backtest_summary}{results of backtest call}
+\item{backtest_summary}{results of \code{\link[=backtest]{backtest()}}}
+}
+\value{
+The Mean Absolute Error for each of the runs in \code{\link[=backtest]{backtest()}}.
 }
 \description{
 Calculates mean absolute error (mae)
+}
+\examples{
+# Load the data
+data(denguedat)
+
+# Run a nowcast with very few iterations
+# change to method = "sampling" when working and remove the iter = 10 (or set to iter = 2000)
+now <- as.Date("1990-10-01")
+ncast <- nowcast(denguedat, "onset_week", "report_week", now = now,
+  method = "optimization", seed = 2495624, iter = 10)
+
+# Run a backtest for the model checking the model fit for two dates:
+btest <- backtest(ncast, dates_to_test = c(as.Date("1990-06-11"), as.Date("1990-06-18")))
+
+# Get the mean absolute error with the scoringutils package
+if (requireNamespace("scoringutils", quietly = TRUE)){
+  calc_mae(btest)
+}
+
 }

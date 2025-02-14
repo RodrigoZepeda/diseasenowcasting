@@ -3,12 +3,6 @@
 #' Function to return the default values for the [nowcast()] function
 #' as a list.
 #'
-#' @param mu_p Integer. Degree of the epidemic trend.
-#'
-#' @param mu_q Integer. Degree of the errors in the epidemic trend.
-#'
-#' @param nu_p Integer. Degree of the delay trend
-#'
 #' @param mu_0_param_1 Real. Mean of the initial value of the epidemic trend.
 #'
 #' @param mu_0_param_2 Positive Real. Variance of the initial value of the epidemic trend.
@@ -37,6 +31,46 @@
 #'
 #' @param sd_m_param_2 Positive real. Initial value for the variance of the standard deviation of the observed cases (not considered if distribution is Poisson)
 #'
+#' @param c_0_param_1 Initial value for cycle parameter's mean
+#'
+#' @param c_0_param_2 Initial value for cycle parameter's sd
+#'
+#' @param ctilde_0_param_1 Initial value for cycle parameter's mean (latent cycle)
+#'
+#' @param ctilde_0_param_2 Initial value for cycle parameter's sd (latent cycle)
+#'
+#' @param sd_c_param_1 Mean value for the standard deviation's of c_0
+#'
+#' @param sd_c_param_2 Standard deviation prior value for the standard deviation's of c_0
+#'
+#' @param sd_ctilde_param_1 Mean value for the standard deviation's of c_0 tilde
+#'
+#' @param sd_ctilde_param_2 Standard deviation prior value for the standard deviation's of c_0 tilde
+#'
+#' @param sd_dow_epi_param_1 Standard deviation's mean for day of the week effect
+#'
+#' @param sd_dow_epi_param_2 Standard deviation's sd for day of the week effect
+#'
+#' @param sd_wkend_epi_param_1 Standard deviation's mean for weekend effect
+#'
+#' @param sd_wkend_epi_param_2 Standard deviation's sd for weekend effect
+#'
+#' @param sd_dom_epi_param_1 Standard deviation's mean for day of the month effect
+#'
+#' @param sd_dom_epi_param_2 Standard deviation's sd for day of the month effect
+#'
+#' @param sd_month_epi_param_1 Standard deviation's mean for month effect
+#'
+#' @param sd_month_epi_param_2 Standard deviation's sd for month effect
+#'
+#' @param sd_week_epi_param_1 Standard deviation's mean for epiweek effect
+#'
+#' @param sd_week_epi_param_2 Standard deviation's sd for epiweek effect
+#'
+#' @param sd_holidays_epi_param_1 Standard deviation's mean for holiday effect
+#'
+#' @param sd_holidays_epi_param_2 Standard deviation's sd for holiday effect
+#'
 #' @param dof Degrees of freedom if the distribution used in [nowcast()] is Student (default = 7).
 #'
 #' @param control_k_transform Parameter for the `dhyperbolic` or `softplus` link functions.
@@ -50,13 +84,10 @@
 #' set_priors()
 #'
 #' #Change the priors
-#' set_priors(mu_intercept_param_1 = 2, mu_q = 3)
+#' set_priors(mu_intercept_param_1 = 2)
 #'
 #' @export
 set_priors <- function(
-    mu_p = 1,
-    mu_q = 1,
-    nu_p = 1,
     mu_intercept_param_1 = 0,
     mu_intercept_param_2 = 1,
     mu_0_param_1 = 0,
@@ -65,12 +96,32 @@ set_priors <- function(
     nu_intercept_param_2 = 1,
     nu_0_param_1 = 0,
     nu_0_param_2 = 1,
+    c_0_param_1   = 0,
+    c_0_param_2   = 1,
+    ctilde_0_param_1 = 0,
+    ctilde_0_param_2 = 1,
     sd_mu_param_1 = 0,
     sd_mu_param_2 = 1,
     sd_nu_param_1 = 0,
     sd_nu_param_2 = 1,
+    sd_c_param_1 = 0,
+    sd_c_param_2 = 1,
+    sd_ctilde_param_1 = 0,
+    sd_ctilde_param_2 = 1,
     sd_m_param_1 = 0,
     sd_m_param_2 = 1,
+    sd_dow_epi_param_1 = 0,
+    sd_dow_epi_param_2 = 1,
+    sd_wkend_epi_param_1 = 0,
+    sd_wkend_epi_param_2 = 1,
+    sd_dom_epi_param_1 = 0,
+    sd_dom_epi_param_2 = 1,
+    sd_month_epi_param_1 = 0,
+    sd_month_epi_param_2 = 1,
+    sd_week_epi_param_1 = 0,
+    sd_week_epi_param_2 = 1,
+    sd_holidays_epi_param_1 = 0,
+    sd_holidays_epi_param_2 = 1,
     dof = 7, #Degrees of freedom for student t
     control_k_transform = 2,
     control_c_transform = 0.5
@@ -86,7 +137,7 @@ set_priors <- function(
 #' Function to randomly set the priors
 #'
 #' @description
-#' Assign random priors. This is mostly used with the [simulate_process()] function.
+#' Assign random priors. This is mostly used with the [simulate_disease()] function.
 #'
 #' @param ... Any parameter used in [set_priors()] that will remain fixed (not random).
 #' @examples
@@ -99,7 +150,7 @@ set_priors <- function(
 #' @export
 random_priors <- function(...) {
 
-  constant_priors <- c("mu_p", "mu_q", "nu_p", "dof", "control_k_transform", "control_c_transform")
+  constant_priors <- c("dof", "control_k_transform", "control_c_transform")
 
   priors_means    <- set_priors()
 
@@ -130,7 +181,7 @@ random_priors <- function(...) {
 
 }
 
-#' Function for setting the distribution from words to numner
+#' Function for setting the distribution from words to number
 #'
 #' @inheritParams nowcast
 #'
@@ -175,25 +226,25 @@ get_link_number <- function(link){
 #' any `rstan` sampling or optimization algorithm.
 #'
 #' @keywords internal
-get_priors_from_init <- function(priors, num_strata, num_delays, num_steps){
+get_priors_from_init <- function(priors, num_strata, num_delays, num_steps, autoregresive, moving_average){
   #Add the priors
   initfun <- function(...) {
 
     #Normalize phi_ar
-    if (priors$mu_p > 0){
-      phi_mu <- list(stats::runif(priors$mu_p, -1, 1))
+    if (autoregresive$mu_p > 0){
+      phi_mu <- list(stats::runif(autoregresive$mu_p, -1, 1))
     } else {
       phi_mu <- as.numeric()
     }
 
-    if (priors$mu_q > 0){
-      theta_mu <- list(stats::runif(priors$mu_q, -1, 1))
+    if (moving_average$mu_q > 0){
+      theta_mu <- list(stats::runif(moving_average$mu_q, -1, 1))
     } else {
       theta_mu <- as.numeric()
     }
 
-    if (priors$nu_p > 0){
-      phi_nu <- list(stats::runif(priors$nu_p, -1, 1))
+    if (autoregresive$nu_p > 0){
+      phi_nu <- list(stats::runif(autoregresive$nu_p, -1, 1))
     } else {
       phi_nu <- as.numeric()
     }
@@ -217,4 +268,35 @@ get_priors_from_init <- function(priors, num_strata, num_delays, num_steps){
     )
   }
   return(initfun)
+}
+
+#' Control the autorregresive and moving average components
+#'
+#' Controls either the autoregresive [AR()] or the moving-average [MA()] components
+#' of the epidemic and delay process
+#'
+#' @param epidemic_trend Integer. Degree of the epidemic trend. Refers to the p parameter in an ARMA(p,q)
+#' for the epidemic process.
+#'
+#' @param epidemic_errors Integer. Degree of the errors in the epidemic trend. Refers to the q parameter
+#' in an ARMA(p,q) for the epidemic process.
+#'
+#' @param delay_trend Integer. Degree of the delay trend. Refers to the q parameter
+#' in an ARMA(p,q) for the delay process.
+#'
+#' @name arma
+#'
+#' @examples
+#' AR(2,2)
+#' MA(1)
+#'
+#' @export
+AR <- function(epidemic_trend = 1, delay_trend = 1){
+  list(mu_p = epidemic_trend, nu_p = delay_trend)
+}
+
+#' @rdname arma
+#' @export
+MA <- function(epidemic_errors = 1){
+list(mu_q = epidemic_errors)
 }

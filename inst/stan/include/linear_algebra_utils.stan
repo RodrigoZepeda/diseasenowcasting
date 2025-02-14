@@ -106,7 +106,7 @@ vector append_val_2_vec(vector A, real val){
     B[1:num_elements(A)] = A;
 
   //Add val at the end
-  B[num_elements(B)] = val;
+  B[num_elements(A) + 1] = val;
 
   return B;
 }
@@ -128,7 +128,7 @@ vector append_vec_2_val(real val, vector A){
 
   //Append vector A
   if (num_elements(A) > 0)
-    B[2:num_elements(B)] = A;
+    B[2:(num_elements(A) + 1)] = A;
 
   //Add val at the beginning
   B[1] = val;

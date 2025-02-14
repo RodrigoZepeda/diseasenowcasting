@@ -1,0 +1,225 @@
+---
+title: "Introduction to diseasenowcasting"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+The `diseasenowcasting` package provides a disease-agnostic framework for nowcasting the number of cases affected by certain disease.
+
+## What is nowcasting?
+
+In many applications, it is of interest to predict the **current** number of cases as there might be a lag in the registry. Examples of lags can be administrative such as tests taking time to yield results, sociological such as patients taking time to report at their healthcare facility after symptom onset or biological: symptoms not happening at the same time as colonization. In such cases you might end up with registries looking like the one in Figure 1: where the number of cases observed by today is an incomplete fraction of the overall number of cases that will eventually be registered.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Current number of cases for a certain disease (left) vs the eventual number of registered cases for that disease (right)", out.width = '100%'}
+set.seed(24759)
+library(dplyr)
+library(ggplot2)
+library(ggtext)
+library(cowplot)
+
+cases <- tibble(cases_obs = c(1,4,1,5,3,6,5,8,8,10,2), 
+                cases_eventual = c(1,4,1,5,3,6,5,8,9,11,10),
+                nowcast_point = c(1,4,1,5,3,6,6,8,5.5,10.2,9.5),
+                day = 1:11)
+
+plt1 <- ggplot(cases) +
+  geom_col(aes(x = day, y = cases_obs), fill = "#5F7E62") +
+  geom_col(aes(x = day, y = cases_obs), fill = "#262626",
+           data = cases[9:11,]) +
+  labs(
+    x = "Epidemiological week",
+    y = "Cases",
+    title = "Current observed cases"
+  ) +
+  theme_classic() +
+  scale_x_continuous(breaks = 1:11)
+
+plt2 <- ggplot(cases) +
+  geom_col(aes(x = day, y = cases_eventual), fill = "#5F7E62") +
+  geom_col(aes(x = day, y = cases_obs), fill = "#262626",
+           data = cases[9:11,]) +
+  labs(
+    x = "Epidemiological week",
+    y = "Cases",
+    title = "Final number of cases"
+  ) +
+  theme_classic() +
+  scale_x_continuous(breaks = 1:11)
+  
+plot_grid(plt1, plt2)
+
+```
+
+The difference between the current observed number of cases and the final number of cases that will eventually be reported is accounted for by a model. By **nowcasting**, we refer to predicting the number of cases for a specific disease in a date that has already happened (or is currently happening) and for which we have incomplete information. The most basic example involves predicting the number of cases for **now** given that we have already seen some of today's cases arrive at our system but not all of them yet. Hence the nowcast refers to the number of cases that we will eventually observe for a certain time frame as depicted in Figure 2:
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Nowcasted number of cases for the disease of the previous image given that we had only observed a fraction of them", out.width = '75%'}
+set.seed(24759)
+library(dplyr)
+library(ggplot2)
+library(ggtext)
+library(cowplot)
+
+cases <- tibble(cases_obs = c(1,4,1,5,3,6,5,8,8,10,2), 
+                cases_eventual = c(1,4,1,5,3,6,5,8,9,11,10),
+                nowcast_point = c(1,4,1,5,3,6,6,8,5.5,10.2,9.5),
+                day = 1:11)
+
+ggplot(cases) +
+  geom_col(aes(x = day, y = cases_obs), fill = "#5F7E62") +
+  geom_col(aes(x = day, y = cases_obs), fill = "#262626",
+           data = cases[9:11,]) +
+  geom_line(aes(x = day, y = nowcast_point), color = "#DA6529", size = 1) +
+  geom_point(aes(x = day, y = nowcast_point), color = "#DA6529", size = 3) +
+  geom_point(aes(x = day, y = nowcast_point), color = "white", size = 1) +
+  labs(
+    x = "Epidemiological week",
+    y = "Cases",
+    title = "Current number of observed cases"
+  ) +
+  theme_classic() +
+  theme(plot.title = element_markdown()) +
+  scale_x_continuous(breaks = 1:11)
+
+
+```
+
+This vignette will give you an overview of the basics of the `diseasenowcasting` package. The typical workflow involves the following steps: 
+
+1. [Getting the data](#getting-the-data).
+2. [Fitting a model](#fitting-a-model).
+3. [Evaluating the model](#evaluating-the-model).
+4. [Updating with new data](#updating-with-new-data).
+
+In this tutorial we will focus only on the steps in a reproducible manner and we will refer to specific vignettes for advanced usage on each of the steps. 
+
+```{r setup, message=FALSE, warning=FALSE}
+set.seed(26758)
+library(diseasenowcasting)
+library(dplyr)
+```
+
+## 1. Getting the data
+
+Data for the `nowcasting` function should be either individual-level data or line-list data. In any case at least two columns in `Date` format are required: the `true_date` and the `report_date`. 
+
+* `true_date` Refers to the date when the case happened. 
+* `report_date` Refers to the date when the case was reported.
+
+> In general we assume that the `true_date` always happened before the `report_date` as you cannot report something that hasn't already happened.  
+
+### Types of data
+
+#### Individual-level data 
+
+By individual-level data we mean a dataset for which each row represents a case. For example, the `denguedat` dataset included in the package contains individual-level data:
+
+```{r}
+#Call the dataset
+data("denguedat")
+
+#Preview 
+denguedat |> head()
+```
+
+Notice that beyond the two dates (here `true_date = "onset_week"` and `report_date = "report_week"`) there can be additional covariates in the data (such as `gender` in this example). 
+
+#### Line-list data 
+
+By line-list data we mean a dataset for which each row represents a count of cases For example, the `mpoxdat` dataset included in the package contains line-list data:
+
+```{r}
+#Call the dataset
+data("mpoxdat")
+
+#Preview 
+mpoxdat |> head()
+```
+
+Both line-list and individual-level data can be used in the package. Also, the package allows for different time granularity. The `denguedat` contains counts per week while `mpoxdat` has counts per day. Both weekly and daily time frames are usable in `diseasenowcasting`. 
+
+## 2. Fitting the nowcast
+
+You can use the `nowcast()` function to generate nowcasts for your data. In the following example we use only a fraction of `denguedat`: until October 1990 to speed things up (you can use the whole denguedat if you want):
+
+```{r}
+#Reduce the dataset
+denguedat_fraction <- denguedat |> 
+  filter(report_week <= as.Date("1990/10/01", format = "%Y/%m/%d"))
+```
+
+For the nowcast we specify which one is the `true_date` and which one corresponds to the `report_date`. Remember that the `true_date` should always be smaller or equal to the `report_date` as the assumption is that no cases can be reported before happening:
+
+> **Note** For this example we are setting the method to variational just to improve the speed of the example. The sampling method should always be prefered. 
+
+```{r}
+#Generate the nowcast. Set verbose option t
+ncast <- nowcast(denguedat_fraction, true_date = "onset_week", 
+                 report_date = "report_week",
+                 method = "variational") #<- Change to sampling when in production
+```
+
+The `ncast` object itself shows the characteristics of the fitted model:
+
+```{r}
+ncast
+```
+
+You can generate plots of the `nowcast` with the `plot` function:
+
+```{r}
+plot(ncast)
+```
+
+And get the predictions with the summary function
+
+```{r}
+summary(ncast)
+```
+
+You can see how to add holiday effects, change the priors, and add further options to the model, in the [Advanced nowcast options](https://rodrigozepeda.github.io/diseasenowcasting/articles/Advanced-nowcast-options.html). 
+
+For now we will show you how to evaluate a nowcast once it has been prepared:
+
+
+## 3. Evaluating the model
+
+Once a nowcast has been constructed you can use the [backtest()] function to evaluate what the current model would have predicted in the past vs what was actually observed. Here, for example, we are evaluating what the model predicted for May, June and July:
+
+```{r}
+#This will take a while as it refits the model several times
+btest <- backtest(ncast, start_date = as.Date("1990/05/01"), end_date = as.Date("1990/07/31"), refresh = 0)
+```
+
+The `backtest_metrics()` function calculates the mean absolute error (`mae`), root mean squared error (`rmse`) and weighted interval scoring (`wis`):
+
+```{r}
+#This will take a while as it refits the model several times
+backtest_metrics(btest)
+```
+
+## 4. Updating with new data
+
+The `update()` function takes an existing nowcast and updates it with `new_data` to generate predictions for a more recent now. For example, consider now the `denguedat` information with one additional new week:
+
+```{r}
+#This new dataset contains a new additional week
+denguedat_fraction_updated <- denguedat |> 
+  filter(report_week <= as.Date("1990/10/08", format = "%Y/%m/%d"))
+```
+
+We can update our nowcast with this new data:
+
+```{r}
+ncast_2 <- update(ncast, new_data = denguedat_fraction_updated)
+```
+
+And do the same operations as before:
+
+```{r}
+plot(ncast_2)
+```

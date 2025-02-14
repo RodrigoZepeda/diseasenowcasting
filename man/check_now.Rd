@@ -2,24 +2,27 @@
 % Please edit documentation in R/checkers.R
 \name{check_now}
 \alias{check_now}
-\title{Check the `now` argument to be date}
+\title{Check the \code{now} argument to be date}
 \usage{
-check_now(.disease_data, now, onset_date)
+check_now(.disease_data, now, true_date, report_date)
 }
 \arguments{
 \item{.disease_data}{A time series of reporting data in aggregated line list format
-such that each row has a column for onset date, report date, and}
+such that each row has a column for onset date, report date, and (optionally) strata}
 
 \item{now}{An object of datatype \code{Date} indicating the date at which
-to perform the nowcast.}
+to perlform the nowcast.}
 
-\item{onset_date}{In quotations, the name of the column of datatype
+\item{true_date}{In quotations, the name of the column of datatype
 \code{Date} designating the date of case onset. e.g. "onset_week"}
+
+\item{report_date}{In quotations, the name of the column of datatype
+\code{Date} designating the date of case report. e.g. "report_week"}
 }
 \value{
-(invisibly) TRUE if the `now` date is achievable
+(invisibly) TRUE if the \code{now} date is achievable
 }
 \description{
-Check the `now` argument to be date
+Check the \code{now} argument to be date
 }
 \keyword{internal}

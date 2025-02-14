@@ -6,12 +6,15 @@
 \alias{diseasenowcasting-package}
 \title{diseasenowcasting: Nowcasting disease onset cases given report dates}
 \description{
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+
 Implements bayesian state-space models to nowcast incident cases for any disease given report dates while controlling by strata and covariates.
 }
 \seealso{
 Useful links:
 \itemize{
   \item \url{https://rodrigozepeda.github.io/diseasenowcasting/}
+  \item \url{https://github.com/RodrigoZepeda/diseasenowcasting}
 }
 
 }
@@ -20,14 +23,14 @@ Useful links:
 
 Authors:
 \itemize{
-  \item Rami Yaari
-  \item Matteo Perini
+  \item Rami Yaari (\href{https://orcid.org/0000-0002-8808-8937}{ORCID})
+  \item Matteo Perini (\href{https://orcid.org/0000-0002-9465-6216}{ORCID})
 }
 
 Other contributors:
 \itemize{
-  \item Tal Robin [contributor]
-  \item Teresa Yamana [contributor]
+  \item Tal Robin (\href{https://orcid.org/0000-0002-3128-2499}{ORCID}) [contributor]
+  \item Teresa Yamana (\href{https://orcid.org/0000-0001-8349-3151}{ORCID}) [contributor]
   \item Columbia University in the City of New York [copyright holder, funder]
 }
 

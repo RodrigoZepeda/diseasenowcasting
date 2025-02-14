@@ -132,8 +132,8 @@ backtest <- function(start_date = NULL,
   stratas <- names(ncast[['data']][['strata_dict']][,-c(1,2)])
 
   cases_per_date <- ncast[["data"]][["original_data"]] |>
-                    dplyr::group_by(!!as.symbol(true_date), !!!syms(stratas)) |>
-                    dplyr::summarize(!!as.symbol("observed") := dplyr::n(), .groups = "drop")
+    dplyr::group_by(!!as.symbol(true_date), !!!syms(stratas)) |>
+    dplyr::summarize(!!as.symbol("observed") := dplyr::n(), .groups = "drop")
 
   backtest_summary <- pred_table |>
     dplyr::left_join(cases_per_date, by = c(true_date,stratas)) |>
@@ -364,12 +364,12 @@ backtest_metrics <- function(..., metrics = c("mae","rmse","ape","wis"), horizon
 
   ##Check the models are compatible
   if(!check_same_columns(list(...))){
-      cli::cli_abort('Models cannot be compared - different column names in elements of backtest_summary')
+    cli::cli_abort('Models cannot be compared - different column names in elements of backtest_summary')
   }
 
   backtest_summary <- backtest_summary |>
-                      dplyr::filter(!!as.symbol("horizon") %in% horizons) |>
-                      dplyr::rename(!!as.symbol("strata") := !!as.symbol("Strata_unified"))
+    dplyr::filter(!!as.symbol("horizon") %in% horizons) |>
+    dplyr::rename(!!as.symbol("strata") := !!as.symbol("Strata_unified"))
 
   models <- unique(backtest_summary$model)
   stratas <- unique(backtest_summary$strata)

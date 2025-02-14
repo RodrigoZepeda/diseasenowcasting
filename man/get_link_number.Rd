@@ -7,13 +7,15 @@
 get_link_number(link)
 }
 \value{
-A number for the distribution code for Stan's `data`.
+A number for the distribution code for Stan's \code{data}.
 }
 \description{
 The following links are implemented:
-* identity: g(x) = x
-* log: g(x) = log(x)
-* softplus: g(x) = k*log(1 + exp(x/k))
-* dhyperbolic: g(x) = c*x/2 + sqrt( (c*x/2)^2 + k)
+\itemize{
+\item identity: g(x) = x
+\item log: g(x) = log(x)
+\item softplus: g(x) = k*log(1 + exp(x/k))
+\item dhyperbolic: g(x) = c\emph{x/2 + sqrt( (c}x/2)^2 + k)
+}
 }
 \keyword{internal}

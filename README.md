@@ -14,61 +14,126 @@ coverage](https://codecov.io/gh/RodrigoZepeda/diseasenowcasting/graph/badge.svg)
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
+`diseasenowcasting` is an R package for nowcasting time series of
+epidemiological cases. Epidemiologic surveillance tools usually have an
+intrinsic delay between the **true date** of an event and the **report
+date** for that event. Some examples include the **true date** being
+symptom onset or testing time and the **report date** corresponds to
+when the case was registered in the system. `diseasenowcasting` uses
+Bayesian structural time series models (via the probabilistic
+programming language [Stan](https://mc-stan.org/)) to infer the cases
+that have not yet been reported thus providing a prediction of the final
+number of cases.
+
+> :warning: `diseasenowcasting` is currently under active development
+> and some interface might change from the final version.
+
+## Installing
+
+To install `diseasenowcasting` you need to use the `remotes` package.
+
+``` r
+#install.packages("remotes") # <- Uncomment if you have not installed the `remotes` package
+remotes::install_github("RodrigoZepeda/diseasenowcasting", dependencies = c("Imports","Suggests"))
+```
+
 ## Example
 
 ``` r
+set.seed(6728)
 library(diseasenowcasting)
-library(ggplot2)
 library(dplyr)
-library(posterior)
-
-set.seed(32658235)
-
-# Create a fake disease process
-num_steps  <- 15
-num_strata <- 2
-num_delays <- 10
-sims       <- simulate_disease(num_steps = num_steps, num_strata = num_strata,
-                               num_delays = num_delays)
-
-# Now use model to predict disease process. If no strata is required omit the strata option
-predictions <- nowcast(sims, "onset_date", "report_date", strata = ".strata", 
-                       chains = 4, cores = 4)
-
-#Get the predicted values in a nice format
-predicted_values <- predictions$generated_quantities |>
-  as_draws() |>
-  subset_draws("N_predict") |>
-  summarise_draws() |>
-  mutate(.strata = as.numeric(stringr::str_remove_all(variable,".*\\[.*,|\\]"))) |>
-  mutate(.tval = as.numeric(stringr::str_remove_all(variable,".*\\[|,.*\\]"))) |> 
-  left_join(
-    predictions$data$preprocessed_data |> distinct(.tval, onset_date)
-  ) |>
-  left_join(
-    predictions$data$strata_dict
-  ) |> 
-  mutate(.strata = .strata_unified)
-  
-# Sum over all delays
-data_delays <- sims |>
-  group_by(onset_date, .strata) |>
-  summarise(n = sum(n)) 
-
-# Create plot
-ggplot(data_delays) +
-  geom_ribbon(aes(x = onset_date, ymin = q5, ymax = q95, fill = as.character(.strata)), 
-              data = predicted_values, linetype = "dotted", alpha = 0.5) +
-  geom_line(aes(x = onset_date, y = n, color = as.character(.strata))) +
-  geom_line(aes(x = onset_date, y = mean, color = as.character(.strata)), 
-            data = predicted_values, linetype = "dotted") +
-  theme_bw() +
-  scale_color_manual("Strata", values = c("tomato3", "forestgreen")) +
-  scale_fill_manual("Strata", values = c("tomato3", "forestgreen")) +
-  labs(
-    x = "Time",
-    y = "Cases"
-  )
 ```
 
-<img src="man/figures/README-unnamed-chunk-2-1.png" width="100%" />
+For this example we will use the `denguedat` dataset that comes with the
+package.
+
+``` r
+#Load example dataset
+data(denguedat)
+```
+
+The \[nowcast()\] function performs the `nowcast`. The things required
+are the `true_date` and `report_date` and `strata` (if exists).
+
+``` r
+#Use just a subsample of the data for the example
+denguedat <- denguedat |> 
+  filter(report_week <= as.Date("1990/08/01", format = "%Y/%m/%d"))
+
+#Run the nowcast model stratified by gender. Refresh = 0 makes it quiet
+ncast <- nowcast(denguedat, true_date = "onset_week", report_date = "report_week", 
+                       strata = "gender", refresh = 0)
+```
+
+The `summary` and `plot` options allow you to use the predictions:
+
+``` r
+#Create a nice plot for the predictions
+plot(ncast, datesbrakes = "1 month")
+```
+
+<img src="man/figures/README-unnamed-chunk-6-1.png" width="100%" />
+
+## Tutorials
+
+You can read the following articles for a more in-depth introduction to
+the package:
+
+- [An introduction to the
+  package:](https://rodrigozepeda.github.io/diseasenowcasting/articles/Introduction.html)
+  provides an overview of the main functions.
+- [Advanced nowcast
+  options:](https://rodrigozepeda.github.io/diseasenowcasting/articles/Advanced-nowcast-options.html)
+  provides an in-depth look at the `nowcast()` function and its options.
+- [Comparison to other
+  methods:](https://rodrigozepeda.github.io/diseasenowcasting/articles/Comparison-to-other-methods.html)
+  provides a comparison in terms of metrics to other nowcasting
+  packages.
+
+## Developing
+
+If you are interested on developing the package, after downloading the
+repository you might need to run
+
+``` r
+rstantools::rstan_config()
+```
+
+before the
+
+``` r
+devtools::load_all(".")
+```
+
+in order for the `C++` files to be generated for your specific system.
+
+### Developing issues with RStudio
+
+In RStudio there might be an error message when loading the package of
+
+    Error file too big
+
+a workaround is to include the following line on the `configure`
+
+``` bash
+echo "PKG_CXXFLAGS += -Wa,-mbig-obj" >> ./src/Makevars
+```
+
+and `configure.win` files:
+
+``` bash
+echo "PKG_CXXFLAGS += -Wa,-mbig-obj" >> ./src/Makevars.win
+```
+
+Then, use `R` from the terminal and run:
+
+``` r
+⁠pkgbuild::compile_dll(debug = FALSE)
+```
+
+Afterwards, in a new `R` session in RStudio you can finally load:
+
+``` r
+devtools::load_all(".")
+```
