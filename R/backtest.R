@@ -264,7 +264,7 @@ backtest <- function(ncast,
   stratas <- names(ncast[['data']][['strata_dict']][,-c(1,2)])
 
   cases_per_date <- ncast[["data"]][["original_data"]] |>
-    dplyr::group_by(!!as.symbol(true_date), !!!syms(stratas)) |>
+    dplyr::group_by(!!as.symbol(true_date), dplyr::all_of(dplyr::pick(stratas))) |>
     dplyr::summarize(!!as.symbol("observed") := dplyr::n(), .groups = "drop")
 
   backtest_summary <- pred_table |>
@@ -341,19 +341,26 @@ aggregate_backtest_summary <- function(backtest_summary, remove_strata) {
   true_date <- cols[3]
   value_cols <- cols[(end_idx+1):length(cols)]
 
-  backtest_summary_agg <- backtest_summary %>%
-    group_by(now, !!as.symbol(true_date), !!!syms(kept_strata)) %>%
-    summarise(
-      model = first(model),
-      horizon = first(horizon),
-      Strata_unified = "No strata",
-      across(value_cols, sum),
-      .groups = "drop"
-    )
-
-  if(length(kept_strata)>0) {
-    backtest_summary_agg <- backtest_summary_agg |>
+  if(length(kept_strata) > 0) {
+    backtest_summary_agg <- backtest_summary |>
+      dplyr::group_by(now, !!as.symbol(true_date), dplyr::all_of(dplyr::pick(kept_strata))) |>
+      dplyr::summarise(
+        model = dplyr::first(model),
+        horizon = dplyr::first(horizon),
+        dplyr::across(value_cols, sum),
+        .groups = "drop"
+      ) |>
       tidyr::unite(col = "Strata_unified", dplyr::all_of(kept_strata), sep = " - ", remove = FALSE)
+  } else {
+    backtest_summary_agg <- backtest_summary |>
+      dplyr::group_by(now, !!as.symbol(true_date)) |>
+      dplyr::summarise(
+        model = dplyr::first(model),
+        horizon = dplyr::first(horizon),
+        Strata_unified = "No strata",
+        dplyr::across(value_cols, sum),
+        .groups = "drop"
+      )
   }
 
   desc_cols <- c("model","now",true_date,"horizon",kept_strata,"Strata_unified")
