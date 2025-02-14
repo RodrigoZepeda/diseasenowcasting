@@ -132,9 +132,9 @@ infer_end_date <- function(ncast, start_date){
 
   #Check the initial day is in nowcast
   if (end_date <= start_date | end_date > ncast_max_date) {
-   cli::cli_abort(
-     "Unable to automatically infer the dates for backtesting. Please set up the `start_date` and `end_date` manually."
-   )
+    cli::cli_abort(
+      "Unable to automatically infer the dates for backtesting. Please set up the `start_date` and `end_date` manually."
+    )
   }
 
   return(end_date)
@@ -261,15 +261,111 @@ backtest <- function(ncast,
     pred_table   <- rbind(pred_table, pred_summary)
   }
 
+  stratas <- names(ncast[['data']][['strata_dict']][,-c(1,2)])
+
   cases_per_date <- ncast[["data"]][["original_data"]] |>
-                    dplyr::group_by(!!as.symbol(true_date)) |>
-                    dplyr::summarize(!!as.symbol("observed") := dplyr::n(), .groups = "drop")
+    dplyr::group_by(!!as.symbol(true_date), dplyr::all_of(dplyr::pick(stratas))) |>
+    dplyr::summarize(!!as.symbol("observed") := dplyr::n(), .groups = "drop")
 
   backtest_summary <- pred_table |>
-    dplyr::left_join(cases_per_date, by = true_date) |>
+    dplyr::left_join(cases_per_date, by = c(true_date,stratas)) |>
     dplyr::mutate(!!as.symbol("model") := !!model_name)
 
-  return(backtest_summary)
+  first_cols <- c("model","now",true_date,"horizon",stratas,"Strata_unified","observed")
+  last_cols <- setdiff(colnames(backtest_summary),first_cols)
+  backtest_summary <- backtest_summary[,c(first_cols,last_cols)]
+
+  return (backtest_summary)
+}
+
+
+#' aggregate_backtest_summary
+#'
+#' Aggregate the backtest summary by removing stratas.
+#' A utility function for comparing the results of a stratified model to a non stratified model.
+#' The results of the stratified model backtest summary should be aggregated before calling backtest_metrics
+#' together with the backtest summary of a non-stratified model.
+#'
+#' @param backtest_summary results of [backtest()]
+#' @param remove_strata vector of strata columns found inside backtest_summary to remove
+#'
+#' @return The aggregated backtest_summary
+#'
+#' @examples
+#' # Load the data
+#' data(denguedat)
+#'
+#' # Run a nowcast with very few iterations
+#' # change to method = "sampling" when working and remove the iter = 10 (or set to iter = 2000)
+#' now <- as.Date("1990-10-01")
+#' ncast <- nowcast(denguedat, "onset_week", "report_week", now = now,
+#'   method = "optimization", seed = 2495624, iter = 10)
+#'
+#' # Run a backtest for the model checking the model fit for two dates:
+#' btest <- backtest(ncast, dates_to_test = c(as.Date("1990-06-11"), as.Date("1990-06-18")), model_name="model_global")
+#'
+#' # Run a nowcast stratified by gender
+#' ncast_strat <- nowcast(denguedat, "onset_week", "report_week", now = now, strata = c("gender"),
+#'   method = "optimization", seed = 2495624, iter = 10)
+#'
+#' # Run a backtest for the stratified model
+#' btest_strat <- backtest(ncast_strat, dates_to_test = c(as.Date("1990-06-11"), as.Date("1990-06-18")), model_name="model_strat")
+#'
+#' # Aggregates the backtest results for the stratified model
+#' btest_strat_agg <- aggregate_backtest_summary(btest_strat, "gender")
+#'
+#' # Compare the metrics of the non-stratified model with the aggregated stratified model
+#' metrics = backtest_metrics(btest, btest_strat_agg)
+#'
+#' @export
+aggregate_backtest_summary <- function(backtest_summary, remove_strata) {
+
+  cols <- colnames(backtest_summary)
+
+  # Find all strata columns - assumes given structure where
+  # strata columns are located between horizon and Strata_unified
+  start_idx <- which(cols == "horizon")
+  end_idx <- which(cols == "Strata_unified")
+  # Ensure valid indices
+  if (length(start_idx) == 0 | length(end_idx) == 0 | start_idx > end_idx) {
+    cli::cli_abort('Unexpected structure of backtest_summary')
+  }
+  strata <- cols[(start_idx + 1):(end_idx - 1)]
+
+  ##Check that the given strata to remove are starta columns of backtest_summary
+  if(!all(remove_strata %in% strata)) {
+    cli::cli_abort('Not all given strata to remove are strata columns of backtest_summary')
+  }
+
+  kept_strata <- setdiff(strata, remove_strata)
+  true_date <- cols[3]
+  value_cols <- cols[(end_idx+1):length(cols)]
+
+  if(length(kept_strata) > 0) {
+    backtest_summary_agg <- backtest_summary |>
+      dplyr::group_by(now, !!as.symbol(true_date), dplyr::all_of(dplyr::pick(kept_strata))) |>
+      dplyr::summarise(
+        model = dplyr::first(model),
+        horizon = dplyr::first(horizon),
+        dplyr::across(value_cols, sum),
+        .groups = "drop"
+      ) |>
+      tidyr::unite(col = "Strata_unified", dplyr::all_of(kept_strata), sep = " - ", remove = FALSE)
+  } else {
+    backtest_summary_agg <- backtest_summary |>
+      dplyr::group_by(now, !!as.symbol(true_date)) |>
+      dplyr::summarise(
+        model = dplyr::first(model),
+        horizon = dplyr::first(horizon),
+        Strata_unified = "No strata",
+        dplyr::across(value_cols, sum),
+        .groups = "drop"
+      )
+  }
+
+  desc_cols <- c("model","now",true_date,"horizon",kept_strata,"Strata_unified")
+  backtest_summary_agg <- backtest_summary_agg[,c(desc_cols,value_cols)]
+  return (backtest_summary_agg)
 }
 
 
@@ -334,7 +430,7 @@ calc_mae <- function(backtest_summary) {
 
 #' calc_ape
 #'
-#' Calculates the absolute percent error
+#' Calculates the absolute percent error (ape)
 #'
 #' @param backtest_summary results of backtest call
 #'
@@ -430,7 +526,7 @@ calc_rmse <- function(backtest_summary) {
 #'
 #' @param backtest_summary results of backtest call
 #'
-#' @return The Weighted Interval Scoring for each of the runs in [backtest()].
+#' @return The weighted interval score for each of the runs in [backtest()].
 #'
 #' @examples
 #' # Load the data
@@ -487,7 +583,7 @@ calc_wis <- function(backtest_summary) {
 #'
 #' @param metrics list of metrics which should be calculated.
 #' Currently supporting: 'mae' (mean absolute error), 'rmse' (root mean squared error),
-#' and 'wis' (weighted interval score)
+#' 'ape' (absolute percent error) and 'wis' (weighted interval score)
 #'
 #' @param horizons vector of horizons for which the metrics be calculated.
 #' Default is to calculate metrics only for horizon 0 (the nowcast).
@@ -515,11 +611,11 @@ calc_wis <- function(backtest_summary) {
 #' backtest_metrics(btest1, btest2)
 #' }
 #' @export
-backtest_metrics <- function(..., metrics = c("mae","rmse","wis"), horizons = 0){
+backtest_metrics <- function(..., metrics = c("mae","rmse","ape","wis"), horizons = 0){
 
   ##Check the models are compatible
   if(!check_same_columns(list(...))){
-      cli::cli_abort('Models cannot be compared - different column names in elements of backtest_summary')
+    cli::cli_abort('Models cannot be compared - different column names in elements of backtest_summary')
   }
 
   backtest_summary <- dplyr::bind_rows(...)
@@ -544,6 +640,7 @@ backtest_metrics <- function(..., metrics = c("mae","rmse","wis"), horizons = 0)
       metric,
       mae  = calc_mae(backtest_summary),
       rmse = calc_rmse(backtest_summary),
+      ape = calc_ape(backtest_summary),
       wis  = calc_wis(backtest_summary),
       cli::cli_abort("Unsupported metric: {.val {metric}}.")
     )
@@ -552,5 +649,10 @@ backtest_metrics <- function(..., metrics = c("mae","rmse","wis"), horizons = 0)
   metrics_table <- metrics_table |>
     dplyr::arrange(!!as.symbol("model"),!!as.symbol("horizon"))
 
+  desc_cols <- c("model","now","horizon","Strata_unified")
+  value_cols <- setdiff(colnames(metrics_table),desc_cols)
+  metrics_table <- metrics_table[,c(desc_cols,value_cols)]
+
   return(metrics_table)
 }
+

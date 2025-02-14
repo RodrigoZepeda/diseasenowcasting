@@ -13,7 +13,7 @@ calc_ape(backtest_summary)
 The Absolute Percent Error for each of the runs in \code{\link[=backtest]{backtest()}}.
 }
 \description{
-Calculates the absolute percent error
+Calculates the absolute percent error (ape)
 }
 \examples{
 # Load the data
