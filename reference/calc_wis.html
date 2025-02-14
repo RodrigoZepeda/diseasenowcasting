@@ -57,7 +57,7 @@
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>The Weighted Interval Scoring for each of the runs in <code><a href="backtest.html">backtest()</a></code>.</p>
+    <p>The weighted interval score for each of the runs in <code><a href="backtest.html">backtest()</a></code>.</p>
     </div>
 
     <div class="section level2">
@@ -78,18 +78,18 @@
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"scoringutils"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span><span class="op">{</span></span></span>
 <span class="r-in"><span>  <span class="fu">calc_wis</span><span class="op">(</span><span class="va">btest</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    horizon Strata_unified                                model        now</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;num&gt;         &lt;char&gt;                               &lt;char&gt;     &lt;Date&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:       0      No strata model_2025-02-11_22h44m29s_608545033 1990-06-11</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:       0      No strata model_2025-02-11_22h44m29s_608545033 1990-06-18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    horizon Strata_unified                                 model        now</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;num&gt;         &lt;char&gt;                                &lt;char&gt;     &lt;Date&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:       0      No strata model_2025-02-14_21h40m37s_2120140673 1990-06-11</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:       0      No strata model_2025-02-14_21h40m37s_2120140673 1990-06-18</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>          wis overprediction underprediction dispersion  bias</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>        &lt;num&gt;          &lt;num&gt;           &lt;num&gt;      &lt;num&gt; &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 12.989286      11.071429               0   1.917857     1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:  9.851071       6.278571               0   3.572500     1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 12.943036      11.000000               0   1.943036  1.00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:  8.921786       5.285714               0   3.636071  0.95</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    interval_coverage_50 interval_coverage_90 ae_median</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                   &lt;num&gt;                &lt;num&gt;     &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:                    0                    0        22</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:                    0                    0        20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:                    0                    0        23</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:                    0                    0        17</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

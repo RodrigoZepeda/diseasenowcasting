@@ -158,16 +158,17 @@ stratified by race:</p>
 <p>and calculating metrics by the strata:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/backtest_metrics.html">backtest_metrics</a></span><span class="op">(</span><span class="va">btest</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 5 × 14</span></span></span>
-<span><span class="co">#&gt;   horizon Strata_unified    model now          mse se_point   wis overprediction</span></span>
-<span><span class="co">#&gt;     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span> <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>       0 Asian             mode… 2022-08-04  6.21    38.6   2.91           0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>       0 Black             mode… 2022-08-04  2.77     7.65  2.67           0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>       0 Hispanic          mode… 2022-08-04 13.4    180.    4.65           1.14</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>       0 Non-Hispanic Whi… mode… 2022-08-04 12.1    147.    4.36           1   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span>       0 Other             mode… 2022-08-04 15.4    238.    7.25           0   </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 6 more variables: underprediction &lt;dbl&gt;, dispersion &lt;dbl&gt;, bias &lt;dbl&gt;,</span></span></span>
-<span><span class="co">#&gt; <span style="color: #949494;">#   interval_coverage_50 &lt;dbl&gt;, interval_coverage_90 &lt;dbl&gt;, ae_median &lt;dbl&gt;</span></span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 5 × 15</span></span></span>
+<span><span class="co">#&gt;   model             now        horizon Strata_unified   mse se_point   ape   wis</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> model_2025-02-14… 2022-08-04       0 Asian          14.8     219.   2.96  5.91</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> model_2025-02-14… 2022-08-04       0 Black          22.8     518.   3.79  9.81</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> model_2025-02-14… 2022-08-04       0 Hispanic       33.4    <span style="text-decoration: underline;">1</span>115.   5.57 16.1 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> model_2025-02-14… 2022-08-04       0 Non-Hispanic … 31.1     969.   4.45 14.2 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> model_2025-02-14… 2022-08-04       0 Other           8.56     73.3  4.28  3.25</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 7 more variables: overprediction &lt;dbl&gt;, underprediction &lt;dbl&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   dispersion &lt;dbl&gt;, bias &lt;dbl&gt;, interval_coverage_50 &lt;dbl&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   interval_coverage_90 &lt;dbl&gt;, ae_median &lt;dbl&gt;</span></span></span></code></pre></div>
 <p>All of the remaining examples will be estimated without covariates
 and without backtesting just to improve the speed of the tutorial.</p>
 </div>
