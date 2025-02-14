@@ -4,14 +4,14 @@
 \alias{backtest_metrics}
 \title{backtest_metrics}
 \usage{
-backtest_metrics(..., metrics = c("mae", "rmse", "wis"), horizons = 0)
+backtest_metrics(..., metrics = c("mae", "rmse", "ape", "wis"), horizons = 0)
 }
 \arguments{
 \item{...}{Results of calls to backtest.}
 
 \item{metrics}{list of metrics which should be calculated.
 Currently supporting: 'mae' (mean absolute error), 'rmse' (root mean squared error),
-and 'wis' (weighted interval score)}
+'ape' (absolute percent error) and 'wis' (weighted interval score)}
 
 \item{horizons}{vector of horizons for which the metrics be calculated.
 Default is to calculate metrics only for horizon 0 (the nowcast).}

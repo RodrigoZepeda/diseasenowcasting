@@ -10,7 +10,7 @@ calc_wis(backtest_summary)
 \item{backtest_summary}{results of backtest call}
 }
 \value{
-The Weighted Interval Scoring for each of the runs in \code{\link[=backtest]{backtest()}}.
+The weighted interval score for each of the runs in \code{\link[=backtest]{backtest()}}.
 }
 \description{
 Calculates weighted interval score (wis)
