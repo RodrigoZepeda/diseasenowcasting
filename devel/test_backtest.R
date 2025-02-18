@@ -1,5 +1,10 @@
 library(ggrepel)
+library(tidyr)
+library(dplyr)
 data(denguedat)
+
+#try with not optimization
+#remeber to add ggrepel to optional
 
 
 denguedat_red=denguedat[denguedat$report_week<=as.Date('1991-12-22'),]
@@ -64,7 +69,8 @@ backtest_summary4 <- backtest(backncast,
 
 
 
-mtr <- backtest_metrics(backtest_summary1,backtest_summary2,backtest_summary3,backtest_summary4, horizons = c(0,-1,-2))
+#mtr <- backtest_metrics(backtest_summary1,backtest_summary2,backtest_summary3,backtest_summary4, horizons = c(0,-1,-2))
+mtr <- backtest_metrics(backtest_summary3,backtest_summary4, horizons = c(0,-1))
 
 
 # plot_backtest_metrics
@@ -75,7 +81,7 @@ mtr <- backtest_metrics(backtest_summary1,backtest_summary2,backtest_summary3,ba
 
 #need to selct the horizon. default is 0, can only select one.
 horizons=unique(mtr$horizon)
-sel_mtr="ae_median" #metric to consider
+sel_mtr="wis" #metric to consider
 #datesbrakes="2 weeks" #copy this from plot.nowcaster
 
 # Ensure 'now' is of Date type
@@ -93,8 +99,7 @@ metric_averages <- long_mtr %>%
 
 ##add to the vignettes > articles > diseasenowcasting.Rmd > 3. Evaluating the model
 ggplot(long_mtr, aes(x = now, y = value, color = model)) +
-  geom_point() +
-  geom_line() +
+  geom_jitter(width = 5, alpha = 0.6) +
   facet_grid(Strata_unified ~ horizon, scales = "free_y", labeller = labeller(horizon = function(h) paste("Horizon =", h))) +
   theme_minimal() +
   labs(x = NULL, y = sel_mtr, color = NULL) +  # Remove legend title by setting color to NULL
