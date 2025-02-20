@@ -320,6 +320,20 @@ absolute error (<code>mae</code>), root mean squared error
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 7 more variables: overprediction &lt;dbl&gt;, underprediction &lt;dbl&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   dispersion &lt;dbl&gt;, bias &lt;dbl&gt;, interval_coverage_50 &lt;dbl&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   interval_coverage_90 &lt;dbl&gt;, ae_median &lt;dbl&gt;</span></span></span></code></pre></div>
+<p>You can run <code>backtest_metrics</code> on multiple nowcasts</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co">#p&lt;-backtest_metrics(btest)</span></span>
+<span><span class="co">#plot(p)</span></span>
+<span></span>
+<span><span class="co">#ncast2 &lt;- nowcast(denguedat_fraction, true_date = "onset_week", </span></span>
+<span><span class="co">#                 report_date = "report_week",</span></span>
+<span><span class="co">#                method = "variational", dist = "Normal") </span></span>
+<span><span class="co">#btest2 &lt;- backtest(ncast2, dates_to_test = as.Date("1990-06-11"),</span></span>
+<span><span class="co">#</span></span>
+<span><span class="co">#comparison &lt;- backtest_metrics(btest, btest2)</span></span></code></pre></div>
+<p>and plot the comparison with <code>plot</code></p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co">#plot(comparison)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="updating-with-new-data">4. Updating with new data<a class="anchor" aria-label="anchor" href="#updating-with-new-data"></a>
@@ -328,17 +342,17 @@ absolute error (<code>mae</code>), root mean squared error
 updates it with <code>new_data</code> to generate predictions for a more
 recent now. For example, consider now the <code>denguedat</code>
 information with one additional new week:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#This new dataset contains a new additional week</span></span>
 <span><span class="va">denguedat_fraction_updated</span> <span class="op">&lt;-</span> <span class="va">denguedat</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">report_week</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990/10/08"</span>, format <span class="op">=</span> <span class="st">"%Y/%m/%d"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>We can update our nowcast with this new data:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ncast_2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">ncast</span>, new_data <span class="op">=</span> <span class="va">denguedat_fraction_updated</span><span class="op">)</span></span></code></pre></div>
 <p>And do the same operations as before:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_2</span><span class="op">)</span></span></code></pre></div>
-<p><img src="diseasenowcasting_files/figure-html/unnamed-chunk-15-1.png" width="700"></p>
+<p><img src="diseasenowcasting_files/figure-html/unnamed-chunk-17-1.png" width="700"></p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
