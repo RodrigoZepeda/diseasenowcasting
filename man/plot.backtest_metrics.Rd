@@ -4,10 +4,12 @@
 \alias{plot.backtest_metrics}
 \title{plot.backtest_metrics}
 \usage{
-\method{plot}{backtest_metrics}(x, metric = "wis", horizons = 0, datesbrakes = NULL)
+\method{plot}{backtest_metrics}(x, ..., metric = "wis", horizons = 0, datesbrakes = NULL)
 }
 \arguments{
 \item{x}{results of calls to \code{\link[=backtest_metrics]{backtest_metrics()}}}
+
+\item{...}{further arguments passed to the generic plot function.}
 
 \item{metric}{the metric to display. Specify only one. Default = "wis"}
 
@@ -27,16 +29,21 @@ if (requireNamespace("scoringutils", quietly = TRUE)) {
   data(denguedat)
   # In this example, we will test two models
   now    <- as.Date("1990-10-01")
-  ncast1 <- nowcast(denguedat, "onset_week", "report_week", now = now, method = "optimization", seed = 2495624, iter = 10)
-  ncast2 <- nowcast(denguedat, "onset_week", "report_week", now = now, method = "optimization", seed = 2495624, iter = 10, dist = "Normal")
+  ncast1 <- nowcast(denguedat, "onset_week", "report_week", now = now,
+                     method = "optimization", seed = 2495624, iter = 10)
+  ncast2 <- nowcast(denguedat, "onset_week", "report_week", now = now,
+                    method = "optimization", seed = 2495624, iter = 10,
+                    dist = "Normal")
   # Run a backtest for each of the models
-  btest1 <- backtest(ncast1, dates_to_test = as.Date("1990-06-11"), model_name = "Classic")
-  btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"), model_name = "Normal")
+  btest1 <- backtest(ncast1, dates_to_test = as.Date("1990-06-11"),
+                     model_name = "Classic")
+  btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"),
+                      model_name = "Normal")
   # Compare the models to select the best model
   comparison <- backtest_metrics(btest1, btest2)
   # plot the comparison
-  plot.backtest_metrics(comparison)
+  plot(comparison)
   # specify metric and horizons
-  plot.backtest_metrics(comparison, metric = "mse", horizons = c(-1, 0))
+  # plot(comparison, metric = "mse", horizons = c(-1, 0))
 }
 }

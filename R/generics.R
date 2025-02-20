@@ -404,6 +404,7 @@ update.nowcaster <- function(object, new_data, now = NULL, refresh = 250*rlang::
 #' Create a plot to compare the metrics calculated with [backtest_metrics()]
 #'
 #' @param x results of calls to [backtest_metrics()]
+#' @param ... further arguments passed to the generic plot function.
 #' @param metric the metric to display. Specify only one. Default = "wis"
 #' @param horizons vector of horizons for which the metrics be calculated. Default is to calculate metrics only for horizon 0 (the nowcast).
 #' @param datesbrakes A string giving the distance between x-axis breaks if not specified, one label
@@ -416,21 +417,28 @@ update.nowcaster <- function(object, new_data, now = NULL, refresh = 250*rlang::
 #'   data(denguedat)
 #'   # In this example, we will test two models
 #'   now    <- as.Date("1990-10-01")
-#'   ncast1 <- nowcast(denguedat, "onset_week", "report_week", now = now, method = "optimization", seed = 2495624, iter = 10)
-#'   ncast2 <- nowcast(denguedat, "onset_week", "report_week", now = now, method = "optimization", seed = 2495624, iter = 10, dist = "Normal")
+#'   ncast1 <- nowcast(denguedat, "onset_week", "report_week", now = now,
+#'                      method = "optimization", seed = 2495624, iter = 10)
+#'   ncast2 <- nowcast(denguedat, "onset_week", "report_week", now = now,
+#'                     method = "optimization", seed = 2495624, iter = 10,
+#'                     dist = "Normal")
 #'   # Run a backtest for each of the models
-#'   btest1 <- backtest(ncast1, dates_to_test = as.Date("1990-06-11"), model_name = "Classic")
-#'   btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"), model_name = "Normal")
+#'   btest1 <- backtest(ncast1, dates_to_test = as.Date("1990-06-11"),
+#'                      model_name = "Classic")
+#'   btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"),
+#'                       model_name = "Normal")
 #'   # Compare the models to select the best model
 #'   comparison <- backtest_metrics(btest1, btest2)
 #'   # plot the comparison
-#'   plot.backtest_metrics(comparison)
+#'   plot(comparison)
 #'   # specify metric and horizons
-#'   plot.backtest_metrics(comparison, metric = "mse", horizons = c(-1, 0))
+#'   # plot(comparison, metric = "mse", horizons = c(-1, 0))
 #' }
-#' @importFrom ggrepel geom_text_repel
 #' @export
-plot.backtest_metrics <- function(x, metric = "wis", horizons = 0, datesbrakes = NULL) {
+plot.backtest_metrics <- function(x, ..., metric = "wis", horizons = 0, datesbrakes = NULL) {
+
+  # Declare horizon locally within the function to avoid a warning
+  horizon <- NULL
 
   if (!requireNamespace("ggplot2", quietly = TRUE)){
     cli::cli_alert_warning("To produce plots please install the `ggplot2` package.")
@@ -442,30 +450,29 @@ plot.backtest_metrics <- function(x, metric = "wis", horizons = 0, datesbrakes =
 
   if (!ggrepel_available) {
     cli::cli_alert_warning("To add labels to the plot, please install the `ggrepel` package.")
-  }
+    }
 
   # Check if datesbrakes is either NULL or a valid specification
   if (!is.null(datesbrakes) &&
       !grepl("^\\d+\\s*(day|week|month|year|days|weeks|months|years)$|^(day|week|month|year|days|weeks|months|years)$", datesbrakes)) {
-    cli::cli_alert_warning('datesbrakes is not a valid string for date breaks. Examples are: "2 weeks", "10 days", "day", "months", "year"...')
-  }
+    cli::cli_abort('datesbrakes is not a valid string for date breaks. Examples are: "2 weeks", "10 days", "day", "months", "year"...')
+    }
 
   # Check if horizons provided exists in x
   if (any(!horizons %in% unique(x$horizon))) {
-    cli::cli_alert_warning('At least one of the selected horizons was not evaluated in the backtest_metrics object provided')
-  }
+    cli::cli_abort('At least one of the horizons was not evaluated in backtest_metrics()')
+    }
 
   # Check if only one available metric was given
   if (length(metric) != 1) {
-    cli::cli_alert_warning('Specify a single metric. This function plots only one metric at a time')
-  }
+    cli::cli_abort('This function plots only one metric at a time. Specify only one')
+    }
 
   # Check the metric is available
   available_metrics <- colnames(x)[-c(1:4)]
   if (any(!metric %in% available_metrics)) {
-    cli::cli_alert_info("The metric you selected does not exist or was not evaluated in the backtest_metrics object provided.")
-    cli::cli_alert_info("Available metrics to plot -> {paste(available_metrics, collapse = ', ')}")
-    stop()
+    cli::cli_abort("The metric you selected was not evaluated in backtest_metrics() \n
+                   Available metrics to plot are: {.strong {paste(available_metrics, collapse = ', ')}}")
   }
 
   # Ensure 'now' is of Date type
@@ -527,6 +534,7 @@ plot.backtest_metrics <- function(x, metric = "wis", horizons = 0, datesbrakes =
       linetype = "dashed"
     )
 
+
   # Only add ggrepel if it's available
   if (ggrepel_available) {
     plotbktest <- plotbktest + ggrepel::geom_text_repel(
@@ -540,6 +548,6 @@ plot.backtest_metrics <- function(x, metric = "wis", horizons = 0, datesbrakes =
       hjust = 1, size = 3, inherit.aes = FALSE, show.legend = FALSE
     )
   }
-
   return(plotbktest)
+  #return(list(plot = plotbktest, metric_averages = metric_averages))
 }
