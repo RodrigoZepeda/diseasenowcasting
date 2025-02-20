@@ -205,8 +205,8 @@ backtest_metrics(btest)
 You can run `backtest_metrics` on multiple nowcasts
 
 ```{r}
-p<-backtest_metrics(btest)
-plot(p)
+#p<-backtest_metrics(btest)
+#plot(p)
 
 #ncast2 <- nowcast(denguedat_fraction, true_date = "onset_week", 
 #                 report_date = "report_week",
