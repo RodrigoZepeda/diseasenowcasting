@@ -1,10 +1,5 @@
 
 
-
-## Add to the vignettes > articles > diseasenowcasting.Rmd > 3. Evaluating the model
-
-
-
 library(ggrepel)
 library(tidyr)
 library(dplyr)
@@ -18,7 +13,7 @@ denguedat_red=denguedat[denguedat$report_week<=as.Date('1992-3-22'),]
 backncast= nowcast(.disease_data=denguedat_red,
                    true_date="onset_week",
                    report_date="report_week",
-                   method = "optimization", dist = "Normal",
+                   method = "variational", dist = "Normal",
                    refresh=0, strata = "gender")
 
 
@@ -30,7 +25,8 @@ backtest_summary1 <- backtest(backncast,
                               end_date = as.Date('1991-05-22'),
                               stride = 4,
                               min_horizon = -3,
-                              method = "optimization", dist = "Normal",
+#                              method = "optimization",
+                              dist = "Normal",
                               refresh=0,
                               model_name='model_Normal')
 
@@ -41,7 +37,8 @@ backtest_summary2 <- backtest(backncast,
                               end_date = as.Date('1991-05-22'),
                               stride = 4,
                               min_horizon = -3,
-                              method = "optimization", dist = "Poisson",
+#                              method = "optimization",
+                              dist = "Poisson",
                               refresh=0,
                               model_name='model_Poisson')
 
@@ -52,7 +49,8 @@ backtest_summary3 <- backtest(backncast,
                               end_date = as.Date('1991-07-22'),
                               stride = 4,
                               min_horizon = -3,
-                              method = "optimization", dist = "NegativeBinomial",
+#                              method = "optimization",
+                              dist = "NegativeBinomial",
                               refresh=0,
                               model_name="Negative Binomial")
 
@@ -63,7 +61,8 @@ backtest_summary4 <- backtest(backncast,
                               end_date = as.Date('1991-07-22'),
                               stride = 4,
                               min_horizon = -3,
-                              method = "optimization", dist = "Student",
+#                              method = "optimization",
+                              dist = "Student",
                               refresh=0,
                               model_name="Stu/.dent$")
 
