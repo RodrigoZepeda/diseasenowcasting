@@ -202,6 +202,26 @@ The `backtest_metrics()` function calculates the mean absolute error (`mae`), ro
 backtest_metrics(btest)
 ```
 
+You can run `backtest_metrics` on multiple nowcasts
+
+```{r}
+p<-backtest_metrics(btest)
+plot(p)
+
+#ncast2 <- nowcast(denguedat_fraction, true_date = "onset_week", 
+#                 report_date = "report_week",
+#                method = "variational", dist = "Normal") 
+#btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"),
+#
+#comparison <- backtest_metrics(btest, btest2)
+```
+
+and plot the comparison with `plot`
+
+```{r}
+#plot(comparison)
+```
+
 ## 4. Updating with new data
 
 The `update()` function takes an existing nowcast and updates it with `new_data` to generate predictions for a more recent now. For example, consider now the `denguedat` information with one additional new week:
