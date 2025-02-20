@@ -45,6 +45,7 @@ Suggests:
     ggplot2,
     scales,
     ggtext,
+    ggrepel,
     testthat (>= 3.0.0)
 Biarch: true
 LinkingTo: 
