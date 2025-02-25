@@ -28,7 +28,7 @@ ncast <- nowcast(denguedat, "onset_week", "report_week", now = now,
 # Run a backtest for the model checking the model fit for two dates:
 btest <- backtest(ncast, dates_to_test = c(as.Date("1990-06-11"), as.Date("1990-06-18")))
 
-# Get the rmse with the scoring utils package
+# Get the rmse with the scoringutils package
 if (requireNamespace("scoringutils", quietly = TRUE)){
   calc_ape(btest)
 }

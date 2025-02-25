@@ -412,20 +412,20 @@ check_same_columns <- function(df_list) {
 #' @export
 calc_mae <- function(backtest_summary) {
 
-  mae_vals <- NULL
+  mae_scores <- NULL
   if (requireNamespace("scoringutils", quietly = TRUE)){
-    mae_vals <- backtest_summary |>
+    mae_scores <- backtest_summary |>
       dplyr::select(!!as.symbol("predicted") := !!as.symbol("mean"), dplyr::everything()) |>
       scoringutils::as_forecast_point() |>
       scoringutils::score() |>
       scoringutils::summarise_scores(by = c("horizon","Strata_unified","model","now")) |>
       dplyr::select_at(c("model","now","horizon","Strata_unified","ae_point")) |>
-      dplyr::rename(!!as.symbol("mse") := "ae_point")
+      dplyr::rename(!!as.symbol("mae") := "ae_point")
   } else {
     cli::cli_alert_danger("The `scoringutils` package is required to perform this operation. Please install.")
   }
 
-  return(mae_vals)
+  return(mae_scores)
 }
 
 #' calc_ape
@@ -449,7 +449,7 @@ calc_mae <- function(backtest_summary) {
 #' # Run a backtest for the model checking the model fit for two dates:
 #' btest <- backtest(ncast, dates_to_test = c(as.Date("1990-06-11"), as.Date("1990-06-18")))
 #'
-#' # Get the rmse with the scoring utils package
+#' # Get the rmse with the scoringutils package
 #' if (requireNamespace("scoringutils", quietly = TRUE)){
 #'   calc_ape(btest)
 #' }
@@ -457,9 +457,9 @@ calc_mae <- function(backtest_summary) {
 #' @export
 calc_ape <- function(backtest_summary) {
 
-  ape_vals <- NULL
+  ape_scores <- NULL
   if (requireNamespace("scoringutils", quietly = TRUE)){
-    ape_vals <- backtest_summary |>
+    ape_scores <- backtest_summary |>
       dplyr::select(!!as.symbol("predicted") := !!as.symbol("mean"), dplyr::everything()) |>
       dplyr::mutate(sample=1) |>
       scoringutils::as_forecast_point() |>
@@ -470,7 +470,7 @@ calc_ape <- function(backtest_summary) {
     cli::cli_alert_danger("The `scoringutils` package is required to perform this operation. Please install.")
   }
 
-  return (ape_vals)
+  return (ape_scores)
 }
 
 #' calc_rmse
@@ -494,7 +494,7 @@ calc_ape <- function(backtest_summary) {
 #' # Run a backtest for the model checking the model fit for two dates:
 #' btest <- backtest(ncast, dates_to_test = c(as.Date("1990-06-11"), as.Date("1990-06-18")))
 #'
-#' # Get the rmse with the scoring utils package
+#' # Get the rmse with the scoringutils package
 #' if (requireNamespace("scoringutils", quietly = TRUE)){
 #'   calc_rmse(btest)
 #' }
@@ -502,9 +502,9 @@ calc_ape <- function(backtest_summary) {
 #' @export
 calc_rmse <- function(backtest_summary) {
 
-  rmse_vals <- NULL
+  rmse_scores <- NULL
   if (requireNamespace("scoringutils", quietly = TRUE)){
-    rmse_vals <- backtest_summary |>
+    rmse_scores <- backtest_summary |>
       dplyr::select(!!as.symbol("predicted") := !!as.symbol("mean"), dplyr::everything()) |>
       dplyr::mutate(sample=1) |>
       scoringutils::as_forecast_point() |>
@@ -512,19 +512,35 @@ calc_rmse <- function(backtest_summary) {
       scoringutils::summarise_scores(by = c("horizon","Strata_unified","model","now")) |>
       dplyr::select_at(c("model","now","horizon","Strata_unified","se_point")) |>
       dplyr::mutate(!!as.symbol("rmse") := sqrt(!!as.symbol("se_point"))) |>
-      dplyr::select(-!!as.symbol("rmse"))
+      dplyr::select(-!!as.symbol("se_point"))
   } else {
     cli::cli_alert_danger("The `scoringutils` package is required to perform this operation. Please install.")
   }
 
-  return (rmse_vals)
+  return (rmse_scores)
 }
 
-#' calc_wis
+
+#' get_quantile_metrics
 #'
-#' Calculates weighted interval score (wis)
+#' Returns vector of supported quantile metrics based on \code{\link[scoringutils]{get_metrics.forecast_quantile}} in \code{\link{scoringutils}}.
+#'
+#' @export
+get_quantile_metrics <- function() {
+
+  metrics <-  c("wis","overprediction","underprediction","dispersion","bias",
+                "interval_coverage_50","interval_coverage_90","ae_median")
+  return (metrics)
+}
+
+
+#' calc_quantile_scores
+#'
+#' Calculates quantile-based scores
 #'
 #' @param backtest_summary results of backtest call
+#'
+#' @param metrics the quantile metrics to calculate - see \code{\link{get_quantile_metrics}}
 #'
 #' @return The weighted interval score for each of the runs in [backtest()].
 #'
@@ -541,13 +557,14 @@ calc_rmse <- function(backtest_summary) {
 #' # Run a backtest for the model checking the model fit for two dates:
 #' btest <- backtest(ncast, dates_to_test = c(as.Date("1990-06-11"), as.Date("1990-06-18")))
 #'
-#' # Get the rmse with the scoring utils package
+#' # Get the rmse with the scoringutils package
 #' if (requireNamespace("scoringutils", quietly = TRUE)){
-#'   calc_wis(btest)
+#'   metrics = c("wis","dispersion","bias")
+#'   calc_quantile_scores(btest,metrics=metrics)
 #' }
 #'
 #' @export
-calc_wis <- function(backtest_summary) {
+calc_quantile_scores <- function(backtest_summary, metrics) {
 
   #Get the quantiles
   quantile_cols <- colnames(backtest_summary)[grepl(".*\\%", colnames(backtest_summary))]
@@ -560,19 +577,27 @@ calc_wis <- function(backtest_summary) {
     quantile_cols <- c(quantile_cols, "50%")
   }
 
-  wis_vals <- NULL
+  quantile_metrics <- get_quantile_metrics()
+  non_valid_metrics <- setdiff(metrics,quantile_metrics)
+  if(length(non_valid_metrics)>0) {
+    cli::cli_abort("Unsupported quantile metrics: {.val {non_valid_metrics}}.")
+  }
+
+  quantile_scores <- NULL
   if (requireNamespace("scoringutils", quietly = TRUE)){
-    wis_vals <- backtest_summary |>
+    quantile_scores <- backtest_summary |>
       tidyr::pivot_longer(cols = quantile_cols, names_to = 'quantile_level', values_to = 'predicted') |>
       dplyr::mutate(!!as.symbol("quantile_level") := as.numeric(stringr::str_remove_all(!!as.symbol("quantile_level"), "\\%"))/100)  |>
       scoringutils::as_forecast_quantile() |>
       scoringutils::score() |>
-      scoringutils::summarise_scores(by = c("horizon","Strata_unified","model","now"))
+      scoringutils::summarise_scores(by = c("horizon","Strata_unified","model","now")) |>
+      dplyr::select_at(c("model","now","horizon","Strata_unified",metrics))
+
   } else {
     cli::cli_alert_danger("The `scoringutils` package is required to perform this operation. Please install.")
   }
 
-  return (wis_vals)
+  return (quantile_scores)
 }
 
 #' backtest_metrics
@@ -583,10 +608,12 @@ calc_wis <- function(backtest_summary) {
 #'
 #' @param metrics list of metrics which should be calculated.
 #' Currently supporting: 'mae' (mean absolute error), 'rmse' (root mean squared error),
-#' 'ape' (absolute percent error) and 'wis' (weighted interval score)
+#' 'ape' (absolute percent error) and 'quantile' for all quantile-based metrics or input specific quantile-base metrics from \code{\link{get_quantile_metrics}}.
 #'
 #' @param horizons vector of horizons for which the metrics be calculated.
 #' Default is to calculate metrics only for horizon 0 (the nowcast).
+#'
+#' @return A backtest_metrics object - a table with the computed metrics.
 #'
 #' @examples
 #' #These examples require the `scoringutils` function
@@ -611,7 +638,7 @@ calc_wis <- function(backtest_summary) {
 #' backtest_metrics(btest1, btest2)
 #' }
 #' @export
-backtest_metrics <- function(..., metrics = c("mae","rmse","ape","wis"), horizons = 0){
+backtest_metrics <- function(..., metrics = c("mae","rmse","ape","quantile"), horizons = 0){
 
   ##Check the models are compatible
   if(!check_same_columns(list(...))){
@@ -619,7 +646,6 @@ backtest_metrics <- function(..., metrics = c("mae","rmse","ape","wis"), horizon
   }
 
   backtest_summary <- dplyr::bind_rows(...)
-
 
   #Check the summary
   backtest_summary <- backtest_summary |>
@@ -633,25 +659,35 @@ backtest_metrics <- function(..., metrics = c("mae","rmse","ape","wis"), horizon
 
   metrics_table <- tidyr::expand_grid(horizon=horizons, Strata_unified=stratas, model=models,now=now)
 
+  quantile_metrics <- get_quantile_metrics()
+
   for(metric in metrics) {
 
     #Calculate the metric
-    metric_results <- switch(
-      metric,
-      mae  = calc_mae(backtest_summary),
-      rmse = calc_rmse(backtest_summary),
-      ape = calc_ape(backtest_summary),
-      wis  = calc_wis(backtest_summary),
-      cli::cli_abort("Unsupported metric: {.val {metric}}.")
-    )
+    if(metric=="mae")
+      metric_results = calc_mae(backtest_summary)
+    else if(metric=="rmse")
+      metric_results = calc_rmse(backtest_summary)
+    else if(metric=="ape")
+      metric_results = calc_ape(backtest_summary)
+    else if(metric=="quantile")
+      metric_results = calc_quantile_scores(backtest_summary, quantile_metrics)
+    else if(metric %in% quantile_metrics)
+      metric_results = calc_quantile_scores(backtest_summary, metric)
+    else
+        cli::cli_abort("Unsupported metric: {.val {metric}}.")
+
     metrics_table <- dplyr::left_join(metrics_table, metric_results, by=c('horizon','Strata_unified','model','now'))
   }
+
   metrics_table <- metrics_table |>
     dplyr::arrange(!!as.symbol("model"),!!as.symbol("horizon"))
 
   desc_cols <- c("model","now","horizon","Strata_unified")
   value_cols <- setdiff(colnames(metrics_table),desc_cols)
   metrics_table <- metrics_table[,c(desc_cols,value_cols)]
+
+  class(metrics_table) <- "backtest_metrics"
 
   return(metrics_table)
 }
