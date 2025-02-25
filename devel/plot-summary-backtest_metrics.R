@@ -74,7 +74,6 @@ backtest_summary4 <- backtest(backncast,
 
 ciccio <- backtest_metrics(backtest_summary1,backtest_summary2,backtest_summary3,backtest_summary4, horizons = c(0,-1,-2))
 
-
 x <- backtest_metrics(backtest_summary1,backtest_summary2,backtest_summary3,backtest_summary4, horizons = c(0,-1,-2))
 #x<- backtest_metrics(backtest_summary3,backtest_summary4, horizons = c(0,-1))
 
