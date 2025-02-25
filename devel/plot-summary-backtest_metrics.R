@@ -3,124 +3,72 @@
 library(ggrepel)
 library(tidyr)
 library(dplyr)
+
 data(denguedat)
 
-#try with not optimization
-#remeber to add ggrepel to optional
+#Use just a subsample of the data for the example
+denguedat <- denguedat |>
+  filter(report_week <= as.Date("1990/08/01", format = "%Y/%m/%d"))
 
+#Run the nowcast model globally (not stratified) using NB model (default)
+ncast1 <- nowcast(denguedat, true_date = "onset_week", report_date = "report_week",
+                  method = "optimization", iter = 10)
 
-denguedat_red=denguedat[denguedat$report_week<=as.Date('1992-3-22'),]
-backncast= nowcast(.disease_data=denguedat_red,
-                   true_date="onset_week",
-                   report_date="report_week",
-                   method = "variational", dist = "Normal",
-                   refresh=0, strata = "gender")
+#Run the nowcast model globally (not stratified) using Poisson model
+ncast2 <- nowcast(denguedat, true_date = "onset_week", report_date = "report_week",
+                  method = "optimization", dist = "Poisson", iter = 10)
 
+#Run the nowcast model stratified by gender using NB model (default)
+ncast3 <- nowcast(denguedat, true_date = "onset_week", report_date = "report_week", strata = c("gender"),
+                  method = "optimization", iter = 10)
 
+#Run the nowcast model stratified by gender using Poisson model
+ncast4 <- nowcast(denguedat, true_date = "onset_week", report_date = "report_week",strata = c("gender"),
+                  method = "optimization", dist = "Poisson", iter = 10)
 
-backtest_summary1 <- backtest(backncast,
-                              true_date="onset_week",
-                              report_date="report_week",
-                              start_date = as.Date('1991-01-22'),
-                              end_date = as.Date('1991-05-22'),
+#Run backtest procedures using nowcasts parameters defined above
+backtest_summary1 <- backtest(ncast1,
+                              start_date = as.Date('1990-01-22'),
+                              end_date = as.Date('1990-07-22'),
                               stride = 4,
                               min_horizon = -3,
-#                              method = "optimization",
-                              dist = "Normal",
-                              refresh=0,
-                              model_name='model_Normal')
+                              model_name='model_NB')
 
-backtest_summary2 <- backtest(backncast,
-                              true_date="onset_week",
-                              report_date="report_week",
-                              start_date = as.Date('1991-01-22'),
-                              end_date = as.Date('1991-05-22'),
+backtest_summary2 <- backtest(ncast2,
+                              start_date = as.Date('1990-01-22'),
+                              end_date = as.Date('1990-07-22'),
                               stride = 4,
                               min_horizon = -3,
-#                              method = "optimization",
-                              dist = "Poisson",
-                              refresh=0,
                               model_name='model_Poisson')
 
-backtest_summary3 <- backtest(backncast,
-                              true_date="onset_week",
-                              report_date="report_week",
-                              start_date = as.Date('1991-01-22'),
-                              end_date = as.Date('1991-07-22'),
+backtest_summary3 <- backtest(ncast3,
+                              start_date = as.Date('1990-01-22'),
+                              end_date = as.Date('1990-07-22'),
                               stride = 4,
                               min_horizon = -3,
-#                              method = "optimization",
-                              dist = "NegativeBinomial",
-                              refresh=0,
-                              model_name="Negative Binomial")
+                              model_name='model_NB_strat')
 
-backtest_summary4 <- backtest(backncast,
-                              true_date="onset_week",
-                              report_date="report_week",
-                              start_date = as.Date('1991-01-22'),
-                              end_date = as.Date('1991-07-22'),
+backtest_summary4 <- backtest(ncast4,
+                              start_date = as.Date('1990-01-22'),
+                              end_date = as.Date('1990-07-22'),
                               stride = 4,
                               min_horizon = -3,
-#                              method = "optimization",
-                              dist = "Student",
-                              refresh=0,
-                              model_name="Stu/.dent$")
+                              model_name='model_Poisson_strat')
 
+#Compare metrics of backtest results for stratified models
+metrics_comp_strat <- backtest_metrics(backtest_summary3,
+                                       backtest_summary4, horizons =c(-1,0))
 
-#plot backtest: basically the same as regualar plot + the observed as a line.
-# as default plot horizon 0 but make the user choose.
+#Compare metrics of backtest results for all models -
+#stratified models results are aggregated to allow the comparison
+metrics_comp_all <- backtest_metrics(backtest_summary1,
+                                     backtest_summary2,
+                                     aggregate_backtest_summary(backtest_summary3,"gender"),
+                                     aggregate_backtest_summary(backtest_summary4,"gender"), horizons = c(-1,0))
 
+summary.backtest_metrics(long_mtr)
 
+plot.backtest_metrics(metrics_comp_strat)
+plot.backtest_metrics(metrics_comp_all)
 
-ciccio <- backtest_metrics(backtest_summary1,backtest_summary2,backtest_summary3,backtest_summary4, horizons = c(0,-1,-2))
-
-x <- backtest_metrics(backtest_summary1,backtest_summary2,backtest_summary3,backtest_summary4, horizons = c(0,-1,-2))
-#x<- backtest_metrics(backtest_summary3,backtest_summary4, horizons = c(0,-1))
-
-
-# plot_backtest_metrics
-#something like this
-#https://rodrigozepeda.github.io/diseasenowcasting/articles/Comparison-to-other-methods.html
-
-
-
-horizons=unique(x$horizon)
-metric="dispersion" #metric to consider
-#datesbrakes="2 weeks" #copy this from plot.nowcaster
-
-
-
-# Ensure 'now' is of Date type
-  x$now <- as.Date(x$now)
-
-# Convert data to long format for ggplot2
-long_mtr <- x %>%
-  pivot_longer(cols = metric, names_to = "metric", values_to = "value")
-
-# Calculate averages for each metric and model
-metric_averages <- long_mtr %>%
-  group_by(horizon,  Strata_unified, metric, model) %>%
-  summarize(avg_value = mean(value, na.rm = TRUE), .groups = "drop")
-
-
-##add to the vignettes > articles > diseasenowcasting.Rmd > 3. Evaluating the model
-ggplot(long_mtr, aes(x = now, y = value, color = model)) +
-  geom_jitter(width = 5, alpha = 0.6) +
-  facet_grid(Strata_unified ~ horizon, scales = "free_y", labeller = labeller(horizon = function(h) paste("Horizon =", h))) +
-  theme_minimal() +
-  labs(x = NULL, y = metric, color = NULL) +  # Remove legend title by setting color to NULL
-  theme(
-    axis.text.x = element_text(angle = 90, hjust = 1),
-    axis.title.y = element_text(size = 15),
-    legend.position = "bottom",  # Place the legend at the bottom
-    plot.title = element_text(hjust = 0.5)  # Center the title
-  ) +
-  ggplot2::scale_x_date(
-    date_labels = "%Y-%b-%d",  # Date format
-    minor_breaks = NULL,
-    breaks = sort(unique(dplyr::pull(x, now)))
-  ) +
-  geom_hline(data = metric_averages, aes(yintercept = avg_value, color = model), linetype = "dashed")+
-  geom_text_repel(data = metric_averages, aes(x = as.Date(Inf), y = avg_value, label = paste("avg.", round(avg_value, 2)), color = model),
-                  hjust = 1, size = 3, inherit.aes = FALSE, show.legend = FALSE)
 

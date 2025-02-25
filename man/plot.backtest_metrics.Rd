@@ -16,8 +16,8 @@
 \item{horizons}{vector of horizons for which the metrics be calculated. Default is to calculate metrics only for horizon 0 (the nowcast).}
 
 \item{datesbrakes}{A string giving the distance between x-axis breaks if not specified, one label
-per bar. Other valid examples are: "2 weeks", or "10 years", 'sec', 'min', 'hour', 'day', 'week',
-'month', 'year', optionally followed by 's'.}
+per bar. Other valid examples are: "2 weeks", or "10 years", "sec", "min", "hour", "day", "week",
+"month", "year", optionally followed by "s".}
 }
 \description{
 Create a plot to compare the metrics calculated with \code{\link[=backtest_metrics]{backtest_metrics()}}
@@ -42,7 +42,7 @@ if (requireNamespace("scoringutils", quietly = TRUE)) {
   # Compare the models to select the best model
   comparison <- backtest_metrics(btest1, btest2)
   # plot the comparison
-  plot(comparison)
+  # plot(comparison)                  ADJ AFTER FIX
   # specify metric and horizons
   # plot(comparison, metric = "mse", horizons = c(-1, 0))
 }
