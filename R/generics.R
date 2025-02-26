@@ -421,18 +421,19 @@ update.nowcaster <- function(object, new_data, now = NULL, refresh = 250*rlang::
 #'                      method = "optimization", seed = 2495624, iter = 10)
 #'   ncast2 <- nowcast(denguedat, "onset_week", "report_week", now = now,
 #'                     method = "optimization", seed = 2495624, iter = 10,
-#'                     dist = "Normal")
+#'                     dist = "Poisson")
 #'   # Run a backtest for each of the models
-#'   btest1 <- backtest(ncast1, dates_to_test = as.Date("1990-06-11"),
-#'                      model_name = "Classic")
-#'   btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"),
-#'                       model_name = "Normal")
+#'   dates_to_test <- c(as.Date("1990-06-11"), as.Date("1990-06-18"))
+#'   btest1 <- backtest(ncast1, dates_to_test = dates_to_test,
+#'                     min_horizon = -2, model_name = "Classic")
+#'   btest2 <- backtest(ncast2, dates_to_test = dates_to_test,
+#'                     min_horizon = -2, model_name = "Poisson")
 #'   # Compare the models to select the best model
-#'   comparison <- backtest_metrics(btest1, btest2)
+#'   comparison <- backtest_metrics(btest1, btest2, horizons = c(-1,0))
 #'   # plot the comparison
 #'   # plot(comparison)                  ADJ AFTER FIX
 #'   # specify metric and horizons
-#'   # plot(comparison, metric = "mse", horizons = c(-1, 0))
+#'   # plot(comparison, metric = "rmse", horizons = c(-1,0))
 #' }
 #' @export
 plot.backtest_metrics <- function(x, ..., metric = "wis", horizons = 0, datesbrakes = NULL) {
@@ -450,23 +451,23 @@ plot.backtest_metrics <- function(x, ..., metric = "wis", horizons = 0, datesbra
 
   if (!ggrepel_available) {
     cli::cli_alert_warning("To add labels to the plot, please install the `ggrepel` package.")
-    }
+  }
 
   # Check if datesbrakes is either NULL or a valid specification
   if (!is.null(datesbrakes) &&
       !grepl("^\\d+\\s*(day|week|month|year|days|weeks|months|years)$|^(day|week|month|year|days|weeks|months|years)$", datesbrakes)) {
     cli::cli_abort('datesbrakes is not a valid string for date breaks. Examples are: "2 weeks", "10 days", "day", "months", "year"...')
-    }
+  }
 
   # Check if horizons provided exists in x
   if (any(!horizons %in% unique(x$horizon))) {
     cli::cli_abort('At least one of the horizons was not evaluated in backtest_metrics()')
-    }
+  }
 
   # Check if only one available metric was given
   if (length(metric) != 1) {
     cli::cli_abort('This function plots only one metric at a time. Specify only one')
-    }
+  }
 
   # Check the metric is available
   available_metrics <- colnames(x)[-c(1:4)]             # ADJ AFTER FIX
