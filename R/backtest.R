@@ -688,7 +688,7 @@ backtest_metrics <- function(..., metrics = c("mae","rmse","ape","quantile"), ho
   value_cols <- setdiff(colnames(metrics_table),desc_cols)
   metrics_table <- metrics_table[,c(desc_cols,value_cols)]
 
-  class(metrics_table) <- "backtest_metrics"
+  metrics_table <- structure(metrics_table, class = c("backtest_metrics", "data.frame"))
 
   return(metrics_table)
 }
