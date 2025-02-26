@@ -16,8 +16,8 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest_metrics.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/calc_ape.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/calc_mae.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/calc_quantile_scores.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/calc_rmse.html</loc></url>
-<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/calc_wis.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/check_date_columns.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/check_now.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/check_proportion_reported.html</loc></url>
@@ -35,6 +35,7 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/get_link_number.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/get_prior_code_stan.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/get_priors_from_init.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/get_quantile_metrics.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/has_date.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/index.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/infer_data_type.html</loc></url>

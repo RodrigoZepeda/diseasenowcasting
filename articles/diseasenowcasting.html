@@ -301,25 +301,48 @@ absolute error (<code>mae</code>), root mean squared error
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#This will take a while as it refits the model several times</span></span>
 <span><span class="fu"><a href="../reference/backtest_metrics.html">backtest_metrics</a></span><span class="op">(</span><span class="va">btest</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 13 × 15</span></span></span>
-<span><span class="co">#&gt;    model           now        horizon Strata_unified   mse se_point    ape   wis</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> model_2025-02-… 1990-05-07       0 No strata      15.2    231.   3.04    6.66</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> model_2025-02-… 1990-05-14       0 No strata      13.8    191.   1.97    5.30</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> model_2025-02-… 1990-05-21       0 No strata      16.0    255.   5.33    7.10</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> model_2025-02-… 1990-05-28       0 No strata      14.6    212.   2.91    5.84</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> model_2025-02-… 1990-06-04       0 No strata      15.8    251.   5.28    6.87</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> model_2025-02-… 1990-06-11       0 No strata      10.6    112.   1.76    3.72</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> model_2025-02-… 1990-06-18       0 No strata      13.9    195.   2.32    5.63</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> model_2025-02-… 1990-06-25       0 No strata       6.21    38.5  0.564   2.04</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> model_2025-02-… 1990-07-02       0 No strata      10.0    101.   1.67    3.63</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> model_2025-02-… 1990-07-09       0 No strata       6.70    44.8  0.837   2.14</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">11</span> model_2025-02-… 1990-07-16       0 No strata       9.60    92.1  1.60    3.47</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">12</span> model_2025-02-… 1990-07-23       0 No strata       7.48    55.9  1.07    2.44</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">13</span> model_2025-02-… 1990-07-30       0 No strata       1.40     1.97 0.082<span style="text-decoration: underline;">6</span>  1.86</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 7 more variables: overprediction &lt;dbl&gt;, underprediction &lt;dbl&gt;,</span></span></span>
-<span><span class="co">#&gt; <span style="color: #949494;">#   dispersion &lt;dbl&gt;, bias &lt;dbl&gt;, interval_coverage_50 &lt;dbl&gt;,</span></span></span>
-<span><span class="co">#&gt; <span style="color: #949494;">#   interval_coverage_90 &lt;dbl&gt;, ae_median &lt;dbl&gt;</span></span></span></code></pre></div>
+<span><span class="co">#&gt;                                   model        now horizon Strata_unified</span></span>
+<span><span class="co">#&gt; 1  model_2025-02-26_19h55m13s_841041674 1990-05-07       0      No strata</span></span>
+<span><span class="co">#&gt; 2  model_2025-02-26_19h55m13s_841041674 1990-05-14       0      No strata</span></span>
+<span><span class="co">#&gt; 3  model_2025-02-26_19h55m13s_841041674 1990-05-21       0      No strata</span></span>
+<span><span class="co">#&gt; 4  model_2025-02-26_19h55m13s_841041674 1990-05-28       0      No strata</span></span>
+<span><span class="co">#&gt; 5  model_2025-02-26_19h55m13s_841041674 1990-06-04       0      No strata</span></span>
+<span><span class="co">#&gt; 6  model_2025-02-26_19h55m13s_841041674 1990-06-11       0      No strata</span></span>
+<span><span class="co">#&gt; 7  model_2025-02-26_19h55m13s_841041674 1990-06-18       0      No strata</span></span>
+<span><span class="co">#&gt; 8  model_2025-02-26_19h55m13s_841041674 1990-06-25       0      No strata</span></span>
+<span><span class="co">#&gt; 9  model_2025-02-26_19h55m13s_841041674 1990-07-02       0      No strata</span></span>
+<span><span class="co">#&gt; 10 model_2025-02-26_19h55m13s_841041674 1990-07-09       0      No strata</span></span>
+<span><span class="co">#&gt; 11 model_2025-02-26_19h55m13s_841041674 1990-07-16       0      No strata</span></span>
+<span><span class="co">#&gt; 12 model_2025-02-26_19h55m13s_841041674 1990-07-23       0      No strata</span></span>
+<span><span class="co">#&gt; 13 model_2025-02-26_19h55m13s_841041674 1990-07-30       0      No strata</span></span>
+<span><span class="co">#&gt;       mae   rmse        ape      wis overprediction underprediction dispersion</span></span>
+<span><span class="co">#&gt; 1  15.194 15.194 3.03880000 6.657143      5.0000000       0.0000000   1.657143</span></span>
+<span><span class="co">#&gt; 2  13.808 13.808 1.97257143 5.300714      3.4285714       0.0000000   1.872143</span></span>
+<span><span class="co">#&gt; 3  15.978 15.978 5.32600000 7.100714      5.4285714       0.0000000   1.672143</span></span>
+<span><span class="co">#&gt; 4  14.553 14.553 2.91060000 5.842857      4.1428571       0.0000000   1.700000</span></span>
+<span><span class="co">#&gt; 5  15.840 15.840 5.28000000 6.871607      5.1428571       0.0000000   1.728750</span></span>
+<span><span class="co">#&gt; 6  10.588 10.588 1.76466667 3.721607      2.1428571       0.0000000   1.578750</span></span>
+<span><span class="co">#&gt; 7  13.948 13.948 2.32466667 5.628571      4.0000000       0.0000000   1.628571</span></span>
+<span><span class="co">#&gt; 8   6.207  6.207 0.56427273 2.043036      0.5714286       0.0000000   1.471607</span></span>
+<span><span class="co">#&gt; 9  10.030 10.030 1.67166667 3.628571      2.2857143       0.0000000   1.342857</span></span>
+<span><span class="co">#&gt; 10  6.695  6.695 0.83687500 2.135893      0.7142857       0.0000000   1.421607</span></span>
+<span><span class="co">#&gt; 11  9.595  9.595 1.59916667 3.471429      2.0000000       0.0000000   1.471429</span></span>
+<span><span class="co">#&gt; 12  7.476  7.476 1.06800000 2.443571      1.0000000       0.0000000   1.443571</span></span>
+<span><span class="co">#&gt; 13  1.404  1.404 0.08258824 1.857321      0.0000000       0.4285714   1.428750</span></span>
+<span><span class="co">#&gt;     bias interval_coverage_50 interval_coverage_90 ae_median</span></span>
+<span><span class="co">#&gt; 1   1.00                    0                    0        13</span></span>
+<span><span class="co">#&gt; 2   0.90                    0                    1        12</span></span>
+<span><span class="co">#&gt; 3   1.00                    0                    0        14</span></span>
+<span><span class="co">#&gt; 4   0.95                    0                    0        13</span></span>
+<span><span class="co">#&gt; 5   1.00                    0                    0        14</span></span>
+<span><span class="co">#&gt; 6   0.90                    0                    1         9</span></span>
+<span><span class="co">#&gt; 7   0.95                    0                    0        12</span></span>
+<span><span class="co">#&gt; 8   0.50                    1                    1         4</span></span>
+<span><span class="co">#&gt; 9   0.90                    0                    1         8</span></span>
+<span><span class="co">#&gt; 10  0.50                    1                    1         5</span></span>
+<span><span class="co">#&gt; 11  0.90                    0                    1         8</span></span>
+<span><span class="co">#&gt; 12  0.90                    0                    1         5</span></span>
+<span><span class="co">#&gt; 13 -0.50                    1                    1         3</span></span></code></pre></div>
 <p>You can run <code>backtest_metrics</code> on multiple nowcasts</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#p&lt;-backtest_metrics(btest)</span></span>

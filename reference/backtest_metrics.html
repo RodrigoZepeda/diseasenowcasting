@@ -44,7 +44,11 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">backtest_metrics</span><span class="op">(</span><span class="va">...</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mae"</span>, <span class="st">"rmse"</span>, <span class="st">"ape"</span>, <span class="st">"wis"</span><span class="op">)</span>, horizons <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">backtest_metrics</span><span class="op">(</span></span>
+<span>  <span class="va">...</span>,</span>
+<span>  metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mae"</span>, <span class="st">"rmse"</span>, <span class="st">"ape"</span>, <span class="st">"quantile"</span><span class="op">)</span>,</span>
+<span>  horizons <span class="op">=</span> <span class="fl">0</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -58,7 +62,7 @@
 <dt id="arg-metrics">metrics<a class="anchor" aria-label="anchor" href="#arg-metrics"></a></dt>
 <dd><p>list of metrics which should be calculated.
 Currently supporting: 'mae' (mean absolute error), 'rmse' (root mean squared error),
-'ape' (absolute percent error) and 'wis' (weighted interval score)</p></dd>
+'ape' (absolute percent error) and 'quantile' for all quantile-based metrics or input specific quantile-base metrics from <code><a href="get_quantile_metrics.html">get_quantile_metrics</a></code>.</p></dd>
 
 
 <dt id="arg-horizons">horizons<a class="anchor" aria-label="anchor" href="#arg-horizons"></a></dt>
@@ -66,6 +70,10 @@ Currently supporting: 'mae' (mean absolute error), 'rmse' (root mean squared err
 Default is to calculate metrics only for horizon 0 (the nowcast).</p></dd>
 
 </dl></div>
+    <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>A backtest_metrics object - a table with the computed metrics.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
@@ -81,23 +89,24 @@ Default is to calculate metrics only for horizon 0 (the nowcast).</p></dd>
 <span class="r-in"><span>  method <span class="op">=</span> <span class="st">"optimization"</span>, seed <span class="op">=</span> <span class="fl">2495624</span>, iter <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">ncast2</span> <span class="op">&lt;-</span> <span class="fu"><a href="nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">denguedat</span>, <span class="st">"onset_week"</span>, <span class="st">"report_week"</span>, now <span class="op">=</span> <span class="va">now</span>,</span></span>
-<span class="r-in"><span>  method <span class="op">=</span> <span class="st">"optimization"</span>, seed <span class="op">=</span> <span class="fl">2495624</span>, iter <span class="op">=</span> <span class="fl">10</span>, dist <span class="op">=</span> <span class="st">"Normal"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  method <span class="op">=</span> <span class="st">"optimization"</span>, seed <span class="op">=</span> <span class="fl">2495624</span>, iter <span class="op">=</span> <span class="fl">10</span>, dist <span class="op">=</span> <span class="st">"Poisson"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Run a backtest for each of the models</span></span></span>
 <span class="r-in"><span><span class="va">btest1</span> <span class="op">&lt;-</span> <span class="fu"><a href="backtest.html">backtest</a></span><span class="op">(</span><span class="va">ncast1</span>, dates_to_test <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990-06-11"</span><span class="op">)</span>, model_name <span class="op">=</span> <span class="st">"Classic"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">btest2</span> <span class="op">&lt;-</span> <span class="fu"><a href="backtest.html">backtest</a></span><span class="op">(</span><span class="va">ncast2</span>, dates_to_test <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990-06-11"</span><span class="op">)</span>, model_name <span class="op">=</span> <span class="st">"Normal"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">btest2</span> <span class="op">&lt;-</span> <span class="fu"><a href="backtest.html">backtest</a></span><span class="op">(</span><span class="va">ncast2</span>, dates_to_test <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990-06-11"</span><span class="op">)</span>, model_name <span class="op">=</span> <span class="st">"Poisson"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Compare the models to select the best model</span></span></span>
 <span class="r-in"><span><span class="fu">backtest_metrics</span><span class="op">(</span><span class="va">btest1</span>, <span class="va">btest2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 2 × 15</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   model   now        horizon Strata_unified   mse se_point   ape   wis</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> Classic 1990-06-11       0 No strata       24.2     587.  4.04 13.2 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> Normal  1990-06-11       0 No strata       13.2     174.  2.20  5.52</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 7 more variables: overprediction &lt;dbl&gt;, underprediction &lt;dbl&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   dispersion &lt;dbl&gt;, bias &lt;dbl&gt;, interval_coverage_50 &lt;dbl&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   interval_coverage_90 &lt;dbl&gt;, ae_median &lt;dbl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     model        now horizon Strata_unified    mae   rmse      ape      wis</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 Classic 1990-06-11       0      No strata 24.225 24.225 4.037500 13.19286</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 Poisson 1990-06-11       0      No strata 13.252 13.252 2.208667  8.86500</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   overprediction underprediction dispersion bias interval_coverage_50</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1      11.285714               0  1.9071429    1                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2       8.128571               0  0.7364286    1                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   interval_coverage_90 ae_median</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1                    0        23</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2                    0        13</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
