@@ -31,14 +31,15 @@ ncast <- nowcast(denguedat, "onset_week", "report_week", now = now,
   method = "optimization", seed = 2495624, iter = 10)
 
 # Run a backtest for the model checking the model fit for two dates:
-btest <- backtest(ncast, dates_to_test = c(as.Date("1990-06-11"), as.Date("1990-06-18")), model_name="model_global")
+dates_to_test <- c(as.Date("1990-06-11"), as.Date("1990-06-18"))
+btest <- backtest(ncast, dates_to_test=dates_to_test , model_name="model_global")
 
 # Run a nowcast stratified by gender
 ncast_strat <- nowcast(denguedat, "onset_week", "report_week", now = now, strata = c("gender"),
   method = "optimization", seed = 2495624, iter = 10)
 
 # Run a backtest for the stratified model
-btest_strat <- backtest(ncast_strat, dates_to_test = c(as.Date("1990-06-11"), as.Date("1990-06-18")), model_name="model_strat")
+btest_strat <- backtest(ncast_strat, dates_to_test=dates_to_test, model_name="model_strat")
 
 # Aggregates the backtest results for the stratified model
 btest_strat_agg <- aggregate_backtest_summary(btest_strat, "gender")

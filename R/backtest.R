@@ -302,14 +302,15 @@ backtest <- function(ncast,
 #'   method = "optimization", seed = 2495624, iter = 10)
 #'
 #' # Run a backtest for the model checking the model fit for two dates:
-#' btest <- backtest(ncast, dates_to_test = c(as.Date("1990-06-11"), as.Date("1990-06-18")), model_name="model_global")
+#' dates_to_test <- c(as.Date("1990-06-11"), as.Date("1990-06-18"))
+#' btest <- backtest(ncast, dates_to_test=dates_to_test , model_name="model_global")
 #'
 #' # Run a nowcast stratified by gender
 #' ncast_strat <- nowcast(denguedat, "onset_week", "report_week", now = now, strata = c("gender"),
 #'   method = "optimization", seed = 2495624, iter = 10)
 #'
 #' # Run a backtest for the stratified model
-#' btest_strat <- backtest(ncast_strat, dates_to_test = c(as.Date("1990-06-11"), as.Date("1990-06-18")), model_name="model_strat")
+#' btest_strat <- backtest(ncast_strat, dates_to_test=dates_to_test, model_name="model_strat")
 #'
 #' # Aggregates the backtest results for the stratified model
 #' btest_strat_agg <- aggregate_backtest_summary(btest_strat, "gender")
@@ -628,11 +629,11 @@ calc_quantile_scores <- function(backtest_summary, metrics) {
 #'   method = "optimization", seed = 2495624, iter = 10)
 #'
 #' ncast2 <- nowcast(denguedat, "onset_week", "report_week", now = now,
-#'   method = "optimization", seed = 2495624, iter = 10, dist = "Normal")
+#'   method = "optimization", seed = 2495624, iter = 10, dist = "Poisson")
 #'
 #' # Run a backtest for each of the models
 #' btest1 <- backtest(ncast1, dates_to_test = as.Date("1990-06-11"), model_name = "Classic")
-#' btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"), model_name = "Normal")
+#' btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"), model_name = "Poisson")
 #'
 #' # Compare the models to select the best model
 #' backtest_metrics(btest1, btest2)

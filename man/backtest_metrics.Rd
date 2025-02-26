@@ -39,11 +39,11 @@ ncast1 <- nowcast(denguedat, "onset_week", "report_week", now = now,
   method = "optimization", seed = 2495624, iter = 10)
 
 ncast2 <- nowcast(denguedat, "onset_week", "report_week", now = now,
-  method = "optimization", seed = 2495624, iter = 10, dist = "Normal")
+  method = "optimization", seed = 2495624, iter = 10, dist = "Poisson")
 
 # Run a backtest for each of the models
 btest1 <- backtest(ncast1, dates_to_test = as.Date("1990-06-11"), model_name = "Classic")
-btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"), model_name = "Normal")
+btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"), model_name = "Poisson")
 
 # Compare the models to select the best model
 backtest_metrics(btest1, btest2)
