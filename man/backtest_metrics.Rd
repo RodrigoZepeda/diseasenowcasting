@@ -4,17 +4,24 @@
 \alias{backtest_metrics}
 \title{backtest_metrics}
 \usage{
-backtest_metrics(..., metrics = c("mae", "rmse", "ape", "wis"), horizons = 0)
+backtest_metrics(
+  ...,
+  metrics = c("mae", "rmse", "ape", "quantile"),
+  horizons = 0
+)
 }
 \arguments{
 \item{...}{Results of calls to backtest.}
 
 \item{metrics}{list of metrics which should be calculated.
 Currently supporting: 'mae' (mean absolute error), 'rmse' (root mean squared error),
-'ape' (absolute percent error) and 'wis' (weighted interval score)}
+'ape' (absolute percent error) and 'quantile' for all quantile-based metrics or input specific quantile-base metrics from \code{\link{get_quantile_metrics}}.}
 
 \item{horizons}{vector of horizons for which the metrics be calculated.
 Default is to calculate metrics only for horizon 0 (the nowcast).}
+}
+\value{
+A backtest_metrics object - a table with the computed metrics.
 }
 \description{
 Compute metrics for given backtest results
@@ -32,11 +39,11 @@ ncast1 <- nowcast(denguedat, "onset_week", "report_week", now = now,
   method = "optimization", seed = 2495624, iter = 10)
 
 ncast2 <- nowcast(denguedat, "onset_week", "report_week", now = now,
-  method = "optimization", seed = 2495624, iter = 10, dist = "Normal")
+  method = "optimization", seed = 2495624, iter = 10, dist = "Poisson")
 
 # Run a backtest for each of the models
 btest1 <- backtest(ncast1, dates_to_test = as.Date("1990-06-11"), model_name = "Classic")
-btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"), model_name = "Normal")
+btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"), model_name = "Poisson")
 
 # Compare the models to select the best model
 backtest_metrics(btest1, btest2)
