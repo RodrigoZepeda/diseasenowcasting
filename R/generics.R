@@ -509,7 +509,7 @@ plot.backtest_metrics <- function(x, ..., metric = "wis", horizons = 0, datesbra
     )
 
   plotbktest <- ggplot2::ggplot(long_mtr, ggplot2::aes(x = !!rlang::sym("now"), y = !!rlang::sym("value"), color = !!rlang::sym("model"))) +
-    ggplot2::geom_jitter(width = 5, alpha = 0.6) +
+    ggplot2::geom_jitter(height = 0, alpha = 0.6) +
     ggplot2::facet_grid(
       rows = ggplot2::vars(!!rlang::sym("Strata_unified")),
       cols = ggplot2::vars(!!rlang::sym("horizon")),
