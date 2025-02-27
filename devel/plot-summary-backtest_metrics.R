@@ -64,11 +64,11 @@ metrics_comp_strat <- backtest_metrics(backtest_summary3,
 metrics_comp_all <- backtest_metrics(backtest_summary1,
                                      backtest_summary2,
                                      aggregate_backtest_summary(backtest_summary3,"gender"),
-                                     aggregate_backtest_summary(backtest_summary4,"gender"), horizons = c(-1,0))
+                                     aggregate_backtest_summary(backtest_summary4,"gender"), horizons = c(-1,0), metrics = c("ape","rmse"))
 
-summary.backtest_metrics(long_mtr)
-
-plot.backtest_metrics(metrics_comp_strat)
+summary(metrics_comp_all, metrics = c("ape","wis") )
+plot(metrics_comp_all)
+plot.backtest_metrics(metrics_comp_strat, horizons = c(-1,0))
 plot.backtest_metrics(metrics_comp_all)
 
 

@@ -29,7 +29,7 @@ to perlform the nowcast.}
 Generic to update a \code{nowcaster} object with new data
 }
 \examples{
-#' # Load the data
+# Load the data
 data(denguedat)
 
 # Run a nowcast using the first 1000 data points
