@@ -192,34 +192,40 @@ Once a nowcast has been constructed you can use the [backtest()] function to eva
 
 ```{r}
 #This will take a while as it refits the model several times
-btest <- backtest(ncast, start_date = as.Date("1990/05/01"), end_date = as.Date("1990/07/31"), refresh = 0)
+btest <- backtest(ncast, start_date = as.Date("1990/05/01"), end_date = as.Date("1990/07/31"), refresh = 0, model_name='model_NB')
 ```
 
 The `backtest_metrics()` function calculates the mean absolute error (`mae`), root mean squared error (`rmse`) and weighted interval scoring (`wis`):
 
 ```{r}
 #This will take a while as it refits the model several times
-backtest_metrics(btest)
+mtr <- backtest_metrics(btest)
+mtr
 ```
-
-You can run `backtest_metrics` on multiple nowcasts
+You can generate a summary and and plot `backtest_metrics()` object with the`summary` and `plot` functions.
 
 ```{r}
-#p<-backtest_metrics(btest)
-#plot(p)
-
-#ncast2 <- nowcast(denguedat_fraction, true_date = "onset_week", 
-#                 report_date = "report_week",
-#                method = "variational", dist = "Normal") 
-#btest2 <- backtest(ncast2, dates_to_test = as.Date("1990-06-11"),
-#
-#comparison <- backtest_metrics(btest, btest2)
+summary(mtr)
+plot(mtr)
 ```
 
-and plot the comparison with `plot`
+`backtest_metrics` works with multiple `backtest` objects
 
 ```{r}
-#plot(comparison)
+#creating a new nowcast using a Poisson distribution
+ncast2 <- nowcast(denguedat_fraction, true_date = "onset_week", 
+                 report_date = "report_week",
+                method = "variational", dist = "Poisson") 
+btest2 <- backtest(ncast2, start_date = as.Date("1990/05/01"), end_date = as.Date("1990/07/31"), refresh = 0, model_name='model_Poisson') 
+
+comparison_mtr <- backtest_metrics(btest, btest2)
+```
+
+generate a summary of the comparison with `summary` and generate a plot with `plot`
+
+```{r}
+summary(comparison_mtr)
+plot(comparison_mtr)
 ```
 
 ## 4. Updating with new data
