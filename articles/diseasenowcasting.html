@@ -293,70 +293,108 @@ past vs what was actually observed. Here, for example, we are evaluating
 what the model predicted for May, June and July:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#This will take a while as it refits the model several times</span></span>
-<span><span class="va">btest</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/backtest.html">backtest</a></span><span class="op">(</span><span class="va">ncast</span>, start_date <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990/05/01"</span><span class="op">)</span>, end_date <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990/07/31"</span><span class="op">)</span>, refresh <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">btest</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/backtest.html">backtest</a></span><span class="op">(</span><span class="va">ncast</span>, start_date <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990/05/01"</span><span class="op">)</span>, end_date <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990/07/31"</span><span class="op">)</span>, refresh <span class="op">=</span> <span class="fl">0</span>, model_name<span class="op">=</span><span class="st">'model_NB'</span><span class="op">)</span></span></code></pre></div>
 <p>The <code><a href="../reference/backtest_metrics.html">backtest_metrics()</a></code> function calculates the mean
 absolute error (<code>mae</code>), root mean squared error
 (<code>rmse</code>) and weighted interval scoring
 (<code>wis</code>):</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#This will take a while as it refits the model several times</span></span>
-<span><span class="fu"><a href="../reference/backtest_metrics.html">backtest_metrics</a></span><span class="op">(</span><span class="va">btest</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                                   model        now horizon Strata_unified</span></span>
-<span><span class="co">#&gt; 1  model_2025-02-26_19h55m13s_841041674 1990-05-07       0      No strata</span></span>
-<span><span class="co">#&gt; 2  model_2025-02-26_19h55m13s_841041674 1990-05-14       0      No strata</span></span>
-<span><span class="co">#&gt; 3  model_2025-02-26_19h55m13s_841041674 1990-05-21       0      No strata</span></span>
-<span><span class="co">#&gt; 4  model_2025-02-26_19h55m13s_841041674 1990-05-28       0      No strata</span></span>
-<span><span class="co">#&gt; 5  model_2025-02-26_19h55m13s_841041674 1990-06-04       0      No strata</span></span>
-<span><span class="co">#&gt; 6  model_2025-02-26_19h55m13s_841041674 1990-06-11       0      No strata</span></span>
-<span><span class="co">#&gt; 7  model_2025-02-26_19h55m13s_841041674 1990-06-18       0      No strata</span></span>
-<span><span class="co">#&gt; 8  model_2025-02-26_19h55m13s_841041674 1990-06-25       0      No strata</span></span>
-<span><span class="co">#&gt; 9  model_2025-02-26_19h55m13s_841041674 1990-07-02       0      No strata</span></span>
-<span><span class="co">#&gt; 10 model_2025-02-26_19h55m13s_841041674 1990-07-09       0      No strata</span></span>
-<span><span class="co">#&gt; 11 model_2025-02-26_19h55m13s_841041674 1990-07-16       0      No strata</span></span>
-<span><span class="co">#&gt; 12 model_2025-02-26_19h55m13s_841041674 1990-07-23       0      No strata</span></span>
-<span><span class="co">#&gt; 13 model_2025-02-26_19h55m13s_841041674 1990-07-30       0      No strata</span></span>
-<span><span class="co">#&gt;       mae   rmse        ape      wis overprediction underprediction dispersion</span></span>
-<span><span class="co">#&gt; 1  15.194 15.194 3.03880000 6.657143      5.0000000       0.0000000   1.657143</span></span>
-<span><span class="co">#&gt; 2  13.808 13.808 1.97257143 5.300714      3.4285714       0.0000000   1.872143</span></span>
-<span><span class="co">#&gt; 3  15.978 15.978 5.32600000 7.100714      5.4285714       0.0000000   1.672143</span></span>
-<span><span class="co">#&gt; 4  14.553 14.553 2.91060000 5.842857      4.1428571       0.0000000   1.700000</span></span>
-<span><span class="co">#&gt; 5  15.840 15.840 5.28000000 6.871607      5.1428571       0.0000000   1.728750</span></span>
-<span><span class="co">#&gt; 6  10.588 10.588 1.76466667 3.721607      2.1428571       0.0000000   1.578750</span></span>
-<span><span class="co">#&gt; 7  13.948 13.948 2.32466667 5.628571      4.0000000       0.0000000   1.628571</span></span>
-<span><span class="co">#&gt; 8   6.207  6.207 0.56427273 2.043036      0.5714286       0.0000000   1.471607</span></span>
-<span><span class="co">#&gt; 9  10.030 10.030 1.67166667 3.628571      2.2857143       0.0000000   1.342857</span></span>
-<span><span class="co">#&gt; 10  6.695  6.695 0.83687500 2.135893      0.7142857       0.0000000   1.421607</span></span>
-<span><span class="co">#&gt; 11  9.595  9.595 1.59916667 3.471429      2.0000000       0.0000000   1.471429</span></span>
-<span><span class="co">#&gt; 12  7.476  7.476 1.06800000 2.443571      1.0000000       0.0000000   1.443571</span></span>
-<span><span class="co">#&gt; 13  1.404  1.404 0.08258824 1.857321      0.0000000       0.4285714   1.428750</span></span>
-<span><span class="co">#&gt;     bias interval_coverage_50 interval_coverage_90 ae_median</span></span>
-<span><span class="co">#&gt; 1   1.00                    0                    0        13</span></span>
-<span><span class="co">#&gt; 2   0.90                    0                    1        12</span></span>
-<span><span class="co">#&gt; 3   1.00                    0                    0        14</span></span>
-<span><span class="co">#&gt; 4   0.95                    0                    0        13</span></span>
-<span><span class="co">#&gt; 5   1.00                    0                    0        14</span></span>
-<span><span class="co">#&gt; 6   0.90                    0                    1         9</span></span>
-<span><span class="co">#&gt; 7   0.95                    0                    0        12</span></span>
-<span><span class="co">#&gt; 8   0.50                    1                    1         4</span></span>
-<span><span class="co">#&gt; 9   0.90                    0                    1         8</span></span>
-<span><span class="co">#&gt; 10  0.50                    1                    1         5</span></span>
-<span><span class="co">#&gt; 11  0.90                    0                    1         8</span></span>
-<span><span class="co">#&gt; 12  0.90                    0                    1         5</span></span>
-<span><span class="co">#&gt; 13 -0.50                    1                    1         3</span></span></code></pre></div>
-<p>You can run <code>backtest_metrics</code> on multiple nowcasts</p>
+<span><span class="va">mtr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/backtest_metrics.html">backtest_metrics</a></span><span class="op">(</span><span class="va">btest</span><span class="op">)</span></span>
+<span><span class="va">mtr</span></span>
+<span><span class="co">#&gt;       model        now horizon Strata_unified    mae   rmse        ape</span></span>
+<span><span class="co">#&gt; 1  model_NB 1990-05-07       0      No strata 18.695 18.695 3.73900000</span></span>
+<span><span class="co">#&gt; 2  model_NB 1990-05-14       0      No strata 11.428 11.428 1.63257143</span></span>
+<span><span class="co">#&gt; 3  model_NB 1990-05-21       0      No strata 15.057 15.057 5.01900000</span></span>
+<span><span class="co">#&gt; 4  model_NB 1990-05-28       0      No strata 13.577 13.577 2.71540000</span></span>
+<span><span class="co">#&gt; 5  model_NB 1990-06-04       0      No strata 15.063 15.063 5.02100000</span></span>
+<span><span class="co">#&gt; 6  model_NB 1990-06-11       0      No strata 11.031 11.031 1.83850000</span></span>
+<span><span class="co">#&gt; 7  model_NB 1990-06-18       0      No strata  3.333  3.333 0.55550000</span></span>
+<span><span class="co">#&gt; 8  model_NB 1990-06-25       0      No strata  8.163  8.163 0.74209091</span></span>
+<span><span class="co">#&gt; 9  model_NB 1990-07-02       0      No strata  3.061  3.061 0.51016667</span></span>
+<span><span class="co">#&gt; 10 model_NB 1990-07-09       0      No strata  5.831  5.831 0.72887500</span></span>
+<span><span class="co">#&gt; 11 model_NB 1990-07-16       0      No strata  1.067  1.067 0.17783333</span></span>
+<span><span class="co">#&gt; 12 model_NB 1990-07-23       0      No strata  0.512  0.512 0.07314286</span></span>
+<span><span class="co">#&gt; 13 model_NB 1990-07-30       0      No strata  3.195  3.195 0.18794118</span></span>
+<span><span class="co">#&gt;          wis overprediction underprediction dispersion  bias</span></span>
+<span><span class="co">#&gt; 1  7.7078571      5.5714286       0.0000000  2.1364286  0.95</span></span>
+<span><span class="co">#&gt; 2  4.2716071      2.7857143       0.0000000  1.4858929  0.90</span></span>
+<span><span class="co">#&gt; 3  6.6216071      5.0000000       0.0000000  1.6216071  1.00</span></span>
+<span><span class="co">#&gt; 4  5.5507143      3.9857143       0.0000000  1.5650000  0.95</span></span>
+<span><span class="co">#&gt; 5  6.4294643      4.7142857       0.0000000  1.7151786  1.00</span></span>
+<span><span class="co">#&gt; 6  4.0357143      2.4285714       0.0000000  1.6071429  0.90</span></span>
+<span><span class="co">#&gt; 7  1.1942857      0.2857143       0.0000000  0.9085714  0.50</span></span>
+<span><span class="co">#&gt; 8  2.7142857      1.1428571       0.0000000  1.5714286  0.90</span></span>
+<span><span class="co">#&gt; 9  1.1571429      0.2857143       0.0000000  0.8714286  0.50</span></span>
+<span><span class="co">#&gt; 10 1.8714286      0.5714286       0.0000000  1.3000000  0.50</span></span>
+<span><span class="co">#&gt; 11 0.7078571      0.0000000       0.0000000  0.7078571  0.00</span></span>
+<span><span class="co">#&gt; 12 0.9642857      0.0000000       0.1428571  0.8214286 -0.50</span></span>
+<span><span class="co">#&gt; 13 2.0214286      0.0000000       0.7142857  1.3071429 -0.50</span></span>
+<span><span class="co">#&gt;    interval_coverage_50 interval_coverage_90 ae_median</span></span>
+<span><span class="co">#&gt; 1                     0                    0      17.0</span></span>
+<span><span class="co">#&gt; 2                     0                    1       9.5</span></span>
+<span><span class="co">#&gt; 3                     0                    0      13.0</span></span>
+<span><span class="co">#&gt; 4                     0                    0      12.0</span></span>
+<span><span class="co">#&gt; 5                     0                    0      13.0</span></span>
+<span><span class="co">#&gt; 6                     0                    1       9.0</span></span>
+<span><span class="co">#&gt; 7                     1                    1       2.0</span></span>
+<span><span class="co">#&gt; 8                     0                    1       6.0</span></span>
+<span><span class="co">#&gt; 9                     1                    1       2.0</span></span>
+<span><span class="co">#&gt; 10                    1                    1       4.0</span></span>
+<span><span class="co">#&gt; 11                    1                    1       0.0</span></span>
+<span><span class="co">#&gt; 12                    1                    1       1.0</span></span>
+<span><span class="co">#&gt; 13                    1                    1       5.0</span></span></code></pre></div>
+<p>You can generate a summary and and plot
+<code><a href="../reference/backtest_metrics.html">backtest_metrics()</a></code> object with the<code>summary</code> and
+<code>plot</code> functions.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co">#p&lt;-backtest_metrics(btest)</span></span>
-<span><span class="co">#plot(p)</span></span>
-<span></span>
-<span><span class="co">#ncast2 &lt;- nowcast(denguedat_fraction, true_date = "onset_week", </span></span>
-<span><span class="co">#                 report_date = "report_week",</span></span>
-<span><span class="co">#                method = "variational", dist = "Normal") </span></span>
-<span><span class="co">#btest2 &lt;- backtest(ncast2, dates_to_test = as.Date("1990-06-11"),</span></span>
-<span><span class="co">#</span></span>
-<span><span class="co">#comparison &lt;- backtest_metrics(btest, btest2)</span></span></code></pre></div>
-<p>and plot the comparison with <code>plot</code></p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">mtr</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 11 × 8</span></span></span>
+<span><span class="co">#&gt;    model    Strata_unified horizon metric                 avg    sd n_now     se</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> model_NB No strata      0       ae_median           7.19   5.44     13 1.51  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> model_NB No strata      0       ape                 1.76   1.80     13 0.500 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> model_NB No strata      0       bias                0.546  0.548    13 0.152 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> model_NB No strata      0       dispersion          1.36   0.421    13 0.117 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> model_NB No strata      0       interval_coverage_… 0.462  0.519    13 0.144 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> model_NB No strata      0       interval_coverage_… 0.692  0.480    13 0.133 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> model_NB No strata      0       mae                 8.46   6.07     13 1.68  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> model_NB No strata      0       overprediction      2.06   2.13     13 0.591 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> model_NB No strata      0       rmse                8.46   6.07     13 1.68  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> model_NB No strata      0       underprediction     0.065<span style="text-decoration: underline;">9</span> 0.199    13 0.055<span style="text-decoration: underline;">1</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">11</span> model_NB No strata      0       wis                 3.48   2.44     13 0.677</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">mtr</span><span class="op">)</span></span></code></pre></div>
+<p><img src="diseasenowcasting_files/figure-html/unnamed-chunk-13-1.png" width="700"></p>
+<p><code>backtest_metrics</code> works with multiple
+<code>backtest</code> objects</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co">#plot(comparison)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="co">#creating a new nowcast using a Poisson distribution</span></span>
+<span><span class="va">ncast2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">denguedat_fraction</span>, true_date <span class="op">=</span> <span class="st">"onset_week"</span>, </span>
+<span>                 report_date <span class="op">=</span> <span class="st">"report_week"</span>,</span>
+<span>                method <span class="op">=</span> <span class="st">"variational"</span>, dist <span class="op">=</span> <span class="st">"Poisson"</span><span class="op">)</span> </span>
+<span><span class="va">btest2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/backtest.html">backtest</a></span><span class="op">(</span><span class="va">ncast2</span>, start_date <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990/05/01"</span><span class="op">)</span>, end_date <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990/07/31"</span><span class="op">)</span>, refresh <span class="op">=</span> <span class="fl">0</span>, model_name<span class="op">=</span><span class="st">'model_Poisson'</span><span class="op">)</span> </span>
+<span></span>
+<span><span class="va">comparison_mtr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/backtest_metrics.html">backtest_metrics</a></span><span class="op">(</span><span class="va">btest</span>, <span class="va">btest2</span><span class="op">)</span></span></code></pre></div>
+<p>generate a summary of the comparison with <code>summary</code> and
+generate a plot with <code>plot</code></p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">comparison_mtr</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 22 × 8</span></span></span>
+<span><span class="co">#&gt;    model    Strata_unified horizon metric                 avg    sd n_now     se</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> model_NB No strata      0       ae_median           7.19   5.44     13 1.51  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> model_NB No strata      0       ape                 1.76   1.80     13 0.500 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> model_NB No strata      0       bias                0.546  0.548    13 0.152 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> model_NB No strata      0       dispersion          1.36   0.421    13 0.117 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> model_NB No strata      0       interval_coverage_… 0.462  0.519    13 0.144 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> model_NB No strata      0       interval_coverage_… 0.692  0.480    13 0.133 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> model_NB No strata      0       mae                 8.46   6.07     13 1.68  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> model_NB No strata      0       overprediction      2.06   2.13     13 0.591 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> model_NB No strata      0       rmse                8.46   6.07     13 1.68  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> model_NB No strata      0       underprediction     0.065<span style="text-decoration: underline;">9</span> 0.199    13 0.055<span style="text-decoration: underline;">1</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 12 more rows</span></span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">comparison_mtr</span><span class="op">)</span></span></code></pre></div>
+<p><img src="diseasenowcasting_files/figure-html/unnamed-chunk-15-1.png" width="700"></p>
 </div>
 <div class="section level2">
 <h2 id="updating-with-new-data">4. Updating with new data<a class="anchor" aria-label="anchor" href="#updating-with-new-data"></a>
@@ -365,17 +403,17 @@ absolute error (<code>mae</code>), root mean squared error
 updates it with <code>new_data</code> to generate predictions for a more
 recent now. For example, consider now the <code>denguedat</code>
 information with one additional new week:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#This new dataset contains a new additional week</span></span>
 <span><span class="va">denguedat_fraction_updated</span> <span class="op">&lt;-</span> <span class="va">denguedat</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">report_week</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1990/10/08"</span>, format <span class="op">=</span> <span class="st">"%Y/%m/%d"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>We can update our nowcast with this new data:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ncast_2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">ncast</span>, new_data <span class="op">=</span> <span class="va">denguedat_fraction_updated</span><span class="op">)</span></span></code></pre></div>
 <p>And do the same operations as before:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_2</span><span class="op">)</span></span></code></pre></div>
-<p><img src="diseasenowcasting_files/figure-html/unnamed-chunk-17-1.png" width="700"></p>
+<p><img src="diseasenowcasting_files/figure-html/unnamed-chunk-18-1.png" width="700"></p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
