@@ -318,6 +318,8 @@ backtest <- function(ncast,
 #' # Compare the metrics of the non-stratified model with the aggregated stratified model
 #' metrics = backtest_metrics(btest, btest_strat_agg)
 #'
+#' @importFrom rlang .data
+#'
 #' @export
 aggregate_backtest_summary <- function(backtest_summary, remove_strata) {
 
@@ -333,40 +335,40 @@ aggregate_backtest_summary <- function(backtest_summary, remove_strata) {
   }
   strata <- cols[(start_idx + 1):(end_idx - 1)]
 
-  ##Check that the given strata to remove are starta columns of backtest_summary
-  if(!all(remove_strata %in% strata)) {
+  ## Check that the given strata to remove are strata columns of backtest_summary
+  if (!all(remove_strata %in% strata)) {
     cli::cli_abort('Not all given strata to remove are strata columns of backtest_summary')
   }
 
   kept_strata <- setdiff(strata, remove_strata)
   true_date <- cols[3]
-  value_cols <- cols[(end_idx+1):length(cols)]
+  value_cols <- cols[(end_idx + 1):length(cols)]
 
-  if(length(kept_strata) > 0) {
+  if (length(kept_strata) > 0) {
     backtest_summary_agg <- backtest_summary |>
-      dplyr::group_by(now, !!as.symbol(true_date), dplyr::all_of(dplyr::pick(kept_strata))) |>
+      dplyr::group_by(.data$now, !!as.symbol(true_date), dplyr::all_of(dplyr::pick(kept_strata))) |>
       dplyr::summarise(
-        model = dplyr::first(model),
-        horizon = dplyr::first(horizon),
+        model = dplyr::first(.data$model),
+        horizon = dplyr::first(.data$horizon),
         dplyr::across(value_cols, sum),
         .groups = "drop"
       ) |>
       tidyr::unite(col = "Strata_unified", dplyr::all_of(kept_strata), sep = " - ", remove = FALSE)
   } else {
     backtest_summary_agg <- backtest_summary |>
-      dplyr::group_by(now, !!as.symbol(true_date)) |>
+      dplyr::group_by(.data$now, !!as.symbol(true_date)) |>
       dplyr::summarise(
-        model = dplyr::first(model),
-        horizon = dplyr::first(horizon),
+        model = dplyr::first(.data$model),
+        horizon = dplyr::first(.data$horizon),
         Strata_unified = "No strata",
         dplyr::across(value_cols, sum),
         .groups = "drop"
       )
   }
 
-  desc_cols <- c("model","now",true_date,"horizon",kept_strata,"Strata_unified")
-  backtest_summary_agg <- backtest_summary_agg[,c(desc_cols,value_cols)]
-  return (backtest_summary_agg)
+  desc_cols <- c("model", "now", true_date, "horizon", kept_strata, "Strata_unified")
+  backtest_summary_agg <- backtest_summary_agg[, c(desc_cols, value_cols)]
+  return(backtest_summary_agg)
 }
 
 

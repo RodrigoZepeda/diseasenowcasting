@@ -15,7 +15,7 @@
 Generic to print a \code{nowcaster} object
 }
 \examples{
-#' # Load the data
+# Load the data
 data(denguedat)
 
 # Run a nowcast with very few iterations
