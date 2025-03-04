@@ -259,7 +259,7 @@ fitted model:</p>
 <p>You can generate plots of the <code>nowcast</code> with the
 <code>plot</code> function:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast</span>, title <span class="op">=</span> <span class="st">"Nowcast"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="diseasenowcasting_files/figure-html/unnamed-chunk-9-1.png" width="700"></p>
 <p>And get the predictions with the summary function</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
@@ -363,7 +363,7 @@ absolute error (<code>mae</code>), root mean squared error
 <span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> model_NB No strata      0       rmse                8.46   6.07     13 1.68  </span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> model_NB No strata      0       underprediction     0.065<span style="text-decoration: underline;">9</span> 0.199    13 0.055<span style="text-decoration: underline;">1</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">11</span> model_NB No strata      0       wis                 3.48   2.44     13 0.677</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">mtr</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">mtr</span>, title <span class="op">=</span> <span class="st">"Backtest"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="diseasenowcasting_files/figure-html/unnamed-chunk-13-1.png" width="700"></p>
 <p><code>backtest_metrics</code> works with multiple
 <code>backtest</code> objects</p>
@@ -393,7 +393,7 @@ generate a plot with <code>plot</code></p>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> model_NB No strata      0       rmse                8.46   6.07     13 1.68  </span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> model_NB No strata      0       underprediction     0.065<span style="text-decoration: underline;">9</span> 0.199    13 0.055<span style="text-decoration: underline;">1</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 12 more rows</span></span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">comparison_mtr</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">comparison_mtr</span>, title <span class="op">=</span> <span class="st">"Backtest comparison"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="diseasenowcasting_files/figure-html/unnamed-chunk-15-1.png" width="700"></p>
 </div>
 <div class="section level2">
@@ -412,7 +412,7 @@ information with one additional new week:</p>
 <code class="sourceCode R"><span><span class="va">ncast_2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">ncast</span>, new_data <span class="op">=</span> <span class="va">denguedat_fraction_updated</span><span class="op">)</span></span></code></pre></div>
 <p>And do the same operations as before:</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_2</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">ncast_2</span>, title <span class="op">=</span> <span class="st">"Updated nowcast"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="diseasenowcasting_files/figure-html/unnamed-chunk-18-1.png" width="700"></p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
