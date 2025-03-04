@@ -172,7 +172,7 @@ ncast
 You can generate plots of the `nowcast` with the `plot` function:
 
 ```{r}
-plot(ncast)
+plot(ncast, title = "Nowcast")
 ```
 
 And get the predictions with the summary function
@@ -206,7 +206,7 @@ You can generate a summary and and plot `backtest_metrics()` object with the`sum
 
 ```{r}
 summary(mtr)
-plot(mtr)
+plot(mtr, title = "Backtest")
 ```
 
 `backtest_metrics` works with multiple `backtest` objects
@@ -225,7 +225,7 @@ generate a summary of the comparison with `summary` and generate a plot with `pl
 
 ```{r}
 summary(comparison_mtr)
-plot(comparison_mtr)
+plot(comparison_mtr, title = "Backtest comparison")
 ```
 
 ## 4. Updating with new data
@@ -247,5 +247,5 @@ ncast_2 <- update(ncast, new_data = denguedat_fraction_updated)
 And do the same operations as before:
 
 ```{r}
-plot(ncast_2)
+plot(ncast_2, title = "Updated nowcast")
 ```

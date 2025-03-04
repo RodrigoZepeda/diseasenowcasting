@@ -92,6 +92,8 @@ summary.nowcaster <- function(object, quantiles = c(0.05, 0.95), ...) {
 #'
 #' @param quantiles a vector of two values to specify the quantiles for the error bars.
 #'
+#' @param title string to add as a title of the plot
+#'
 #' @param ... Additional parameters to pass to your plot
 #'
 #' @return A [ggplot2::ggplot2()] object with barplots to show real cases and the predictions
@@ -126,7 +128,7 @@ summary.nowcaster <- function(object, quantiles = c(0.05, 0.95), ...) {
 #' @export
 plot.nowcaster <- function(x, color = "#5F7E62", datesbrakes = NULL,
                            casesbrakes = 10, rowsfacet = NULL, colsfacet = NULL,
-                           quantiles = c(0.05, 0.95), ...){
+                           quantiles = c(0.05, 0.95), title = NULL,...){
 
   if (!requireNamespace("ggplot2", quietly = TRUE)){
     cli::cli_alert_warning(
@@ -186,6 +188,7 @@ plot.nowcaster <- function(x, color = "#5F7E62", datesbrakes = NULL,
   if (length(quantiles)!=2) {
     stop("must specify 2 quantiles for error bars")
   }
+
 
   # Get names from input data
   true_date_name <- x$data$call_parameters$true_date
@@ -290,9 +293,10 @@ plot.nowcaster <- function(x, color = "#5F7E62", datesbrakes = NULL,
     ggplot2::theme(
       axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 1),
       legend.position = "top",
-      legend.justification='right',
+      legend.justification="right",
       legend.direction = "horizontal"
-    )
+    ) +
+    ggplot2::ggtitle(title)
 
   # If all data have the same strata, do not plot the facet title
   if (length(unique(data_delays$.strata)) == 1) {
@@ -410,6 +414,7 @@ update.nowcaster <- function(object, new_data, now = NULL, refresh = 250*rlang::
 #' @param datesbrakes A string giving the distance between x-axis breaks if not specified, one label
 #' per bar. Other valid examples are: "2 weeks", or "10 years", "sec", "min", "hour", "day", "week",
 #' "month", "year", optionally followed by "s".
+#' @param title string to add as a title of the plot
 #' @examples
 #' # These examples require the `scoringutils` package
 #' if (requireNamespace("scoringutils", quietly = TRUE)) {
@@ -436,7 +441,7 @@ update.nowcaster <- function(object, new_data, now = NULL, refresh = 250*rlang::
 #'   plot(comparison, metric = "rmse", horizons = c(-1,0))
 #' }
 #' @export
-plot.backtest_metrics <- function(x, ..., metric = "wis", horizons = 0, datesbrakes = NULL) {
+plot.backtest_metrics <- function(x, ..., metric = "wis", horizons = 0, datesbrakes = NULL, title = NULL) {
 
   # Declare horizon locally within the function to avoid a warning
   horizon <- NULL
@@ -540,7 +545,8 @@ plot.backtest_metrics <- function(x, ..., metric = "wis", horizons = 0, datesbra
         color = !!rlang::sym("model")
       ),
       linetype = "dashed"
-    )
+    ) +
+    ggplot2::ggtitle(title)
 
 
   # Only add ggrepel if it's available

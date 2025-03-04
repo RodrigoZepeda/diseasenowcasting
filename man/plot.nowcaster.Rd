@@ -12,6 +12,7 @@
   rowsfacet = NULL,
   colsfacet = NULL,
   quantiles = c(0.05, 0.95),
+  title = NULL,
   ...
 )
 }
@@ -35,6 +36,8 @@ manual control over the layout of multiple strata in the plot.}
 allows manual control over the layout of multiple strata in the plot.}
 
 \item{quantiles}{a vector of two values to specify the quantiles for the error bars.}
+
+\item{title}{string to add as a title of the plot}
 
 \item{...}{Additional parameters to pass to your plot}
 }
