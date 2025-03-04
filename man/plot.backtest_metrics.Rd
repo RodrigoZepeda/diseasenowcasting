@@ -4,7 +4,7 @@
 \alias{plot.backtest_metrics}
 \title{plot.backtest_metrics}
 \usage{
-\method{plot}{backtest_metrics}(x, ..., metric = "wis", horizons = 0, datesbrakes = NULL)
+\method{plot}{backtest_metrics}(x, ..., metric = "wis", horizons = 0, datesbrakes = NULL, title = NULL)
 }
 \arguments{
 \item{x}{results of calls to \code{\link[=backtest_metrics]{backtest_metrics()}}}
@@ -18,6 +18,8 @@
 \item{datesbrakes}{A string giving the distance between x-axis breaks if not specified, one label
 per bar. Other valid examples are: "2 weeks", or "10 years", "sec", "min", "hour", "day", "week",
 "month", "year", optionally followed by "s".}
+
+\item{title}{string to add as a title of the plot}
 }
 \description{
 Create a plot to compare the metrics calculated with \code{\link[=backtest_metrics]{backtest_metrics()}}
