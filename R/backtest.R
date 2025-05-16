@@ -526,7 +526,8 @@ calc_rmse <- function(backtest_summary) {
 
 #' get_quantile_metrics
 #'
-#' Returns vector of supported quantile metrics based on \code{\link[scoringutils]{get_metrics.forecast_quantile}} in \code{\link{scoringutils}}.
+#' Returns vector of supported quantile metrics based on \code{\link[scoringutils]{get_metrics.forecast_quantile}}
+#' from [scoringutils::get_metrics()].
 #'
 #' @export
 get_quantile_metrics <- function() {

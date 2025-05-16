@@ -1,7 +1,7 @@
 Package: diseasenowcasting
 Type: Package
 Title: Nowcasting disease onset cases given report dates
-Version: 0.2.5
+Version: 0.2.6
 Authors@R: 
     c(person("Rodrigo", "Zepeda-Tello", , "rzepeda17@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-4471-5270")),

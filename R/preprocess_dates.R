@@ -74,7 +74,7 @@ preprocess_dates <- function(.disease_data, date, temporal_effects){
   }
 
   #Remove the date column
-  date_data <- .disease_data |>
+  date_data <- date_data |>
     dplyr::select(-!!as.symbol(date))
 
   return(date_data)
@@ -101,7 +101,7 @@ has_date <- function(.date_data, .colname){
 #' @keywords internal
 datecol <- function(.date_data, .colname){
   if (.colname %in% colnames(.date_data)){
-    vecval <- .date_data |> dplyr::pull(!!as.symbol(.colname))
+    vecval <- .date_data |> dplyr::pull(!!as.symbol(.colname)) |> as.vector()
   } else {
     vecval <- vector("numeric",length = 0)
   }

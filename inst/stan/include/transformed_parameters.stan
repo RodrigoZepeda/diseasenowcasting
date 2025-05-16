@@ -29,7 +29,7 @@ if (has_month_of_year_epi)
   beta_month_epi[1:11] = sd_month_epi[1]*beta_month_epi_param;
 
 //->Week of year
-vector[has_week_of_year_epi ? 53: 0] beta_week_epi = rep_vector(0.0, has_month_of_year_epi ? 53: 0);
+vector[has_week_of_year_epi ? 53: 0] beta_week_epi = rep_vector(0.0, has_week_of_year_epi ? 53: 0);
 if (has_week_of_year_epi){
   for (k in 2:52)
     beta_week_epi[k] = beta_week_epi[k-1] + sd_week_epi[1]*beta_week_epi_param[k-1]; //Prior for next week is this week

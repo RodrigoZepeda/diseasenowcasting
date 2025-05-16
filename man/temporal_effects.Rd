@@ -24,8 +24,7 @@ temporal_effects(
 
 \item{week_of_year}{Boolean. Whether to include an effect for the epidemiological week.}
 
-\item{holidays}{Either \code{NULL} or an \code{\link[almanac:rcalendar]{almanac::rcalendar()}} from the \code{\link[=almanac]{almanac()}} package
-specifying how to calculate holidays.}
+\item{holidays}{Either \code{NULL} or an \code{\link[almanac:rcalendar]{almanac::rcalendar()}} specifying how to calculate holidays.}
 }
 \description{
 Matrix for constructing temporal effects into the \code{\link[=nowcast]{nowcast()}}.
