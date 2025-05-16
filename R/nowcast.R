@@ -86,7 +86,7 @@ nowcast <- function(.disease_data,
                     has_cycle = FALSE,
                     autoregresive  = AR(),
                     moving_average = MA(),
-                    dist   = c("NegativeBinomial", "Poisson","Normal","Student"),
+                    dist   = c("NegativeBinomial", "Poisson"),
                     link_x = default_x_link(dist),
                     link_y = default_y_link(dist),
                     now = NULL,
@@ -123,7 +123,7 @@ nowcast <- function(.disease_data,
   temporal_effects_epidemic <- temporal_effects_epidemic |> infer_temporal_effect(units = units, .default = "epidemic")
 
   # Match the distribution whether negative binomial or poisson
-  dist   <- match.arg(dist, c("NegativeBinomial", "Poisson","Normal","Student"))
+  dist   <- match.arg(dist, c("NegativeBinomial", "Poisson"))
 
   # Method
   method <- match.arg(method, c("sampling","variational","optimization"))
@@ -150,6 +150,7 @@ nowcast <- function(.disease_data,
     verbose = refresh > 0
   )
 
+  #TODO: Fix the nowcast rstan
   # Get the delay data for epidemic process
   .date_epidemic <- preprocess_dates(.disease_data, date = true_date, temporal_effects = temporal_effects_epidemic)
   .date_delay    <- preprocess_dates(.disease_data, date = report_date, temporal_effects = temporal_effects_delay)

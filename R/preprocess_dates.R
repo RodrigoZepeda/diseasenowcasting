@@ -74,7 +74,7 @@ preprocess_dates <- function(.disease_data, date, temporal_effects){
   }
 
   #Remove the date column
-  date_data <- .disease_data |>
+  date_data <- date_data |>
     dplyr::select(-!!as.symbol(date))
 
   return(date_data)
