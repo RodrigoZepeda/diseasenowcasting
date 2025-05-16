@@ -12,8 +12,7 @@
 #'
 #' @param week_of_year Boolean. Whether to include an effect for the epidemiological week.
 #'
-#' @param holidays Either `NULL` or an [almanac::rcalendar()] from the [almanac()] package
-#' specifying how to calculate holidays.
+#' @param holidays Either `NULL` or an [almanac::rcalendar()] specifying how to calculate holidays.
 #'
 #' @section US holidays:
 #'
