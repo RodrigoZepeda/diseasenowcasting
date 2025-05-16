@@ -7,5 +7,6 @@
 get_quantile_metrics()
 }
 \description{
-Returns vector of supported quantile metrics based on \code{\link[scoringutils]{get_metrics.forecast_quantile}} in \code{\link{scoringutils}}.
+Returns vector of supported quantile metrics based on \code{\link[scoringutils]{get_metrics.forecast_quantile}}
+from \code{\link[scoringutils:get_metrics]{scoringutils::get_metrics()}}.
 }
