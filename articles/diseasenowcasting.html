@@ -6,18 +6,17 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Introduction to diseasenowcasting • diseasenowcasting</title>
-<!-- favicons --><link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
-<link rel="apple-touch-icon" type="image/png" sizes="180x180" href="../apple-touch-icon.png">
-<link rel="apple-touch-icon" type="image/png" sizes="120x120" href="../apple-touch-icon-120x120.png">
-<link rel="apple-touch-icon" type="image/png" sizes="76x76" href="../apple-touch-icon-76x76.png">
-<link rel="apple-touch-icon" type="image/png" sizes="60x60" href="../apple-touch-icon-60x60.png">
-<script src="../katex-auto.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
+<link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+<link rel="icon" sizes="any" href="../favicon.ico">
+<link rel="manifest" href="../site.webmanifest">
+<!-- katex math --><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script><script src="../katex-auto.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><link href="../deps/KaTex-0.16.10/katex.min.css" rel="stylesheet">
-<script src="../deps/KaTex-0.16.10/katex.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Introduction to diseasenowcasting">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Introduction to diseasenowcasting">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -27,7 +26,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.6</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -67,7 +66,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>Introduction to diseasenowcasting</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/RodrigoZepeda/diseasenowcasting/blob/v0.2.5/vignettes/articles/diseasenowcasting.Rmd" class="external-link"><code>vignettes/articles/diseasenowcasting.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/vignettes/articles/diseasenowcasting.Rmd" class="external-link"><code>vignettes/articles/diseasenowcasting.Rmd</code></a></small>
       <div class="d-none name"><code>diseasenowcasting.Rmd</code></div>
     </div>
 
@@ -302,48 +301,48 @@ absolute error (<code>mae</code>), root mean squared error
 <code class="sourceCode R"><span><span class="co">#This will take a while as it refits the model several times</span></span>
 <span><span class="va">mtr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/backtest_metrics.html">backtest_metrics</a></span><span class="op">(</span><span class="va">btest</span><span class="op">)</span></span>
 <span><span class="va">mtr</span></span>
-<span><span class="co">#&gt;       model        now horizon Strata_unified    mae   rmse        ape</span></span>
-<span><span class="co">#&gt; 1  model_NB 1990-05-07       0      No strata 18.695 18.695 3.73900000</span></span>
-<span><span class="co">#&gt; 2  model_NB 1990-05-14       0      No strata 11.428 11.428 1.63257143</span></span>
-<span><span class="co">#&gt; 3  model_NB 1990-05-21       0      No strata 15.057 15.057 5.01900000</span></span>
-<span><span class="co">#&gt; 4  model_NB 1990-05-28       0      No strata 13.577 13.577 2.71540000</span></span>
-<span><span class="co">#&gt; 5  model_NB 1990-06-04       0      No strata 15.063 15.063 5.02100000</span></span>
-<span><span class="co">#&gt; 6  model_NB 1990-06-11       0      No strata 11.031 11.031 1.83850000</span></span>
-<span><span class="co">#&gt; 7  model_NB 1990-06-18       0      No strata  3.333  3.333 0.55550000</span></span>
-<span><span class="co">#&gt; 8  model_NB 1990-06-25       0      No strata  8.163  8.163 0.74209091</span></span>
-<span><span class="co">#&gt; 9  model_NB 1990-07-02       0      No strata  3.061  3.061 0.51016667</span></span>
-<span><span class="co">#&gt; 10 model_NB 1990-07-09       0      No strata  5.831  5.831 0.72887500</span></span>
-<span><span class="co">#&gt; 11 model_NB 1990-07-16       0      No strata  1.067  1.067 0.17783333</span></span>
-<span><span class="co">#&gt; 12 model_NB 1990-07-23       0      No strata  0.512  0.512 0.07314286</span></span>
-<span><span class="co">#&gt; 13 model_NB 1990-07-30       0      No strata  3.195  3.195 0.18794118</span></span>
-<span><span class="co">#&gt;          wis overprediction underprediction dispersion  bias</span></span>
-<span><span class="co">#&gt; 1  7.7078571      5.5714286       0.0000000  2.1364286  0.95</span></span>
-<span><span class="co">#&gt; 2  4.2716071      2.7857143       0.0000000  1.4858929  0.90</span></span>
-<span><span class="co">#&gt; 3  6.6216071      5.0000000       0.0000000  1.6216071  1.00</span></span>
-<span><span class="co">#&gt; 4  5.5507143      3.9857143       0.0000000  1.5650000  0.95</span></span>
-<span><span class="co">#&gt; 5  6.4294643      4.7142857       0.0000000  1.7151786  1.00</span></span>
-<span><span class="co">#&gt; 6  4.0357143      2.4285714       0.0000000  1.6071429  0.90</span></span>
-<span><span class="co">#&gt; 7  1.1942857      0.2857143       0.0000000  0.9085714  0.50</span></span>
-<span><span class="co">#&gt; 8  2.7142857      1.1428571       0.0000000  1.5714286  0.90</span></span>
-<span><span class="co">#&gt; 9  1.1571429      0.2857143       0.0000000  0.8714286  0.50</span></span>
-<span><span class="co">#&gt; 10 1.8714286      0.5714286       0.0000000  1.3000000  0.50</span></span>
-<span><span class="co">#&gt; 11 0.7078571      0.0000000       0.0000000  0.7078571  0.00</span></span>
-<span><span class="co">#&gt; 12 0.9642857      0.0000000       0.1428571  0.8214286 -0.50</span></span>
-<span><span class="co">#&gt; 13 2.0214286      0.0000000       0.7142857  1.3071429 -0.50</span></span>
-<span><span class="co">#&gt;    interval_coverage_50 interval_coverage_90 ae_median</span></span>
-<span><span class="co">#&gt; 1                     0                    0      17.0</span></span>
-<span><span class="co">#&gt; 2                     0                    1       9.5</span></span>
-<span><span class="co">#&gt; 3                     0                    0      13.0</span></span>
-<span><span class="co">#&gt; 4                     0                    0      12.0</span></span>
-<span><span class="co">#&gt; 5                     0                    0      13.0</span></span>
-<span><span class="co">#&gt; 6                     0                    1       9.0</span></span>
-<span><span class="co">#&gt; 7                     1                    1       2.0</span></span>
-<span><span class="co">#&gt; 8                     0                    1       6.0</span></span>
-<span><span class="co">#&gt; 9                     1                    1       2.0</span></span>
-<span><span class="co">#&gt; 10                    1                    1       4.0</span></span>
-<span><span class="co">#&gt; 11                    1                    1       0.0</span></span>
-<span><span class="co">#&gt; 12                    1                    1       1.0</span></span>
-<span><span class="co">#&gt; 13                    1                    1       5.0</span></span></code></pre></div>
+<span><span class="co">#&gt;       model        now horizon Strata_unified    mae   rmse       ape      wis</span></span>
+<span><span class="co">#&gt; 1  model_NB 1990-05-07       0      No strata 16.587 16.587 3.3174000 7.821429</span></span>
+<span><span class="co">#&gt; 2  model_NB 1990-05-14       0      No strata 13.524 13.524 1.9320000 5.000000</span></span>
+<span><span class="co">#&gt; 3  model_NB 1990-05-21       0      No strata 16.621 16.621 5.5403333 7.672143</span></span>
+<span><span class="co">#&gt; 4  model_NB 1990-05-28       0      No strata 14.775 14.775 2.9550000 6.564464</span></span>
+<span><span class="co">#&gt; 5  model_NB 1990-06-04       0      No strata 16.846 16.846 5.6153333 8.278750</span></span>
+<span><span class="co">#&gt; 6  model_NB 1990-06-11       0      No strata 14.631 14.631 2.4385000 6.786429</span></span>
+<span><span class="co">#&gt; 7  model_NB 1990-06-18       0      No strata 14.240 14.240 2.3733333 6.671429</span></span>
+<span><span class="co">#&gt; 8  model_NB 1990-06-25       0      No strata 11.011 11.011 1.0010000 4.128571</span></span>
+<span><span class="co">#&gt; 9  model_NB 1990-07-02       0      No strata 13.246 13.246 2.2076667 5.942857</span></span>
+<span><span class="co">#&gt; 10 model_NB 1990-07-09       0      No strata 13.130 13.130 1.6412500 5.064286</span></span>
+<span><span class="co">#&gt; 11 model_NB 1990-07-16       0      No strata 13.359 13.359 2.2265000 5.500000</span></span>
+<span><span class="co">#&gt; 12 model_NB 1990-07-23       0      No strata 12.644 12.644 1.8062857 4.757143</span></span>
+<span><span class="co">#&gt; 13 model_NB 1990-07-30       0      No strata  3.393  3.393 0.1995882 1.714464</span></span>
+<span><span class="co">#&gt;    overprediction underprediction dispersion bias interval_coverage_50</span></span>
+<span><span class="co">#&gt; 1       6.1428571               0   1.678571 1.00                    0</span></span>
+<span><span class="co">#&gt; 2       3.2857143               0   1.714286 0.90                    0</span></span>
+<span><span class="co">#&gt; 3       6.0000000               0   1.672143 1.00                    0</span></span>
+<span><span class="co">#&gt; 4       5.0000000               0   1.564464 1.00                    0</span></span>
+<span><span class="co">#&gt; 5       6.7142857               0   1.564464 1.00                    0</span></span>
+<span><span class="co">#&gt; 6       5.2714286               0   1.515000 1.00                    0</span></span>
+<span><span class="co">#&gt; 7       5.2857143               0   1.385714 1.00                    0</span></span>
+<span><span class="co">#&gt; 8       2.5714286               0   1.557143 0.90                    0</span></span>
+<span><span class="co">#&gt; 9       4.5714286               0   1.371429 1.00                    0</span></span>
+<span><span class="co">#&gt; 10      3.4285714               0   1.635714 0.90                    0</span></span>
+<span><span class="co">#&gt; 11      4.0000000               0   1.500000 0.95                    0</span></span>
+<span><span class="co">#&gt; 12      3.2857143               0   1.471429 0.90                    0</span></span>
+<span><span class="co">#&gt; 13      0.2857143               0   1.428750 0.50                    1</span></span>
+<span><span class="co">#&gt;    interval_coverage_90 ae_median</span></span>
+<span><span class="co">#&gt; 1                     0        15</span></span>
+<span><span class="co">#&gt; 2                     1        11</span></span>
+<span><span class="co">#&gt; 3                     0        14</span></span>
+<span><span class="co">#&gt; 4                     0        13</span></span>
+<span><span class="co">#&gt; 5                     0        15</span></span>
+<span><span class="co">#&gt; 6                     0        13</span></span>
+<span><span class="co">#&gt; 7                     0        13</span></span>
+<span><span class="co">#&gt; 8                     1        10</span></span>
+<span><span class="co">#&gt; 9                     0        12</span></span>
+<span><span class="co">#&gt; 10                    1        12</span></span>
+<span><span class="co">#&gt; 11                    0        12</span></span>
+<span><span class="co">#&gt; 12                    1        11</span></span>
+<span><span class="co">#&gt; 13                    1         2</span></span></code></pre></div>
 <p>You can generate a summary and and plot
 <code><a href="../reference/backtest_metrics.html">backtest_metrics()</a></code> object with the<code>summary</code> and
 <code>plot</code> functions.</p>
@@ -352,17 +351,17 @@ absolute error (<code>mae</code>), root mean squared error
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 11 × 8</span></span></span>
 <span><span class="co">#&gt;    model    Strata_unified horizon metric                 avg    sd n_now     se</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> model_NB No strata      0       ae_median           7.19   5.44     13 1.51  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> model_NB No strata      0       ape                 1.76   1.80     13 0.500 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> model_NB No strata      0       bias                0.546  0.548    13 0.152 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> model_NB No strata      0       dispersion          1.36   0.421    13 0.117 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> model_NB No strata      0       interval_coverage_… 0.462  0.519    13 0.144 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> model_NB No strata      0       interval_coverage_… 0.692  0.480    13 0.133 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> model_NB No strata      0       mae                 8.46   6.07     13 1.68  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> model_NB No strata      0       overprediction      2.06   2.13     13 0.591 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> model_NB No strata      0       rmse                8.46   6.07     13 1.68  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> model_NB No strata      0       underprediction     0.065<span style="text-decoration: underline;">9</span> 0.199    13 0.055<span style="text-decoration: underline;">1</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">11</span> model_NB No strata      0       wis                 3.48   2.44     13 0.677</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> model_NB No strata      0       ae_median          11.8    3.30     13 0.914 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> model_NB No strata      0       ape                 2.56   1.56     13 0.431 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> model_NB No strata      0       bias                0.927  0.136    13 0.037<span style="text-decoration: underline;">8</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> model_NB No strata      0       dispersion          1.54   0.111    13 0.030<span style="text-decoration: underline;">9</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> model_NB No strata      0       interval_coverage…  0.076<span style="text-decoration: underline;">9</span> 0.277    13 0.076<span style="text-decoration: underline;">9</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> model_NB No strata      0       interval_coverage…  0.385  0.506    13 0.140 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> model_NB No strata      0       mae                13.4    3.45     13 0.958 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> model_NB No strata      0       overprediction      4.30   1.75     13 0.484 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> model_NB No strata      0       rmse               13.4    3.45     13 0.958 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> model_NB No strata      0       underprediction     0      0        13 0     </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">11</span> model_NB No strata      0       wis                 5.84   1.78     13 0.493</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">mtr</span>, title <span class="op">=</span> <span class="st">"Backtest"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="diseasenowcasting_files/figure-html/unnamed-chunk-13-1.png" width="700"></p>
 <p><code>backtest_metrics</code> works with multiple
@@ -382,16 +381,16 @@ generate a plot with <code>plot</code></p>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 22 × 8</span></span></span>
 <span><span class="co">#&gt;    model    Strata_unified horizon metric                 avg    sd n_now     se</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> model_NB No strata      0       ae_median           7.19   5.44     13 1.51  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> model_NB No strata      0       ape                 1.76   1.80     13 0.500 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> model_NB No strata      0       bias                0.546  0.548    13 0.152 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> model_NB No strata      0       dispersion          1.36   0.421    13 0.117 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> model_NB No strata      0       interval_coverage_… 0.462  0.519    13 0.144 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> model_NB No strata      0       interval_coverage_… 0.692  0.480    13 0.133 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> model_NB No strata      0       mae                 8.46   6.07     13 1.68  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> model_NB No strata      0       overprediction      2.06   2.13     13 0.591 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> model_NB No strata      0       rmse                8.46   6.07     13 1.68  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> model_NB No strata      0       underprediction     0.065<span style="text-decoration: underline;">9</span> 0.199    13 0.055<span style="text-decoration: underline;">1</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> model_NB No strata      0       ae_median          11.8    3.30     13 0.914 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> model_NB No strata      0       ape                 2.56   1.56     13 0.431 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> model_NB No strata      0       bias                0.927  0.136    13 0.037<span style="text-decoration: underline;">8</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> model_NB No strata      0       dispersion          1.54   0.111    13 0.030<span style="text-decoration: underline;">9</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> model_NB No strata      0       interval_coverage…  0.076<span style="text-decoration: underline;">9</span> 0.277    13 0.076<span style="text-decoration: underline;">9</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> model_NB No strata      0       interval_coverage…  0.385  0.506    13 0.140 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> model_NB No strata      0       mae                13.4    3.45     13 0.958 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> model_NB No strata      0       overprediction      4.30   1.75     13 0.484 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> model_NB No strata      0       rmse               13.4    3.45     13 0.958 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> model_NB No strata      0       underprediction     0      0        13 0     </span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 12 more rows</span></span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">comparison_mtr</span>, title <span class="op">=</span> <span class="st">"Backtest comparison"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="diseasenowcasting_files/figure-html/unnamed-chunk-15-1.png" width="700"></p>
@@ -426,7 +425,7 @@ information with one additional new week:</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.2.</p>
 </div>
 
     </footer>

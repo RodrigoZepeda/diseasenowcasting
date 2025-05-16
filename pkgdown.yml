@@ -1,11 +1,11 @@
 pandoc: 3.1.11
-pkgdown: 2.1.1
+pkgdown: 2.1.2
 pkgdown_sha: ~
 articles:
   articles/Advanced-nowcast-options: Advanced-nowcast-options.html
   articles/Comparison-to-other-methods: Comparison-to-other-methods.html
   articles/diseasenowcasting: diseasenowcasting.html
-last_built: 2025-03-06T22:16Z
+last_built: 2025-05-16T19:28Z
 urls:
   reference: https://rodrigozepeda.github.io/diseasenowcasting/reference
   article: https://rodrigozepeda.github.io/diseasenowcasting/articles
