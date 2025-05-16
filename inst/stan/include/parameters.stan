@@ -17,7 +17,7 @@ vector[has_day_of_week_epi ? 6: 0] beta_dow_epi_param;
 vector[has_weekend_epi ? 1: 0] beta_wkend_epi_param;
 vector[has_day_of_month_epi ? 30: 0] beta_dom_epi_param;
 vector[has_month_of_year_epi ? 11: 0] beta_month_epi_param;
-vector[has_week_of_year_epi ? 51: 0] beta_week_epi_param;
+vector[has_week_of_year_epi ? 52: 0] beta_week_epi_param;
 vector[has_holidays_epi ? 1: 0] beta_holidays_epi_param;
 
 //vector[has_day_of_week_dly ? 6: 0] beta_dow_dly_param;

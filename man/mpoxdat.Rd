@@ -3,7 +3,7 @@
 \docType{data}
 \name{mpoxdat}
 \alias{mpoxdat}
-\title{mpoxdat: M-pox line-list reporting data for New York City}
+\title{mpoxdat: Mpox reporting data from the 2022 New York City outbreak}
 \format{
 A data frame.
 }
@@ -11,13 +11,17 @@ A data frame.
 data(mpoxdat)
 }
 \description{
-Surveillance data from from the New York City Health Department’s mpox surveillance database.
+Surveillance line list data provided by the New York City (NYC) Health Department
+at https://github.com/nychealth/mpox_nowcast_eval, to accompany a nowcasting
+performance evaluation (doi: 10.2196/56495). Patients with a confirmed or probable mpox
+diagnosis or illness onset from July 8 through September 30, 2022 were included. The original
+dataset was aggregated and pre-processed as described in the note below.
 }
 \details{
 This is line-list data with each row representing case counts. The columns are as follows:
 \itemize{
-\item \code{dx_date}: first positive mpox laboratory result
-\item \code{dx_report_date}: the first positive mpox laboratory result was received by the NYC Health Department
+\item \code{dx_date}: is the specimen collection date of the first positive mpox laboratory result,
+\item \code{dx_report_date}: is the date the report of first positive mpox laboratory result was received by the NYC Health Department,
 \item \code{n}: the case count of individuals within those dates.
 \item \code{race}: the race corresponding to those cases. Race was randomly assigned with probabilities
 "Non-Hispanic White" = 0.309, "Hispanic" = 0.283, "Black" = 0.202, "Asian" = 0.156, and "Other" = 0.05

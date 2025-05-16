@@ -101,7 +101,7 @@ has_date <- function(.date_data, .colname){
 #' @keywords internal
 datecol <- function(.date_data, .colname){
   if (.colname %in% colnames(.date_data)){
-    vecval <- .date_data |> dplyr::pull(!!as.symbol(.colname))
+    vecval <- .date_data |> dplyr::pull(!!as.symbol(.colname)) |> as.vector()
   } else {
     vecval <- vector("numeric",length = 0)
   }

@@ -71,7 +71,7 @@ static constexpr std::array<const char*, 679> locations_array__ =
   " (in 'nowcasting', line 1214, column 0 to column 46)",
   " (in 'nowcasting', line 1219, column 0 to column 98)",
   " (in 'nowcasting', line 1224, column 0 to column 102)",
-  " (in 'nowcasting', line 1229, column 0 to column 100)",
+  " (in 'nowcasting', line 1229, column 0 to column 99)",
   " (in 'nowcasting', line 1240, column 0 to column 50)",
   " (in 'nowcasting', line 1296, column 0 to column 85)",
   " (in 'nowcasting', line 1297, column 0 to column 100)",
@@ -4263,10 +4263,10 @@ public:
       current_statement__ = 254;
       beta_week_epi_param_1dim__ = std::numeric_limits<int>::min();
       current_statement__ = 254;
-      beta_week_epi_param_1dim__ = (has_week_of_year_epi ? 51 : 0);
+      beta_week_epi_param_1dim__ = (has_week_of_year_epi ? 52 : 0);
       current_statement__ = 254;
       stan::math::validate_non_negative_index("beta_week_epi_param",
-        "has_week_of_year_epi ? 51 : 0", beta_week_epi_param_1dim__);
+        "has_week_of_year_epi ? 52 : 0", beta_week_epi_param_1dim__);
       current_statement__ = 255;
       beta_holidays_epi_param_1dim__ = std::numeric_limits<int>::min();
       current_statement__ = 255;
@@ -4812,7 +4812,7 @@ public:
           DUMMY_VAR__);
       current_statement__ = 40;
       stan::model::assign(beta_week_epi,
-        stan::math::rep_vector(0.0, (has_month_of_year_epi ? 53 : 0)),
+        stan::math::rep_vector(0.0, (has_week_of_year_epi ? 53 : 0)),
         "assigning variable beta_week_epi");
       current_statement__ = 60;
       if (has_week_of_year_epi) {
@@ -5475,7 +5475,7 @@ public:
       }
       current_statement__ = 40;
       stan::model::assign(beta_week_epi,
-        stan::math::rep_vector(0.0, (has_month_of_year_epi ? 53 : 0)),
+        stan::math::rep_vector(0.0, (has_week_of_year_epi ? 53 : 0)),
         "assigning variable beta_week_epi");
       current_statement__ = 60;
       if (has_week_of_year_epi) {
