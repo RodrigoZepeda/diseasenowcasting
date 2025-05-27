@@ -150,7 +150,7 @@ nowcast <- function(.disease_data,
     verbose = refresh > 0
   )
 
-  #TODO: Fix the nowcast rstan
+
   # Get the delay data for epidemic process
   .date_epidemic <- preprocess_dates(.disease_data, date = true_date, temporal_effects = temporal_effects_epidemic)
   .date_delay    <- preprocess_dates(.disease_data, date = report_date, temporal_effects = temporal_effects_delay)
@@ -173,6 +173,7 @@ nowcast <- function(.disease_data,
   .disease_data <- strata_list$.disease_data
   num_strata    <- strata_list$num_strata
 
+  #TODO: Fix the nowcast rstan
   stan_list <- nowcast.rstan(.disease_data,
                 .date_epidemic = .date_epidemic,
                 .date_delay    = .date_delay,

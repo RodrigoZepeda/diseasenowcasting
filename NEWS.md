@@ -7,6 +7,10 @@ include zeroes (previous function extended the observations for all zeroes) and 
 maximum possible observed delay. 
 * Reduced the number of distributions to Poisson and NegativeBinomial only. 
 
+# diseasenowcasting 0.2.6
+
+* Fixed the time covariates from preprocess_dates.
+
 # diseasenowcasting 0.1.0
 
 * Initial creation.
