@@ -112,8 +112,8 @@ preprocess_for_nowcast <- function(.disease_data, true_date, report_date, strata
   #Generate d_star the maximum possible delay that could have been observed
   .disease_data <- .disease_data |>
     dplyr::filter(!!as.symbol(report_date) <= max_date) |>
-    dplyr::mutate(.dstar = as.numeric(
-      difftime(max_date, !!as.symbol(true_date), units = !!units))) |>
+    dplyr::mutate(.dstar = ceiling(as.numeric(
+      difftime(max_date, !!as.symbol(true_date), units = !!units)))) |>
     dplyr::arrange(!!as.symbol(true_date), !!as.symbol(".delay"))
 
   return(.disease_data)

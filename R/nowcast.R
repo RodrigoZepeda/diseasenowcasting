@@ -101,6 +101,7 @@ nowcast <- function(.disease_data,
                     priors  = set_priors(),
                     ...) {
 
+  #TODO: Get the preprocess for nowcast out of here
   # Ungroup the original data frame just in case
   .disease_data <- .disease_data |> dplyr::ungroup()
   original_data <- .disease_data #Save it to pass for update
