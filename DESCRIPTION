@@ -1,0 +1,32 @@
+Package: dcast3
+Title: Epidemic Nowcasting via Censored Regression (RTMB Engine)
+Version: 0.0.0.9000
+Authors@R:
+    person("Rodrigo", "Zepeda", role = c("aut", "cre"),
+           email = "noreply@example.com")
+Description: A cmdstanr-free reimplementation of the diseasenowcast2
+    nowcasting model using RTMB (CppAD autodiff + a built-in Laplace
+    approximation for the latent epidemic process). Reproduces the model
+    menu, model(likelihood(), epidemic(), delay()), and the two-stage
+    multiple-imputation nowcast, but with no Stan dependency. The reporting
+    delay is modelled directly as a stochastic process, jointly with the
+    epidemic dynamics, via the Guenther et al. (2021) censored likelihood.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Depends:
+    R (>= 4.2.0)
+Imports:
+    cli,
+    Matrix,
+    RTMB,
+    RTMBdist,
+    S7,
+    stats,
+    utils
+Suggests:
+    tbl.now,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+LazyData: true

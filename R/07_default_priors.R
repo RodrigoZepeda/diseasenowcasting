@@ -1,0 +1,156 @@
+# =============================================================================
+# default_priors() — build the per-parameter prior bundle for the RTMB engine
+# =============================================================================
+# Returns a flat named list keyed by parameter name.  Each entry is
+#   list(dist = <num_id>, params = <length-3>, is_constant = 0/1, fixed = <val>)
+# mirroring the resolution logic of diseasenowcast2::default_priors() but
+# flattened for direct use inside the RTMB objective (no Stan data layout).
+#
+# Keys produced (only the ones relevant to the model are consumed downstream):
+#   delay_mu, delay_sigma, delay_Q, delay_sigma_gengamma, delay_probs(alpha)
+#   mu_intercept, phi_nb, gamma_cov
+#   gp_alpha, gp_ell, basis_coefs              (HSGP / spline)
+#   ar_phi, ar_sigma                           (AR1 / SIR-RW)
+#   R0, gamma_sir, N_eff                       (SIR)
+# =============================================================================
+
+#' Build the default prior bundle for an RTMB nowcast model
+#'
+#' @param mod A [model()] object.
+#' @param data Optional prepared-data list from [prepare_data()] (used for the
+#'   data-informed location/scale defaults).  May also be a bare list with an
+#'   `m` matrix.
+#' @param ... Per-key overrides (e.g. `phi = lognormal_prior(log(20), 0.5)`,
+#'   `delay_mu = normal_prior(log(5), 0.3)`).
+#' @returns A named list of prior specs.
+#' @export
+default_priors <- function(mod, data = NULL, ...) {
+  overrides <- list(...)
+  lik <- mod@likelihood
+  epi <- mod@epidemic
+  dly <- mod@delay
+
+  m_mat <- if (!is.null(data) && !is.null(data$m) && nrow(data$m) > 0) data$m else NULL
+
+  .res <- function(slot_val, default_prior, key = NULL) {
+    value <- if (!is.null(key) && !is.null(overrides[[key]])) overrides[[key]] else slot_val
+    if (S7::S7_inherits(value, prior_class)) {
+      list(dist = value@num_id, params = .pad3(value@stan_params),
+           is_constant = 0L, fixed = numeric(0))
+    } else if (is.numeric(value) && length(value) > 0) {
+      list(dist = 0L, params = c(0, 0, 0), is_constant = 1L, fixed = as.numeric(value))
+    } else {
+      list(dist = default_prior@num_id, params = .pad3(default_prior@stan_params),
+           is_constant = 0L, fixed = numeric(0))
+    }
+  }
+
+  # ── Data-informed log-scale defaults (mirror diseasenowcast2) ──────────────
+  if (!is.null(m_mat)) {
+    daily <- tapply(m_mat[, 2], m_mat[, 1], sum)
+    daily <- daily[is.finite(daily) & daily > 0]
+    log_mu_center <- if (length(daily) > 0) log(stats::median(daily)) else 0
+    log_mu_center <- max(-5, min(log_mu_center, 10))
+    mu_log_sd <- if (length(daily) > 2) stats::sd(log(daily)) else 1
+    mu_log_sd <- if (is.finite(mu_log_sd) && mu_log_sd > 0) mu_log_sd else 1
+    mu_log_sd <- max(0.5, min(mu_log_sd, 2.5))
+
+    med_delay <- .wtd_median(m_mat[, 3], m_mat[, 2])
+    log_delay_center <- if (!is.na(med_delay) && med_delay > 0) log(med_delay) else log(3)
+    log_delay_center <- max(log(0.5), min(log_delay_center, log(60)))
+    delay_log_sd <- sqrt(.wtd_var(log(m_mat[, 3]), m_mat[, 2]))
+    delay_log_sd <- if (is.finite(delay_log_sd) && delay_log_sd > 0) delay_log_sd else 1
+    delay_log_sd <- max(0.3, min(delay_log_sd, 2))
+
+    default_mu_prior     <- normal_prior(log_mu_center, mu_log_sd)
+    default_delay1_prior <- normal_prior(log_delay_center, delay_log_sd)
+  } else {
+    default_mu_prior     <- std_normal_prior()
+    default_delay1_prior <- normal_prior(log(7), 1)
+  }
+
+  pr <- list()
+
+  # ── Likelihood: epidemic-mean intercept + NB overdispersion ────────────────
+  mu_slot <- if (S7::S7_inherits(lik, poisson_likelihood_class) ||
+                 S7::S7_inherits(lik, nb_likelihood_class)) lik@mu else numeric(0)
+  pr$mu_intercept <- .res(mu_slot, default_mu_prior, key = "mu")
+
+  if (S7::S7_inherits(lik, nb_likelihood_class)) {
+    pr$phi_nb <- .res(lik@phi, exponential_prior(1), key = "phi")
+  }
+
+  # ── Covariate coefficients ────────────────────────────────────────────────
+  cov_val <- overrides[["gamma_coef"]] %||% mod@covariate_prior
+  pr$gamma_cov <- if (S7::S7_inherits(cov_val, prior_class)) {
+    list(dist = cov_val@num_id, params = .pad3(cov_val@stan_params), is_constant = 0L, fixed = numeric(0))
+  } else {
+    list(dist = normal_prior(0, 1)@num_id, params = .pad3(c(0, 1)), is_constant = 0L, fixed = numeric(0))
+  }
+
+  # ── Epidemic process priors ────────────────────────────────────────────────
+  if (S7::S7_inherits(epi, hsgp_epidemic_class)) {
+    pr$gp_alpha    <- .res(epi@alpha,       half_normal_prior(0, 1), key = "gp_alpha")
+    pr$gp_ell      <- .res(epi@ell,         inv_gamma_prior(3, 1),   key = "gp_ell")
+    pr$basis_coefs <- .res(epi@basis_coefs, std_normal_prior(),      key = "basis_coefs")
+  } else if (S7::S7_inherits(epi, spline_epidemic_class)) {
+    pr$tau         <- .res(epi@tau,         exponential_prior(1),    key = "tau")
+    pr$basis_coefs <- .res(epi@basis_coefs, std_normal_prior(),      key = "basis_coefs")
+  } else if (S7::S7_inherits(epi, ar1_epidemic_class)) {
+    pr$ar_phi   <- .res(epi@phi,   std_normal_prior(),     key = "ar_phi")
+    pr$ar_sigma <- .res(epi@sigma, exponential_prior(100), key = "ar_sigma")
+  } else if (S7::S7_inherits(epi, sir_epidemic_class)) {
+    pr$R0        <- .res(epi@R0,    lognormal_prior(log(2),   0.5), key = "R0")
+    pr$gamma_sir <- .res(epi@gamma, lognormal_prior(log(1/5), 0.5), key = "gamma_sir")
+    pr$ar_phi    <- .res(numeric(0), std_normal_prior(),     key = "ar_phi")
+    pr$ar_sigma  <- .res(numeric(0), exponential_prior(100), key = "ar_sigma")
+    pr$N_eff     <- .res(epi@N_eff, beta_prior(2, 5),        key = "N_eff")
+  }
+
+  # ── Delay process priors ────────────────────────────────────────────────────
+  if (S7::S7_inherits(dly, lognormal_delay_class)) {
+    pr$delay_mu    <- .res(dly@mu,    default_delay1_prior, key = "delay_mu")
+    pr$delay_sigma <- .res(dly@sigma, gamma_prior(2, 2),    key = "delay_sigma")
+  } else if (S7::S7_inherits(dly, gamma_delay_class)) {
+    gamma_sd_center <- if (!is.null(m_mat)) {
+      sdv <- sqrt(.wtd_var(m_mat[, 3], m_mat[, 2]))
+      if (is.finite(sdv) && sdv > 0) max(0.5, min(sdv, 30)) else 2
+    } else 2
+    pr$delay_mu    <- .res(dly@shape, default_delay1_prior,              key = "delay_mu")
+    pr$delay_sigma <- .res(dly@rate,  gamma_prior(2, 2 / gamma_sd_center), key = "delay_sigma")
+  } else if (S7::S7_inherits(dly, generalized_gamma_delay_class)) {
+    pr$delay_mu    <- .res(dly@mu,    default_delay1_prior, key = "delay_mu")
+    pr$delay_Q     <- .res(dly@Q,     normal_prior(0, 0.5), key = "delay_Q")
+    pr$delay_sigma <- .res(dly@sigma, gamma_prior(2, 0.1),  key = "delay_sigma")
+  } else if (S7::S7_inherits(dly, dirichlet_delay_class)) {
+    bins <- if (length(dly@bins) == 0 || is.na(dly@bins)) (data$np_model_length %||% 14L) else dly@bins
+    alpha_val <- overrides[["delay_alpha"]] %||% dly@alpha
+    if (is.numeric(alpha_val) && length(alpha_val) > 0) {
+      alpha_vec <- if (length(alpha_val) == 1) rep(alpha_val, bins + 1) else alpha_val
+    } else if (!is.null(m_mat)) {
+      dl  <- pmin(as.integer(m_mat[, 3]), bins + 1L)
+      cnt <- tapply(m_mat[, 2], factor(dl, levels = 1:(bins + 1L)), sum)
+      cnt[is.na(cnt)] <- 0
+      pmf <- as.numeric(cnt) / sum(cnt)
+      alpha_vec <- 0.05 + (bins + 1) * pmf
+    } else {
+      alpha_vec <- rep(1, bins + 1)
+    }
+    pr$delay_probs <- list(dist = 4L, params = alpha_vec, is_constant = 0L, fixed = numeric(0), bins = bins)
+  }
+
+  pr
+}
+
+#' Hard-fix a parameter in a prior bundle (treat as data, drop from estimation)
+#'
+#' @param priors A prior bundle from [default_priors()].
+#' @param key Parameter key to fix.
+#' @param value Fixed numeric value.
+#' @returns The modified prior bundle.
+#' @export
+fix_param <- function(priors, key, value) {
+  priors[[key]]$is_constant <- 1L
+  priors[[key]]$fixed       <- as.numeric(value)
+  priors
+}
