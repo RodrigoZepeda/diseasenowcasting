@@ -33,3 +33,24 @@ lognormal_native <- function(log_mean, sd) {
   m <- do.call(rbind, rows); colnames(m) <- c("event", "count", "delay", "strata")
   list(m = m, Tn = Tn, lambda = lambda)
 }
+
+# Synthetic daily linelist as a tbl_now: onset over Tn days with LogNormal
+# reporting delays, censored to the horizon.  Returns a tbl.now::tbl_now.
+.make_synth_tblnow <- function(Tn = 90L, peak = 40, ctr = 55, wid = 18,
+                               base = 5, mu_log = log(5), sigma = 4, seed = 1) {
+  set.seed(seed)
+  start_date <- as.Date("2023-01-01")
+  native <- lognormal_native(mu_log, sigma)
+  rows <- list()
+  for (t in seq_len(Tn)) {
+    n_cases <- rpois(1, peak * exp(-0.5 * ((t - ctr) / wid)^2) + base)
+    if (n_cases > 0) for (i in seq_len(n_cases)) {
+      delay <- max(0L, round(rlnorm(1, native$log_location, native$log_scale)))
+      rows[[length(rows) + 1]] <- data.frame(onset = start_date + (t - 1),
+                                             reported = start_date + (t - 1) + delay)
+    }
+  }
+  linelist <- do.call(rbind, rows)
+  linelist <- linelist[linelist$reported <= start_date + (Tn - 1), , drop = FALSE]
+  tbl.now::tbl_now(linelist, event_date = onset, report_date = reported, data_type = "linelist")
+}

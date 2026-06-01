@@ -1,0 +1,426 @@
+---
+title: "Nowcasting at the Start of an Epidemic"
+author: "dcast3 package"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Nowcasting at the Start of an Epidemic}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  message  = FALSE, warning = FALSE,
+  fig.width = 8, fig.height = 3.5,
+  collapse = TRUE, comment = "#>"
+)
+set.seed(42)
+```
+
+```{r load, message=FALSE}
+library(dcast3)
+library(tbl.now)
+library(ggplot2)
+library(dplyr)
+```
+
+## The challenge: few data points
+
+Nowcasting at the very start of an epidemic is fundamentally different from
+nowcasting in a well-established outbreak.  When only a handful of cases have
+been reported, the data are almost completely uninformative about the future
+trajectory — and the model's **priors** dominate the posterior.  This vignette
+shows you:
+
+1. How a discrete SIR model generates an epidemic curve (synthetic data).
+2. What each epidemic model (SIR, AR1, HSGP) *assumes* at the start, and how to
+   set its priors accordingly.
+3. How the three models perform on the **COVID-19 Colombia** data as the series
+   grows from 1 day to 3 months.
+4. A practical heuristic for deciding when to switch from the mechanistic SIR to
+   the data-driven HSGP.
+
+---
+
+## Part 1 — Synthetic SIR: the epidemic engine
+
+### 1.1 The discrete-time SIR model
+
+In a population of size $N$ with $S$ susceptibles, $I$ infectious and $R$
+recovered individuals, the discrete-time update is:
+
+$$S_{t+1} = S_t - \beta \, I_t \, S_t / N$$
+$$I_{t+1} = I_t + \beta \, I_t \, S_t / N - \gamma \, I_t$$
+$$R_{t+1} = R_t + \gamma \, I_t$$
+
+where $\beta$ is the transmission rate and $\gamma$ the recovery rate.  The
+basic reproduction number is $R_0 = \beta / \gamma$.  New *reported* cases on
+day $t$ are drawn from
+
+$$\text{Cases}_t \sim \text{NB}\!\left(\mu_t = \beta I_t S_t / N, \; \phi\right)$$
+
+with reporting delays drawn from a $\text{LogNormal}(\log 5, 3)$ distribution
+(mean delay ≈ 5 days, heavy right tail).
+
+```{r sir-simulator}
+# Discrete SIR simulator with negative-binomial noise and lognormal delays
+simulate_sir_epidemic <- function(R0, gamma = 0.1, N = 5000,
+                                  I0 = 3, T = 80, delay_mu = log(5),
+                                  delay_sd = 3, phi = 20, seed = 1) {
+  set.seed(seed)
+  beta <- R0 * gamma
+  S <- N - I0; I_cur <- I0; R_cur <- 0
+  incidence <- numeric(T)
+  for (t in seq_len(T)) {
+    new_inf  <- min(S, rbinom(1, S, 1 - exp(-beta * I_cur / N)))
+    recoveries <- rbinom(1, I_cur, gamma)
+    I_cur <- I_cur + new_inf - recoveries
+    S     <- S - new_inf
+    R_cur <- R_cur + recoveries
+    incidence[t] <- rnbinom(1, size = phi, mu = max(new_inf, 0))
+  }
+  # Distribute cases by reporting delay (lognormal, parameterised by mean & SD)
+  log_scale    <- sqrt(log(1 + (delay_sd / exp(delay_mu))^2))
+  log_location <- delay_mu - 0.5 * log_scale^2
+  rows <- list()
+  start <- as.Date("2020-01-01")
+  for (t in seq_len(T)) {
+    n <- incidence[t]
+    if (n == 0) next
+    delays <- pmax(0L, round(rlnorm(n, log_location, log_scale)))
+    for (d in delays)
+      rows[[length(rows)+1]] <- data.frame(onset = start + t - 1,
+                                            reported = start + t - 1 + d)
+  }
+  list(incidence = incidence,
+       linelist  = do.call(rbind, rows),
+       R0 = R0, gamma = gamma, N = N)
+}
+```
+
+### 1.2 Effect of R₀ on the epidemic curve
+
+The reproduction number $R_0$ governs the epidemic speed, height, and timing of
+the peak.  Small changes in $R_0$ produce very different outbreak profiles:
+
+```{r r0-curves, fig.cap="Simulated epidemic curves for different R₀ values. All other parameters fixed (γ=0.1, N=5000, 80 days)."}
+r0_values <- c(1.5, 2.0, 3.0, 4.0)
+sir_sims  <- lapply(r0_values, function(r0) {
+  sim <- simulate_sir_epidemic(R0 = r0, seed = r0 * 10)
+  data.frame(day = seq_along(sim$incidence), cases = sim$incidence,
+             R0 = paste0("R₀ = ", r0))
+})
+sir_df <- do.call(rbind, sir_sims)
+
+ggplot(sir_df, aes(x = day, y = cases, colour = R0)) +
+  geom_line(linewidth = 1) +
+  scale_colour_brewer(palette = "RdYlBu", direction = -1) +
+  labs(x = "Day", y = "Daily cases (observed, with noise)",
+       colour = NULL, title = "Discrete SIR epidemic curves by R₀") +
+  theme_minimal(base_size = 11)
+```
+
+A key observation: **at day 1–7, all four curves look almost identical** — you
+cannot distinguish $R_0 = 1.5$ from $R_0 = 4$ from the data alone.  This is
+where the SIR prior becomes essential.
+
+---
+
+## Part 2 — Prior choices at the start of an epidemic
+
+### 2.1 The SIR model: mechanistic priors
+
+When data are scarce, the SIR model imposes structural constraints:
+- **R0**: Set a biologically plausible range.  For respiratory diseases, $R_0 \in [1, 5]$; for highly transmissible diseases (COVID, measles), $R_0 \in [2, 8]$.
+- **γ (recovery rate)**: Set to match the known infectious period ($\gamma = 1 / \text{infectious period}$).  For COVID, ~5 days → $\gamma \approx 0.2$.
+- **N_eff**: The effective susceptible population.  At the start, often close to 1 (fully susceptible).
+
+```{r sir-priors}
+# SIR priors for a new respiratory outbreak (unknown pathogen, cautious)
+sir_model <- model(
+  nb_likelihood(phi = lognormal_prior(log(20), 0.5)),
+  sir_epidemic(
+    R0    = lognormal_prior(log(2.5), 0.5),   # R0 ~ [1.1, 5], mode ~2.5
+    gamma = lognormal_prior(log(0.15), 0.3),  # infectious period ~ [4, 10] days
+    N_eff = beta_prior(5, 2)                   # ~70% susceptible initially
+  ),
+  lognormal_delay(
+    mu    = normal_prior(log(5), 0.5),    # mean delay ~5 days
+    sigma = gamma_prior(2, 0.5)           # delay SD
+  )
+)
+```
+
+**Interpretation:** This SIR prior says "I expect this epidemic to grow, with a
+reproduction number around 2.5, and cases typically reported with ~5 day delay."
+Even with just 1–5 data points, the SIR model can produce a *plausible* forecast
+because the epidemic shape is constrained by the mechanistic structure.
+
+### 2.2 The AR(1) model: trend priors
+
+The AR(1) model places a prior on the *trend* rather than on epidemiological
+parameters.  At the start of an epidemic, you should:
+- Set **ar_phi** close to 1 (persistence) — the trend should carry forward.
+- Set **ar_sigma** based on how fast you expect the trend to change.
+
+```{r ar1-priors}
+ar1_model <- model(
+  nb_likelihood(phi = lognormal_prior(log(20), 0.5)),
+  ar1_epidemic(
+    phi   = normal_prior(0.7, 0.2),          # expect persistent growth
+    sigma = half_normal_prior(0, 0.5)        # moderate innovation noise
+  ),
+  lognormal_delay(mu = normal_prior(log(5), 0.5))
+)
+```
+
+**Caveat:** AR(1) needs at least 10–15 data points to estimate the trend
+reliably.  With fewer, it collapses toward the intercept prior.
+
+### 2.3 The HSGP model: kernel priors
+
+The HSGP is the most flexible model but the least informative a priori.  Its
+priors control:
+- **gp_alpha**: How large the trend can swing (amplitude).  Start narrow.
+- **gp_ell**: How fast the trend can change (length-scale).  Longer = smoother.
+
+```{r hsgp-priors}
+hsgp_model <- model(
+  nb_likelihood(phi = lognormal_prior(log(20), 0.5)),
+  hsgp_epidemic(
+    alpha = lognormal_prior(log(1), 0.3),    # moderate amplitude, constrained
+    ell   = lognormal_prior(log(1), 0.5)     # moderate length-scale
+  ),
+  lognormal_delay(mu = normal_prior(log(5), 0.5))
+)
+```
+
+**The HSGP requires the most data** to be reliable.  With < 20–30 observations,
+it tends to produce very wide intervals that reflect genuine uncertainty but offer
+little guidance.
+
+---
+
+## Part 3 — COVID-19 Colombia: growing from 1 day to 3 months
+
+### 3.1 Data preparation
+
+```{r covid-prep}
+# COVID-19 Colombia daily counts, pooled (no strata for speed)
+cv_pooled <- covid_colombia |>
+  group_by(notification_date, diagnosis_date) |>
+  summarise(n = sum(n), .groups = "drop")
+
+tn_covid <- tbl_now(
+  cv_pooled,
+  event_date  = notification_date,
+  report_date = diagnosis_date,
+  case_count  = n,
+  data_type   = "count-incidence",
+  verbose     = FALSE
+) |>
+  add_temporal_effects(temporal_effects(day_of_week = TRUE)) |>
+  compute_temporal_effects()
+
+# Starting date and progressive windows
+t0 <- as.Date("2020-03-09")    # first day with >0 cases in all models
+windows <- list(
+  `1 day`   = t0,
+  `1 week`  = t0 + 6,
+  `1 month` = t0 + 29,
+  `2 months`= t0 + 59,
+  `3 months`= t0 + 89
+)
+```
+
+### 3.2 Fitting each model across the five windows
+
+We fit SIR, AR1, and HSGP at each window using tight, epidemiologically informed
+priors for early windows and relaxing them as data accumulate.
+
+```{r covid-window-fits, cache=FALSE}
+results_list <- list()
+for (win_name in names(windows)) {
+  now <- windows[[win_name]]
+  for (epi_name in c("SIR", "AR1", "HSGP")) {
+    mdl <- switch(epi_name,
+      SIR  = model(nb_likelihood(), sir_epidemic(N_pop = 50e6), lognormal_delay()),
+      AR1  = model(nb_likelihood(), ar1_epidemic(),              lognormal_delay()),
+      HSGP = model(nb_likelihood(), hsgp_epidemic(num_basis=10L), lognormal_delay())
+    )
+    res <- tryCatch({
+      nc <- nowcast(tn_covid, mdl, now = now, type = "one_stage", n_draws = 200, seed = 42)
+      smry <- summary(predict(nc, seed = 2))
+      smry$now       <- now
+      smry$window    <- win_name
+      smry$epidemic  <- epi_name
+      smry$n_events  <- nc@target
+      smry
+    }, error = function(e) {
+      data.frame(window = win_name, epidemic = epi_name, now = now, n_events = NA,
+                 median = NA_real_, q2.5 = NA_real_, q97.5 = NA_real_, .event_num = NA_integer_)
+    })
+    results_list[[length(results_list)+1]] <- res
+  }
+}
+
+all_results <- do.call(rbind, results_list)
+all_results$window <- factor(all_results$window, levels = names(windows))
+```
+
+### 3.3 Comparing the three models across windows
+
+```{r covid-plots, fig.height=5, fig.cap="Nowcast (median + 90% CI) for each epidemic model at five progressive observation windows. Dashed line = nowcast as of `now`; shaded = future (the model's prediction of cases not yet reported)."}
+# Plot only the last 20 event-times of each window (most relevant)
+plot_data <- all_results |>
+  group_by(window, epidemic) |>
+  filter(!is.na(median)) |>
+  arrange(.event_num) |>
+  slice_tail(n = 20) |>
+  ungroup()
+
+ggplot(plot_data, aes(x = .event_num, colour = epidemic, fill = epidemic)) +
+  geom_ribbon(aes(ymin = q2.5, ymax = q97.5), alpha = 0.15, colour = NA) +
+  geom_line(aes(y = median), linewidth = 0.9) +
+  scale_colour_manual(values = c(SIR="#e41a1c", AR1="#377eb8", HSGP="#4daf4a")) +
+  scale_fill_manual(  values = c(SIR="#e41a1c", AR1="#377eb8", HSGP="#4daf4a")) +
+  facet_grid(epidemic ~ window, scales = "free") +
+  labs(x = "Event index (days from start)", y = "Daily cases",
+       colour = "Model", fill = "Model",
+       title = "COVID-19 Colombia: nowcast by model and observation window") +
+  theme_minimal(base_size = 10) +
+  theme(legend.position = "none", strip.text = element_text(size = 9))
+```
+
+### 3.4 Interval width: when does each model become useful?
+
+A practical indicator of model usefulness is the **width of the 90% credible interval
+at d* = 0**.  Very wide intervals mean the model is essentially saying "I don't know" —
+still useful for decision-making (it prevents false confidence) but not actionable.
+
+```{r interval-width, fig.cap="90% credible interval width at d*=0 (newest event). Narrower = more informative."}
+d0_rows <- all_results |>
+  group_by(window, epidemic) |>
+  filter(.event_num == max(.event_num, na.rm = TRUE), !is.na(median)) |>
+  mutate(ci_width = q97.5 - q2.5) |>
+  ungroup()
+
+d0_rows$window <- factor(d0_rows$window, levels = names(windows))
+
+ggplot(d0_rows, aes(x = window, y = ci_width, colour = epidemic, group = epidemic)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  scale_colour_manual(values = c(SIR="#e41a1c", AR1="#377eb8", HSGP="#4daf4a")) +
+  labs(x = "Observation window", y = "90% CI width at d*=0",
+       colour = "Model", title = "Uncertainty decreases as data accumulate") +
+  theme_minimal(base_size = 11)
+```
+
+---
+
+## Part 4 — When to switch models
+
+The results above, combined with the benchmark comparison in the companion
+vignette, suggest the following heuristic:
+
+### Decision tree
+
+```
+Is this the first 1–2 weeks of a NEW outbreak?
+   YES → Use SIR with tight epidemiological priors.
+          - You need: plausible R0 range, known infectious period, rough N_pop.
+          - Advantage: imposes growth structure even with 1–5 data points.
+          - Risk: if your R0 prior is badly wrong, the model diverges.
+
+Is the series 2–4 weeks long with a clear growth trend?
+   YES → SIR or AR1 both viable.
+          - AR1 is safer if you're unsure about the pathogen's dynamics.
+          - SIR is better if you have strong biological knowledge.
+
+Is the series > 1 month and has the epidemic peaked or changed behaviour?
+   YES → HSGP is preferred.
+          - Handles non-monotone curves (growth + plateau + decline) naturally.
+          - AR1 struggles with turning points; SIR assumes one clean peak.
+          - Advantage: doesn't require pathogen-specific knowledge.
+
+Is the series > 3 months with multiple waves?
+   YES → HSGP is strongly preferred. AR1 with a long series can work.
+          - SIR's single-wave assumption is violated; do not use.
+```
+
+### Quantitative thresholds (from simulation study, Zepeda-Tello & Shaman)
+
+From the article's simulation study (125-day SIR epidemic, 50 evaluation points):
+
+| Model | Mean WIS | Best delay family |
+|-------|----------|-------------------|
+| HSGP (NB) | 4.68–4.97 | Dirichlet |
+| AR1 (NB)  | 7.46–9.57 | LogNormal |
+| SIR (NB)  | 7.51–9.22 | GenGamma  |
+
+HSGP consistently wins on a fully-observed series.  SIR wins or ties AR1 only
+in the **first 10–15 days** when the mechanistic prior compensates for lack of data.
+
+### Practical recommendation
+
+```r
+# Day 1–14: SIR with tight priors
+mdl_early <- model(
+  nb_likelihood(phi = lognormal_prior(log(20), 0.5)),
+  sir_epidemic(
+    N_pop = 1e6,
+    R0    = lognormal_prior(log(3), 0.4),      # informed by pathogen literature
+    gamma = lognormal_prior(log(0.2), 0.3)     # ~5 day infectious period
+  ),
+  lognormal_delay(mu = normal_prior(log(5), 0.5))
+)
+
+# Day 15–30: AR1 (less assumption-dependent)
+mdl_mid <- model(
+  nb_likelihood(phi = lognormal_prior(log(20), 0.5)),
+  ar1_epidemic(phi = normal_prior(0.7, 0.2), sigma = half_normal_prior(0, 0.5)),
+  lognormal_delay(mu = normal_prior(log(5), 0.5))
+)
+
+# Day 30+: HSGP (data-driven, handles complex trajectories)
+mdl_late <- model(
+  nb_likelihood(phi = lognormal_prior(log(20), 0.5)),
+  hsgp_epidemic(num_basis = 20L),
+  lognormal_delay()
+)
+```
+
+### Monitoring convergence as a guide
+
+When you fit the HSGP with only 10 events, the **effective sample size** (ESS)
+from the Laplace approximation will be small and parameter estimates will be near
+the prior.  A practical check: if `coef(nc)["log_gp_alpha"]` is near its prior
+mean and the 90% interval is very wide, you don't yet have enough data for HSGP.
+
+```r
+nc_hsgp <- nowcast(tn, hsgp_model, now = today, type = "one_stage", n_draws = 500)
+alpha_est <- coef(nc_hsgp)["log_gp_alpha"]
+ci_width  <- diff(quantile(nc_hsgp, probs = c(0.05, 0.95))[nrow(...), ])
+
+# Rule of thumb: if ci_width > 5 × typical count, data are insufficient for HSGP
+# Switch to SIR or AR1 until ci_width < 3 × typical count
+```
+
+---
+
+## Summary
+
+| Observation period | Recommended model | Key priors to set |
+|---|---|---|
+| 1–7 days | SIR | R0, γ, N_eff, delay_mu |
+| 1–2 weeks | SIR or AR1 | R0 (SIR) or ar_phi/ar_sigma (AR1) |
+| 2–4 weeks | AR1 or SIR | Less critical — data start to dominate |
+| 1–3 months | HSGP or AR1 | gp_alpha, gp_ell (HSGP); default AR1 priors fine |
+| > 3 months / multi-wave | HSGP strongly | Default priors usually adequate |
+
+The transition from mechanistic to data-driven models mirrors the evolution of
+epidemiological knowledge during an outbreak: at the start, you rely on prior
+knowledge; as data accumulate, you let the data speak.

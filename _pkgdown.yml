@@ -1,0 +1,102 @@
+url: https://rodrigozepeda.github.io/diseasenowcasting/
+
+home:
+  title: diseasenowcasting — Bayesian Epidemic Nowcasting
+  description: >
+    Nowcast time series of epidemiological cases using a censored-regression
+    approach with RTMB (no Stan required).
+
+template:
+  bootstrap: 5
+  math-rendering: katex
+  bslib:
+    primary: "#5F7E62"       # sage green  -- reported bars / main model
+    secondary: "#262626"     # charcoal    -- navbar background
+    success: "#DA6529"       # burnt orange -- accent / SIR
+    headings-color: "#334335"  # deep green -- headings
+
+navbar:
+  structure:
+    left:  [intro, articles, reference, news]
+    right: [search, github]
+  bg: secondary
+  components:
+    github:
+      icon: fab fa-github
+      href: https://github.com/RodrigoZepeda/diseasenowcasting
+      aria-label: GitHub
+
+articles:
+  - title: "Getting started"
+    navbar: ~
+    contents:
+      - introduction
+  - title: "Advanced topics"
+    contents:
+      - early_epidemic
+      - prior_sensitivity
+      - comparison_methods
+  - title: "Mathematical background"
+    contents:
+      - model_mathematics
+
+reference:
+  - title: "Main workflow"
+    desc: "Build a model, fit it, and inspect the results."
+    contents:
+      - nowcast
+      - model
+      - predict.nowcast_class
+      - coef.nowcast_class
+      - summary.nowcast_class
+      - tidy
+      - autoplot.nowcast_class
+      - nowcast_diagnostic
+      - ppc
+      - surprise
+      - update.nowcast_class
+
+  - title: "Backtesting and scoring"
+    contents:
+      - backtest
+      - score
+      - autoplot.backtest_class
+
+  - title: "Model components"
+    desc: "Likelihood, epidemic trend, and delay families."
+    contents:
+      - nb_likelihood
+      - poisson_likelihood
+      - hsgp_epidemic
+      - ar1_epidemic
+      - sir_epidemic
+      - lognormal_delay
+      - gamma_delay
+      - generalized_gamma_delay
+      - dirichlet_delay
+
+  - title: "Priors"
+    contents:
+      - starts_with("normal_prior")
+      - starts_with("cauchy_prior")
+      - starts_with("gamma_prior")
+      - starts_with("lognormal_prior")
+      - starts_with("exponential_prior")
+      - starts_with("beta_prior")
+      - flat_prior
+      - fix_param
+      - default_priors
+
+  - title: "Data preparation"
+    contents:
+      - prepare_data
+      - summarise_nowcast_matrix
+
+  - title: "Visualisation"
+    contents:
+      - dn_palette
+      - theme_diseasenowcasting
+
+  - title: "Datasets"
+    contents:
+      - covid_colombia

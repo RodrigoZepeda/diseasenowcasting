@@ -1,5 +1,5 @@
 # =============================================================================
-# sample() generic — draw from a prior or likelihood (numeric, non-AD)
+# sample() generic -- draw from a prior or likelihood (numeric, non-AD)
 # =============================================================================
 
 #' Draw random samples from a prior or likelihood

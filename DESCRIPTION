@@ -1,32 +1,62 @@
-Package: dcast3
-Title: Epidemic Nowcasting via Censored Regression (RTMB Engine)
-Version: 0.0.0.9000
+Package: diseasenowcasting
+Title: Nowcast Time Series of Epidemiological Cases
+Version: 1.0.0
 Authors@R:
-    person("Rodrigo", "Zepeda", role = c("aut", "cre"),
-           email = "noreply@example.com")
-Description: A cmdstanr-free reimplementation of the diseasenowcast2
-    nowcasting model using RTMB (CppAD autodiff + a built-in Laplace
-    approximation for the latent epidemic process). Reproduces the model
-    menu, model(likelihood(), epidemic(), delay()), and the two-stage
-    multiple-imputation nowcast, but with no Stan dependency. The reporting
-    delay is modelled directly as a stochastic process, jointly with the
-    epidemic dynamics, via the Guenther et al. (2021) censored likelihood.
+    c(person("Rodrigo", "Zepeda-Tello", role = c("aut", "cre"),
+             email = "rzepeda17@gmail.com",
+             comment = c(ORCID = "0000-0003-4471-5270")),
+      person("Rami", "Yaari", role = "aut",
+             comment = c(ORCID = "0000-0002-8808-8937")),
+      person("Matteo", "Perini", role = "aut",
+             comment = c(ORCID = "0000-0002-9465-6216")),
+      person("Tal", "Robin", role = "ctb",
+             comment = c(ORCID = "0000-0002-3128-2499")),
+      person("Teresa", "Yamana", role = "ctb",
+             comment = c(ORCID = "0000-0001-8349-3151")),
+      person("Jeffrey", "Shaman", role = "ctb"),
+      person(given = "Columbia University in the City of New York",
+             role = c("cph", "fnd")))
+Description: Implements Bayesian nowcasting models for incident disease cases
+    using a censored-regression approach (Zepeda-Tello & Shaman, 2025). The
+    reporting delay is modelled directly as a stochastic process, jointly with
+    the epidemic dynamics, via the Guenther et al. (2021) censored likelihood.
+    Inference uses RTMB (CppAD autodiff + Laplace approximation) with no Stan
+    dependency. Supports multiple epidemic models (HSGP, AR1, SIR), multiple
+    delay families (LogNormal, Gamma, GenGamma, Dirichlet), stratified data,
+    two-stage multiple-imputation nowcasting, and full backtesting workflow.
 License: MIT + file LICENSE
+URL: https://rodrigozepeda.github.io/diseasenowcasting/,
+    https://github.com/RodrigoZepeda/diseasenowcasting
+BugReports: https://github.com/RodrigoZepeda/diseasenowcasting/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Depends:
-    R (>= 4.2.0)
+    R (>= 4.2.0),
+    tbl.now
 Imports:
     cli,
+    doFuture,
+    foreach,
+    ggplot2,
     Matrix,
+    methods,
     RTMB,
     RTMBdist,
     S7,
+    scoringutils,
     stats,
     utils
 Suggests:
-    tbl.now,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    dplyr,
+    scales,
+    covr,
+    patchwork,
+    future,
+    pkgdown
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 LazyData: true

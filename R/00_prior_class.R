@@ -2,8 +2,7 @@
 # Prior classes
 # =============================================================================
 # A `prior_class` carries a distribution code (`num_id`) and up to three
-# parameters (`params`).  The codes match the table in [prior_lpdf()] (a direct
-# port of the original package's continuous_lpdf.stan dispatcher), so the same
+# parameters (`params`).  The codes match the table in [prior_lpdf()] so the same
 # prior objects drive both prior construction and AD log-density evaluation
 # inside the RTMB objective.
 # =============================================================================

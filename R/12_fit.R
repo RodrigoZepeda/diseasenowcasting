@@ -1,5 +1,5 @@
 # =============================================================================
-# fit() — optimise the RTMB objective (Laplace for latent epidemic coefs)
+# fit() -- optimise the RTMB objective (Laplace for latent epidemic coefs)
 # =============================================================================
 
 #' Fit a nowcast model with the RTMB engine
@@ -19,43 +19,54 @@
 fit <- function(model, data, priors = NULL, init = NULL,
                 control = list(iter.max = 500, eval.max = 1000, rel.tol = 1e-9)) {
   priors <- priors %||% default_priors(model, data)
+  hier   <- S7::S7_inherits(model, model_class) && model@strata_pooling == "hierarchical"
 
   if (isTRUE(data$delay_only)) {
     return(.fit_delay_only(model, data, priors, init = init, control = control))
   }
-  .fit_joint(model, data, priors, init = init, control = control)
+  .fit_joint(model, data, priors, init = init, control = control,
+             hierarchical_strata = hier)
 }
 
 #' Joint epidemic + delay fit (Laplace over the latent epidemic coefficients)
 #'
 #' Runs a small init ladder so a single bad start (flat epidemic + long-tail
-#' delay → non-finite gradient at iter 0, the documented Stage-2 gotcha) does
+#' delay -> non-finite gradient at iter 0, the documented Stage-2 gotcha) does
 #' not sink an otherwise-fittable series.  Each rung perturbs the epidemic-level
 #' intercept and (HSGP) the GP amplitude / (AR1) the innovation SD.
 #' @keywords internal
 #' @noRd
 .fit_joint <- function(model, data, priors, init = NULL, n_tries = 6L,
                        use_random = getOption("dcast3.use_random", FALSE),
-                       control = list(iter.max = 1000, eval.max = 2000, rel.tol = 1e-9)) {
+                       control = list(iter.max = 1000, eval.max = 2000, rel.tol = 1e-9),
+                       hierarchical_strata = FALSE) {
   base_init <- init %||% list()
   mu_offsets <- c(0, 0.5, -0.5, 1.0, 1.5, -1.0)
+  n_strata <- as.integer(data$num_strata %||% 1L)
+  cc_mat <- if (is.matrix(data$case_counts)) data$case_counts else matrix(data$case_counts, ncol = 1L)
+  intercept_base <- apply(cc_mat, 2, function(col) { positive <- col[col > 0]
+    if (length(positive)) log(stats::median(positive)) else 0 })   # one per stratum
   best <- NULL
   for (j in seq_len(n_tries)) {
     ini <- base_init
     off <- mu_offsets[((j - 1) %% length(mu_offsets)) + 1]
-    if (is.null(ini$mu_intercept)) {
-      cc <- data$case_counts[data$case_counts > 0]
-      ini$mu_intercept <- (if (length(cc)) log(stats::median(cc)) else 0) + off
+    # Intercept init: for hierarchical we set mu_global + delta; for independent, per-stratum vector
+    if (isTRUE(hierarchical_strata) && n_strata > 1L) {
+      ini$mu_global         <- (base_init$mu_global %||% mean(intercept_base)) + off
+      ini$delta_intercept   <- base_init$delta_intercept %||% rep(0, n_strata)
+      ini$log_tau_intercept <- base_init$log_tau_intercept %||% 0
     } else {
-      ini$mu_intercept <- ini$mu_intercept + off
+      base_intercept   <- base_init$mu_intercept %||% intercept_base
+      ini$mu_intercept <- base_intercept + off
     }
     if (data$epidemic_model == 1L && is.null(base_init$log_gp_alpha))
-      ini$log_gp_alpha <- log(1) + (j - 1) * 0.15
+      ini$log_gp_alpha <- log(1) + (j - 1) * 0.15          # shared GP amplitude (scalar)
     if (data$epidemic_model == 2L && is.null(base_init$log_ar_sigma_unc))
-      ini$log_ar_sigma_unc <- -2 + (j - 1) * 0.3
+      ini$log_ar_sigma_unc <- rep(-2 + (j - 1) * 0.3, n_strata)   # per-stratum AR innovation SD
 
     res <- tryCatch({
-      built <- build_joint_obj(data, priors, init = ini, use_random = use_random)
+      built <- build_joint_obj(data, priors, init = ini, use_random = use_random,
+                               hierarchical_strata = hierarchical_strata)
       obj <- built$obj
       opt <- nlminb(obj$par, obj$fn, obj$gr, control = control)
       if (!is.finite(opt$objective)) stop("non-finite objective")
@@ -82,7 +93,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
 }
 
 #' Delay-only fit with a small init ladder (parametric families 1/2/3; the
-#' non-parametric Dirichlet simplex is dispatched to [.fit_delay_only_np()])
+#' non-parametric Dirichlet simplex is dispatched to `.fit_delay_only_np()`)
 #' @keywords internal
 #' @noRd
 .fit_delay_only <- function(model, data, priors, init = NULL,
@@ -139,7 +150,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
          obj = obj, opt = opt, data = data, priors = priors, model = model)
   }
 
-  # Everything fixed → nothing to optimise (degenerate, but handle gracefully).
+  # Everything fixed -> nothing to optimise (degenerate, but handle gracefully).
   if (delay_mu_is_fixed && delay_sigma_is_fixed && (!is_gengamma || shape_Q_is_fixed)) {
     obj <- build_delay_only_obj(data, priors, init = init_ladder[[1]])
     obj$fn(obj$par)

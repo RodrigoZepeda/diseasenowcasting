@@ -12,6 +12,7 @@ prepare_data(
   d_star = NULL,
   delay_only = FALSE,
   max_time = NULL,
+  num_strata = NULL,
   gp_L = 1.5,
   gp_boundary_frac = 0.62,
   ar_sigma_max = 1,
@@ -34,6 +35,10 @@ delays 1-indexed (single stratum supported in this version).}
 \item{delay_only}{If TRUE, only the delay process is prepared/fit.}
 
 \item{max_time}{Time-window length; defaults to \code{max(m[, 1])}.}
+
+\item{num_strata}{Number of stratum cells (the K-way product of the strata
+levels). If \code{NULL}, inferred from column 4 of \code{m}. The likelihood is summed
+over all \verb{max_time x num_strata} (time, stratum) cells; \code{1} is unstratified.}
 
 \item{gp_L}{HSGP boundary factor (> 1). Default 1.5.}
 

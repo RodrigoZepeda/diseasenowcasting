@@ -1,5 +1,5 @@
 # =============================================================================
-# default_priors() — build the per-parameter prior bundle for the RTMB engine
+# default_priors() -- build the per-parameter prior bundle for the RTMB engine
 # =============================================================================
 # Returns a flat named list keyed by parameter name.  Each entry is
 #   list(dist = <num_id>, params = <length-3>, is_constant = 0/1, fixed = <val>)
@@ -45,7 +45,7 @@ default_priors <- function(mod, data = NULL, ...) {
     }
   }
 
-  # ── Data-informed log-scale defaults (mirror diseasenowcast2) ──────────────
+  # -- Data-informed log-scale defaults (mirror diseasenowcast2) --------------
   if (!is.null(m_mat)) {
     daily <- tapply(m_mat[, 2], m_mat[, 1], sum)
     daily <- daily[is.finite(daily) & daily > 0]
@@ -71,7 +71,7 @@ default_priors <- function(mod, data = NULL, ...) {
 
   pr <- list()
 
-  # ── Likelihood: epidemic-mean intercept + NB overdispersion ────────────────
+  # -- Likelihood: epidemic-mean intercept + NB overdispersion ----------------
   mu_slot <- if (S7::S7_inherits(lik, poisson_likelihood_class) ||
                  S7::S7_inherits(lik, nb_likelihood_class)) lik@mu else numeric(0)
   pr$mu_intercept <- .res(mu_slot, default_mu_prior, key = "mu")
@@ -80,7 +80,7 @@ default_priors <- function(mod, data = NULL, ...) {
     pr$phi_nb <- .res(lik@phi, exponential_prior(1), key = "phi")
   }
 
-  # ── Covariate coefficients ────────────────────────────────────────────────
+  # -- Covariate coefficients ------------------------------------------------
   cov_val <- overrides[["gamma_coef"]] %||% mod@covariate_prior
   pr$gamma_cov <- if (S7::S7_inherits(cov_val, prior_class)) {
     list(dist = cov_val@num_id, params = .pad3(cov_val@stan_params), is_constant = 0L, fixed = numeric(0))
@@ -88,7 +88,7 @@ default_priors <- function(mod, data = NULL, ...) {
     list(dist = normal_prior(0, 1)@num_id, params = .pad3(c(0, 1)), is_constant = 0L, fixed = numeric(0))
   }
 
-  # ── Epidemic process priors ────────────────────────────────────────────────
+  # -- Epidemic process priors ------------------------------------------------
   if (S7::S7_inherits(epi, hsgp_epidemic_class)) {
     pr$gp_alpha    <- .res(epi@alpha,       half_normal_prior(0, 1), key = "gp_alpha")
     pr$gp_ell      <- .res(epi@ell,         inv_gamma_prior(3, 1),   key = "gp_ell")
@@ -107,7 +107,7 @@ default_priors <- function(mod, data = NULL, ...) {
     pr$N_eff     <- .res(epi@N_eff, beta_prior(2, 5),        key = "N_eff")
   }
 
-  # ── Delay process priors ────────────────────────────────────────────────────
+  # -- Delay process priors ----------------------------------------------------
   if (S7::S7_inherits(dly, lognormal_delay_class)) {
     pr$delay_mu    <- .res(dly@mu,    default_delay1_prior, key = "delay_mu")
     pr$delay_sigma <- .res(dly@sigma, gamma_prior(2, 2),    key = "delay_sigma")

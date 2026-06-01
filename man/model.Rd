@@ -8,7 +8,8 @@ model(
   likelihood = nb_likelihood(),
   epidemic = hsgp_epidemic(),
   delay = dirichlet_delay(),
-  covariate_prior = std_normal_prior()
+  covariate_prior = std_normal_prior(),
+  strata_pooling = "independent"
 )
 }
 \arguments{
@@ -21,6 +22,14 @@ model(
 
 \item{covariate_prior}{A \code{prior_class} applied to all covariate coefficients.
 Default: \code{\link[=std_normal_prior]{std_normal_prior()}}.}
+
+\item{strata_pooling}{\code{"independent"} (default) fits fully separate intercepts
+per stratum.  \code{"hierarchical"} pools intercepts via a shared mean and a
+half-normal prior on the between-stratum SD:
+\eqn{\mu_0^{(s)} = \mu_{\text{global}} + \tau \cdot \delta^{(s)}},
+\eqn{\delta^{(s)} \sim \mathcal{N}(0,1)},
+\eqn{\tau \sim \text{HalfNormal}(0,1)}.
+Only relevant when \code{num_strata > 1}.}
 }
 \value{
 A \code{model_class} object.
@@ -35,5 +44,7 @@ omitted to use its default.
 model()
 model(poisson_likelihood(), hsgp_epidemic(gp_kernel = "matern52"))
 model(nb_likelihood(), ar1_epidemic(), lognormal_delay())
+model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
+      strata_pooling = "hierarchical")
 
 }

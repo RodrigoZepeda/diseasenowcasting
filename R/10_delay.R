@@ -48,7 +48,7 @@
 #' Sum over observed delays (data) with their case-count weights of
 #' `weight * log(F(delay) - F(delay-1))`.  The lower-tail form
 #' `log_diff_exp(logF(delay), logF(delay-1))` saturates to `-Inf` (NaN
-#' gradient) once `F(delay) = 1` in double precision — common for heavy-tailed
+#' gradient) once `F(delay) = 1` in double precision -- common for heavy-tailed
 #' reporting delays.  Delays above `split_delay` are therefore evaluated via the
 #' SURVIVAL tail `log_diff_exp(logS(delay-1), logS(delay))` (with `S = 1 - F`),
 #' which never saturates there.  `split_delay` is data, so the partition (and
@@ -152,7 +152,7 @@
        gamma_argument = exp(shape_Q * (log(delay) - log_location) / log_scale) * gamma_shape)
 }
 
-#' GenGamma natural CDF F(delay) — exact gamma body (pgamma is AD-stable).
+#' GenGamma natural CDF F(delay) -- exact gamma body (pgamma is AD-stable).
 #' @keywords internal
 #' @noRd
 .gengamma_cdf <- function(delay, shape_Q, log_location, log_scale) {
@@ -202,7 +202,7 @@
 #'   F(delay)          = cumsum(probs)[delay]                           delay <  n_bins
 #'                     = 1 - tail * exp(-(delay - n_bins))              delay >= n_bins
 #' (the `1 - e^-1` geometric decay and the `tail * exp(...)` CDF match Stan's
-#' `delay_lpmf_vec`/`np_cdf_at` for family 4 — not a fresh modelling choice).
+#' `delay_lpmf_vec`/`np_cdf_at` for family 4 -- not a fresh modelling choice).
 #'
 #' `simplex_probs` is the length-(n_bins + 1) simplex (AD); `n_bins =
 #' np_model_length`.  Returns closures (all AD in `simplex_probs`).

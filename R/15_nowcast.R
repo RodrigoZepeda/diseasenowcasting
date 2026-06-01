@@ -7,7 +7,7 @@
 #   nowcast[t]       = case_counts[t] + epidemic_rng(lambda_future[t], nb_size)
 # where the count draw is NB-2 (size = 1/phi_nb) or Poisson, with overflow
 # guards.  Posterior parameter draws come from the Laplace approximation:
-# sample the parameter vector from N(mode, precision^{-1}) — joint Hessian for
+# sample the parameter vector from N(mode, precision^{-1}) -- joint Hessian for
 # the joint-mode fit (cmdstanr $laplace() regime) or the sdreport joint
 # precision for the marginal (random=) fit.
 # =============================================================================
@@ -26,7 +26,7 @@
 #' (the canonical TMB recipe via a supernodal Cholesky).
 #'
 #' The joint-mode Hessian can be indefinite (not positive-definite) at a saddle
-#' mode — notably SIR on long series, where the beta random-walk variance
+#' mode -- notably SIR on long series, where the beta random-walk variance
 #' collapses.  When the Cholesky fails we add an increasing ridge to the
 #' diagonal until the matrix is PD (a standard Laplace-sampling safeguard;
 #' harmless when the precision is already PD).
@@ -104,10 +104,11 @@ summarise_nowcast_matrix <- function(draws_matrix) {
 
 #' Posterior-predictive nowcast draws (full curve) from a joint RTMB fit
 #'
-#' Samples the parameter vector from the Laplace approximation and draws the
-#' complete count at EVERY event time, returning a `[n_draws x max_time]`
-#' matrix (events ascending).  The dcast3 analogue of the Stan
-#' generated-quantities `nowcast[t]`.
+#' Samples the parameter vector from the Laplace approximation and, per draw,
+#' reconstructs the latent incidence `lambda[t]` AND draws the complete
+#' posterior-predictive count `nowcast[t]` at every event time.  Returns both a
+#' `[n_draws x max_time]` predictive-nowcast matrix (the Stan
+#' generated-quantities `nowcast[t]` analogue) and the latent-incidence matrix.
 #'
 #' @param fit A joint fit from [fit()] (non-`delay_only`).
 #' @param n_draws Number of posterior parameter draws.
@@ -115,12 +116,14 @@ summarise_nowcast_matrix <- function(draws_matrix) {
 #'   summary (default newest).
 #' @param probs Quantile probabilities for the convenience summary.
 #' @param seed Optional RNG seed.
-#' @returns list(`M` = draws matrix, `nowcast` = [summarise_nowcast_matrix()]
-#'   table, `draws`/`quantiles`/`median`/`observed` at `target`).
-#' @export
-nowcast <- function(fit, target = NULL, n_draws = 1000L,
-                    probs = c(0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975),
-                    seed = NULL) {
+#' @returns list(`M` = predictive draws matrix, `lambda_draws` = latent
+#'   incidence matrix, `nowcast` = [summarise_nowcast_matrix()] table,
+#'   `draws`/`quantiles`/`median`/`observed` at `target`).
+#' @keywords internal
+#' @noRd
+.nowcast_draws <- function(fit, target = NULL, n_draws = 1000L,
+                           probs = c(0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975),
+                           seed = NULL) {
   if (!is.null(seed)) set.seed(seed)
   data <- fit$data; priors <- fit$priors
   n_time <- data$max_time
@@ -147,19 +150,37 @@ nowcast <- function(fit, target = NULL, n_draws = 1000L,
   parameter_names <- names(mode_vector)
   parameter_draws <- .sample_mvnorm_precision(as.numeric(mode_vector), precision_matrix, n_draws)
 
-  nowcast_draws <- matrix(NA_real_, nrow = n_draws, ncol = n_time)
+  n_strata <- as.integer(data$num_strata %||% 1L)
+  case_counts_mat <- if (is.matrix(data$case_counts)) data$case_counts else matrix(data$case_counts, n_time, n_strata)
+  observed_total  <- rowSums(case_counts_mat)                          # total observed per event-time
+
+  # Total (summed over strata) drives the existing summary/score path; per-stratum
+  # arrays are kept for stratified inspection.  At n_strata == 1 the total equals
+  # the single column, so unstratified output is byte-for-byte the old behaviour.
+  nowcast_draws <- matrix(NA_real_, n_draws, n_time)                   # predictive counts, total
+  lambda_draws  <- matrix(NA_real_, n_draws, n_time)                   # latent incidence, total
+  nowcast_strata <- array(NA_real_, c(n_draws, n_time, n_strata))
+  lambda_strata  <- array(NA_real_, c(n_draws, n_time, n_strata))
   for (draw_index in seq_len(n_draws)) {
     parlist <- .split_named_vector(setNames(parameter_draws[, draw_index], parameter_names))
     reconstructed <- .joint_reconstruct(data, priors, parlist, fit$Bmat, fit$freq)
-    lambda_future <- reconstructed$lambda * (1 - reconstructed$Gstar) + 1e-8
+    lambda_mat <- matrix(reconstructed$lambda, n_time, n_strata)
+    gstar_mat  <- matrix(reconstructed$Gstar,  n_time, n_strata)
+    lambda_future <- as.numeric(lambda_mat * (1 - gstar_mat)) + 1e-8   # flattened [T*S]
     phi_nb <- if (is_negbin) reconstructed$phi_nb else NA_real_
-    nowcast_draws[draw_index, ] <- data$case_counts + .epidemic_rng(is_negbin, lambda_future, phi_nb)
+    pred_cells <- matrix(.epidemic_rng(is_negbin, lambda_future, phi_nb), n_time, n_strata) + case_counts_mat
+    nowcast_strata[draw_index, , ] <- pred_cells
+    lambda_strata[draw_index, , ]  <- lambda_mat
+    nowcast_draws[draw_index, ] <- rowSums(pred_cells)
+    lambda_draws[draw_index, ]  <- rowSums(lambda_mat)
   }
 
   target_draws <- nowcast_draws[, target]
   target_quantiles <- quantile(target_draws, probs = probs, na.rm = TRUE)
-  list(M = nowcast_draws, nowcast = summarise_nowcast_matrix(nowcast_draws),
+  list(M = nowcast_draws, lambda_draws = lambda_draws,
+       M_strata = nowcast_strata, lambda_strata = lambda_strata, n_strata = n_strata,
+       nowcast = summarise_nowcast_matrix(nowcast_draws),
        draws = target_draws, quantiles = target_quantiles,
        median = unname(target_quantiles[which.min(abs(probs - 0.5))]),
-       target = target, observed = data$case_counts[target])
+       target = target, observed = observed_total[target])
 }

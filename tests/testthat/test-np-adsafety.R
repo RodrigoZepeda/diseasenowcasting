@@ -8,7 +8,7 @@ test_that("Dirichlet joint objective has a finite value AND gradient", {
   mdl <- model(nb_likelihood(), hsgp_epidemic(), dirichlet_delay())
   dat <- prepare_data(mdl, m, max_time = 60L, delay_only = FALSE)
   pr  <- default_priors(mdl, dat, phi = lognormal_prior(log(20), 0.5))
-  built <- dcast3:::build_joint_obj(dat, pr, use_random = FALSE)
+  built <- diseasenowcasting:::build_joint_obj(dat, pr, use_random = FALSE)
   obj <- built$obj
 
   expect_true(is.finite(obj$fn(obj$par)))

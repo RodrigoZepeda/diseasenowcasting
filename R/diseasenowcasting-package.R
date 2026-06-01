@@ -1,0 +1,68 @@
+#' @keywords internal
+"_PACKAGE"
+
+## usethis namespace: start
+# AD-aware density/CDF functions MUST come from RTMB (not stats) so that, inside
+# the objective closure defined in this package's namespace, they dispatch on
+# advector arguments. stats provides only the (numeric) optimisers, summaries,
+# and RNG samplers.
+#' @importFrom RTMB pnorm dnorm dgamma pgamma dbeta dexp dweibull dchisq dnbinom plogis
+#' @importFrom stats nlminb optim median sd quantile approx setNames coef predict
+#'   rnorm rcauchy rt runif rgamma rweibull rlnorm rchisq rexp rlogis rbeta rpois rnbinom
+#' @importFrom utils head tail
+#' @importFrom methods as
+#' @importFrom foreach foreach %dopar%
+#' @importFrom doFuture %dofuture%
+#' @importFrom ggplot2 autoplot
+#' @import tbl.now
+## usethis namespace: end
+NULL
+
+# Null-coalescing helper available on all supported R versions.
+`%||%` <- function(x, y) if (is.null(x) || length(x) == 0) y else x
+
+# Suppress R CMD check NOTEs for column names used in aes() / dplyr NSE
+utils::globalVariables(c(
+  # ggplot2 column aesthetics (autoplot methods)
+  "t", "median", "q5", "q25", "q75", "q95", "q2.5", "q97.5", ".event_num",
+  "delay", "weight", "cdf", "lo", "hi", "med", "pmf",
+  "t_idx", "observed", "pred",
+  "wis", "disease", "group",
+  # dplyr column names (score/backtest)
+  "model", "date_run", "final", "quantile_level", "predicted",
+  "epidemic_label", "nb_label", "delay_label", "n",
+  "overprediction", "underprediction", "dispersion",
+  "interval_coverage_50", "interval_coverage_90",
+  # tbl.now / nowcast internals
+  ".data", "window", "epidemic", "n_events", "now",
+  # RTMB getAll() closure variables (delay-only objective)
+  "delay_logits", "censoring_col", "obs_delays", "row_sums_exact",
+  "col_sums_exact", "col_sums_cens",
+  "dirichlet_alpha", "n_bins", "obs_delays_cens", "row_sums_cens",
+  # RTMB getAll() closure variables (joint objective)
+  "mu_intercept", "gamma", "basis_coefs", "ar_innov",
+  "log_gp_alpha", "log_gp_ell", "ar_phi_unc", "log_ar_sigma_unc",
+  "log_R0", "u_gamma", "u_neff", "log_phi_nb",
+  "delay_mu", "log_delay_sigma_excess", "delay_Q",
+  "mu_global", "log_tau_intercept", "delta_intercept",
+  "delay_mu_fixed", "delay_sigma_fixed", "shape_Q_fixed",
+  "case_counts", "d_star", "X", "hsgp_basis_matrix", "hsgp_frequencies",
+  "row_sums", "split_delay", "gp_kernel",
+  "n_time", "n_strata", "is_hierarchical", "n_covariates",
+  "mu_log_upper_bound", "ar_sigma_max", "N_pop", "initial_infected",
+  "is_negbin", "is_sir", "is_gengamma", "is_nonparametric",
+  "epidemic_model", "delay_fully_fixed", "gstar_precomputed",
+  "prior_mu_dist", "prior_mu_params", "prior_sigma_dist", "prior_sigma_params",
+  "prior_shape_dist", "prior_shape_params", "prior_intercept_dist", "prior_intercept_params",
+  "prior_gamma_dist", "prior_gamma_params", "prior_phi_dist", "prior_phi_params",
+  "prior_gp_alpha_dist", "prior_gp_alpha_params", "prior_gp_ell_dist", "prior_gp_ell_params",
+  "prior_ar_phi_dist", "prior_ar_phi_params", "prior_ar_sigma_dist", "prior_ar_sigma_params",
+  "prior_ar_phi_sir_dist", "prior_ar_phi_sir_params",
+  "prior_R0_dist", "prior_R0_params", "prior_gamma_sir_dist", "prior_gamma_sir_params",
+  "prior_n_eff_dist", "prior_n_eff_params",
+  "delay_mu_is_fixed", "delay_sigma_is_fixed", "shape_Q_is_fixed",
+  # surprise() internal variable
+  "parlist",
+  # base functions flagged in isolated namespace check
+  "rpois", "rnbinom", "as"
+))

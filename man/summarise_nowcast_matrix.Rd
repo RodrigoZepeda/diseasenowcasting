@@ -4,10 +4,10 @@
 \alias{summarise_nowcast_matrix}
 \title{Quantile-table summary of a pooled nowcast draws matrix}
 \usage{
-summarise_nowcast_matrix(M)
+summarise_nowcast_matrix(draws_matrix)
 }
 \arguments{
-\item{M}{Pooled draws matrix \verb{[n_draws x max_time]}.}
+\item{draws_matrix}{Pooled draws matrix \verb{[n_draws x max_time]}.}
 }
 \value{
 A data.frame in the scoring-pipeline format.

@@ -44,7 +44,7 @@ test_that("AR1 joint fit converges and produces a finite nowcast", {
                         ar_sigma = exponential_prior(1))
   rf  <- fit(mdl, dat, priors = pr)
   expect_equal(rf$convergence, 0L)
-  nc <- nowcast(rf, n_draws = 500, seed = 1)
+  nc <- diseasenowcasting:::.nowcast_draws(rf, n_draws = 500, seed = 1)
   expect_true(all(is.finite(nc$quantiles)))
   expect_true(nc$quantiles[1] <= nc$quantiles[9])   # monotone quantiles
 })

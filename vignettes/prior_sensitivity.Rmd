@@ -1,0 +1,317 @@
+---
+title: "Understanding Priors in dcast3"
+author: "dcast3 package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Understanding Priors in dcast3}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  message   = FALSE,
+  warning   = FALSE,
+  fig.width = 9,
+  fig.height = 4,
+  collapse  = TRUE,
+  comment   = "#>"
+)
+```
+
+```{r load, include=FALSE}
+library(dcast3)
+library(ggplot2)
+
+# Load pre-computed sensitivity data (avoids re-running fits at install time)
+ps_file <- system.file("extdata", "prior_sensitivity.rds", package = "dcast3")
+ps <- if (file.exists(ps_file)) readRDS(ps_file) else NULL
+
+# Helper: filter and plot a prior comparison
+plot_prior_effect <- function(prior_name, ylab = "Nowcast (median, 50/90% CI)",
+                              title = NULL, n_recent = 30) {
+  if (is.null(ps)) {
+    return(ggplot() + annotate("text", x=1, y=1, label="Pre-computed data not found.\nRun devel/precompute_prior_sensitivity.R first.") + theme_void())
+  }
+  dat <- ps[ps$prior_name == prior_name, ]
+  if (nrow(dat) == 0) return(ggplot() + theme_void() + labs(title = paste("No data for", prior_name)))
+
+  # Keep only the most recent events per fit
+  dat <- do.call(rbind, lapply(split(dat, list(dat$disease, dat$scenario)), function(block) {
+    block <- block[order(block$.event_num, decreasing = TRUE), ]
+    head(block, n_recent)
+  }))
+
+  dat$scenario <- factor(dat$scenario, levels = c("tight", "default", "loose"))
+  dat$disease  <- factor(dat$disease,  levels = c("dengue", "mpox", "covid"))
+
+  ggplot(dat, ggplot2::aes(x = .event_num, colour = scenario, fill = scenario)) +
+    ggplot2::geom_ribbon(ggplot2::aes(ymin = q2.5, ymax = q97.5), alpha = 0.12, colour = NA) +
+    ggplot2::geom_ribbon(ggplot2::aes(ymin = q25,  ymax = q75),  alpha = 0.20, colour = NA) +
+    ggplot2::geom_line(ggplot2::aes(y = median), linewidth = 0.8) +
+    ggplot2::scale_colour_manual(values = c(tight="#e41a1c", default="#377eb8", loose="#4daf4a")) +
+    ggplot2::scale_fill_manual(  values = c(tight="#e41a1c", default="#377eb8", loose="#4daf4a")) +
+    ggplot2::facet_wrap(~disease, scales = "free_y", nrow = 1) +
+    ggplot2::labs(x = "Event index (most recent on the right)",
+                  y = ylab, colour = "Prior scenario", fill = "Prior scenario",
+                  title = title %||% paste("Effect of", prior_name, "prior")) +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(legend.position = "bottom")
+}
+```
+
+## What are priors, and why do they matter?
+
+In Bayesian statistics, a **prior** is a probability distribution that encodes
+your beliefs about a parameter *before* seeing the data.  When the data are
+informative (many cases, long reporting history), the prior has little impact —
+the data overwhelm it.  When the data are sparse or noisy (early epidemic,
+small populations), the prior can substantially shape the estimates.
+
+In `dcast3` every estimated parameter has a prior: the delay distribution, the
+epidemic trend, the overdispersion, and the GP kernel hyperparameters.  This
+vignette shows what happens to the nowcast when you move each prior, using
+pre-computed results on three real diseases.
+
+**Tip:** the "default" scenario in every plot uses the package defaults.
+The "tight" scenario uses a very concentrated prior (strong belief in a specific
+value); the "loose" scenario uses a diffuse prior (little prior information).
+
+All plots below were generated with 300 posterior draws at a single as-of date
+and are stored in `inst/extdata/prior_sensitivity.rds`.
+
+---
+
+## 1. HSGP epidemic priors
+
+The **Hilbert-space Gaussian process** (`hsgp_epidemic()`) places a smooth
+prior on the epidemic trend $f(t)$ via two hyperparameters:
+
+- **`gp_alpha`** — the *amplitude* (marginal standard deviation) of the GP.  A
+  larger amplitude allows bigger swings in the trend.
+- **`gp_ell`** — the *length-scale*.  A larger length-scale forces the trend to
+  vary more slowly (smoother); a smaller one allows rapid changes.
+
+Both are given log-Normal priors by default:
+
+```r
+gp_alpha ~ LogNormal(log(1), 0.5)   # amplitude
+gp_ell   ~ LogNormal(log(1), 0.5)   # length-scale
+```
+
+### 1.1 GP amplitude (`gp_alpha`)
+
+```{r hsgp-alpha, fig.cap="Effect of the GP amplitude prior. Tight prior constrains the curve's overall height; loose prior allows more extreme epidemic sizes."}
+plot_prior_effect("gp_alpha", title = "GP amplitude prior (gp_alpha)")
+```
+
+**What to watch for:** A tight amplitude prior (red) shrinks the curve toward
+the prior mean and produces narrower credible intervals — useful when you are
+confident the epidemic is not unusually large.  A loose prior (green) allows the
+model to fit very high or very low incidence, producing wider intervals at the
+most recent event times.
+
+### 1.2 GP length-scale (`gp_ell`)
+
+```{r hsgp-ell, fig.cap="Effect of the GP length-scale prior. A small length-scale (tight prior concentrated near small values) allows rapid changes; a large length-scale forces a smoother curve."}
+plot_prior_effect("gp_ell", title = "GP length-scale prior (gp_ell)")
+```
+
+**What to watch for:** With a tight prior on a *small* length-scale the curve
+can turn sharply, capturing rapid epidemic accelerations.  With a loose prior
+(or concentrated on a large value) the curve is forced to be smooth, which may
+miss short-term peaks but reduces noise.
+
+---
+
+## 2. AR(1) epidemic priors
+
+The autoregressive epidemic (`ar1_epidemic()`) models the log-incidence as an
+AR(1) process.  The two priors are:
+
+- **`ar_phi`** — autocorrelation coefficient (how strongly the trend
+  at time $t$ depends on time $t-1$).
+- **`ar_sigma`** — standard deviation of the AR innovations (how much the trend
+  can jump each step).
+
+```{r ar1-priors, fig.cap="Effect of the AR1 prior settings. Tight ar_phi/sigma priors make the trend smooth and mean-reverting; loose priors allow larger, more persistent swings."}
+plot_prior_effect("ar_phi/ar_sigma", title = "AR(1) autocorrelation and innovation SD priors")
+```
+
+**What to watch for:** A tight prior (concentrated near $\phi = 0$, small
+$\sigma$) forces the trend toward a smooth, quickly mean-reverting process
+with narrow intervals.  A loose prior (large $\sigma$) allows large jumps and
+persistent trends, producing wider intervals.
+
+---
+
+## 3. SIR epidemic priors
+
+The mechanistic SIR model (`sir_epidemic()`) is parameterised by:
+
+- **`R0`** — the basic reproduction number.
+- **`gamma`** (recovery rate) — implicitly sets the infectious period.
+- **`N_eff`** — the effective susceptible fraction of the population.
+
+### 3.1 Basic reproduction number (`R0`)
+
+```{r sir-r0, fig.cap="Effect of the R0 prior. A tight prior near R0=2 confines the epidemic growth rate; a loose prior allows both sub-critical and super-critical dynamics."}
+plot_prior_effect("R0", title = "SIR: basic reproduction number prior (R0)")
+```
+
+**What to watch for:** If the tight prior is mis-specified (e.g. you assume
+$R_0 \approx 2$ but the true $R_0$ is 4), the model under-predicts at growth
+phases.  Use a loose prior unless you have strong epidemiological knowledge of
+the pathogen.
+
+---
+
+## 4. Delay distribution priors
+
+The reporting-delay prior controls how the model thinks delays are distributed
+*before* seeing any data.  `dcast3` supports four delay families.
+
+### 4.1 Log-Normal delay (`lognormal_delay`)
+
+The most widely used family.  Priors on the log-mean (`delay_mu`) and the
+natural-scale SD (`delay_sigma`):
+
+```{r delay-lognormal, fig.cap="Effect of the log-normal delay prior. A tight mean prior pins the delay to a specific value; a loose prior lets the data determine it freely."}
+plot_prior_effect("delay_mu/sigma (LogNormal)", title = "Log-Normal delay prior")
+```
+
+**What to watch for:** The delay prior primarily affects the *level* of the
+nowcast at the most recent event times (the rightmost points).  A tight prior
+that mismatches the true delay leads to systematic bias: if the prior delay is
+too short, the model under-inflates the most recent counts; if too long, it
+over-inflates them.
+
+### 4.2 Gamma delay (`gamma_delay`)
+
+```{r delay-gamma, fig.cap="Effect of the Gamma delay prior. Similar structure to log-normal but with lighter tails."}
+plot_prior_effect("delay_mu/sigma (Gamma)", title = "Gamma delay prior")
+```
+
+### 4.3 Generalised Gamma shape (`generalized_gamma_delay`)
+
+The shape parameter `Q` interpolates between a Weibull ($Q = 1$) and a
+log-normal ($Q \to 0$).  The prior on `Q` determines whether the model
+prefers heavier or lighter tails:
+
+```{r delay-gengamma, fig.cap="Effect of the GenGamma Q prior. Tight prior near Q=1 (Weibull-like) vs. loose prior that lets Q vary freely."}
+plot_prior_effect("delay_Q", title = "GenGamma shape prior (delay_Q)")
+```
+
+### 4.4 Dirichlet concentration (`dirichlet_delay`)
+
+The non-parametric Dirichlet delay uses a concentration parameter $\alpha$ that
+controls how spread the prior mass is across delay bins.  A high $\alpha$ means
+the prior expects roughly equal probability for every delay; a low $\alpha$
+(< 1) allows the mass to concentrate on a few bins (sparse delay):
+
+```{r delay-dirichlet, fig.cap="Effect of the Dirichlet concentration prior. High concentration = flat delay distribution; low concentration = concentrated on a few delays."}
+plot_prior_effect("dirichlet_alpha", title = "Dirichlet delay concentration prior")
+```
+
+---
+
+## 5. Likelihood prior: NB overdispersion (`phi`)
+
+The negative-binomial dispersion parameter $\phi$ controls how much variability
+in case counts is *not* explained by the epidemic trend.  Smaller $\phi$ means
+more overdispersion (wider count intervals for the same mean); larger $\phi$
+means less overdispersion (closer to Poisson).  The default prior is:
+
+```r
+phi_nb ~ LogNormal(log(20), 0.5)   # mode ~15, 90% CI roughly [6, 55]
+```
+
+```{r phi-nb, fig.cap="Effect of the NB phi prior. A tight prior near phi=50 (low overdispersion, almost Poisson) produces narrow intervals; a loose prior near phi=5 (high overdispersion) produces very wide intervals."}
+plot_prior_effect("phi_nb", title = "NB overdispersion prior (phi)")
+```
+
+**What to watch for:** This is the single most impactful prior for the *width*
+of the prediction intervals.  If the 90% intervals consistently miss the truth
+(intervals too narrow), try a prior with a lower mode — e.g.
+`lognormal_prior(log(5), 0.5)` — to allow more overdispersion.
+
+---
+
+## 6. Recommendations
+
+The table below summarises what to change first depending on the symptom you
+observe in your nowcast.
+
+```{r recommendations, echo=FALSE}
+recs <- data.frame(
+  Symptom = c(
+    "Credible intervals too wide",
+    "Credible intervals too narrow (too many truths outside)",
+    "Nowcast systematically too high at the newest event",
+    "Nowcast systematically too low at the newest event",
+    "Epidemic trend too wiggly / noisy",
+    "Epidemic trend too smooth / misses peaks",
+    "Rapid epidemic growth is under-predicted",
+    "Model converges slowly or not at all",
+    "Two-stage pipeline produces different results each run"
+  ),
+  `Start here` = c(
+    "Tighten `phi_nb` prior (increase mode, e.g. `lognormal_prior(log(50), 0.3)`)",
+    "Loosen `phi_nb` prior (decrease mode, e.g. `lognormal_prior(log(5), 0.5)`)",
+    "Delay prior `delay_mu` is too large — move it toward the empirical mean delay",
+    "Delay prior `delay_mu` is too small — or `delay_sigma` is too tight, capping the tail",
+    "Tighten `gp_alpha` or increase `gp_ell` (longer length-scale → smoother)",
+    "Loosen `gp_alpha` or decrease `gp_ell` (shorter length-scale → more flexible)",
+    "For SIR: loosen `R0` prior (allow higher values); for HSGP: loosen `gp_alpha`",
+    "Tighten all priors slightly; try a different `delay_mu` starting point",
+    "Increase `K` (delay imputations) or set `floor_mu` / `floor_sig_frac` higher"
+  ),
+  `Also consider` = c(
+    "Check `gp_alpha` prior — very loose amplitude can inflate intervals independently of phi",
+    "Check whether the true epidemic is overdispersed (e.g. clustered outbreaks need low phi)",
+    "Verify delay family: LogNormal is most robust; try Gamma or GenGamma if LN over-inflates",
+    "Use GenGamma or Dirichlet to capture heavy-tailed delays",
+    "Switch from HSGP to AR1 (AR1 can be smoother for short series)",
+    "Increase `num_basis` in `hsgp_epidemic()` for long daily series",
+    "Consider SIR model — mechanistic growth is built in",
+    "Run `backtest()` across multiple dates to identify date-specific failures",
+    "`np_spread` controls Dirichlet imputation width; increase for more variability"
+  ),
+  check.names = FALSE
+)
+knitr::kable(recs, caption = "Prior tuning recommendations by symptom.")
+```
+
+### Quick-reference prior changes
+
+```r
+# Wider intervals (more overdispersion)
+phi <- lognormal_prior(log(5), 0.5)
+nc  <- nowcast(tn, mdl, phi = phi, ...)
+
+# Narrower intervals (less overdispersion)
+phi <- lognormal_prior(log(50), 0.3)
+nc  <- nowcast(tn, mdl, phi = phi, ...)
+
+# Override any prior via default_priors() + fix_param()
+priors <- default_priors(mdl, engine)
+priors <- fix_param(priors, "delay_mu",    log(7))   # fix delay mean to log(7)
+priors <- fix_param(priors, "delay_sigma", 5)         # fix delay SD to 5
+fit_result <- fit(mdl, engine, priors = priors)
+
+# Widen the GP amplitude prior
+priors$gp_alpha <- list(dist = lognormal_prior(0,1)@num_id,
+                        params = c(log(1), 1.5, 0),
+                        is_constant = 0L, fixed = numeric(0))
+```
+
+### The most important priors to get right
+
+1. **`phi_nb`** — the single biggest driver of interval width.  Start here.
+2. **`delay_mu`** — determines how much the model inflates the most recent
+   counts.  If you know the typical reporting delay from domain knowledge,
+   anchor the prior around that value.
+3. **`gp_ell`** (HSGP) / **`ar_sigma`** (AR1) — control how flexible the
+   epidemic trend is.  Tune these if the model tracks noise or misses real peaks.
+4. **`R0`** (SIR only) — if using the mechanistic model, a plausible prior on
+   $R_0$ is essential for stability, especially at epidemic turning points.

@@ -39,7 +39,7 @@ test_that("Dirichlet (default delay) HSGP joint fit + nowcast works", {
   dat <- prepare_data(mdl, m, max_time = 70L, delay_only = FALSE)
   rf  <- fit(mdl, dat, priors = default_priors(mdl, dat, phi = lognormal_prior(log(20), 0.5)))
   expect_equal(rf$convergence, 0L)
-  nc <- nowcast(rf, n_draws = 400, seed = 1)
+  nc <- diseasenowcasting:::.nowcast_draws(rf, n_draws = 400, seed = 1)
   expect_true(all(is.finite(nc$quantiles)))
 })
 
@@ -49,6 +49,6 @@ test_that("SIR epidemic joint fit + nowcast works", {
   dat <- prepare_data(mdl, m, max_time = 70L, delay_only = FALSE)
   rf  <- fit(mdl, dat, priors = default_priors(mdl, dat, phi = lognormal_prior(log(20), 0.5)))
   expect_equal(rf$convergence, 0L)
-  nc <- nowcast(rf, n_draws = 400, seed = 1)
+  nc <- diseasenowcasting:::.nowcast_draws(rf, n_draws = 400, seed = 1)
   expect_true(all(is.finite(nc$quantiles)))
 })

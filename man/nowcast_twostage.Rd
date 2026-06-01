@@ -15,6 +15,7 @@ nowcast_twostage(
   K = 25L,
   floor_mu = 0.15,
   floor_sig_frac = 0.25,
+  np_spread = 1,
   n_draws_per = 200L,
   phi = lognormal_prior(log(20), 0.5),
   probs = c(0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975),
@@ -38,9 +39,14 @@ nowcast_twostage(
 
 \item{K}{Number of delay imputations.}
 
-\item{floor_mu}{Floor on the log-mean imputation SD.}
+\item{floor_mu}{Floor on the log-mean imputation SD (parametric families).}
 
 \item{floor_sig_frac}{Floor on the delay-SD imputation SD (fraction of sigma).}
+
+\item{np_spread}{Dirichlet only: covariance-inflation factor for the simplex
+imputation (samples \code{delay_logits} from the Stage-1 Laplace posterior with
+covariance scaled by \code{np_spread}).  Default 1 (the raw, well-informed
+full-series posterior); values > 1 widen the simplex spread.}
 
 \item{n_draws_per}{Posterior nowcast draws per imputation.}
 

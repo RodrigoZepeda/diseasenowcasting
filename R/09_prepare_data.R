@@ -1,5 +1,5 @@
 # =============================================================================
-# prepare_data() — build the RTMB engine inputs from an observation matrix
+# prepare_data() -- build the RTMB engine inputs from an observation matrix
 # =============================================================================
 # Analogue of diseasenowcast2::data_to_stan(), but emits the (Stan-free) data
 # list the RTMB objective consumes.  Reproduces the FIXED delay-only censoring:
@@ -19,6 +19,9 @@
 #'   `rev(seq_len(max_time)) - 1`.
 #' @param delay_only If TRUE, only the delay process is prepared/fit.
 #' @param max_time Time-window length; defaults to `max(m[, 1])`.
+#' @param num_strata Number of stratum cells (the K-way product of the strata
+#'   levels). If `NULL`, inferred from column 4 of `m`. The likelihood is summed
+#'   over all `max_time x num_strata` (time, stratum) cells; `1` is unstratified.
 #' @param gp_L HSGP boundary factor (> 1). Default 1.5.
 #' @param gp_boundary_frac Fraction of the HSGP domain placed left of the data.
 #'   Default 0.62.
@@ -27,7 +30,7 @@
 #' @returns A named list of engine inputs.
 #' @export
 prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
-                         delay_only = FALSE, max_time = NULL,
+                         delay_only = FALSE, max_time = NULL, num_strata = NULL,
                          gp_L = 1.5, gp_boundary_frac = 0.62,
                          ar_sigma_max = 1, ...) {
   if (!S7::S7_inherits(model, model_class))
@@ -40,14 +43,24 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
 
   epi <- model@epidemic; dly <- model@delay; lik <- model@likelihood
 
-  # ── covariates ─────────────────────────────────────────────────────────────
+  # -- strata -------------------------------------------------------------------
+  # Column 4 of `m` holds the 1-indexed stratum-cell of each observation (all 1
+  # when unstratified).  `num_strata` is the number of cells (= prod of strata
+  # levels); pass it in so empty-in-the-as-of-view cells are still counted.
+  cell_of <- if (ncol(m) >= 4L) as.integer(m[, 4]) else rep(1L, nrow(m))
+  if (is.null(num_strata)) num_strata <- max(c(1L, cell_of))
+  num_strata <- as.integer(num_strata)
+
+  # -- covariates -------------------------------------------------------------
   if (is.null(X)) { X_mat <- matrix(0.0, max_time, 0L); P_val <- 0L }
   else { X_mat <- as.matrix(X); P_val <- ncol(X_mat) }
 
-  # ── d_star ───────────────────────────────────────────────────────────────────
-  d_star_vec <- if (is.null(d_star)) rev(seq_len(max_time)) - 1L else as.numeric(d_star)
+  # -- d_star [max_time x num_strata] (same reporting horizon across strata) ----
+  d_star_mat <- if (is.null(d_star)) matrix(rev(seq_len(max_time)) - 1L, max_time, num_strata)
+    else { dd <- as.matrix(d_star)
+           if (ncol(dd) == 1L) matrix(dd[, 1], max_time, num_strata) else dd }
 
-  # ── per-time delay aggregation (FIXED censoring routing) ──────────────────────
+  # -- per-time delay aggregation (FIXED censoring routing) ----------------------
   # cases_by_delay[delay_index, time] = total cases with that delay at that event-time.
   aggregate_by_delay_and_time <- function(observation_matrix) {
     if (nrow(observation_matrix) == 0L)
@@ -68,18 +81,20 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
   # censoring point per event-time t (1-indexed delays): c_t = max_time - t + 1
   censoring_col <- as.numeric(max_time - seq_len(max_time) + 1L)
 
-  # ── per-(time, stratum) case counts for the epidemic likelihood ──────────────
-  case_counts <- as.numeric(tapply(m[, 2], factor(m[, 1], levels = seq_len(max_time)), sum))
-  case_counts[is.na(case_counts)] <- 0
-  if (nrow(m_censored) > 0L) {
-    cc2 <- as.numeric(tapply(m_censored[, 2], factor(m_censored[, 1], levels = seq_len(max_time)), sum))
-    cc2[is.na(cc2)] <- 0
-    case_counts <- case_counts + cc2
+  # -- per-(time, stratum) case counts [max_time x num_strata] ------------------
+  count_matrix <- function(obs_matrix) {
+    if (nrow(obs_matrix) == 0L) return(matrix(0.0, max_time, num_strata))
+    cell <- if (ncol(obs_matrix) >= 4L) as.integer(obs_matrix[, 4]) else rep(1L, nrow(obs_matrix))
+    agg <- tapply(as.numeric(obs_matrix[, 2]),
+                  list(factor(as.integer(obs_matrix[, 1]), levels = seq_len(max_time)),
+                       factor(cell, levels = seq_len(num_strata))), sum)
+    agg[is.na(agg)] <- 0
+    matrix(as.numeric(agg), max_time, num_strata)
   }
-
+  case_counts <- count_matrix(m) + count_matrix(m_censored)
   casemax <- max(case_counts, na.rm = TRUE)
 
-  # ── num_basis (auto) ─────────────────────────────────────────────────────────
+  # -- num_basis (auto) ---------------------------------------------------------
   nb_model <- if (S7::S7_inherits(epi, hsgp_epidemic_class) ||
                   S7::S7_inherits(epi, spline_epidemic_class)) epi@num_basis else 0L
   num_basis_val <- if (nb_model > 0L) as.integer(nb_model)
@@ -87,19 +102,19 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
                    else if (max_time < 20) 8L
                    else min(150L, max(12L, as.integer(ceiling(1.5 * sqrt(max_time)))))
 
-  # ── tmax_model (HSGP time normalisation) ─────────────────────────────────────
+  # -- tmax_model (HSGP time normalisation) -------------------------------------
   tmax_model_val <- if (S7::S7_inherits(epi, hsgp_epidemic_class)) {
     if (epi@tmax_model > 0) as.integer(epi@tmax_model) else max(3L, max_time)
   } else 100L
 
-  # ── np_model_length (Dirichlet) ──────────────────────────────────────────────
+  # -- np_model_length (Dirichlet) ----------------------------------------------
   np_len <- if (S7::S7_inherits(dly, dirichlet_delay_class)) {
     if (length(dly@bins) == 1 && !is.na(dly@bins)) as.integer(dly@bins) else as.integer(max(m[, 3]))
   } else 1L
 
   list(
     # dimensions / config
-    max_time = max_time, num_strata = 1L, P = P_val, X = X_mat,
+    max_time = max_time, num_strata = num_strata, P = P_val, X = X_mat,
     delay_only = isTRUE(delay_only),
     delay_family = as.integer(dly@num_id),
     epidemic_model = as.integer(epi@num_id),
@@ -113,7 +128,7 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     censoring_col = censoring_col,
     max_delay_obs = if (nrow(m) > 0) max(m[, 3]) else 1,
     # epidemic
-    case_counts = case_counts, d_star = d_star_vec, casemax = casemax,
+    case_counts = case_counts, d_star = d_star_mat, casemax = casemax,
     # hsgp config
     num_basis = num_basis_val, gp_kernel = if (S7::S7_inherits(epi, hsgp_epidemic_class)) epi@gp_kernel else 2L,
     gp_basis = if (S7::S7_inherits(epi, hsgp_epidemic_class)) epi@gp_basis else 1L,

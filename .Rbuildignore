@@ -1,0 +1,14 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.github$
+^\.git$
+^\.gitignore$
+^\.DS_Store$
+^devel$
+^Dockerfile$
+^SKILL\.md$
+^README\.md$
+^article_v1\.tex$
+^figure$
+^\.claude$
+^.*\.sh$

@@ -32,7 +32,7 @@ prior_lpdf <- function(value, num_id, params) {
   log_density <- switch(
     as.character(num_id),
 
-    # ── (-inf, inf) ──────────────────────────────────────────────────────
+    # -- (-inf, inf) ------------------------------------------------------
     "0"  = sum(dnorm(value, 0, 1, log = TRUE)),
     "1"  = sum(dnorm(value, params[1], params[2], log = TRUE)),
     "2"  = sum(-log(pi * params[2]) - log1p(((value - params[1]) / params[2])^2)),       # Cauchy
@@ -46,7 +46,7 @@ prior_lpdf <- function(value, num_id, params) {
     "4"  = sum(-log(2 * params[2]) - abs(value - params[1]) / params[2]),                 # DoubleExponential
     "5"  = 0,                                                                             # Flat
 
-    # ── (0, inf): positive families (start at 100) ───────────────────────
+    # -- (0, inf): positive families (start at 100) -----------------------
     "100" = sum(dnorm(value, 0, 1, log = TRUE)) - length(value) * log(0.5),              # HalfStdNormal
     "101" = sum(dnorm(value, params[1], params[2], log = TRUE) -
                 log_upper_tail_at_zero(params[1], params[2])),                            # HalfNormal

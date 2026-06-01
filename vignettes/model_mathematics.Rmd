@@ -1,0 +1,313 @@
+---
+title: "Mathematical Foundations of dcast3"
+author: "dcast3 package"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Mathematical Foundations of dcast3}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE, comment = "#>", message = FALSE, warning = FALSE
+)
+```
+
+## Overview
+
+This vignette derives the statistical model underlying `dcast3` from first
+principles.  It is intended for mathematically oriented readers who want to
+understand the likelihood construction, the epidemic process specifications, and
+the inference algorithm.  The main reference is Zepeda-Tello & Shaman (2025);
+the notation follows the paper closely.
+
+---
+
+## 1. The two-process framework
+
+Let $\{N_t\}_{t \geq 0}$ denote the **latent epidemic process**: the (unobserved)
+total number of cases occurring at event time $t$.  At each time $t$ there is a
+**reporting-delay process** $\{D_t\}$ that governs when those cases will
+eventually appear in surveillance data.
+
+Formally, if $N_t = n$ cases occur at time $t$, then each case $i$ generates a
+delay $d_i \sim G_D(\cdot \mid \theta_t)$, where $G_D$ is the delay CDF with
+parameter vector $\theta_t$.  At calendar time $\tau$, we observe only those
+cases whose delay satisfies $d_i \leq \tau - t$.  This creates right-censoring:
+for the most recent event times, many cases have not yet been reported.
+
+**The nowcasting problem** is to estimate the posterior distribution of $N_t$ for
+the most recent event times, given all reported delays up to the current
+calendar time.
+
+---
+
+## 2. The censored likelihood
+
+### 2.1 Setting
+
+Consider a single event time $t$.  At calendar time $\tau$, the maximum
+observable delay is $d^*_t = \tau - t$.  Suppose we have observed $k$ cases with
+delays $d_1, \ldots, d_k \leq d^*_t$, and we know there are $n - k$ cases that
+will be reported in the future (with delays $> d^*_t$).  Since $n$ is
+unobserved, we marginalise over all $n \geq k$.
+
+### 2.2 Derivation
+
+The joint probability of the observed delays, conditional on $N_t = n$, is
+
+$$P(d_1, \ldots, d_k \mid \theta_t,\, N_t = n)
+= \binom{n}{k}
+  \prod_{i=1}^k \Delta G_D(d_i \mid \theta_t)
+  \cdot \bigl[1 - G_D(d^*_t \mid \theta_t)\bigr]^{n-k},$$
+
+where
+
+$$\Delta G_D(d \mid \theta_t) =
+\begin{cases}
+  G_D(d \mid \theta_t) - G_D(d-1 \mid \theta_t) & \text{(continuous } G_D\text{)}, \\
+  g_D(d \mid \theta_t)                            & \text{(discrete } G_D \text{ with pmf } g_D\text{)}.
+\end{cases}$$
+
+Summing over all $n \geq k$ and incorporating a prior $\pi(\theta_t)$, the
+likelihood at time $t$ is
+
+$$\mathcal{L}_t(\theta_t \mid d_1, \ldots, d_k)
+\;\propto\;
+\pi(\theta_t)
+\cdot \prod_{l=0}^{L} \bigl[\Delta G_D(l \mid \theta_t)\bigr]^{m_l}
+\cdot S_k(\theta_t),$$
+
+where $m_l = \#\{i : d_i = l\}$ is the count of observed delays equal to $l$,
+and the **latent process term** is
+
+$$S_k(\theta_t)
+= \sum_{n \geq k} \binom{n}{k}
+  \bigl[1 - G_D(d^*_t \mid \theta_t)\bigr]^{n-k}
+  P(N_t = n \mid \theta_t).$$
+
+### 2.3 Log-likelihood
+
+Taking logarithms, the per-time contribution is
+
+$$\ell_t(\theta_t \mid m_0, m_1, \ldots, m_L)
+= \ln \pi(\theta_t)
++ \sum_{l=0}^{L} m_l \ln \Delta G_D(l \mid \theta_t)
++ \ln S_k(\theta_t).$$
+
+The **full log-likelihood** sums over all event times:
+$$\ell(\theta) = \sum_{t} \ell_t(\theta_t \mid m_0^{(t)}, \ldots, m_L^{(t)}).$$
+
+### 2.4 Closed-form $S_k$ for standard epidemic models
+
+**Poisson** ($N_t \sim \mathrm{Poisson}(\lambda_t)$):
+
+$$\ln S_k(\theta_t)
+= k \ln \lambda_t - \ln k! - G_D(d^*_t \mid \theta_t)\, \lambda_t.$$
+
+**Negative Binomial** ($N_t \sim \mathrm{NB}(r_t, p_t)$, mean $r_t(1-p_t)/p_t$):
+
+$$\ln S_k(\theta_t)
+= k\ln(1-p_t) + r_t \ln p_t + \ln\binom{k + r_t - 1}{k}
+- (k + r_t)\ln\bigl[p_t + G_D(d^*_t \mid \theta_t)(1-p_t)\bigr].$$
+
+Both expressions arise from recognising that $S_k$ is the probability-generating
+function of $N_t$ evaluated at $[1 - G_D(d^*_t)]$ (after appropriate
+normalisation).
+
+---
+
+## 3. The epidemic process
+
+The latent mean incidence at time $t$ (across strata $s \in \{1,\ldots,S\}$) is
+
+$$\mu_t^{(s)} = \exp\!\bigl(\gamma_0^{(s)} + f^{(s)}(t) + \mathbf{X}_t^{(s)\top} \boldsymbol{\gamma}^{(s)}\bigr),$$
+
+where $\exp(\cdot)$ ensures positivity, $\gamma_0^{(s)}$ is a stratum-specific
+intercept, $\mathbf{X}_t^{(s)}$ is a covariate vector (e.g. day-of-week dummies),
+and $f^{(s)}(t)$ is a stratum-specific temporal trend.  Three specifications of
+$f$ are available.
+
+### 3.1 Hilbert-Space Gaussian Process (HSGP)
+
+A Gaussian process $f \sim \mathcal{GP}(0, k(t,t'))$ is approximated via $M$
+eigenfunctions $\{\phi_j\}$ of the Laplacian on the domain $[-L, L]$:
+
+$$f(t) \approx \sum_{j=1}^{M} \beta_j\, \phi_j(t)\, \sqrt{S(\lambda_j)},$$
+
+where $S(\lambda)$ is the spectral density of the kernel evaluated at frequency
+$\lambda_j = j\pi/(2L)$, and $\beta_j \overset{\text{iid}}{\sim} \mathcal{N}(0,1)$.
+
+For the **Matérn 5/2** kernel with amplitude $\alpha$ and length-scale $\ell$:
+$$S(\lambda) = \alpha^2\, \frac{16\, (5/\ell^2)^{5/2}}{3\,(\lambda^2 + 5/\ell^2)^3}.$$
+
+This approximation reduces a $\mathcal{O}(T^3)$ GP computation to
+$\mathcal{O}(TM)$ (Riutort-Mayol et al., 2023).  `dcast3` uses $M$ chosen
+automatically as $\lceil 1.5\sqrt{T}\rceil$, capped at 20 for daily series longer
+than 400 days to avoid ill-conditioned Hessians.
+
+### 3.2 Autoregressive trend AR(1)
+
+$$f(t) = m_t, \quad m_t = \phi\, m_{t-1} + \epsilon_t, \quad \epsilon_t \sim \mathcal{N}(0, \sigma^2),$$
+
+with stationary initialisation $m_1 \sim \mathcal{N}(0, \sigma^2 / (1 - \phi^2))$.
+This is parameterised non-centredly: $m_t = \sum_{s=1}^{t} \phi^{t-s}\, \sigma\, z_s$
+with $z_s \overset{\text{iid}}{\sim} \mathcal{N}(0,1)$, making the Laplace
+approximation more stable.
+
+### 3.3 Discrete-time SIR
+
+The mean incidence is derived from a compartmental model.  With susceptibles $S_t$,
+infectious $I_t$, and population $N$:
+
+$$\text{New infections at }t = N\, S_t\!\left(1 - e^{-\beta_t I_t}\right), \quad S_{t+1} = S_t\, e^{-\beta_t I_t},$$
+
+where $\beta_t = R_0\, \gamma \cdot e^{u_t}$ and $u_t$ follows an AR(1) trend
+(allowing $R_t$ to vary over time around a baseline).  The recovery rate $\gamma$
+and susceptible fraction $S_0/N$ are estimated parameters.
+
+**Stratified (coupled) SIR:** For $S$ strata, the force of infection in stratum
+$s$ depends on the *total* infectious pool:
+$$\beta^{(s)}_t\, S_t^{(s)}\, \textstyle\sum_{s'} I_t^{(s')}.$$
+This captures cross-group transmission while allowing stratum-specific transmission rates.
+
+---
+
+## 4. The delay distribution
+
+### 4.1 Parametric families
+
+The delay CDF $G_D(\cdot \mid \theta_t)$ can be any of:
+
+| Family | Parameters | Notes |
+|--------|-----------|-------|
+| **LogNormal** | $(\log\mu_t,\, \sigma)$ | $\mu_t$ is the mean; $\sigma$ is natural-scale SD |
+| **Gamma** | $(\mu_t, \sigma)$ | Parameterised by mean and SD |
+| **Generalised Gamma** | $(\log\mu_t, \sigma, Q)$ | $Q \to 0$: LogNormal; $Q=1$: Weibull. $Q \in (0.05, 3)$ |
+
+Temporal variation in the mean delay is modelled on the log scale:
+$$\ln \mu_t = v_0 + v^{\text{seasonal}}_{h(t)},$$
+where $v^{\text{seasonal}}_{h(t)}$ encodes day-of-week or other periodic effects.
+
+### 4.2 Non-parametric (Dirichlet) delay
+
+Let $L$ be the maximum explicitly modelled delay.  A probability simplex over
+$\{0, 1, \ldots, L\}$ receives a Dirichlet prior:
+$$\bigl(g_D(0), \ldots, g_D(L)\bigr) \sim \mathrm{Dir}(\alpha_0, \ldots, \alpha_L).$$
+
+To handle right-censoring (delays $> L$), an $(L+1)$-th category captures the
+tail probability.  Conditional on falling in the tail, delays follow an
+$\mathrm{Exponential}(1)$ distribution, yielding:
+$$\tilde{G}_D(x) =
+\begin{cases}
+  \sum_{k=0}^{\lfloor x\rfloor} \tilde{g}_D(k), & x \leq L, \\
+  \sum_{k=0}^{L} \tilde{g}_D(k)
+    + \tilde{g}_D(L+1)\bigl(1 - e^{-(x-(L+1))}\bigr), & x > L.
+\end{cases}$$
+
+### 4.3 Missing report dates
+
+When a report date is unavailable, the corresponding delay is right-censored at
+the analysis date $\tau$.  The contribution to the log-likelihood becomes
+$\ln G_D(d^*_j \mid \theta_t)$ instead of $\ln \Delta G_D(d_j \mid \theta_t)$, yielding:
+
+$$\ell_t(\theta_t) = \ln\pi(\theta_t)
++ \sum_{\text{observed}} m_l \ln \Delta G_D(l \mid \theta_t)
++ \sum_{\text{censored}} m_j^* \ln G_D(j \mid \theta_t)
++ \ln S_k(\theta_t).$$
+
+---
+
+## 5. Stratification
+
+With $S$ strata, the log-likelihood decomposes additively:
+$$\ell(\theta) = \sum_{t} \sum_{s=1}^{S} \ell_{t,s}(\theta),$$
+where each stratum contributes its own $m_l^{(s)}$, $k^{(s)}$, and
+$S_{k^{(s)}}(\theta)$ term.  The delay distribution $G_D$ and the NB
+overdispersion $\phi$ are **shared** across strata; the epidemic mean
+$\mu_t^{(s)}$ and the GP/AR1/SIR trajectory parameters are **per-stratum**.
+
+---
+
+## 6. Bayesian inference via Laplace approximation
+
+`dcast3` performs inference via the **joint-mode Laplace approximation** (the
+same regime as `cmdstanr`'s `$laplace()` method).
+
+**Step 1 — MAP estimation.** Minimise the negative log-posterior
+$$-\ell(\theta) \text{ w.r.t. } \theta$$
+using `nlminb` (L-BFGS-B with analytical gradients via RTMB/CppAD).
+
+**Step 2 — Hessian.** Evaluate $H = -\nabla^2 \ell(\hat\theta)$ (the precision
+matrix of the Laplace approximation) using RTMB's automatic differentiation.
+
+**Step 3 — Posterior draws.** Sample
+$$\theta^{(i)} \sim \mathcal{N}(\hat\theta,\; H^{-1}), \quad i = 1, \ldots, B,$$
+via a sparse Cholesky factorisation of $H$ (a PD ridge is added if $H$ is
+indefinite at the mode).
+
+**Step 4 — Predictive draws.** For each $\theta^{(i)}$:
+$$\lambda_t^{(i)} = \exp\!\bigl(\text{cap}\bigl(\mu_t^{(i)}\bigr)\bigr),
+\quad G^*{}^{(i)}_t = G_D\!\bigl(d^*_t + 1 \mid \theta_t^{(i)}\bigr),$$
+$$\text{Nowcast}_t^{(i)} = k_t + \mathrm{NB}\!\bigl(\lambda_t^{(i)}(1 - G^*{}^{(i)}_t),\; \phi^{(i)}\bigr),$$
+where $\mathrm{cap}(\cdot)$ is a smooth upper-bound function preventing overflow:
+$$\text{cap}(x) = U - \log\!\bigl(1 + e^{U - x}\bigr), \quad U = \min(\max(6,\, \log(1 + k_{\max})),\, 16).$$
+
+The posterior-predictive distribution of the nowcast at event time $t$ is then
+summarised from the $B$ draws.
+
+---
+
+## 7. Two-stage cascade (multiple imputation)
+
+When reporting-delay uncertainty is large relative to epidemic uncertainty, a
+single joint fit can underestimate delay variability.  The two-stage cascade
+addresses this via **multiple imputation**:
+
+1. **Stage 1.** Fit a delay-only model to a recent window of the series (default:
+   120 events), obtaining a posterior $(\hat\theta_D, \hat\Sigma_D)$ over delay parameters.
+
+2. **Stage 2.** Draw $K$ delay parameter vectors $\theta_D^{(1)}, \ldots, \theta_D^{(K)}$
+   from a spread around the Stage-1 estimate, fix each as a known constant, and
+   fit a joint epidemic model for each.
+
+3. **Pooling.** Posterior-predictive draws are pooled across imputations:
+   $$\text{Pooled}_{t}^{(i)} = \text{Nowcast}_{t,\,k(i)}\!\left(\theta_D^{(k(i))}\right),$$
+   where $k(i)$ cycles over imputations.  This produces a **right-skewed**
+   predictive distribution that correctly reflects the multiplicative effect of
+   delay uncertainty on $1/G^*$.
+
+---
+
+## 8. Connection to the reporting triangle
+
+Classical nowcasting (e.g. NobBS) reconstructs the full **reporting triangle**
+$\{n_{t,d}\}$ — the count of cases with event time $t$ and delay $d$ — and uses
+it to estimate $N_t$.  Our approach avoids this by observing that the likelihood
+depends only on the *marginal* delay counts $\{m_l\}$ and the survival probability
+$G_D(d^* \mid \theta)$, not on the full joint distribution.  This reformulation:
+
+- Eliminates the need to estimate unobserved cells of the reporting triangle.
+- Allows the delay process to be modelled and estimated continuously.
+- Enables anomaly detection and handling of missing report dates within the
+  same likelihood framework.
+
+---
+
+## References
+
+- Bracher, J. et al. (2021). Evaluating epidemic forecasts in an interval format.
+  *PLOS Computational Biology*. <https://doi.org/10.1371/journal.pcbi.1008618>
+- Günther, F. et al. (2021). Nowcasting the COVID-19 pandemic in Bavaria.
+  *Biometrical Journal*. <https://doi.org/10.1002/bimj.202000112>
+- McGough, S. F. et al. (2020). Nowcasting by Bayesian Smoothing.
+  *PLOS Computational Biology*. <https://doi.org/10.1371/journal.pcbi.1007735>
+- Riutort-Mayol, G. et al. (2023). Practical Hilbert space approximate
+  Bayesian Gaussian processes for probabilistic programming.
+  *Statistics and Computing*. <https://doi.org/10.1007/s11222-022-10167-2>
+- Zepeda-Tello, R. & Shaman, J. (2025). Nowcasting from an epidemic's
+  reporting-delay: a censored regression approach. *Preprint*.

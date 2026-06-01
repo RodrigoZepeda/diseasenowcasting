@@ -1,5 +1,5 @@
 # =============================================================================
-# RTMB objective builders — delay-only (Phase 1)
+# RTMB objective builders -- delay-only (Phase 1)
 # =============================================================================
 # Reproduces the FIXED Stan delay-only log-posterior under
 # (delay_only = 1, num_delay_seasons = 1, delay_is_censored = 1):

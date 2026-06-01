@@ -1,35 +1,25 @@
 # =============================================================================
 # Joint RTMB objective: latent epidemic (Laplace) + delay + S_k likelihood
 # =============================================================================
-# Reproduces the Stan joint log-posterior under delay_is_censored = 0:
-#   - delay PMF likelihood uses the PLAIN discretised PMF (survival-tail robust);
-#     right-censoring of recent counts enters only through Gstar.
-#   - log_mean[t] = mu_intercept + (X gamma)[t] + epidemic_trend[t]
-#   - Gstar[t] = F_delay(d_star[t] + 1)
-#   - S_k: Poisson or NB-2 (r = 1 / phi_nb), summed over t.
-#     (the dropped Poisson -log(k!) is data-constant: irrelevant for the mode,
-#      so absolute log-posterior values won't equal Stan's — only modes/diffs do.)
-# Latent epidemic coefficients (AR1 -> ar_innov ; HSGP -> basis_coefs ; SIR ->
-# the beta random-walk ar_innov) are declared `random` only when use_random=TRUE.
-# Parametric delay families 1 (LogNormal), 2 (Gamma), 3 (Generalized Gamma),
-# 4 (Dirichlet / non-parametric).
+# Stratified (S7 model + tbl.now strata): the log-likelihood is a sum over
+# (time t, stratum s) cells.  The reporting delay G_D is SHARED across strata
+# (estimated from all observed delays pooled); the epidemic mean is per-stratum:
+#   log_mean[t, s] = gamma0[s] + (X gamma[, s])[t] + epidemic_trend[s](t).
+# Per-stratum: intercept, covariate coefficients, HSGP basis_coefs / AR1
+# innovations + ar_phi/ar_sigma.  Shared: NB overdispersion phi, HSGP kernel
+# (alpha, ell), the delay.  SIR couples strata through a shared force of
+# infection (beta^(s) * sum_s' I^(s')).  At num_strata = 1 everything reduces
+# exactly to the single-stratum model.
 #
-# NAMING: verbose names for generic quantities; standard domain symbols kept
-# (Gstar, lambda, R0, beta, ar_phi, ar_sigma, phi_nb) and the model PARAMETER
-# names are unchanged (they are referenced by parList in the reconstruct/nowcast).
+# Latent epidemic coefficients are `random` only when use_random = TRUE (the
+# marginal Laplace); the default joint-mode keeps them as fixed effects.
 # =============================================================================
 
-#' Build the joint RTMB objective
-#'
-#' @param use_random If TRUE the latent epidemic coefficients (`basis_coefs` /
-#'   `ar_innov`) are declared `random` so RTMB does the marginal (nested)
-#'   Laplace.  If FALSE (the default via [fit()]) they stay fixed effects and the
-#'   whole parameter vector is optimised jointly — the single-optimisation,
-#'   joint-mode Laplace regime cmdstanr `$laplace()` uses (much faster: no nested
-#'   inner Newton solve at every outer step).
+#' Build the joint RTMB objective (stratified)
 #' @keywords internal
 #' @noRd
-build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE) {
+build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
+                            hierarchical_strata = FALSE) {
   family <- data$delay_family
   if (!family %in% c(1L, 2L, 3L, 4L))
     cli::cli_abort("build_joint_obj supports delay families 1/2/3/4; family {family} given.")
@@ -43,6 +33,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE) {
   is_negbin <- data$is_negative_binomial == 1L
   n_covariates <- data$P
   n_time       <- data$max_time
+  n_strata     <- as.integer(data$num_strata)
 
   if (epidemic_model == 1L) {
     time_scaled       <- hsgp_time_scaled(n_time, data$tmax_model)
@@ -55,17 +46,13 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE) {
   delay_sigma_is_fixed <- !is_nonparametric && isTRUE(priors$delay_sigma$is_constant == 1L)
   shape_Q_is_fixed     <- is_gengamma && isTRUE(priors$delay_Q$is_constant == 1L)
   dirichlet_alpha      <- if (is_nonparametric) priors$delay_probs$params else numeric(0)
+  delay_probs_fixed    <- is_nonparametric && isTRUE(priors$delay_probs$is_constant == 1L)
 
-  # When every active delay parameter is fixed (the multisample Stage-2 regime),
-  # the delay distribution — and hence Gstar = F_delay(d_star+1) and the delay
-  # PMF term — are CONSTANT.  Precompute Gstar once in plain R and pass it as
-  # data so the (expensive, esp. Gamma/GenGamma) CDF is NOT re-taped/re-evaluated
-  # at every optimiser iteration over all n_time points.  Biggest single speedup
-  # for the delay-fixed fits that dominate the multisample.
-  delay_probs_fixed <- is_nonparametric && isTRUE(priors$delay_probs$is_constant == 1L)
+  # Precompute the shared-delay Gstar [n_time x n_strata] when the delay is fully
+  # fixed (multisample Stage-2): the CDF is then data, not re-taped per step.
   delay_fully_fixed <- (!is_nonparametric && delay_mu_is_fixed && delay_sigma_is_fixed &&
                         (!is_gengamma || shape_Q_is_fixed)) || delay_probs_fixed
-  gstar_precomputed <- numeric(0)
+  gstar_precomputed <- matrix(0.0, 0L, 0L)
   if (delay_fully_fixed) {
     fixed_delay_fns <- if (is_nonparametric)
         .nonparametric_delay_functions(priors$delay_probs$fixed, n_bins)
@@ -73,15 +60,19 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE) {
         .delay_distribution_functions(3L, priors$delay_mu$fixed, priors$delay_Q$fixed, priors$delay_sigma$fixed)
       else
         .delay_distribution_functions(family, priors$delay_mu$fixed, priors$delay_sigma$fixed)
-    gstar_precomputed <- as.numeric(fixed_delay_fns$cdf(data$d_star + 1))
+    gstar_precomputed <- matrix(as.numeric(fixed_delay_fns$cdf(as.numeric(data$d_star) + 1)),
+                                n_time, n_strata)
   }
+
+  is_hierarchical <- isTRUE(hierarchical_strata) && n_strata > 1L
 
   objective_data <- list(
     family = family, is_gengamma = as.integer(is_gengamma),
     is_nonparametric = as.integer(is_nonparametric), n_bins = n_bins,
     dirichlet_alpha = dirichlet_alpha,
     delay_fully_fixed = as.integer(delay_fully_fixed), gstar_precomputed = gstar_precomputed,
-    case_counts = data$case_counts, d_star = data$d_star,
+    case_counts = data$case_counts, d_star = data$d_star,           # [n_time x n_strata] matrices
+    n_time = n_time, n_strata = n_strata, is_hierarchical = as.integer(is_hierarchical),
     obs_delays = data$obs_delays, row_sums = data$row_sums_exact,
     split_delay = max(2, .wtd_median(data$m[, 3], data$m[, 2])),
     X = data$X, hsgp_basis_matrix = hsgp_basis_matrix, hsgp_frequencies = hsgp_frequencies,
@@ -106,8 +97,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE) {
     prior_ar_sigma_params = if (epidemic_model %in% c(2L, 3L)) .pad3(priors$ar_sigma$params) else c(0, 0, 0),
     prior_ar_phi_sir_dist = if (is_sir) priors$ar_phi$dist else 0L,
     prior_ar_phi_sir_params = if (is_sir) .pad3(priors$ar_phi$params) else c(0, 0, 0),
-    # SIR
-    is_sir = as.integer(is_sir), N_pop = data$N_pop, initial_infected = data$case_counts[1],
+    is_sir = as.integer(is_sir), N_pop = data$N_pop,
+    initial_infected = if (is_sir) data$case_counts[1, ] else numeric(n_strata),
     prior_R0_dist = if (is_sir) priors$R0$dist else 0L, prior_R0_params = if (is_sir) .pad3(priors$R0$params) else c(0, 0, 0),
     prior_gamma_sir_dist = if (is_sir) priors$gamma_sir$dist else 0L,
     prior_gamma_sir_params = if (is_sir) .pad3(priors$gamma_sir$params) else c(0, 0, 0),
@@ -117,22 +108,29 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE) {
     shape_Q_is_fixed = as.integer(shape_Q_is_fixed), shape_Q_fixed = if (shape_Q_is_fixed) priors$delay_Q$fixed else 0
   )
 
+  # -- parameter initial values (per-stratum where applicable) ------------------
   init <- init %||% list()
-  intercept_init <- init$mu_intercept %||% { positive_counts <- data$case_counts[data$case_counts > 0]
-    if (length(positive_counts)) log(stats::median(positive_counts)) else 0 }
-  delay_mu_init <- init$delay_mu %||% log(max(.wtd_median(data$m[, 3], data$m[, 2]), 1.5))
+  positive_col_log_median <- function(col) { positive <- col[col > 0]
+    if (length(positive)) log(stats::median(positive)) else 0 }
+  intercept_init <- init$mu_intercept %||% apply(data$case_counts, 2, positive_col_log_median)
+  if (length(intercept_init) != n_strata) intercept_init <- rep_len(intercept_init, n_strata)
+  delay_mu_init  <- init$delay_mu %||% log(max(.wtd_median(data$m[, 3], data$m[, 2]), 1.5))
   delay_sigma_init <- init$delay_sigma %||% {
     if (is_gengamma) 0.6 else { empirical_sd <- sqrt(.wtd_var(data$m[, 3], data$m[, 2]))
       if (is.finite(empirical_sd) && empirical_sd > 0) max(2, min(empirical_sd, 60)) else 5 } }
 
-  # SIR has its own absolute scale (no level intercept, no covariates).
   parameters <- if (is_sir) list()
-                else list(mu_intercept = intercept_init,
-                          gamma = if (n_covariates > 0) (init$gamma %||% rep(0, n_covariates)) else numeric(0))
+                else if (is_hierarchical) list(
+                  # Non-centred hierarchical intercept: mu[s] = mu_global + tau * delta[s]
+                  mu_global          = init$mu_global %||% mean(intercept_init),
+                  log_tau_intercept  = init$log_tau_intercept %||% 0,
+                  delta_intercept    = init$delta_intercept %||% rep(0, n_strata),
+                  gamma = if (n_covariates > 0) (init$gamma %||% matrix(0, n_covariates, n_strata)) else matrix(0, 0, 0)
+                ) else list(
+                  mu_intercept = intercept_init,
+                  gamma = if (n_covariates > 0) (init$gamma %||% matrix(0, n_covariates, n_strata)) else matrix(0, 0, 0)
+                )
   if (is_nonparametric) {
-    # NP simplex via softmax with reference category: p = c(exp(z), 1)/(sum(exp(z)) + 1).
-    # When the simplex is hard-fixed (Stage-2 of the two-stage Dirichlet) there
-    # is no free delay parameter — Gstar is precomputed and the PMF dropped.
     if (!delay_probs_fixed) {
       logits_init <- if (!is.null(init$delay_logits)) init$delay_logits else {
         delay_binned <- pmin(as.integer(data$m[, 3]), n_bins + 1L)
@@ -146,28 +144,34 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE) {
   } else {
     parameters$delay_mu               <- if (delay_mu_is_fixed) 0 else delay_mu_init
     parameters$log_delay_sigma_excess <- if (delay_sigma_is_fixed) 0 else log(max(delay_sigma_init - 0.01, 1e-6))
-    if (is_gengamma) parameters$delay_Q <- if (shape_Q_is_fixed) 0 else (init$delay_Q %||% -2)  # raw
+    if (is_gengamma) parameters$delay_Q <- if (shape_Q_is_fixed) 0 else (init$delay_Q %||% -2)
   }
   if (is_negbin) parameters$log_phi_nb <- init$log_phi_nb %||% log(20)
   if (epidemic_model == 1L) {
     parameters$log_gp_alpha <- init$log_gp_alpha %||% log(1)
     parameters$log_gp_ell   <- init$log_gp_ell   %||% log(1)
-    parameters$basis_coefs  <- init$basis_coefs  %||% rep(0, data$num_basis)
+    parameters$basis_coefs  <- init$basis_coefs  %||% matrix(0, data$num_basis, n_strata)
     random <- "basis_coefs"
   } else if (epidemic_model == 2L) {
-    parameters$ar_phi_unc <- init$ar_phi_unc %||% 0
-    parameters$log_ar_sigma_unc <- init$log_ar_sigma_unc %||% (-2)
-    parameters$ar_innov <- init$ar_innov %||% rep(0, n_time)
+    parameters$ar_phi_unc       <- init$ar_phi_unc %||% rep(0, n_strata)
+    parameters$log_ar_sigma_unc <- init$log_ar_sigma_unc %||% rep(-2, n_strata)
+    parameters$ar_innov         <- init$ar_innov %||% matrix(0, n_time, n_strata)
     random <- "ar_innov"
-  } else {  # SIR: log beta follows an AR(1) random walk (ar_innov = latent)
-    parameters$log_R0 <- init$log_R0 %||% log(2)
-    parameters$u_gamma <- init$u_gamma %||% stats::qlogis(1/5)
-    parameters$u_neff  <- init$u_neff  %||% stats::qlogis(0.5)
-    parameters$ar_phi_unc <- init$ar_phi_unc %||% 0
-    parameters$log_ar_sigma_unc <- init$log_ar_sigma_unc %||% (-2)
-    parameters$ar_innov <- init$ar_innov %||% rep(0, n_time)
+  } else {  # SIR (coupled): per-stratum R0/gamma/N_eff + shared-FOI beta random walk
+    parameters$log_R0  <- init$log_R0  %||% rep(log(2), n_strata)
+    parameters$u_gamma <- init$u_gamma %||% rep(stats::qlogis(1/5), n_strata)
+    parameters$u_neff  <- init$u_neff  %||% rep(stats::qlogis(0.5), n_strata)
+    parameters$ar_phi_unc       <- init$ar_phi_unc %||% rep(0, n_strata)
+    parameters$log_ar_sigma_unc <- init$log_ar_sigma_unc %||% rep(-2, n_strata)
+    parameters$ar_innov         <- init$ar_innov %||% matrix(0, n_time, n_strata)
     random <- "ar_innov"
   }
+
+  # Defensive: per-stratum vector params must have length num_strata even if a
+  # warm-start / ladder seed supplied a scalar.
+  for (nm in intersect(c("mu_intercept", "ar_phi_unc", "log_ar_sigma_unc", "log_R0", "u_gamma", "u_neff"),
+                       names(parameters)))
+    if (length(parameters[[nm]]) != n_strata) parameters[[nm]] <- rep_len(parameters[[nm]], n_strata)
 
   map <- list()
   if (!is_nonparametric) {
@@ -178,18 +182,17 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE) {
 
   negative_log_posterior <- function(params) {
     RTMB::getAll(params, objective_data)
-    # The SIR incidence recursion below subassigns advectors into a numeric
-    # vector (incidence[t] <- ...); enable RTMB's in-place [<- for THIS scope.
     "[<-" <- RTMB::ADoverload("[<-")
-
     log_jacobian <- 0
+
+    # -- shared delay distribution ------------------------------------------
     if (delay_fully_fixed == 1L) {
-      delay_fns <- NULL                 # delay constant: Gstar precomputed, PMF dropped
+      delay_fns <- NULL
     } else if (is_nonparametric == 1L) {
-      exp_logits   <- exp(delay_logits)
+      exp_logits    <- exp(delay_logits)
       simplex_probs <- c(exp_logits, exp(0 * delay_logits[1])) / (sum(exp_logits) + 1)
-      np_fns       <- .nonparametric_delay_functions(simplex_probs, n_bins)
-      delay_fns    <- list(log_cdf = np_fns$log_cdf, cdf = np_fns$cdf)
+      np_fns        <- .nonparametric_delay_functions(simplex_probs, n_bins)
+      delay_fns     <- list(cdf = np_fns$cdf)
     } else {
       delay_log_mean <- if (delay_mu_is_fixed == 1L) delay_mu_fixed else delay_mu
       delay_sd       <- if (delay_sigma_is_fixed == 1L) delay_sigma_fixed else 0.01 + exp(log_delay_sigma_excess)
@@ -200,58 +203,92 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE) {
         else { shape_transform <- .gengamma_shape_transform(delay_Q)
                shape_Q <- shape_transform$shape_Q; log_jacobian <- log_jacobian + shape_transform$log_jacobian }
       }
-      delay_fns <- if (is_gengamma == 1L)
-          .delay_distribution_functions(3L, delay_log_mean, shape_Q, delay_sd)
-        else
-          .delay_distribution_functions(family, delay_log_mean, delay_sd)
+      delay_fns <- if (is_gengamma == 1L) .delay_distribution_functions(3L, delay_log_mean, shape_Q, delay_sd)
+                   else                   .delay_distribution_functions(family, delay_log_mean, delay_sd)
     }
+    cdf_fn <- if (delay_fully_fixed == 1L) NULL else delay_fns$cdf
+    upper_bound <- mu_log_upper_bound
+    nb_size <- if (is_negbin == 1L) 1.0 / exp(log_phi_nb) else 0
 
-    # ── epidemic mean (log scale) over time ────────────────────────────────
+    # -- per-stratum epidemic mean + S_k accumulation -----------------------
+    # Accumulate the count log-likelihood cell-by-cell.  For HSGP/AR1 each
+    # stratum is independent (column loop); SIR couples strata via sum(I).
+    log_mean_matrix <- NULL                       # built only for SIR (coupled)
     if (is_sir == 1L) {
       R0 <- exp(log_R0); recovery_rate <- plogis(u_gamma); susceptible_frac <- plogis(u_neff)
       effective_pop <- susceptible_frac * N_pop
       ar_phi   <- -0.999 + 1.998 * plogis(ar_phi_unc)
       ar_sigma <- ar_sigma_max * plogis(log_ar_sigma_unc)
-      log_beta_trend <- ar1_trend(ar_innov, ar_phi, ar_sigma)
       log_beta_baseline <- log(R0 * recovery_rate)
-      incidence  <- numeric(length(case_counts))
+      incidence  <- matrix(0.0, n_time, n_strata)
       susceptible <- 1 - initial_infected / effective_pop
       infected    <- initial_infected / effective_pop
-      for (t in seq_along(case_counts)) {
-        beta_t <- exp(log_beta_baseline + log_beta_trend[t])
-        new_infections <- susceptible * (1 - exp(-beta_t * infected))
-        incidence[t]   <- new_infections * effective_pop
-        susceptible    <- susceptible * exp(-beta_t * infected)
-        infected       <- new_infections + (1 - recovery_rate) * infected
+      trend_cols  <- vector("list", n_strata)
+      for (s in seq_len(n_strata)) trend_cols[[s]] <- ar1_trend(ar_innov[, s], ar_phi[s], ar_sigma[s])
+      for (t in seq_len(n_time)) {
+        total_infectious <- sum(infected)                       # coupled force of infection
+        for (s in seq_len(n_strata)) {
+          beta_ts <- exp(log_beta_baseline[s] + trend_cols[[s]][t])
+          new_infections <- susceptible[s] * (1 - exp(-beta_ts * total_infectious))
+          incidence[t, s] <- new_infections * effective_pop[s]
+          susceptible[s]  <- susceptible[s] * exp(-beta_ts * total_infectious)
+          infected[s]     <- new_infections + (1 - recovery_rate[s]) * infected[s]
+        }
       }
-      log_mean_t <- log(incidence + 1e-8)
-      log_jacobian <- log_jacobian + log_R0 +
-        log(recovery_rate) + log(1 - recovery_rate) + log(susceptible_frac) + log(1 - susceptible_frac) +
-        log(1.998) + log(plogis(ar_phi_unc)) + log(1 - plogis(ar_phi_unc)) +
-        log(ar_sigma_max) + log(plogis(log_ar_sigma_unc)) + log(1 - plogis(log_ar_sigma_unc))
+      log_mean_matrix <- log(incidence + 1e-8)
+      log_jacobian <- log_jacobian +
+        sum(log_R0 + log(recovery_rate) + log(1 - recovery_rate) + log(susceptible_frac) + log(1 - susceptible_frac) +
+            log(1.998) + log(plogis(ar_phi_unc)) + log(1 - plogis(ar_phi_unc)) +
+            log(ar_sigma_max) + log(plogis(log_ar_sigma_unc)) + log(1 - plogis(log_ar_sigma_unc)))
+    } else if (epidemic_model == 1L) {
+      gp_alpha <- exp(log_gp_alpha); gp_ell <- exp(log_gp_ell)
+      spectral_weights <- hsgp_spectral_weights(hsgp_frequencies, gp_alpha, gp_ell, gp_kernel)
+      log_jacobian <- log_jacobian + log_gp_alpha + log_gp_ell
     } else {
-      log_mean_t <- rep(mu_intercept, length(case_counts))
-      if (n_covariates > 0) log_mean_t <- log_mean_t + as.vector(X %*% gamma)
-      if (epidemic_model == 1L) {
-        gp_alpha <- exp(log_gp_alpha); gp_ell <- exp(log_gp_ell)
-        spectral_weights <- hsgp_spectral_weights(hsgp_frequencies, gp_alpha, gp_ell, gp_kernel)
-        log_mean_t <- log_mean_t + as.vector(hsgp_basis_matrix %*% (basis_coefs * spectral_weights))
-        log_jacobian <- log_jacobian + log_gp_alpha + log_gp_ell
+      ar_phi   <- -0.999 + 1.998 * plogis(ar_phi_unc)
+      ar_sigma <- ar_sigma_max * plogis(log_ar_sigma_unc)
+      log_jacobian <- log_jacobian +
+        sum(log(1.998) + log(plogis(ar_phi_unc)) + log(1 - plogis(ar_phi_unc)) +
+            log(ar_sigma_max) + log(plogis(log_ar_sigma_unc)) + log(1 - plogis(log_ar_sigma_unc)))
+    }
+
+    # -- hierarchical intercept reconstruction ---------------------------------
+    if (is_hierarchical == 1L && is_sir == 0L) {
+      tau_int <- exp(log_tau_intercept)
+      mu_intercept_hier <- mu_global + tau_int * delta_intercept
+      log_jacobian <- log_jacobian + log_tau_intercept   # Jacobian for tau = exp(log_tau)
+    }
+
+    loglik_counts <- 0
+    for (s in seq_len(n_strata)) {
+      if (is_sir == 1L) {
+        log_mean_col <- log_mean_matrix[, s]
       } else {
-        ar_phi   <- -0.999 + 1.998 * plogis(ar_phi_unc)
-        ar_sigma <- ar_sigma_max * plogis(log_ar_sigma_unc)
-        log_mean_t <- log_mean_t + ar1_trend(ar_innov, ar_phi, ar_sigma)
-        log_jacobian <- log_jacobian +
-          log(1.998) + log(plogis(ar_phi_unc)) + log(1 - plogis(ar_phi_unc)) +
-          log(ar_sigma_max) + log(plogis(log_ar_sigma_unc)) + log(1 - plogis(log_ar_sigma_unc))
+        intercept_s  <- if (is_hierarchical == 1L) mu_intercept_hier[s] else mu_intercept[s]
+        log_mean_col <- rep(intercept_s, n_time)
+        if (n_covariates > 0) log_mean_col <- log_mean_col + as.vector(X %*% gamma[, s])
+        if (epidemic_model == 1L)
+          log_mean_col <- log_mean_col + as.vector(hsgp_basis_matrix %*% (basis_coefs[, s] * spectral_weights))
+        else
+          log_mean_col <- log_mean_col + ar1_trend(ar_innov[, s], ar_phi[s], ar_sigma[s])
+      }
+      log_mean_capped <- upper_bound - log1p(exp(upper_bound - log_mean_col))
+      lambda <- exp(log_mean_capped)
+      gstar  <- if (delay_fully_fixed == 1L) gstar_precomputed[, s] else cdf_fn(d_star[, s] + 1)
+      counts_col <- case_counts[, s]
+      if (is_negbin == 1L) {
+        success_prob <- nb_size / (nb_size + lambda)
+        loglik_counts <- loglik_counts +
+          sum(counts_col * log1p(-success_prob)) + sum(nb_size * log(success_prob)) +
+          sum(lgamma(counts_col + nb_size) - lgamma(nb_size) - lgamma(counts_col + 1)) -
+          sum((counts_col + nb_size) * log(success_prob + gstar * (1 - success_prob)))
+      } else {
+        loglik_counts <- loglik_counts + sum(counts_col * log_mean_capped) - sum(gstar * lambda)
       }
     }
-    upper_bound  <- mu_log_upper_bound
-    log_mean_capped <- upper_bound - log1p(exp(upper_bound - log_mean_t))   # smooth anti-explosion cap
-    lambda <- exp(log_mean_capped)
+    if (is_negbin == 1L) log_jacobian <- log_jacobian + log_phi_nb
 
-    Gstar <- if (delay_fully_fixed == 1L) gstar_precomputed else delay_fns$cdf(d_star + 1)
-
+    # -- shared delay PMF likelihood (pooled over strata) --------------------
     loglik_delay <- 0
     if (delay_fully_fixed == 0L && length(obs_delays) > 0) {
       loglik_delay <- if (is_nonparametric == 1L) sum(row_sums * np_fns$log_pmf_raw(obs_delays))
@@ -259,21 +296,11 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE) {
                                                      delay_fns$log_cdf, delay_fns$log_survival)
     }
 
-    if (is_negbin == 1L) {
-      nb_size <- 1.0 / exp(log_phi_nb)
-      success_prob <- nb_size / (nb_size + lambda)
-      loglik_counts <- sum(case_counts * log1p(-success_prob)) + sum(nb_size * log(success_prob)) +
-        sum(lgamma(case_counts + nb_size) - lgamma(nb_size) - lgamma(case_counts + 1)) -
-        sum((case_counts + nb_size) * log(success_prob + Gstar * (1 - success_prob)))
-      log_jacobian <- log_jacobian + log_phi_nb
-    } else {
-      loglik_counts <- sum(case_counts * log_mean_capped) - sum(Gstar * lambda)
-    }
-
+    # -- priors --------------------------------------------------------------
     log_prior <- 0
-    if (delay_fully_fixed == 0L) {                 # fixed delay -> constant prior, dropped
+    if (delay_fully_fixed == 0L) {
       if (is_nonparametric == 1L) {
-        log_prior <- log_prior + dirichlet_lpdf(simplex_probs, dirichlet_alpha) + sum(log(simplex_probs))  # + softmax-ref Jacobian
+        log_prior <- log_prior + dirichlet_lpdf(simplex_probs, dirichlet_alpha) + sum(log(simplex_probs))
       } else {
         if (delay_mu_is_fixed == 0L)    log_prior <- log_prior + prior_lpdf(delay_log_mean, prior_mu_dist, prior_mu_params)
         if (delay_sigma_is_fixed == 0L) log_prior <- log_prior + prior_lpdf(delay_sd, prior_sigma_dist, prior_sigma_params)
@@ -281,8 +308,17 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE) {
           log_prior <- log_prior + prior_lpdf(shape_Q, prior_shape_dist, prior_shape_params)
       }
     }
-    if (is_sir == 0L) log_prior <- log_prior + prior_lpdf(mu_intercept, prior_intercept_dist, prior_intercept_params)
-    if (is_sir == 0L && n_covariates > 0) log_prior <- log_prior + prior_lpdf(gamma, prior_gamma_dist, prior_gamma_params)
+    if (is_sir == 0L) {
+      if (is_hierarchical == 1L) {
+        # Hierarchical intercept prior: mu_global ~ intercept_prior; delta ~ N(0,1); tau ~ HalfNormal(0,1)
+        log_prior <- log_prior + prior_lpdf(mu_global, prior_intercept_dist, prior_intercept_params)
+        log_prior <- log_prior + sum(dnorm(delta_intercept, 0, 1, log = TRUE))
+        log_prior <- log_prior + dnorm(tau_int, 0, 1, log = TRUE)   # HalfNormal: tau > 0 always here
+      } else {
+        log_prior <- log_prior + prior_lpdf(mu_intercept, prior_intercept_dist, prior_intercept_params)
+      }
+    }
+    if (is_sir == 0L && n_covariates > 0) log_prior <- log_prior + prior_lpdf(as.vector(gamma), prior_gamma_dist, prior_gamma_params)
     if (is_negbin == 1L) log_prior <- log_prior + prior_lpdf(1.0 / nb_size, prior_phi_dist, prior_phi_params)
     if (epidemic_model == 1L) {
       log_prior <- log_prior + prior_lpdf(gp_alpha, prior_gp_alpha_dist, prior_gp_alpha_params)
@@ -301,87 +337,111 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE) {
       log_prior <- log_prior + sum(dnorm(ar_innov, 0, 1, log = TRUE))
     }
 
-    RTMB::REPORT(log_mean_capped); RTMB::REPORT(lambda); RTMB::REPORT(Gstar)
     -(loglik_delay + loglik_counts + log_prior + log_jacobian)
   }
 
   random_arg <- if (use_random) random else NULL
   obj <- RTMB::MakeADFun(negative_log_posterior, parameters, map = map, random = random_arg, silent = TRUE)
   list(obj = obj, random = random, epi_model = epidemic_model, is_nb = is_negbin,
-       Bmat = hsgp_basis_matrix, freq = hsgp_frequencies)
+       Bmat = hsgp_basis_matrix, freq = hsgp_frequencies, n_strata = n_strata)
 }
 
-#' Reconstruct log-mean / lambda / Gstar (plain numeric) from a fitted parameter list
+#' Reconstruct per-(time, stratum) lambda / Gstar (plain numeric) from a fit
+#'
+#' Mirrors the objective's per-stratum / coupled-SIR mean construction in base
+#' R.  Latent matrices are reshaped defensively (parList gives matrices;
+#' .split_named_vector gives column-major flat vectors).  Returns `[n_time x
+#' n_strata]` matrices.
 #' @keywords internal
 #' @noRd
 .joint_reconstruct <- function(data, priors, parlist, hsgp_basis_matrix, hsgp_frequencies) {
-  n_time <- data$max_time; family <- data$delay_family
-  is_gengamma <- family == 3L; is_nonparametric <- family == 4L
+  n_time <- data$max_time; n_strata <- as.integer(data$num_strata)
+  family <- data$delay_family; is_gengamma <- family == 3L; is_nonparametric <- family == 4L
+  reshape <- function(x, nr, nc) matrix(as.numeric(x), nr, nc)
+
+  # -- shared delay --------------------------------------------------------
   if (is_nonparametric) {
     n_bins <- as.integer(data$np_model_length)
-    simplex_probs <- if (isTRUE(priors$delay_probs$is_constant == 1L)) {
-      priors$delay_probs$fixed                       # Stage-2: hard-fixed simplex
-    } else {
-      exp_logits <- exp(parlist$delay_logits); c(exp_logits, 1) / (sum(exp_logits) + 1)
-    }
+    simplex_probs <- if (isTRUE(priors$delay_probs$is_constant == 1L)) priors$delay_probs$fixed
+      else { el <- exp(parlist$delay_logits); c(el, 1) / (sum(el) + 1) }
     delay_fns <- .nonparametric_delay_functions(simplex_probs, n_bins)
     delay_log_mean <- delay_sd <- NA_real_
   } else {
-    delay_mu_is_fixed    <- isTRUE(priors$delay_mu$is_constant == 1L)
-    delay_sigma_is_fixed <- isTRUE(priors$delay_sigma$is_constant == 1L)
-    shape_Q_is_fixed     <- is_gengamma && isTRUE(priors$delay_Q$is_constant == 1L)
-    delay_log_mean <- if (delay_mu_is_fixed) priors$delay_mu$fixed else parlist$delay_mu
-    delay_sd       <- if (delay_sigma_is_fixed) priors$delay_sigma$fixed else 0.01 + exp(parlist$log_delay_sigma_excess)
-    shape_Q        <- if (is_gengamma) (if (shape_Q_is_fixed) priors$delay_Q$fixed
-                                        else .gengamma_shape_transform(parlist$delay_Q)$shape_Q) else 0
+    fix_mu <- isTRUE(priors$delay_mu$is_constant == 1L); fix_sig <- isTRUE(priors$delay_sigma$is_constant == 1L)
+    fix_Q  <- is_gengamma && isTRUE(priors$delay_Q$is_constant == 1L)
+    delay_log_mean <- if (fix_mu) priors$delay_mu$fixed else parlist$delay_mu
+    delay_sd       <- if (fix_sig) priors$delay_sigma$fixed else 0.01 + exp(parlist$log_delay_sigma_excess)
+    shape_Q        <- if (is_gengamma) (if (fix_Q) priors$delay_Q$fixed else .gengamma_shape_transform(parlist$delay_Q)$shape_Q) else 0
     delay_fns <- if (is_gengamma) .delay_distribution_functions(3L, delay_log_mean, shape_Q, delay_sd)
                  else             .delay_distribution_functions(family, delay_log_mean, delay_sd)
   }
+  d_star <- if (is.matrix(data$d_star)) data$d_star else matrix(data$d_star, n_time, n_strata)
 
-  if (data$epidemic_model == 3L) {
+  # -- per-(time, stratum) log-mean -------------------------------------------
+  log_mean <- matrix(0.0, n_time, n_strata)
+  if (data$epidemic_model == 3L) {                              # coupled SIR
     R0 <- exp(parlist$log_R0); recovery_rate <- stats::plogis(parlist$u_gamma)
-    susceptible_frac <- stats::plogis(parlist$u_neff)
-    effective_pop <- susceptible_frac * data$N_pop; initial_infected <- data$case_counts[1]
+    susceptible_frac <- stats::plogis(parlist$u_neff); effective_pop <- susceptible_frac * data$N_pop
+    initial_infected <- data$case_counts[1, ]
     ar_phi   <- -0.999 + 1.998 * stats::plogis(parlist$ar_phi_unc)
     ar_sigma <- data$ar_sigma_max * stats::plogis(parlist$log_ar_sigma_unc)
-    log_beta_trend <- numeric(n_time)
-    log_beta_trend[1] <- parlist$ar_innov[1] * ar_sigma / sqrt(1 - ar_phi^2)
-    if (n_time >= 2) for (t in 2:n_time)
-      log_beta_trend[t] <- ar_phi * log_beta_trend[t - 1] + parlist$ar_innov[t] * ar_sigma
-    log_beta_baseline <- log(R0 * recovery_rate)
-    incidence <- numeric(n_time); susceptible <- 1 - initial_infected / effective_pop
-    infected  <- initial_infected / effective_pop
-    for (t in seq_len(n_time)) {
-      beta_t <- exp(log_beta_baseline + log_beta_trend[t])
-      new_infections <- susceptible * (1 - exp(-beta_t * infected))
-      incidence[t] <- new_infections * effective_pop
-      susceptible  <- susceptible * exp(-beta_t * infected)
-      infected     <- new_infections + (1 - recovery_rate) * infected
+    ar_innov <- reshape(parlist$ar_innov, n_time, n_strata)
+    trend <- matrix(0.0, n_time, n_strata)
+    for (s in seq_len(n_strata)) {
+      trend[1, s] <- ar_innov[1, s] * ar_sigma[s] / sqrt(1 - ar_phi[s]^2)
+      if (n_time >= 2) for (t in 2:n_time) trend[t, s] <- ar_phi[s] * trend[t - 1, s] + ar_innov[t, s] * ar_sigma[s]
     }
-    log_mean_t <- log(incidence + 1e-8)
+    beta0 <- log(R0 * recovery_rate); incidence <- matrix(0.0, n_time, n_strata)
+    susceptible <- 1 - initial_infected / effective_pop; infected <- initial_infected / effective_pop
+    for (t in seq_len(n_time)) {
+      total_infectious <- sum(infected)
+      for (s in seq_len(n_strata)) {
+        beta_ts <- exp(beta0[s] + trend[t, s])
+        new_inf <- susceptible[s] * (1 - exp(-beta_ts * total_infectious))
+        incidence[t, s] <- new_inf * effective_pop[s]
+        susceptible[s]  <- susceptible[s] * exp(-beta_ts * total_infectious)
+        infected[s]     <- new_inf + (1 - recovery_rate[s]) * infected[s]
+      }
+    }
+    log_mean <- log(incidence + 1e-8)
   } else {
-    log_mean_t <- rep(parlist$mu_intercept, n_time)
-    if (data$P > 0) log_mean_t <- log_mean_t + as.vector(data$X %*% parlist$gamma)
+    # Resolve intercept: hierarchical or independent
+    is_hierarchical_r <- !is.null(parlist$mu_global)
+    mu_intercept <- if (is_hierarchical_r)
+      as.numeric(parlist$mu_global) + exp(as.numeric(parlist$log_tau_intercept)) * as.numeric(parlist$delta_intercept)
+    else parlist$mu_intercept
+    gamma <- if (data$P > 0) reshape(parlist$gamma, data$P, n_strata) else NULL
     if (data$epidemic_model == 1L) {
       gp_alpha <- exp(parlist$log_gp_alpha); gp_ell <- exp(parlist$log_gp_ell)
       spectral_weights <- hsgp_spectral_weights(hsgp_frequencies, gp_alpha, gp_ell, data$gp_kernel)
-      log_mean_t <- log_mean_t + as.vector(hsgp_basis_matrix %*% (parlist$basis_coefs * spectral_weights))
+      basis_coefs <- reshape(parlist$basis_coefs, ncol(hsgp_basis_matrix), n_strata)
     } else {
       ar_phi   <- -0.999 + 1.998 * stats::plogis(parlist$ar_phi_unc)
       ar_sigma <- data$ar_sigma_max * stats::plogis(parlist$log_ar_sigma_unc)
-      ar_trend <- numeric(n_time); ar_trend[1] <- parlist$ar_innov[1] * ar_sigma / sqrt(1 - ar_phi^2)
-      if (n_time >= 2) for (t in 2:n_time)
-        ar_trend[t] <- ar_phi * ar_trend[t - 1] + parlist$ar_innov[t] * ar_sigma
-      log_mean_t <- log_mean_t + ar_trend
+      ar_innov <- reshape(parlist$ar_innov, n_time, n_strata)
+    }
+    for (s in seq_len(n_strata)) {
+      col <- rep(mu_intercept[s], n_time)
+      if (!is.null(gamma)) col <- col + as.vector(data$X %*% gamma[, s])
+      if (data$epidemic_model == 1L) {
+        col <- col + as.vector(hsgp_basis_matrix %*% (basis_coefs[, s] * spectral_weights))
+      } else {
+        tr <- numeric(n_time); tr[1] <- ar_innov[1, s] * ar_sigma[s] / sqrt(1 - ar_phi[s]^2)
+        if (n_time >= 2) for (t in 2:n_time) tr[t] <- ar_phi[s] * tr[t - 1] + ar_innov[t, s] * ar_sigma[s]
+        col <- col + tr
+      }
+      log_mean[, s] <- col
     }
   }
-  upper_bound <- data$mu_log_upper_bound
-  log_mean_capped <- upper_bound - log1p(exp(upper_bound - log_mean_t))
-  lambda <- exp(log_mean_capped)
-  Gstar  <- as.numeric(delay_fns$cdf(data$d_star + 1))
-  phi_nb <- if (data$is_negative_binomial == 1L) exp(parlist$log_phi_nb) else NA_real_
 
-  list(mu = log_mean_t, mu_safe = log_mean_capped, lambda = lambda, Gstar = Gstar,
+  ub <- data$mu_log_upper_bound
+  mu_safe <- ub - log1p(exp(ub - log_mean))
+  lambda  <- exp(mu_safe)
+  Gstar   <- matrix(0.0, n_time, n_strata)
+  for (s in seq_len(n_strata)) Gstar[, s] <- as.numeric(delay_fns$cdf(d_star[, s] + 1))
+  phi_nb  <- if (data$is_negative_binomial == 1L) exp(parlist$log_phi_nb) else NA_real_
+
+  list(mu = log_mean, mu_safe = mu_safe, lambda = lambda, Gstar = Gstar,
        log_loc = if (!is.null(delay_fns$log_location)) delay_fns$log_location else NA_real_,
        log_scale = if (!is.null(delay_fns$log_scale)) delay_fns$log_scale else NA_real_,
        delay_mu = delay_log_mean, delay_sigma = delay_sd, phi_nb = phi_nb)
