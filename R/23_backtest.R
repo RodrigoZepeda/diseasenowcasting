@@ -31,6 +31,12 @@ backtest_class <- S7::new_class(
 #'   observed range (interior points) is sampled.
 #' @param type `"two_stage"` (default) or `"one_stage"`.
 #' @param n_dates If `dates` is `NULL`, how many to sample. Default 20.
+#' @param max_delay Truth-completeness horizon (in event units).  Event dates
+#'   within `max_delay` units of the last report do not yet have a fully
+#'   observed eventual count, so the backtest **excludes** them (their "truth"
+#'   would still be accruing).  Default `NULL` uses the 99th percentile of the
+#'   observed reporting delays.  Pass a number to override, or `Inf` to evaluate
+#'   every date regardless of completeness.
 #' @param return_simulations If TRUE, also keep the pooled draw matrix per
 #'   (date, model).  Default FALSE (summaries only: mean/median/sd/quantiles).
 #' @param n_draws Posterior draws per nowcast.
@@ -68,6 +74,7 @@ backtest_class <- S7::new_class(
 #' @export
 backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
                      type = c("two_stage", "one_stage"), n_dates = 20L,
+                     max_delay = NULL,
                      return_simulations = FALSE, n_draws = 1000L, K = 25L,
                      np_spread = 1, seed = NULL, ...) {
   type <- match.arg(type)
@@ -79,11 +86,43 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
   min_event  <- min(data[[event_col]], na.rm = TRUE)
   report_col <- tbl.now::get_report_date(data)
 
+  # ── Truth-completeness horizon ───────────────────────────────────────────
+  # An event date only has a complete eventual count once enough time has passed
+  # for its late reports to arrive.  Observed delays (in event units):
+  ev_event  <- .unit_steps(min_event, data[[event_col]],  event_unit)
+  ev_report <- .unit_steps(min_event, data[[report_col]], event_unit)
+  delays_u  <- ev_report - ev_event
+  delays_u  <- delays_u[is.finite(delays_u) & delays_u >= 0]
+  if (is.null(max_delay)) {
+    max_delay <- if (length(delays_u) > 0)
+      ceiling(stats::quantile(delays_u, 0.99, names = FALSE)) else 0
+  }
+  last_report_evnum <- if (length(ev_report) > 0) max(ev_report, na.rm = TRUE) else 0
+  cutoff_evnum <- last_report_evnum - max_delay      # most-recent fully-observed event-time
+
   if (is.null(dates)) {
     candidate <- sort(unique(data[[event_col]]))
     candidate <- candidate[-c(1, length(candidate))]                 # drop the very ends
+    # Keep only candidates whose truth is (plausibly) complete.
+    cand_evnum <- .unit_steps(min_event, candidate, event_unit)
+    candidate  <- candidate[cand_evnum <= cutoff_evnum]
+    if (length(candidate) == 0L)
+      cli::cli_abort(c("No evaluation dates with a complete eventual count.",
+                       "i" = "The series is shorter than {.code max_delay} = {max_delay} event units; pass {.code max_delay} explicitly to override."))
     if (!is.null(seed)) set.seed(seed)
     dates <- sort(candidate[round(seq(1, length(candidate), length.out = min(n_dates, length(candidate))))])
+  } else if (is.finite(max_delay)) {
+    # Drop user-supplied dates whose truth is not yet complete (with a heads-up).
+    dates       <- sort(as(dates, class(data[[event_col]])[1]))
+    dates_evnum <- .unit_steps(min_event, dates, event_unit)
+    too_recent  <- dates_evnum > cutoff_evnum
+    if (any(too_recent)) {
+      cli::cli_warn(c(
+        "Dropping {sum(too_recent)} evaluation date{?s} within {max_delay} event unit{?s} of the last report (truth not yet complete).",
+        "i" = "Pass {.code max_delay = Inf} to keep them."))
+      dates <- dates[!too_recent]
+    }
+    if (length(dates) == 0L) cli::cli_abort("All supplied `dates` were dropped as too recent; pass `max_delay = Inf` to keep them.")
   }
 
   # Eventual truth: total incidence per event-time over ALL reports in `data`.

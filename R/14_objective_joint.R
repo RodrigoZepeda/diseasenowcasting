@@ -74,6 +74,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     case_counts = data$case_counts, d_star = data$d_star,           # [n_time x n_strata] matrices
     n_time = n_time, n_strata = n_strata, is_hierarchical = as.integer(is_hierarchical),
     obs_delays = data$obs_delays, row_sums = data$row_sums_exact,
+    obs_delays_cens = data$obs_delays_cens %||% numeric(0),
+    row_sums_cens   = data$row_sums_cens   %||% numeric(0),
     split_delay = max(2, .wtd_median(data$m[, 3], data$m[, 2])),
     X = data$X, hsgp_basis_matrix = hsgp_basis_matrix, hsgp_frequencies = hsgp_frequencies,
     gp_kernel = data$gp_kernel,
@@ -294,6 +296,13 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       loglik_delay <- if (is_nonparametric == 1L) sum(row_sums * np_fns$log_pmf_raw(obs_delays))
                       else .discretised_delay_loglik(obs_delays, row_sums, split_delay,
                                                      delay_fns$log_cdf, delay_fns$log_survival)
+    }
+    # Right-censored delays: we only know the delay is <= j, contributing
+    # log G_D(j) (the article's m_j^* term). G_D = CDF of the delay process.
+    if (delay_fully_fixed == 0L && length(obs_delays_cens) > 0) {
+      log_cdf_cens <- if (is_nonparametric == 1L) np_fns$log_cdf(obs_delays_cens)
+                      else delay_fns$log_cdf(obs_delays_cens)
+      loglik_delay <- loglik_delay + sum(row_sums_cens * log_cdf_cens)
     }
 
     # -- priors --------------------------------------------------------------

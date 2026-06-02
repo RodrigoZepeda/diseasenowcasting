@@ -8,6 +8,7 @@
   object,
   new_data,
   type = c("both", "count", "delay"),
+  level = 0.99,
   n_draws = 500L,
   seed = NULL
 )
@@ -18,6 +19,8 @@
 \item{new_data}{See \code{\link[=surprise]{surprise()}}.}
 
 \item{type}{See \code{\link[=surprise]{surprise()}}.}
+
+\item{level}{See \code{\link[=surprise]{surprise()}}.}
 
 \item{n_draws}{See \code{\link[=surprise]{surprise()}}.}
 

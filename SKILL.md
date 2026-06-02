@@ -236,6 +236,10 @@ bt <- backtest(
   dates  = NULL,                 # vector of Date; NULL = n_dates evenly spaced
   n_dates = 20,
   type   = "one_stage",
+  max_delay = NULL,              # truth-completeness horizon (event units);
+                                 #   NULL = 99th pct of observed delays. Dates
+                                 #   within max_delay of the last report are
+                                 #   dropped (truth not yet complete). Inf = keep all.
   n_draws = 1000,
   K = 25,
   return_simulations = FALSE,    # if TRUE, @simulations slot populated
@@ -243,7 +247,7 @@ bt <- backtest(
   ...
 )
 # Returns backtest_class; parallelised via doFuture (%dofuture%)
-# Set plan(multisession, workers=8) before calling for parallel execution
+# Set future::plan(multisession, workers=8) before calling for parallel execution
 ```
 
 ### score()
@@ -261,6 +265,53 @@ score(bt, metric = c("wis", "ape", "mse"), report = TRUE)
 autoplot(bt)     # faceted by model; median + 50%/90% ribbons vs final truth
 autoplot(pred)   # single nowcast
 ```
+
+---
+
+## 6b. Surprise (anomaly detection) and censoring
+
+### surprise() — is new data surprising under the fit?
+
+```r
+# type "count": new_data has columns event_index (0-indexed), count
+# type "delay": new_data has columns delay (event units), optional weight
+# type "both" (default): supply both. level = credible level (default 0.99).
+s <- surprise(nc, new_data, type = "both", level = 0.99, n_draws = 500)
+s$count_surprise   # event_index, observed, ppp_right/left, direction (high/low), is_surprising
+s$delay_surprise   # delay, mean_tail_prob (P(D>=d)), cdf_prob (P(D<=d)), direction (long/short), is_surprising
+```
+
+### update() computes surprise automatically + warns
+
+```r
+nc2 <- update(nc, new_rows, surprise_level = 0.99)   # warns if counts/delays are surprising
+surprise_result(nc2)                                  # the full diseasenowcasting_surprise table
+update(nc, new_rows, compute_surprise = FALSE)        # silent
+```
+
+`update()` scores **count revisions** (recent event-times whose total changed)
+and **new report delays** against the previous fit, and raises a cli warning
+naming exactly what was surprising (count too high/low, delay too long/short).
+
+### Censoring an outlier delay (m_censored)
+
+A report flagged `is_censored` contributes `log G_D(j)` (delay <= j, an upper
+bound) instead of the exact-delay term — so an extreme outlier delay stops
+distorting the fitted delay distribution.  `nowcast()` reads the tbl_now's
+`is_censored` column automatically (both the delay-only and joint objectives
+handle it).
+
+```r
+# Flag every report whose delay exceeds a bound as censored, then re-fit:
+tn2 <- censor_delays_above(tn, max_delay = 45)   # sets is_censored = TRUE for delay > 45
+nc  <- nowcast(tn2, model())                      # uses the censored delays
+
+# Or set is_censored yourself when building the tbl_now:
+# tbl.now::tbl_now(df, ..., is_censored = my_logical_column)
+```
+
+The typical loop: fit -> `update()` warns "delay too long" -> `censor_delays_above()`
+-> re-fit (better-calibrated delay distribution, often better WIS for one-stage fits).
 
 ---
 

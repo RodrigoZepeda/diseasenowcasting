@@ -76,9 +76,23 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE, ..
   }
   num_strata <- length(cell_levels)
 
-  m <- cbind(event_num + 1L, counts, delay_num + 1L, cell_index)
-  m <- m[order(m[, 1], m[, 4], m[, 3]), , drop = FALSE]
-  storage.mode(m) <- "double"
+  m_all <- cbind(event_num + 1L, counts, delay_num + 1L, cell_index)
+  storage.mode(m_all) <- "double"
+
+  # -- censored observations (delay known only up to an upper bound) ------------
+  # tbl.now marks these with an is_censored column; for such rows the recorded
+  # `.delay` is the UPPER BOUND j, and the likelihood uses log G_D(j) (the case
+  # arrived with delay <= j) instead of the exact-delay term.  They are split
+  # out into `m_censored`; everything else is an exact observation in `m`.
+  cens_col <- tryCatch(tbl.now::get_is_censored(data), error = function(e) character(0))
+  is_cens  <- if (length(cens_col) == 1L && cens_col %in% names(incidence)) {
+    v <- as.logical(incidence[[cens_col]]); v[is.na(v)] <- FALSE; v
+  } else rep(FALSE, nrow(m_all))
+
+  m          <- m_all[!is_cens, , drop = FALSE]
+  m_censored <- m_all[ is_cens, , drop = FALSE]
+  if (nrow(m) > 0)          m          <- m[order(m[, 1], m[, 4], m[, 3]), , drop = FALSE]
+  if (nrow(m_censored) > 0) m_censored <- m_censored[order(m_censored[, 1], m_censored[, 4], m_censored[, 3]), , drop = FALSE]
   d_star <- matrix(rev(seq_len(max_time)) - 1L, ncol = 1L)
 
   # Time-grid covariate matrix X computed DETERMINISTICALLY on the full grid.
@@ -89,7 +103,9 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE, ..
   # observed data alone would (incorrectly) leave those rows at zero.
   X <- .temporal_effect_matrix(data, min_event, event_unit, max_time, effect_cols)
 
-  engine <- prepare_data(model, m, X = X, d_star = d_star, max_time = max_time,
+  engine <- prepare_data(model, m,
+                         m_censored = if (nrow(m_censored) > 0) m_censored else NULL,
+                         X = X, d_star = d_star, max_time = max_time,
                          num_strata = num_strata, delay_only = delay_only, ...)
   list(data = engine, now = now, event_col = event_col, min_event = min_event,
        event_unit = event_unit, max_time = max_time,

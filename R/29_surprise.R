@@ -46,9 +46,13 @@
 #'     `ppp_left`, `relative_surprise`.
 #'   - `$delay_surprise` (data.frame): one row per delay value with
 #'     `delay`, `tail_prob` (= 1 - G_D(delay)), `lpd`, `relative_surprise`.
+#' @param level Credible level used to flag surprises (default `0.99`).  A count
+#'   is flagged when it falls in the outer `(1 - level)/2` tail of the posterior
+#'   predictive (too high or too low); a delay is flagged when `P(D >= d)` or
+#'   `P(D <= d)` is below `1 - level` (surprisingly long or short).
 #' @export
 surprise <- function(object, new_data, type = c("both", "count", "delay"),
-                     n_draws = 500L, seed = NULL) {
+                     level = 0.99, n_draws = 500L, seed = NULL) {
   UseMethod("surprise")
 }
 
@@ -61,11 +65,11 @@ surprise.default <- function(object, ...) {
 #' @noRd
 S7::method(surprise, nowcast_class) <- function(object, new_data,
                                                   type = c("both","count","delay"),
-                                                  n_draws = 500L, seed = NULL) {
+                                                  level = 0.99, n_draws = 500L, seed = NULL) {
   type <- match.arg(type)
   if (!is.null(seed)) set.seed(seed)
   fit    <- object@fits[[1]]
-  .surprise_internal(fit, new_data, type, n_draws, seed)
+  .surprise_internal(fit, new_data, type, level, n_draws, seed)
 }
 
 #' Surprise score on a raw fit() result
@@ -73,22 +77,25 @@ S7::method(surprise, nowcast_class) <- function(object, new_data,
 #' @param object A list returned by [fit()].
 #' @param new_data See [surprise()].
 #' @param type See [surprise()].
+#' @param level See [surprise()].
 #' @param n_draws See [surprise()].
 #' @param seed See [surprise()].
 #' @export
 surprise.list <- function(object, new_data, type = c("both","count","delay"),
-                          n_draws = 500L, seed = NULL) {
+                          level = 0.99, n_draws = 500L, seed = NULL) {
   if (!is.null(object$obj)) {
     type <- match.arg(type)
     if (!is.null(seed)) set.seed(seed)
-    .surprise_internal(object, new_data, type, n_draws, seed)
+    .surprise_internal(object, new_data, type, level, n_draws, seed)
   } else {
     cli::cli_abort("Unrecognized list -- expected a fit() result.")
   }
 }
 
 # -- Internal engine -----------------------------------------------------------
-.surprise_internal <- function(fit, new_data, type, n_draws, seed) {
+.surprise_internal <- function(fit, new_data, type, level = 0.99, n_draws, seed) {
+  count_tail <- (1 - level) / 2     # two-sided tail for counts
+  delay_tail <- (1 - level)         # one-sided tail for delays
   data   <- fit$data
   priors <- fit$priors
   family <- data$delay_family
@@ -157,7 +164,11 @@ surprise.list <- function(object, new_data, type = c("both","count","delay"),
       )
     })
     count_result <- do.call(rbind, rows)
-    count_result$is_surprising <- count_result$relative_surprise < 0.10   # rho < 0.10 = surprising
+    # Two-sided flag at the chosen level: observed count in the outer tail.
+    too_high <- !is.na(count_result$ppp_right) & count_result$ppp_right < count_tail
+    too_low  <- !is.na(count_result$ppp_left)  & count_result$ppp_left  < count_tail
+    count_result$direction    <- ifelse(too_high, "high", ifelse(too_low, "low", ""))
+    count_result$is_surprising <- too_high | too_low
   }
 
   # -- TYPE 2: delay surprise ------------------------------------------------
@@ -208,7 +219,7 @@ surprise.list <- function(object, new_data, type = c("both","count","delay"),
             else .delay_distribution_functions(family, rc$delay_mu, rc$delay_sigma)
           }, error = function(e) NULL)
         if (is.null(fns)) return(NA_real_)
-        pmax(0, as.numeric(fns$cdf(d_new + 0.5)) - as.numeric(fns$cdf(d_new - 0.5)))
+        pmax(0, as.numeric(fns$cdf(d_new + 0.5)) - as.numeric(fns$cdf(pmax(0, d_new - 0.5))))
       }, numeric(1)), na.rm = TRUE) + 1e-12
 
       mode_pmf <- max(vapply(seq_len(ncol(par_draws)), function(i) {
@@ -229,39 +240,44 @@ surprise.list <- function(object, new_data, type = c("both","count","delay"),
         pmax(0, as.numeric(fns$cdf(mode_d + 0.5)) - as.numeric(fns$cdf(pmax(0, mode_d - 0.5))))
       }, numeric(1)), na.rm = TRUE) + 1e-12
 
+      mean_cdf  <- 1 - mean_tail                # P(D <= d_new) = G_D(d_new)
+      too_long  <- mean_tail < delay_tail        # surprisingly late report
+      too_short <- mean_cdf  < delay_tail        # surprisingly early report
       data.frame(
         delay              = d_new,
         weight             = delay_wts[r],
-        mean_tail_prob     = round(mean_tail, 6),
+        mean_tail_prob     = round(mean_tail, 6),   # P(D >= d)
+        cdf_prob           = round(mean_cdf, 6),    # P(D <= d)
         lpd                = round(log(pmf_approx), 4),
         relative_surprise  = round(pmax(0, pmin(1, exp(log(pmf_approx) - log(mode_pmf)))), 4),
-        is_surprising      = mean_tail < 0.01   # tail prob < 1%
+        direction          = ifelse(too_long, "long", ifelse(too_short, "short", "")),
+        is_surprising      = too_long | too_short
       )
     })
     delay_result <- do.call(rbind, rows)
   }
 
   structure(list(count_surprise = count_result, delay_surprise = delay_result,
-                 type = type, n_draws = n_draws),
+                 type = type, level = level, n_draws = n_draws),
             class = "diseasenowcasting_surprise")
 }
 
 #' @export
 print.diseasenowcasting_surprise <- function(x, ...) {
-  cli::cli_h2("diseasenowcasting surprise scores (type: {x$type}, n_draws: {x$n_draws})")
+  cli::cli_h2("diseasenowcasting surprise scores (type: {x$type}, level: {x$level %||% 0.99})")
   if (!is.null(x$count_surprise)) {
     cli::cli_h3("Count surprise")
     print(x$count_surprise, row.names = FALSE)
     n_surp <- sum(x$count_surprise$is_surprising, na.rm = TRUE)
-    if (n_surp > 0) cli::cli_alert_warning("{n_surp} event(s) flagged as surprising (relative_surprise < 0.10).")
+    if (n_surp > 0) cli::cli_alert_warning("{n_surp} event-time{?s} flagged as surprising (count too high/low).")
     else cli::cli_alert_success("No surprisingly unusual counts detected.")
   }
   if (!is.null(x$delay_surprise)) {
     cli::cli_h3("Delay surprise")
     print(x$delay_surprise, row.names = FALSE)
     n_surp <- sum(x$delay_surprise$is_surprising, na.rm = TRUE)
-    if (n_surp > 0) cli::cli_alert_warning("{n_surp} delay(s) flagged as surprisingly long (tail prob < 1%).")
-    else cli::cli_alert_success("No surprisingly long delays detected.")
+    if (n_surp > 0) cli::cli_alert_warning("{n_surp} delay{?s} flagged as surprising (too long/short).")
+    else cli::cli_alert_success("No surprisingly long/short delays detected.")
   }
   invisible(x)
 }

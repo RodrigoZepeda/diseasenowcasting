@@ -55,7 +55,8 @@ test_that("update() merges new data and refits to a longer series", {
   tn_old <- tbl.now::tbl_now(d_old, event_date = onset, report_date = reported, data_type = "linelist")
   mdl <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
   nc  <- nowcast(tn_old, mdl, type = "one_stage", n_draws = 300, seed = 1)
-  nc2 <- update(nc, new_rows)
+  # update() now warns about surprising new data; not what this test checks.
+  nc2 <- suppressWarnings(update(nc, new_rows, compute_surprise = FALSE))
 
   expect_true(S7::S7_inherits(nc2, diseasenowcasting:::nowcast_class))
   expect_true(nc2@target > nc@target)                 # series grew

@@ -1,0 +1,187 @@
+---
+title: "Handling Outlier Delays with Censoring"
+author: "diseasenowcasting package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Handling Outlier Delays with Censoring}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, warning = FALSE,
+  fig.width = 8, fig.height = 4,
+  collapse = TRUE, comment = "#>"
+)
+set.seed(1)
+```
+
+```{r load}
+library(diseasenowcasting)
+library(tbl.now)
+library(dplyr)
+```
+
+## The problem: a single absurd delay
+
+Real surveillance data contain the occasional report with an enormous reporting
+delay — a case entered into the system months after it occurred.  In the
+Colombia COVID-19 data (`covid_colombia`) the bulk of reports arrive within a
+week or two, but a handful take **more than 300 days**:
+
+```{r delay-hist, fig.cap="Reporting-delay distribution of COVID-19 Colombia. A few reports arrive hundreds of days late."}
+library(ggplot2)
+covid_colombia |>
+  mutate(delay = as.numeric(diagnosis_date - notification_date)) |>
+  filter(delay >= 0) |>
+  ggplot(aes(delay)) +
+  geom_histogram(binwidth = 5, fill = dn_palette()["reported"]) +
+  scale_y_sqrt() +
+  labs(x = "Reporting delay (days)", y = "Reports (sqrt scale)",
+       title = "Most reports are quick; a long tail of extreme delays") +
+  theme_diseasenowcasting()
+```
+
+When a parametric delay model (log-normal, gamma, …) is fit to data containing
+such an outlier, the extreme value **drags the estimated delay distribution to
+the right**.  The model then believes delays are longer than they really are,
+inflates the most recent nowcasts, and scores worse.
+
+The mathematical framework behind `diseasenowcasting` offers a principled fix
+(Zepeda-Tello & Shaman, 2025, §"Missing report dates"): treat such a report as
+**right-censored**.  Instead of telling the model "this case had delay exactly
+330", we tell it only "this case arrived *by* delay 330" — i.e. its delay is an
+**upper bound**.  In the likelihood the report then contributes
+\eqn{\log G_D(330)} (which is \eqn{\approx \log 1 = 0} for any sensible delay
+distribution) instead of the tiny tail density \eqn{\log \Delta G_D(330)}.  The
+outlier stops distorting the fit.
+
+## Step 1 — fit a model and discover the surprise
+
+We work with an early-pandemic window and fit a one-stage nowcast.
+
+```{r fit-window}
+covid <- covid_colombia |>
+  filter(notification_date <= as.Date("2020-07-15")) |>
+  group_by(notification_date, diagnosis_date) |>
+  summarise(n = sum(n), .groups = "drop")
+
+tn <- tbl_now(covid,
+              event_date  = notification_date,
+              report_date = diagnosis_date,
+              case_count  = n,
+              data_type   = "count-incidence",
+              verbose     = FALSE)
+
+mdl <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
+nc  <- nowcast(tn, mdl, now = as.Date("2020-05-01"),
+               type = "one_stage", n_draws = 500,
+               temporal_effects = "none", seed = 1)
+```
+
+Now imagine the next batch of data arrives and it contains a report with a
+330-day delay.  `update()` automatically scores the new data against the old
+fit and **warns** when something is surprising:
+
+```{r surprise, warning=TRUE}
+new_batch <- data.frame(
+  notification_date = as.Date("2020-05-02"),
+  diagnosis_date    = as.Date("2020-05-02") + 330   # an absurd 330-day delay
+)
+
+nc_updated <- update(nc, new_batch, now = as.Date("2020-05-03"),
+                     temporal_effects = "none")
+```
+
+The warning tells us *exactly* what was unexpected (a reporting delay far longer
+than the model expects) and suggests the remedy.  The full table is available
+via `surprise_result()`:
+
+```{r surprise-table}
+sr <- surprise_result(nc_updated)
+subset(sr$delay_surprise, is_surprising)
+```
+
+## Step 2 — censor the outlier and re-fit
+
+We follow the warning's advice: flag every report whose delay exceeds a sensible
+bound (here 45 days, comfortably above the 99th percentile of ~50 days) as
+censored.  `censor_delays_above()` does this — it sets `is_censored = TRUE` for
+those reports, turning their delay into an upper bound.  `nowcast()` then reads
+the `is_censored` flag automatically.
+
+```{r censor}
+tn_censored <- censor_delays_above(tn, max_delay = 45)
+```
+
+```{r refit}
+nc_plain    <- nowcast(tn,          mdl, now = as.Date("2020-05-01"),
+                       type = "one_stage", n_draws = 500,
+                       temporal_effects = "none", seed = 1)
+nc_censored <- nowcast(tn_censored, mdl, now = as.Date("2020-05-01"),
+                       type = "one_stage", n_draws = 500,
+                       temporal_effects = "none", seed = 1)
+```
+
+The fitted delay mean drops once the outliers are no longer taken literally:
+
+```{r delay-compare}
+data.frame(
+  fit       = c("plain", "censored"),
+  delay_mu  = round(c(coef(nc_plain)["delay_mu"], coef(nc_censored)["delay_mu"]), 3),
+  delay_sd  = round(c(coef(nc_plain)["delay_sigma"], coef(nc_censored)["delay_sigma"]), 2)
+)
+```
+
+## Step 3 — does it nowcast better?  A backtest
+
+Finally we check that controlling the surprise actually *improves accuracy*.  We
+backtest the same model on the plain data and on the censored data across a set
+of as-of dates, scoring the d\* = 0 nowcast against the eventual truth with the
+Weighted Interval Score (WIS; lower is better).
+
+```{r backtest-compare}
+eval_dates <- as.Date(c("2020-04-15", "2020-05-01", "2020-05-15", "2020-06-01"))
+
+bt_plain <- backtest(tn,          mdl, dates = eval_dates, type = "one_stage",
+                     n_draws = 300, max_delay = Inf, temporal_effects = "none", seed = 1)
+bt_cens  <- backtest(tn_censored, mdl, dates = eval_dates, type = "one_stage",
+                     n_draws = 300, max_delay = Inf, temporal_effects = "none", seed = 1)
+
+rbind(
+  plain    = score(bt_plain, report = FALSE)[, c("wis", "coverage_90")],
+  censored = score(bt_cens,  report = FALSE)[, c("wis", "coverage_90")]
+)
+```
+
+Censoring the handful of outlier delays gives a **lower (better) WIS** without
+hurting coverage: the delay distribution is no longer pulled to the right by a
+few extreme values, so the most recent nowcasts are better calibrated.
+
+## Summary — the surprise → censor → refit loop
+
+```
+1. Fit a nowcast.
+2. New data arrives -> update() scores it and WARNS about surprises.
+3. A "delay too long" warning flags an outlier report.
+4. censor_delays_above(tn, bound) turns its delay into an upper bound.
+5. Re-fit -> the delay distribution is no longer distorted -> better WIS.
+```
+
+This is the practical payoff of modelling the reporting delay as a stochastic
+process with proper censoring rather than a nuisance to be cleaned away: the
+model can *tell you* when an observation does not fit, and the censoring
+machinery lets you respond without discarding data.
+
+> **Note.** The improvement is largest for the **one-stage** fit, whose joint
+> likelihood is directly distorted by outlier delays.  The **two-stage** cascade
+> estimates the delay from a recent window first and is already fairly robust to
+> such outliers, so it benefits less.
+
+## References
+
+- Zepeda-Tello, R. & Shaman, J. (2025). Nowcasting from an epidemic's
+  reporting-delay: a censored regression approach. *Preprint*.
+- Günther, F. et al. (2021). Nowcasting the COVID-19 pandemic in Bavaria.
+  *Biometrical Journal*.

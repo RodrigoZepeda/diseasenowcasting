@@ -35,6 +35,7 @@ articles:
     contents:
       - early_epidemic
       - prior_sensitivity
+      - censored_delays
       - comparison_methods
   - title: "Mathematical background"
     contents:
@@ -54,6 +55,8 @@ reference:
       - nowcast_diagnostic
       - ppc
       - surprise
+      - censor_delays_above
+      - surprise_result
       - update.nowcast_class
 
   - title: "Backtesting and scoring"

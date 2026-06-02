@@ -10,6 +10,7 @@ backtest(
   dates = NULL,
   type = c("two_stage", "one_stage"),
   n_dates = 20L,
+  max_delay = NULL,
   return_simulations = FALSE,
   n_draws = 1000L,
   K = 25L,
@@ -30,6 +31,13 @@ observed range (interior points) is sampled.}
 \item{type}{\code{"two_stage"} (default) or \code{"one_stage"}.}
 
 \item{n_dates}{If \code{dates} is \code{NULL}, how many to sample. Default 20.}
+
+\item{max_delay}{Truth-completeness horizon (in event units).  Event dates
+within \code{max_delay} units of the last report do not yet have a fully
+observed eventual count, so the backtest \strong{excludes} them (their "truth"
+would still be accruing).  Default \code{NULL} uses the 99th percentile of the
+observed reporting delays.  Pass a number to override, or \code{Inf} to evaluate
+every date regardless of completeness.}
 
 \item{return_simulations}{If TRUE, also keep the pooled draw matrix per
 (date, model).  Default FALSE (summaries only: mean/median/sd/quantiles).}

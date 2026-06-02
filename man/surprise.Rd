@@ -8,6 +8,7 @@ surprise(
   object,
   new_data,
   type = c("both", "count", "delay"),
+  level = 0.99,
   n_draws = 500L,
   seed = NULL
 )
@@ -23,6 +24,11 @@ For \code{type = "both"}: supply both sets of columns.}
 
 \item{type}{Which surprise type(s) to compute. One of \code{"count"},
 \code{"delay"}, \code{"both"} (default \code{"both"}).}
+
+\item{level}{Credible level used to flag surprises (default \code{0.99}).  A count
+is flagged when it falls in the outer \code{(1 - level)/2} tail of the posterior
+predictive (too high or too low); a delay is flagged when \code{P(D >= d)} or
+\code{P(D <= d)} is below \code{1 - level} (surprisingly long or short).}
 
 \item{n_draws}{Number of posterior draws (default 500).}
 
