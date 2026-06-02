@@ -142,7 +142,7 @@ $$f(t) \approx \sum_{j=1}^{M} \beta_j\, \phi_j(t)\, \sqrt{S(\lambda_j)},$$
 where $S(\lambda)$ is the spectral density of the kernel evaluated at frequency
 $\lambda_j = j\pi/(2L)$, and $\beta_j \overset{\text{iid}}{\sim} \mathcal{N}(0,1)$.
 
-For the **Matérn 5/2** kernel with amplitude $\alpha$ and length-scale $\ell$:
+For the **Matern 5/2** kernel with amplitude $\alpha$ and length-scale $\ell$:
 $$S(\lambda) = \alpha^2\, \frac{16\, (5/\ell^2)^{5/2}}{3\,(\lambda^2 + 5/\ell^2)^3}.$$
 
 This approximation reduces a $\mathcal{O}(T^3)$ GP computation to
@@ -238,19 +238,19 @@ $\mu_t^{(s)}$ and the GP/AR1/SIR trajectory parameters are **per-stratum**.
 `diseasenowcasting` performs inference via the **joint-mode Laplace approximation** (the
 same regime as `cmdstanr`'s `$laplace()` method).
 
-**Step 1 — MAP estimation.** Minimise the negative log-posterior
+**Step 1 -- MAP estimation.** Minimise the negative log-posterior
 $$-\ell(\theta) \text{ w.r.t. } \theta$$
 using `nlminb` (L-BFGS-B with analytical gradients via RTMB/CppAD).
 
-**Step 2 — Hessian.** Evaluate $H = -\nabla^2 \ell(\hat\theta)$ (the precision
+**Step 2 -- Hessian.** Evaluate $H = -\nabla^2 \ell(\hat\theta)$ (the precision
 matrix of the Laplace approximation) using RTMB's automatic differentiation.
 
-**Step 3 — Posterior draws.** Sample
+**Step 3 -- Posterior draws.** Sample
 $$\theta^{(i)} \sim \mathcal{N}(\hat\theta,\; H^{-1}), \quad i = 1, \ldots, B,$$
 via a sparse Cholesky factorisation of $H$ (a PD ridge is added if $H$ is
 indefinite at the mode).
 
-**Step 4 — Predictive draws.** For each $\theta^{(i)}$:
+**Step 4 -- Predictive draws.** For each $\theta^{(i)}$:
 $$\lambda_t^{(i)} = \exp\!\bigl(\text{cap}\bigl(\mu_t^{(i)}\bigr)\bigr),
 \quad G^*{}^{(i)}_t = G_D\!\bigl(d^*_t + 1 \mid \theta_t^{(i)}\bigr),$$
 $$\text{Nowcast}_t^{(i)} = k_t + \mathrm{NB}\!\bigl(\lambda_t^{(i)}(1 - G^*{}^{(i)}_t),\; \phi^{(i)}\bigr),$$
@@ -286,7 +286,7 @@ addresses this via **multiple imputation**:
 ## 8. Connection to the reporting triangle
 
 Classical nowcasting (e.g. NobBS) reconstructs the full **reporting triangle**
-$\{n_{t,d}\}$ — the count of cases with event time $t$ and delay $d$ — and uses
+$\{n_{t,d}\}$ -- the count of cases with event time $t$ and delay $d$ -- and uses
 it to estimate $N_t$.  Our approach avoids this by observing that the likelihood
 depends only on the *marginal* delay counts $\{m_l\}$ and the survival probability
 $G_D(d^* \mid \theta)$, not on the full joint distribution.  This reformulation:
@@ -302,7 +302,7 @@ $G_D(d^* \mid \theta)$, not on the full joint distribution.  This reformulation:
 
 - Bracher, J. et al. (2021). Evaluating epidemic forecasts in an interval format.
   *PLOS Computational Biology*. <https://doi.org/10.1371/journal.pcbi.1008618>
-- Günther, F. et al. (2021). Nowcasting the COVID-19 pandemic in Bavaria.
+- Gunther, F. et al. (2021). Nowcasting the COVID-19 pandemic in Bavaria.
   *Biometrical Journal*. <https://doi.org/10.1002/bimj.202000112>
 - McGough, S. F. et al. (2020). Nowcasting by Bayesian Smoothing.
   *PLOS Computational Biology*. <https://doi.org/10.1371/journal.pcbi.1007735>

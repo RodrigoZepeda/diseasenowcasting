@@ -69,7 +69,7 @@ dengue_tbl
 
 Once your data is a `tbl_now`, a single call to `nowcast()` does the rest.
 
-## Example 1 — Dengue fever (weekly, Puerto Rico)
+## Example 1 -- Dengue fever (weekly, Puerto Rico)
 
 We fit a stratified nowcast to illustrate the basic workflow. 
 
@@ -86,7 +86,7 @@ autoplot(nc_dengue)
 
 The shaded bars show the median while the errorbar has the 90 % credible intervals.  
 
-Values can be obtained via [predict()] and [summary()]:
+Values can be obtained via `predict()` and `summary()`:
 
 ```{r dengue-results}
 # Full posterior-predictive nowcast at every event-time
@@ -97,16 +97,14 @@ summary(pred_dengue) |> tail(6)   # last 6 weeks
 ```
 
 
-Additionally the [nowcast_diagnostic()] shows the fitted distribution for the delay
+Additionally the `nowcast_diagnostic()` shows the fitted distribution for the delay, the smoothed epidemic process as well as the aggregated nowcast (for the sum of all strata):
 
 ```{r dengue-diagnostic}
 nowcast_diagnostic(nc_dengue) 
 ```
 
 
----
-
-## Example 2 — Mpox (daily, USA, stratified by race)
+## Example 2 -- Mpox (daily, USA, stratified by race)
 
 The `mpoxdat` dataset (also in `tbl.now`) covers the 2022 mpox outbreak in New York City
 with daily case counts stratified by race.  We use the
@@ -115,8 +113,10 @@ window of data; Stage 2 uses multiple imputations of that delay to fit the
 epidemic, correctly propagating delay uncertainty into the final estimates.
 
 ```{r mpox-prep}
-mp <- tbl_now(
-  as.data.frame(mpoxdat),
+data(mpoxdat)
+
+mpox_tbl <- tbl_now(
+  mpoxdat,
   event_date  = dx_date,
   report_date = dx_report_date,
   case_count  = n,
@@ -125,42 +125,53 @@ mp <- tbl_now(
 ) 
 ```
 
-A simple plot of the data shows that we should be taking into account daily effects. Although the model automatically tries to do it, we can also set it with [add_temporal_effects()]:
+A simple plot of the data shows that we should be taking into account daily effects. 
+
+```{r mpoxplot}
+ggplot(mpox_tbl) +
+  geom_col(aes(x = dx_date, y = n), fill = "#5F7E62") +
+  labs(x = "Event date", y = "Case count") +
+  theme_diseasenowcasting() 
+```
+
+
+Although the model automatically tries to do it, we can also set it with `add_temporal_effects()`:
 
 ```{r}
-mp <- mp |> 
+mpox_tbl <- mpox_tbl |> 
   add_temporal_effects(temporal_effects(day_of_week = TRUE))
 ```
 
+You can see that the `tbl_now` indicates its computation:
+
 ```{r, echo = FALSE}
-mp
+mpox_tbl
 ```
 
 One can also choose between several likelihoods, epidemic processess and delay distributions
-and feed it into the [model()]. Here we use a Suceptible-Infected-Recovered model (SIR) with
+and feed it into the `model()`. Here we use a Suceptible-Infected-Recovered model (SIR) with
 a delay that follows a lognormal distribution:
 
 ```{r mpox-fit}
 #Models can be modified via the model() 
 mpox_model <- model(likelihood = nb_likelihood(), epidemic = sir_epidemic(), delay = lognormal_delay())
 
-nc_mpox <- nowcast(mp, model = mpox_model)
+nc_mpox <- nowcast(mpox_tbl, model = mpox_model)
 
 autoplot(nc_mpox) 
 ```
 
 
-## Example 3 — Comparing models with a backtest
+## Example 3 -- Comparing models with a backtest
 
 A **backtest** reruns nowcasts at multiple historical dates and scores them
 against the eventually-observed totals.  This lets you objectively compare
 model families before committing to one for real-time monitoring.
 
-**Parallel execution.** `backtest()` fits one nowcast per (date × model) cell,
-and those cells run in parallel through the
-[future](https://future.futureverse.org/) framework.  By default they run
-sequentially; to use several CPU cores, set a parallel plan *before* calling
-`backtest()`:
+The `backtest()` fits one nowcast per (`date` x `model`) cell. Those cells run 
+in parallel through the [future](https://future.futureverse.org/) framework.  
+By default they run sequentially; to use several CPU cores, 
+set a parallel plan *before* calling `backtest()`:
 
 ```{r backtest-plan, eval=FALSE}
 library(future)
@@ -168,6 +179,10 @@ plan(multisession, workers = 4)   # 4 parallel R sessions
 # ... run backtest() ...
 plan(sequential)                  # restore serial execution when done
 ```
+
+In what follows we run a backtest in sequential mode however we
+strongly recommend using as many workers in a multisession plan
+as possible:
 
 ```{r backtest}
 # Compare HSGP (flexible GP trend) vs AR1 (autoregressive trend) 
@@ -178,25 +193,22 @@ models_to_compare <- list(
   model(nb_likelihood(), sir_epidemic(),  lognormal_delay())
 )
 
-bt <- backtest(
-  mp,
+backtest_mpox <- backtest(
+  mpox_tbl,
   models  = models_to_compare,
   n_dates = 5, #Test 3 dates at random from the mpox data
-  type    = "two_stage",
   seed    = 42
 )
 ```
 
 ```{r score}
-# Rank by Weighted Interval Score (WIS) — lower is better
-score(bt, metric = "wis", report = TRUE)
+# Rank by Weighted Interval Score (WIS) -- lower is better
+score(backtest_mpox, metric = "wis", report = TRUE)
 ```
 
 The `score()` output shows WIS, absolute percentage error (APE), and empirical
 coverage at 50 % and 90 %.  A well-calibrated nowcast should have coverage close
-to these nominal levels.
-
-
+to these levels.
 
 ## Next steps
 

@@ -32,7 +32,7 @@ library(dplyr)
 Nowcasting at the very start of an epidemic is fundamentally different from
 nowcasting in a well-established outbreak.  When only a handful of cases have
 been reported, the data are almost completely uninformative about the future
-trajectory — and the model's **priors** dominate the posterior.  This vignette
+trajectory -- and the model's **priors** dominate the posterior.  This vignette
 shows you:
 
 1. How a discrete SIR model generates an epidemic curve (synthetic data).
@@ -45,7 +45,7 @@ shows you:
 
 ---
 
-## Part 1 — Synthetic SIR: the epidemic engine
+## Part 1 -- Synthetic SIR: the epidemic engine
 
 ### 1.1 The discrete-time SIR model
 
@@ -63,7 +63,7 @@ day $t$ are drawn from
 $$\text{Cases}_t \sim \text{NB}\!\left(\mu_t = \beta I_t S_t / N, \; \phi\right)$$
 
 with reporting delays drawn from a $\text{LogNormal}(\log 5, 3)$ distribution
-(mean delay ≈ 5 days, heavy right tail).
+(mean delay approx. 5 days, heavy right tail).
 
 ```{r sir-simulator}
 # Discrete SIR simulator with negative-binomial noise and lognormal delays
@@ -101,17 +101,17 @@ simulate_sir_epidemic <- function(R0, gamma = 0.1, N = 5000,
 }
 ```
 
-### 1.2 Effect of R₀ on the epidemic curve
+### 1.2 Effect of R0 on the epidemic curve
 
 The reproduction number $R_0$ governs the epidemic speed, height, and timing of
 the peak.  Small changes in $R_0$ produce very different outbreak profiles:
 
-```{r r0-curves, fig.cap="Simulated epidemic curves for different R₀ values. All other parameters fixed (γ=0.1, N=5000, 80 days)."}
+```{r r0-curves, fig.cap="Simulated epidemic curves for different R0 values. All other parameters fixed (gamma=0.1, N=5000, 80 days)."}
 r0_values <- c(1.5, 2.0, 3.0, 4.0)
 sir_sims  <- lapply(r0_values, function(r0) {
   sim <- simulate_sir_epidemic(R0 = r0, seed = r0 * 10)
   data.frame(day = seq_along(sim$incidence), cases = sim$incidence,
-             R0 = paste0("R₀ = ", r0))
+             R0 = paste0("R0 = ", r0))
 })
 sir_df <- do.call(rbind, sir_sims)
 
@@ -119,23 +119,23 @@ ggplot(sir_df, aes(x = day, y = cases, colour = R0)) +
   geom_line(linewidth = 1) +
   scale_colour_brewer(palette = "RdYlBu", direction = -1) +
   labs(x = "Day", y = "Daily cases (observed, with noise)",
-       colour = NULL, title = "Discrete SIR epidemic curves by R₀") +
+       colour = NULL, title = "Discrete SIR epidemic curves by R0") +
   theme_minimal(base_size = 11)
 ```
 
-A key observation: **at day 1–7, all four curves look almost identical** — you
+A key observation: **at day 1-7, all four curves look almost identical** -- you
 cannot distinguish $R_0 = 1.5$ from $R_0 = 4$ from the data alone.  This is
 where the SIR prior becomes essential.
 
 ---
 
-## Part 2 — Prior choices at the start of an epidemic
+## Part 2 -- Prior choices at the start of an epidemic
 
 ### 2.1 The SIR model: mechanistic priors
 
 When data are scarce, the SIR model imposes structural constraints:
 - **R0**: Set a biologically plausible range.  For respiratory diseases, $R_0 \in [1, 5]$; for highly transmissible diseases (COVID, measles), $R_0 \in [2, 8]$.
-- **γ (recovery rate)**: Set to match the known infectious period ($\gamma = 1 / \text{infectious period}$).  For COVID, ~5 days → $\gamma \approx 0.2$.
+- **gamma (recovery rate)**: Set to match the known infectious period ($\gamma = 1 / \text{infectious period}$).  For COVID, ~5 days -> $\gamma \approx 0.2$.
 - **N_eff**: The effective susceptible population.  At the start, often close to 1 (fully susceptible).
 
 ```{r sir-priors}
@@ -156,14 +156,14 @@ sir_model <- model(
 
 **Interpretation:** This SIR prior says "I expect this epidemic to grow, with a
 reproduction number around 2.5, and cases typically reported with ~5 day delay."
-Even with just 1–5 data points, the SIR model can produce a *plausible* forecast
+Even with just 1-5 data points, the SIR model can produce a *plausible* forecast
 because the epidemic shape is constrained by the mechanistic structure.
 
 ### 2.2 The AR(1) model: trend priors
 
 The AR(1) model places a prior on the *trend* rather than on epidemiological
 parameters.  At the start of an epidemic, you should:
-- Set **ar_phi** close to 1 (persistence) — the trend should carry forward.
+- Set **ar_phi** close to 1 (persistence) -- the trend should carry forward.
 - Set **ar_sigma** based on how fast you expect the trend to change.
 
 ```{r ar1-priors}
@@ -177,7 +177,7 @@ ar1_model <- model(
 )
 ```
 
-**Caveat:** AR(1) needs at least 10–15 data points to estimate the trend
+**Caveat:** AR(1) needs at least 10-15 data points to estimate the trend
 reliably.  With fewer, it collapses toward the intercept prior.
 
 ### 2.3 The HSGP model: kernel priors
@@ -198,13 +198,13 @@ hsgp_model <- model(
 )
 ```
 
-**The HSGP requires the most data** to be reliable.  With < 20–30 observations,
+**The HSGP requires the most data** to be reliable.  With < 20-30 observations,
 it tends to produce very wide intervals that reflect genuine uncertainty but offer
 little guidance.
 
 ---
 
-## Part 3 — COVID-19 Colombia: growing from 1 day to 3 months
+## Part 3 -- COVID-19 Colombia: growing from 1 day to 3 months
 
 ### 3.1 Data preparation
 
@@ -298,7 +298,7 @@ ggplot(plot_data, aes(x = .event_num, colour = epidemic, fill = epidemic)) +
 ### 3.4 Interval width: when does each model become useful?
 
 A practical indicator of model usefulness is the **width of the 90% credible interval
-at d* = 0**.  Very wide intervals mean the model is essentially saying "I don't know" —
+at d* = 0**.  Very wide intervals mean the model is essentially saying "I don't know" --
 still useful for decision-making (it prevents false confidence) but not actionable.
 
 ```{r interval-width, fig.cap="90% credible interval width at d*=0 (newest event). Narrower = more informative."}
@@ -321,7 +321,7 @@ ggplot(d0_rows, aes(x = window, y = ci_width, colour = epidemic, group = epidemi
 
 ---
 
-## Part 4 — When to switch models
+## Part 4 -- When to switch models
 
 The results above, combined with the benchmark comparison in the companion
 vignette, suggest the following heuristic:
@@ -329,25 +329,25 @@ vignette, suggest the following heuristic:
 ### Decision tree
 
 ```
-Is this the first 1–2 weeks of a NEW outbreak?
-   YES → Use SIR with tight epidemiological priors.
+Is this the first 1-2 weeks of a NEW outbreak?
+   YES -> Use SIR with tight epidemiological priors.
           - You need: plausible R0 range, known infectious period, rough N_pop.
-          - Advantage: imposes growth structure even with 1–5 data points.
+          - Advantage: imposes growth structure even with 1-5 data points.
           - Risk: if your R0 prior is badly wrong, the model diverges.
 
-Is the series 2–4 weeks long with a clear growth trend?
-   YES → SIR or AR1 both viable.
+Is the series 2-4 weeks long with a clear growth trend?
+   YES -> SIR or AR1 both viable.
           - AR1 is safer if you're unsure about the pathogen's dynamics.
           - SIR is better if you have strong biological knowledge.
 
 Is the series > 1 month and has the epidemic peaked or changed behaviour?
-   YES → HSGP is preferred.
+   YES -> HSGP is preferred.
           - Handles non-monotone curves (growth + plateau + decline) naturally.
           - AR1 struggles with turning points; SIR assumes one clean peak.
           - Advantage: doesn't require pathogen-specific knowledge.
 
 Is the series > 3 months with multiple waves?
-   YES → HSGP is strongly preferred. AR1 with a long series can work.
+   YES -> HSGP is strongly preferred. AR1 with a long series can work.
           - SIR's single-wave assumption is violated; do not use.
 ```
 
@@ -357,17 +357,17 @@ From the article's simulation study (125-day SIR epidemic, 50 evaluation points)
 
 | Model | Mean WIS | Best delay family |
 |-------|----------|-------------------|
-| HSGP (NB) | 4.68–4.97 | Dirichlet |
-| AR1 (NB)  | 7.46–9.57 | LogNormal |
-| SIR (NB)  | 7.51–9.22 | GenGamma  |
+| HSGP (NB) | 4.68-4.97 | Dirichlet |
+| AR1 (NB)  | 7.46-9.57 | LogNormal |
+| SIR (NB)  | 7.51-9.22 | GenGamma  |
 
 HSGP consistently wins on a fully-observed series.  SIR wins or ties AR1 only
-in the **first 10–15 days** when the mechanistic prior compensates for lack of data.
+in the **first 10-15 days** when the mechanistic prior compensates for lack of data.
 
 ### Practical recommendation
 
 ```r
-# Day 1–14: SIR with tight priors
+# Day 1-14: SIR with tight priors
 mdl_early <- model(
   nb_likelihood(phi = lognormal_prior(log(20), 0.5)),
   sir_epidemic(
@@ -378,7 +378,7 @@ mdl_early <- model(
   lognormal_delay(mu = normal_prior(log(5), 0.5))
 )
 
-# Day 15–30: AR1 (less assumption-dependent)
+# Day 15-30: AR1 (less assumption-dependent)
 mdl_mid <- model(
   nb_likelihood(phi = lognormal_prior(log(20), 0.5)),
   ar1_epidemic(phi = normal_prior(0.7, 0.2), sigma = half_normal_prior(0, 0.5)),
@@ -405,8 +405,8 @@ nc_hsgp <- nowcast(tn, hsgp_model, now = today, type = "one_stage", n_draws = 50
 alpha_est <- coef(nc_hsgp)["log_gp_alpha"]
 ci_width  <- diff(quantile(nc_hsgp, probs = c(0.05, 0.95))[nrow(...), ])
 
-# Rule of thumb: if ci_width > 5 × typical count, data are insufficient for HSGP
-# Switch to SIR or AR1 until ci_width < 3 × typical count
+# Rule of thumb: if ci_width > 5 x typical count, data are insufficient for HSGP
+# Switch to SIR or AR1 until ci_width < 3 x typical count
 ```
 
 ---
@@ -415,10 +415,10 @@ ci_width  <- diff(quantile(nc_hsgp, probs = c(0.05, 0.95))[nrow(...), ])
 
 | Observation period | Recommended model | Key priors to set |
 |---|---|---|
-| 1–7 days | SIR | R0, γ, N_eff, delay_mu |
-| 1–2 weeks | SIR or AR1 | R0 (SIR) or ar_phi/ar_sigma (AR1) |
-| 2–4 weeks | AR1 or SIR | Less critical — data start to dominate |
-| 1–3 months | HSGP or AR1 | gp_alpha, gp_ell (HSGP); default AR1 priors fine |
+| 1-7 days | SIR | R0, gamma, N_eff, delay_mu |
+| 1-2 weeks | SIR or AR1 | R0 (SIR) or ar_phi/ar_sigma (AR1) |
+| 2-4 weeks | AR1 or SIR | Less critical -- data start to dominate |
+| 1-3 months | HSGP or AR1 | gp_alpha, gp_ell (HSGP); default AR1 priors fine |
 | > 3 months / multi-wave | HSGP strongly | Default priors usually adequate |
 
 The transition from mechanistic to data-driven models mirrors the evolution of

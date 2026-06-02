@@ -27,14 +27,13 @@ We compare across three real-world disease surveillance datasets:
 
 | Dataset | Disease | Temporal unit | Source |
 |---------|---------|---------------|--------|
-| `denguedat` (tbl.now) | Dengue fever | Weekly | Colombia |
+| `denguedat` (tbl.now) | Dengue fever | Weekly | Puerto Rico |
 | `mpoxdat` (tbl.now)   | Mpox | Daily | USA 2022 |
-| `covid_colombia` (diseasenowcasting) | COVID-19 | Daily | Colombia 2020–2023 |
+| `covid_colombia` (diseasenowcasting) | COVID-19 | Daily | Colombia 2020-2023 |
 
 The comparison uses **50 evaluation dates** per disease, equally spaced across the
 available history, chosen with a shared random seed for reproducibility.  Forecasts are
-scored at **d* = 0** (the newest event time at each evaluation date) — the hardest and most
-policy-relevant target.
+scored at a 0 delay, that is, the newest event time at each evaluation date. 
 
 ---
 
@@ -44,15 +43,15 @@ All methods are scored using the **Weighted Interval Score (WIS)**, a proper sco
 that simultaneously rewards calibration and sharpness (Bracher et al., 2021).  WIS decomposes
 into:
 
-- **Overprediction** — penalty for predicted intervals that are too high relative to the truth.
-- **Underprediction** — penalty for predicted intervals that are too low.
-- **Dispersion** — penalty for uncertainty intervals that are too wide.
+- **Overprediction** -- penalty for predicted intervals that are too high relative to the truth.
+- **Underprediction** -- penalty for predicted intervals that are too low.
+- **Dispersion** -- penalty for uncertainty intervals that are too wide.
 
 Coverage at 50% and 90% credible intervals is also reported.  A well-calibrated model should
 have empirical coverage close to the nominal level.
 
-All comparisons are performed on a **common date set** — dates where both `diseasenowcasting` and the
-comparison method have produced a valid nowcast — ensuring fairness.
+All comparisons are performed on a **common date set** -- dates where both `diseasenowcasting` and the
+comparison method have produced a valid nowcast -- ensuring fairness.
 
 ---
 
@@ -82,9 +81,9 @@ knitr::kable(dengue_tab, digits = 2, row.names = FALSE,
 **Key findings (dengue):**
 
 - All `diseasenowcasting` HSGP variants beat NobBS and all Epinowcast variants on WIS.
-- Best `diseasenowcasting`: **HSGP / GenGamma**, WIS ≈ 7.0, cov90 ≈ 0.94.
-- NobBS WIS ≈ `r round(sc$wis[sc$disease=="dengue" & grepl("NobBS",sc$model)][1], 1)`, cov90 ≈ `r round(sc$cov90[sc$disease=="dengue" & grepl("NobBS",sc$model)][1], 2)`.
-- Best Epinowcast WIS ≈ `r round(min(sc$wis[sc$disease=="dengue" & grepl("Epinowcast",sc$model)], na.rm=TRUE), 1)`.
+- Best `diseasenowcasting`: **HSGP / GenGamma**, WIS approx. 7.0, cov90 approx. 0.94.
+- NobBS WIS approx. `r round(sc$wis[sc$disease=="dengue" & grepl("NobBS",sc$model)][1], 1)`, cov90 approx. `r round(sc$cov90[sc$disease=="dengue" & grepl("NobBS",sc$model)][1], 2)`.
+- Best Epinowcast WIS approx. `r round(min(sc$wis[sc$disease=="dengue" & grepl("Epinowcast",sc$model)], na.rm=TRUE), 1)`.
 
 ### Mpox (daily, USA)
 
@@ -97,9 +96,9 @@ knitr::kable(mpox_tab, digits = 2, row.names = FALSE,
 
 **Key findings (mpox):**
 
-- `diseasenowcasting` AR1 variants achieve the lowest WIS, beating NobBS by a wide margin (~7×).
-- Best `diseasenowcasting`: **AR1 / Gamma**, WIS ≈ `r round(sc$wis[sc$disease=="mpox" & !sc$is_comparison][1], 1)`, cov90 ≈ `r round(sc$cov90[sc$disease=="mpox" & !sc$is_comparison][1], 2)`.
-- NobBS WIS ≈ `r round(sc$wis[sc$disease=="mpox" & grepl("NobBS",sc$model)][1], 1)` — substantially worse due to poor calibration (cov90 ≈ `r round(sc$cov90[sc$disease=="mpox" & grepl("NobBS",sc$model)][1], 2)`).
+- `diseasenowcasting` AR1 variants achieve the lowest WIS, beating NobBS by a wide margin (~7x).
+- Best `diseasenowcasting`: **AR1 / Gamma**, WIS approx. `r round(sc$wis[sc$disease=="mpox" & !sc$is_comparison][1], 1)`, cov90 approx. `r round(sc$cov90[sc$disease=="mpox" & !sc$is_comparison][1], 2)`.
+- NobBS WIS approx. `r round(sc$wis[sc$disease=="mpox" & grepl("NobBS",sc$model)][1], 1)` -- substantially worse due to poor calibration (cov90 approx. `r round(sc$cov90[sc$disease=="mpox" & grepl("NobBS",sc$model)][1], 2)`).
 - The mpox epidemic has a very short, sharp curve where the AR1 model's local-trend structure outperforms the global GP.
 
 ### COVID-19 (daily, Colombia)
@@ -114,7 +113,7 @@ knitr::kable(covid_tab, digits = 2, row.names = FALSE,
 **Key findings (COVID-19):**
 
 - `diseasenowcasting` beats NobBS on WIS for COVID as well, but the margin depends on the delay family.
-- Best `diseasenowcasting`: **HSGP / GenGamma**, WIS ≈ `r round(sc$wis[sc$disease=="covid" & !sc$is_comparison][1], 0)`, cov90 ≈ `r round(sc$cov90[sc$disease=="covid" & !sc$is_comparison][1], 2)`.
+- Best `diseasenowcasting`: **HSGP / GenGamma**, WIS approx. `r round(sc$wis[sc$disease=="covid" & !sc$is_comparison][1], 0)`, cov90 approx. `r round(sc$cov90[sc$disease=="covid" & !sc$is_comparison][1], 2)`.
 - COVID's long daily series (700+ days) makes the GenGamma delay family advantageous: its flexible shape adapts to the changing delay distribution across epidemic waves.
 
 ---
@@ -186,13 +185,13 @@ knitr::kable(summary_tab, digits = 2, row.names = FALSE,
 ## How to reproduce with backtest()
 
 The results above were generated by running `devel/run_own_models_diseasenowcasting.sh` (which
-parallelises 50-date × 12-model fits via `own_models_diseasenowcasting.R`) and scoring with
+parallelises 50-date x 12-model fits via `own_models_diseasenowcasting.R`) and scoring with
 `devel/score_diseasenowcasting.R`.  You can reproduce the same evaluation methodology at smaller scale
 using `diseasenowcasting`'s built-in `backtest()` function.
 
-`backtest()` fits one nowcast per (date × model) cell and dispatches those cells
+`backtest()` fits one nowcast per (date x model) cell and dispatches those cells
 in parallel via the [future](https://future.futureverse.org/) framework.  It is
-sequential unless you register a parallel plan first — set
+sequential unless you register a parallel plan first -- set
 `future::plan(multisession, workers = N)` before calling `backtest()` to use
 `N` CPU cores (and `future::plan(sequential)` to restore serial execution).
 
@@ -204,7 +203,7 @@ library(future)
 # Set up parallel execution (adjust workers to your CPU count)
 plan(multisession, workers = 8)
 
-# ── Dengue (weekly) ──────────────────────────────────────────────────────────
+# -- Dengue (weekly) ----------------------------------------------------------
 dn <- tbl_now(denguedat, event_date = onset_week, report_date = report_week,
               data_type = "linelist", verbose = FALSE)
 
@@ -234,7 +233,7 @@ autoplot(bt_dengue)
 ```
 
 To add NobBS and Epinowcast as comparison baselines, format their quantile outputs with
-the same `(date_run, .event_num, q2.5…q97.5, final)` column schema and bind them to the
+the same `(date_run, .event_num, q2.5...q97.5, final)` column schema and bind them to the
 `@results` slot of the `backtest_class` object before calling `score()`.
 
 ---
