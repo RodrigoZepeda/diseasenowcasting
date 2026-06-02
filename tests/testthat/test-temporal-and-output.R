@@ -51,6 +51,25 @@ test_that("user-supplied temporal effects are respected (no double-add, no messa
   expect_gt(nc@engine$P, 0L)
 })
 
+test_that("an attached-but-not-computed t_effects spec is respected (no default message)", {
+  # tbl_now(t_effects = ...) attaches the spec but does NOT compute the columns.
+  d  <- .daily_linelist(Tn = 40L, seed = 31)
+  tn <- tbl_now(d, event_date = onset, report_date = reported,
+                data_type = "linelist", verbose = FALSE,
+                t_effects = temporal_effects(day_of_week = TRUE))
+  # No computed columns yet, but a spec is attached:
+  expect_length(tbl.now::get_temporal_effect_cols(tn), 0L)
+  expect_gt(length(tbl.now::get_temporal_effects(tn)), 0L)
+
+  # nowcast() must NOT add defaults, must NOT message, and must still use the effect.
+  expect_no_message(
+    nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
+                  type = "one_stage", n_draws = 100,
+                  now = as.Date("2020-02-09"), seed = 1)
+  )
+  expect_gt(nc@engine$P, 0L)        # the day-of-week covariate was materialised + used
+})
+
 # ── 2. Deterministic full-grid covariates (nowcast past last observation) ─────
 
 test_that(".temporal_effect_matrix spans the full grid and matches wday", {

@@ -15,7 +15,7 @@ backtest(
   n_draws = 1000L,
   K = 25L,
   np_spread = 1,
-  seed = NULL,
+  seed = sample.int(.Machine$integer.max, 1),
   ...
 )
 }

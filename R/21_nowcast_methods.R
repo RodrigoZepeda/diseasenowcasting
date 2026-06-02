@@ -10,7 +10,7 @@
 
 #' @keywords internal
 #' @noRd
-.nowcast_lambda_draws <- function(object, n_draws = NULL, seed = NULL) {
+.nowcast_lambda_draws <- function(object, n_draws = NULL, seed = sample.int(.Machine$integer.max, 1)) {
   if (!is.null(seed)) set.seed(seed)
   n_draws <- n_draws %||% object@n_draws
   .pool_fit_draws(object@fits, object@target, n_draws = n_draws)$lambda
@@ -52,7 +52,7 @@ S7::method(coef, nowcast_class) <- function(object, ...) {
 #' @returns A `nowcast_prediction_class` object (or a summary data.frame).
 #' @noRd
 S7::method(predict, nowcast_class) <- function(object, n_draws = NULL,
-                                                      summary = FALSE, seed = NULL, ...) {
+                                                      summary = FALSE, seed = sample.int(.Machine$integer.max, 1), ...) {
   if (!is.null(seed)) set.seed(seed)
   n_draws <- n_draws %||% object@n_draws
   per_fit <- max(1L, ceiling(n_draws / length(object@fits)))

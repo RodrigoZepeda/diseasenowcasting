@@ -4,7 +4,11 @@
 \alias{nowcast_diagnostic}
 \title{Three-panel diagnostic plot for a fitted nowcast}
 \usage{
-nowcast_diagnostic(object, n_draws = NULL, seed = NULL)
+nowcast_diagnostic(
+  object,
+  n_draws = NULL,
+  seed = sample.int(.Machine$integer.max, 1)
+)
 }
 \arguments{
 \item{object}{A \code{nowcast_class} object.}

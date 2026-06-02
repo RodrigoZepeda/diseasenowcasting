@@ -16,7 +16,7 @@ nowcast(
   floor_mu = 0.15,
   floor_sig_frac = 0.25,
   temporal_effects = "auto",
-  seed = NULL,
+  seed = sample.int(.Machine$integer.max, 1),
   ...
 )
 }

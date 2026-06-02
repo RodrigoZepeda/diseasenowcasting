@@ -19,7 +19,7 @@
 #' @param seed Optional RNG seed.
 #' @returns A `patchwork` combined plot (or a named list of three ggplots).
 #' @export
-nowcast_diagnostic <- function(object, n_draws = NULL, seed = NULL) {
+nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machine$integer.max, 1)) {
   if (!is.null(seed)) set.seed(seed)
   n_draws <- n_draws %||% min(object@n_draws, 500L)
 

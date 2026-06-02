@@ -57,7 +57,7 @@ nowcast_twostage <- function(model, m, X = NULL, d_star = NULL, max_time = NULL,
                              n_draws_per = 200L,
                              phi = lognormal_prior(log(20), 0.5),
                              probs = c(0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975),
-                             seed = NULL) {
+                             seed = sample.int(.Machine$integer.max, 1)) {
   if (!is.null(seed)) set.seed(seed)
   if (is.null(max_time)) max_time <- max(m[, 1])
   target <- target %||% max_time

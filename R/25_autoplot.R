@@ -269,7 +269,7 @@ S7::method(autoplot, nowcast_class) <- function(object, n_draws = NULL,
                                                  color = "#5F7E62",
                                                  date_breaks = NULL,
                                                  title = NULL,
-                                                 seed = NULL, ...) {
+                                                 seed = sample.int(.Machine$integer.max, 1), ...) {
   # predict() already attaches event dates, strata draws, and observed series.
   pred <- predict(object, n_draws = n_draws %||% min(object@n_draws, 500L), seed = seed)
   autoplot(pred, quantiles = quantiles, color = color,

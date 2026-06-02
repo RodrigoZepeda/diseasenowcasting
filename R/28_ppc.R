@@ -21,7 +21,7 @@
 #' @returns A named list with slots `$plot` (a ggplot / patchwork), `$delay_ppc`
 #'   (data frame), and `$count_ppc` (data frame).
 #' @export
-ppc <- function(object, n_draws = 500L, seed = NULL, min_full_report_delay = NULL, ...) {
+ppc <- function(object, n_draws = 500L, seed = sample.int(.Machine$integer.max, 1), min_full_report_delay = NULL, ...) {
   UseMethod("ppc")
 }
 
@@ -32,7 +32,7 @@ ppc.default <- function(object, ...) {
 }
 
 #' @noRd
-S7::method(ppc, nowcast_class) <- function(object, n_draws = 500L, seed = NULL,
+S7::method(ppc, nowcast_class) <- function(object, n_draws = 500L, seed = sample.int(.Machine$integer.max, 1),
                                             min_full_report_delay = NULL, ...) {
   if (!is.null(seed)) set.seed(seed)
   fit    <- object@fits[[1]]

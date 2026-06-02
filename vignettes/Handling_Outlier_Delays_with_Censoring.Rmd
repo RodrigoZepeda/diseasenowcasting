@@ -1,6 +1,6 @@
 ---
 title: "Handling Outlier Delays with Censoring"
-author: "diseasenowcasting package"
+author: "Rodrigo Zepeda-Tello"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Handling Outlier Delays with Censoring}
@@ -14,96 +14,110 @@ knitr::opts_chunk$set(
   fig.width = 8, fig.height = 4,
   collapse = TRUE, comment = "#>"
 )
-set.seed(1)
 ```
 
 ```{r load}
+set.seed(248675)
 library(diseasenowcasting)
 library(tbl.now)
 library(dplyr)
+library(ggplot2)
 ```
 
-## The problem: a single absurd delay
+## The problem: an extreme delay
 
-Real surveillance data contain the occasional report with an enormous reporting
-delay -- a case entered into the system months after it occurred.  In the
-Colombia COVID-19 data (`covid_colombia`) the bulk of reports arrive within a
+Real surveillance data occasionally contains reports with extreme reporting delays. This can be due to typos, healthcare-system hurdles or other issues not related to the disease's natural evolution.  In
+Colombia's COVID-19 data (`covid_colombia`) the bulk of reports arrive within a
 week or two, but a handful take **more than 300 days**:
 
-```{r delay-hist, fig.cap="Reporting-delay distribution of COVID-19 Colombia. A few reports arrive hundreds of days late."}
-library(ggplot2)
-covid_colombia |>
-  mutate(delay = as.numeric(diagnosis_date - notification_date)) |>
-  filter(delay >= 0) |>
-  ggplot(aes(delay)) +
-  geom_histogram(binwidth = 5, fill = dn_palette()["reported"]) +
-  scale_y_sqrt() +
-  labs(x = "Reporting delay (days)", y = "Reports (sqrt scale)",
-       title = "Most reports are quick; a long tail of extreme delays") +
-  theme_diseasenowcasting()
+```{r delay-hist1}
+data(covid_colombia)
+
+tbl_covid <- covid_colombia |> 
+  tbl_now(event_date = notification_date,
+          case_count  = n,
+              data_type   = "count-incidence",
+          report_date = diagnosis_date,
+          t_effects = temporal_effects(day_of_week = TRUE))
+
+summary(tbl_covid$.delay)
 ```
+
+```{r delay-hist2, echo=FALSE, fig.cap="Reporting-delay distribution of COVID-19 Colombia (extremes exagerated for illustration purposes). A few reports arrive hundreds of days late}
+tbl_covid |> 
+  filter(n > 0) |> 
+  ggplot() +
+  geom_histogram(aes(x = .delay, weight = n), fill = "#A8BFA9", binwidth = 5) +
+  geom_histogram(aes(x = .delay, weight = n), fill = "#DA6529", binwidth = 5,
+                 data = tbl_covid |> filter(.delay > 102)) +
+  annotate(
+    "segment",
+    x = 220, xend = 110,
+    y = 1.e6, yend = 1000,
+    arrow = arrow(length = unit(0.25, "cm"))
+  ) +
+  annotate(
+    "text",
+    x = 220,
+    y = 1.e6,
+    label = "Extreme delays of\n100 days or more",
+    hjust = 0
+  ) +
+  theme_diseasenowcasting() +
+  scale_y_sqrt(labels = scales::comma_format()) +
+  labs(x = "Delay", y = "Case count", title = "COVID-19 cases in Colombia")
+```
+
+
 
 When a parametric delay model (log-normal, gamma, ...) is fit to data containing
 such an outlier, the extreme value **drags the estimated delay distribution to
 the right**.  The model then believes delays are longer than they really are,
-inflates the most recent nowcasts, and scores worse.
+thus inflating the most recent nowcasts.
 
-The mathematical framework behind `diseasenowcasting` offers a principled fix
-(Zepeda-Tello & Shaman, 2025, Section "Missing report dates"): treat such a report as
+The `diseasenowcasting` framrwork offers a fix. It treats such reports as
 **right-censored**.  Instead of telling the model "this case had delay exactly
-330", we tell it only "this case arrived *by* delay 330" -- i.e. its delay is an
-**upper bound**.  In the likelihood the report then contributes
-$\log G_D(330)$ (which is $\approx \log 1 = 0$ for any sensible delay
-distribution) instead of the tiny tail density $\log \Delta G_D(330)$.  The
-outlier stops distorting the fit.
+330", it tells it only "this case arrived *by* delay 330" (_i.e._ its delay is an
+**upper bound**). 
 
-## Step 1 -- fit a model and discover the surprise
+In what follows we explain how to use the model to automatically detect abnormal
+delays and how to inform the model so that predictions are improved. 
 
-We work with an early-pandemic window and fit a one-stage nowcast.
+## 1) Fit a model
 
-```{r fit-window}
-covid <- covid_colombia |>
-  filter(notification_date <= as.Date("2020-07-15")) |>
-  group_by(notification_date, diagnosis_date) |>
-  summarise(n = sum(n), .groups = "drop")
+The first step for a model to learn about *extreme delays* is to have an 
+initial model with historical data so that it learns what the usual 
+delay distribution is. 
 
-tn <- tbl_now(covid,
-              event_date  = notification_date,
-              report_date = diagnosis_date,
-              case_count  = n,
-              data_type   = "count-incidence",
-              verbose     = FALSE)
-
-mdl <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
-```
-
-To play out the "new data arrives" story we first fit on the reports available
-**as of** an early date, keeping only those reported by then:
+In this case we'll work  with an early-pandemic window and fit a nowcast. To 
+play out the "new data arrives" story we first fit on the reports available
+**as of** an early date by specifying a **now**:
 
 ```{r fit-asof}
-asof  <- as.Date("2020-05-01")
-tn_asof <- covid |>
-  filter(diagnosis_date <= asof) |>
-  tbl_now(event_date  = notification_date, report_date = diagnosis_date,
-          case_count  = n, data_type = "count-incidence", verbose = FALSE)
-
-nc <- nowcast(tn_asof, mdl, now = asof, type = "one_stage",
-              n_draws = 500, temporal_effects = "none", seed = 1)
+initial_tbl <- tbl_covid |> 
+  filter(notification_date <= as.Date("2020-08-31") & diagnosis_date <= as.Date("2020-08-31"))
 ```
 
-Now the next report arrives, and it carries an absurd 330-day delay.  `update()`
-automatically scores the new report against the old fit and **warns** when
-something is surprising:
+
+Fit a nowcast
+
+```{r fit-asof}
+initial_ncast <- nowcast(initial_tbl)
+```
+
+
+And then get new data:
+
+```{r fit-asof}
+new_data_tbl <- tbl_covid |> 
+  filter(notification_date <= as.Date("2020-09-01") & diagnosis_date <= as.Date("2020-09-01"))
+```
+
+Finally,  `update()` will automatically score the new report against 
+the old fit and **warn** that something is amiss:
 
 ```{r surprise, warning=TRUE}
-new_batch <- data.frame(
-  notification_date = as.Date("2020-05-02"),
-  diagnosis_date    = as.Date("2020-05-02") + 330,  # an absurd 330-day delay
-  n                 = 1                              # count-incidence needs the count column
-)
-
-nc_updated <- update(nc, new_batch, now = as.Date("2020-05-03"),
-                     temporal_effects = "none")
+nc_updated <- update(initial_ncast, new_data_tbl)
 ```
 
 The warning tells us *exactly* what was unexpected (a reporting delay far longer

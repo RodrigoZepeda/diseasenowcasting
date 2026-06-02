@@ -4,7 +4,13 @@
 \alias{ppc}
 \title{Posterior predictive check for a fitted nowcast}
 \usage{
-ppc(object, n_draws = 500L, seed = NULL, min_full_report_delay = NULL, ...)
+ppc(
+  object,
+  n_draws = 500L,
+  seed = sample.int(.Machine$integer.max, 1),
+  min_full_report_delay = NULL,
+  ...
+)
 }
 \arguments{
 \item{object}{A \code{nowcast_class} object.}

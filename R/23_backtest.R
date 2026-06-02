@@ -76,7 +76,7 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
                      type = c("two_stage", "one_stage"), n_dates = 20L,
                      max_delay = NULL,
                      return_simulations = FALSE, n_draws = 1000L, K = 25L,
-                     np_spread = 1, seed = NULL, ...) {
+                     np_spread = 1, seed = sample.int(.Machine$integer.max, 1), ...) {
   type <- match.arg(type)
   if (S7::S7_inherits(models, model_class)) models <- list(models)
   model_labels <- vapply(models, .model_label, character(1))

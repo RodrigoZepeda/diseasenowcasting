@@ -10,7 +10,7 @@ surprise(
   type = c("both", "count", "delay"),
   level = 0.99,
   n_draws = 500L,
-  seed = NULL
+  seed = sample.int(.Machine$integer.max, 1)
 )
 }
 \arguments{

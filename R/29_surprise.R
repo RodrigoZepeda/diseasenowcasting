@@ -52,7 +52,7 @@
 #'   `P(D <= d)` is below `1 - level` (surprisingly long or short).
 #' @export
 surprise <- function(object, new_data, type = c("both", "count", "delay"),
-                     level = 0.99, n_draws = 500L, seed = NULL) {
+                     level = 0.99, n_draws = 500L, seed = sample.int(.Machine$integer.max, 1)) {
   UseMethod("surprise")
 }
 
@@ -65,7 +65,7 @@ surprise.default <- function(object, ...) {
 #' @noRd
 S7::method(surprise, nowcast_class) <- function(object, new_data,
                                                   type = c("both","count","delay"),
-                                                  level = 0.99, n_draws = 500L, seed = NULL) {
+                                                  level = 0.99, n_draws = 500L, seed = sample.int(.Machine$integer.max, 1)) {
   type <- match.arg(type)
   if (!is.null(seed)) set.seed(seed)
   fit    <- object@fits[[1]]
@@ -82,7 +82,7 @@ S7::method(surprise, nowcast_class) <- function(object, new_data,
 #' @param seed See [surprise()].
 #' @export
 surprise.list <- function(object, new_data, type = c("both","count","delay"),
-                          level = 0.99, n_draws = 500L, seed = NULL) {
+                          level = 0.99, n_draws = 500L, seed = sample.int(.Machine$integer.max, 1)) {
   if (!is.null(object$obj)) {
     type <- match.arg(type)
     if (!is.null(seed)) set.seed(seed)

@@ -76,7 +76,7 @@ nowcast <- function(data, model = diseasenowcasting::model(),
                     type = c("two_stage", "one_stage"), now = NULL,
                     K = 25L, n_draws = 2000L, delay_window = 120L, np_spread = 1,
                     floor_mu = 0.15, floor_sig_frac = 0.25,
-                    temporal_effects = "auto", seed = NULL, ...) {
+                    temporal_effects = "auto", seed = sample.int(.Machine$integer.max, 1), ...) {
   type <- match.arg(type)
   if (!is.null(seed)) set.seed(seed)
   # The NB overdispersion prior lives on the likelihood, not on nowcast().
@@ -122,9 +122,17 @@ nowcast <- function(data, model = diseasenowcasting::model(),
   }
   if (!tbl.now::is_tbl_now(data)) return(data)
 
-  # Respect effects the user already computed
-  existing <- tryCatch(tbl.now::get_temporal_effect_cols(data), error = function(e) character(0))
-  if (length(existing) > 0L) return(data)
+  # Respect any temporal effects the user has attached -- whether already
+  # COMPUTED (effect columns present) or merely SPECIFIED (a spec attached via
+  # `tbl_now(t_effects = ...)` / `add_temporal_effects()` but not yet computed).
+  existing_cols <- tryCatch(tbl.now::get_temporal_effect_cols(data), error = function(e) character(0))
+  if (length(existing_cols) > 0L) return(data)            # already computed -> use as-is
+  existing_spec <- tryCatch(tbl.now::get_temporal_effects(data), error = function(e) NULL)
+  if (!is.null(existing_spec) && length(existing_spec) > 0L) {
+    # Spec attached but not computed: materialise the columns so the engine can
+    # use them.  No defaults are added and no message is emitted.
+    return(tryCatch(tbl.now::compute_temporal_effects(data), error = function(e) data))
+  }
 
   unit <- tryCatch(as.character(tbl.now::get_event_units(data)), error = function(e) "day")
 
