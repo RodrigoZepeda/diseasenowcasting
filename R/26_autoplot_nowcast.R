@@ -3,14 +3,14 @@
 # =============================================================================
 # Not autoplot() -- the main autoplot(nowcast_class) is the bar-chart style in
 # 25_autoplot.R.  This function gives a deeper look: delay histogram + fitted
-# CDF, smoothed lambda, and the predictive nowcast as a line+ribbon.
+# density, smoothed lambda, and the predictive nowcast as a line+ribbon.
 # Call it explicitly: nowcast_diagnostic(nc, seed = 1)
 # =============================================================================
 
 #' Three-panel diagnostic plot for a fitted nowcast
 #'
 #' Produces three stacked panels: (1) reporting-delay histogram with the
-#' fitted CDF, (2) smoothed latent incidence lambda with 50/90% CI, and (3)
+#' fitted density, (2) smoothed latent incidence lambda with 50/90% CI, and (3)
 #' posterior-predictive nowcast with observed counts.  Requires the
 #' `patchwork` package for a combined output.
 #'
@@ -41,22 +41,24 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = NULL) {
 
   rc   <- fit$reconstruct
   is_np <- family == 4L
-  delay_cdf_df <- tryCatch({
+  # Fitted delay DENSITY (discretised pmf): the probability mass in a unit-width
+  # window centred at each delay, directly comparable to the proportion histogram.
+  delay_density_df <- tryCatch({
     d_seq <- seq(0, max_delay_plot, by = 0.2)
-    map_cdf <- if (is_np) {
+    fns <- if (is_np) {
       n_bins <- as.integer(data$np_model_length)
       pl <- fit$parList
       simplex <- if (isTRUE(priors$delay_probs$is_constant == 1L)) priors$delay_probs$fixed
                  else { el <- exp(pl$delay_logits); c(el, 1) / (sum(el) + 1) }
-      fns <- .nonparametric_delay_functions(simplex, n_bins); fns$cdf(d_seq)
+      .nonparametric_delay_functions(simplex, n_bins)
+    } else if (family == 3L) {
+      .delay_distribution_functions(3L, rc$delay_mu,
+        .gengamma_shape_transform(fit$parList$delay_Q %||% -2)$shape_Q, rc$delay_sigma)
     } else {
-      fns <- if (family == 3L)
-        .delay_distribution_functions(3L, rc$delay_mu,
-          .gengamma_shape_transform(fit$parList$delay_Q %||% -2)$shape_Q, rc$delay_sigma)
-        else .delay_distribution_functions(family, rc$delay_mu, rc$delay_sigma)
-      fns$cdf(d_seq)
+      .delay_distribution_functions(family, rc$delay_mu, rc$delay_sigma)
     }
-    data.frame(delay = d_seq, cdf = as.numeric(map_cdf))
+    dens <- as.numeric(fns$cdf(d_seq + 0.5)) - as.numeric(fns$cdf(pmax(0, d_seq - 0.5)))
+    data.frame(delay = d_seq, density = pmax(0, dens))
   }, error = function(e) NULL)
 
   pal <- dn_palette()
@@ -65,11 +67,11 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = NULL) {
     ggplot2::geom_bar(data = hist_df,
                       ggplot2::aes(x = delay, weight = weight / sum(weight)),
                       fill = pal["predicted"], colour = "white", alpha = 0.8, width = 0.8) +
-    ggplot2::labs(x = "Reporting delay (days/weeks)", y = "Proportion / CDF",
+    ggplot2::labs(x = "Reporting delay (days/weeks)", y = "Density",
                   title = "Reporting-delay distribution")
-  if (!is.null(delay_cdf_df))
-    p1 <- p1 + ggplot2::geom_line(data = delay_cdf_df,
-                                   ggplot2::aes(x = delay, y = cdf),
+  if (!is.null(delay_density_df))
+    p1 <- p1 + ggplot2::geom_line(data = delay_density_df,
+                                   ggplot2::aes(x = delay, y = density),
                                    colour = pal["accent"], linewidth = 1.2)
   p1 <- p1 + theme_diseasenowcasting()
 
@@ -91,7 +93,7 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = NULL) {
     ggplot2::geom_line(ggplot2::aes(y = median),
                        colour = pal["reported"], linewidth = 1) +
     ggplot2::labs(x = "Event index", y = expression(lambda[t]),
-                  title = "Smoothed latent incidence (lambda)") +
+                  title = "Smoothed epidemic process (lambda)") +
     theme_diseasenowcasting()
 
   # -- PANEL 3: Posterior-predictive nowcast ---------------------------------
@@ -109,7 +111,7 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = NULL) {
     ggplot2::geom_point(data = obs_df, ggplot2::aes(x = t, y = observed),
                         colour = pal["dark"], size = 1.2) +
     ggplot2::labs(x = "Event index", y = "Cases",
-                  title = "Posterior-predictive nowcast (black = observed)") +
+                  title = "Nowcast (black = observed)") +
     theme_diseasenowcasting()
 
   plots <- list(delay = p1, lambda = p2, nowcast = p3)

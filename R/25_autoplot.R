@@ -163,12 +163,12 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
     ggplot2::geom_col(
       ggplot2::aes(x = .data$x_val, y = .data$predicted_total,
                    fill = "Predicted, not yet reported"),
-      colour = NA, alpha = 0.45, width = 0.9
+      colour = NA, alpha = 0.45, 
     ) +
     ggplot2::geom_col(
       ggplot2::aes(x = .data$x_val, y = .data$reported,
                    fill = "Reported"),
-      colour = NA, alpha = 0.9, width = 0.9
+      colour = NA, 
     ) +
     ggplot2::geom_errorbar(
       ggplot2::aes(x = .data$x_val, ymin = .data$q_lo, ymax = .data$q_hi),

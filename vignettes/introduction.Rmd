@@ -33,7 +33,6 @@ with the roles of its columns:
 + *strata* (optional) columns that defined all the strata (e.g. sex and region)
 + *now*  (optional) the date until which to nowcast (assumes all events and reports before the now have been observed)
 
-> A `tbl.now` allows the user to give both linelist and count-data.  
 
 ```{r load}
 library(diseasenowcasting)
@@ -54,9 +53,10 @@ head(denguedat, 6)
 ```
 
 
+Which we can transform to a `tbl_now` by specifying the event and report dates as well as the `data_type`. A `tbl.now` allows the user to give both linelist and count-data.  
 
 ```{r}
-dn <- tbl_now(
+dengue_tbl <- tbl_now(
   denguedat,
   event_date  = onset_week,    # symptom onset date
   report_date = report_week,   # when the record was reported
@@ -64,7 +64,7 @@ dn <- tbl_now(
   data_type   = "linelist",    # another option is "count-incidence"  if data is aggregated
   now         =  as.Date("1991-01-01")
 )
-dn
+dengue_tbl
 ```
 
 Once your data is a `tbl_now`, a single call to `nowcast()` does the rest.
@@ -74,22 +74,19 @@ Once your data is a `tbl_now`, a single call to `nowcast()` does the rest.
 We fit a stratified nowcast to illustrate the basic workflow. 
 
 ```{r dengue-fit}
-nc_dengue <- nowcast(dn, n_draws = 1000)
+nc_dengue <- nowcast(dengue_tbl, n_draws = 1000)
 nc_dengue
 ```
 
-The fitted model can be visualized with `autoplot`:
+The fitted model can be visualized with [autoplot()]:
+
 ```{r dengue-plot}
 autoplot(nc_dengue) 
 ```
 
-The shaded bars show the 50 % and 90 % credible intervals.  The most recent
-weeks (rightmost points) carry the widest intervals — this is the nowcast
-correcting for the fact that the latest data are the most incomplete.
+The shaded bars show the median while the errorbar has the 90 % credible intervals.  
 
-
-
-Or values can be obtained via `predict` and `summary`:
+Values can be obtained via [predict()] and [summary()]:
 
 ```{r dengue-results}
 # Full posterior-predictive nowcast at every event-time
@@ -98,6 +95,14 @@ pred_dengue <- predict(nc_dengue)
 #This creates a summary of mean and quantiles
 summary(pred_dengue) |> tail(6)   # last 6 weeks
 ```
+
+
+Additionally the [nowcast_diagnostic()] shows the fitted distribution for the delay
+
+```{r dengue-diagnostic}
+nowcast_diagnostic(nc_dengue) 
+```
+
 
 ---
 

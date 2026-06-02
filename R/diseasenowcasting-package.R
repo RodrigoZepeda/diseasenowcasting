@@ -25,7 +25,7 @@ NULL
 utils::globalVariables(c(
   # ggplot2 column aesthetics (autoplot methods)
   "t", "median", "q5", "q25", "q75", "q95", "q2.5", "q97.5", ".event_num",
-  "delay", "weight", "cdf", "lo", "hi", "med", "pmf",
+  "delay", "weight", "cdf", "density", "lo", "hi", "med", "pmf",
   "t_idx", "observed", "pred",
   "wis", "disease", "group",
   "x_val", "reported", "predicted_total", "q_lo", "q_hi", "stratum", "event_date",

@@ -144,7 +144,7 @@
        M_strata = M_strata, n_strata = n_strata)
 }
 
-#' Bind two [draws x time x strata] arrays along the draws dimension (base R).
+#' Bind two `draws x time x strata` arrays along the draws dimension (base R).
 #' @keywords internal
 #' @noRd
 abind_draws <- function(a, b) {

@@ -18,7 +18,7 @@ A \code{patchwork} combined plot (or a named list of three ggplots).
 }
 \description{
 Produces three stacked panels: (1) reporting-delay histogram with the
-fitted CDF, (2) smoothed latent incidence lambda with 50/90\% CI, and (3)
+fitted density, (2) smoothed latent incidence lambda with 50/90\% CI, and (3)
 posterior-predictive nowcast with observed counts.  Requires the
 \code{patchwork} package for a combined output.
 }
