@@ -119,11 +119,19 @@ test_that("update() warns about a surprising new delay and stores the result", {
                 temporal_effects = "none", seed = 1)
   # New data: a report for an existing event-time with a 300-day delay
   new <- data.frame(onset = start + 41, reported = start + 41 + 300)
-  expect_warning(
-    nc2 <- update(nc, new, now = start + 41, temporal_effects = "none"),
-    regexp = "Surprising reporting delay")
+
+  # A SINGLE warning, naming the delay in the data's units ("days") and only
+  # flagging the too-LONG delay (no count/epidemic surprise).
+  w <- testthat::capture_warnings(
+    nc2 <- update(nc, new, now = start + 41, temporal_effects = "none"))
+  expect_length(w, 1L)
+  expect_match(w, "Surprising reporting delay of .* days")
+  expect_match(w, "longer than the model expects")
+  expect_match(w, "surprise_result\\(nc\\)")          # code hint to see the surprises
+
   sr <- surprise_result(nc2)
   expect_s3_class(sr, "diseasenowcasting_surprise")
+  expect_null(sr$count_surprise)                       # epidemic/count surprise not computed
   expect_true(any(sr$delay_surprise$is_surprising))
 })
 

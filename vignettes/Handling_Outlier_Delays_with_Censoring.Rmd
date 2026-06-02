@@ -95,7 +95,8 @@ play out the "new data arrives" story we first fit on the reports available
 
 ```{r fit-asof}
 initial_tbl <- tbl_covid |> 
-  filter(notification_date <= as.Date("2020-08-31") & diagnosis_date <= as.Date("2020-08-31"))
+  filter(notification_date <= as.Date("2020-08-31") & diagnosis_date <= as.Date("2020-08-31")) |> 
+  change_now() #Update the "now" of the nowcast to the latest date
 ```
 
 
@@ -105,15 +106,17 @@ Fit a nowcast
 initial_ncast <- nowcast(initial_tbl)
 ```
 
+## 2) Update a model
 
-And then get new data:
+We can then get new data:
 
 ```{r fit-asof}
 new_data_tbl <- tbl_covid |> 
-  filter(notification_date <= as.Date("2020-09-01") & diagnosis_date <= as.Date("2020-09-01"))
+  filter(notification_date <= as.Date("2020-09-01") & diagnosis_date <= as.Date("2020-09-01")) |> 
+  change_now()
 ```
 
-Finally,  `update()` will automatically score the new report against 
+And,  `update()` the model. This will automatically score the new report against 
 the old fit and **warn** that something is amiss:
 
 ```{r surprise, warning=TRUE}
@@ -185,29 +188,21 @@ Censoring the handful of outlier delays gives a **lower (better) WIS** without
 hurting coverage: the delay distribution is no longer pulled to the right by a
 few extreme values, so the most recent nowcasts are better calibrated.
 
-## Summary -- the surprise -> censor -> refit loop
+## Summary -- fit -> update -> identify outliers -> censor -> refit loop
 
-```
+In general the workflow is: 
+
 1. Fit a nowcast.
-2. New data arrives -> update() scores it and WARNS about surprises.
-3. A "delay too long" warning flags an outlier report.
-4. censor_delays_above(tn, bound) turns its delay into an upper bound.
-5. Re-fit -> the delay distribution is no longer distorted -> better WIS.
-```
 
-This is the practical payoff of modelling the reporting delay as a stochastic
-process with proper censoring rather than a nuisance to be cleaned away: the
-model can *tell you* when an observation does not fit, and the censoring
-machinery lets you respond without discarding data.
+2. New data arrives -> `update()` scores it and **warns** about potential 
+outliers.
 
-> **Note.** The improvement is largest for the **one-stage** fit, whose joint
-> likelihood is directly distorted by outlier delays.  The **two-stage** cascade
-> estimates the delay from a recent window first and is already fairly robust to
-> such outliers, so it benefits less.
+3. Manually identify which ones correspond to outliers and which correspond
+to true values. This has to be done by a human as no automated system will know
+when something flagged as noise is real. 
 
-## References
+4. Use `censor_delays_above(tn, bound)` turning the delays into an upper bound. Or
+modify the `tbl_now` directly (column `is_censored`)
 
-- Zepeda-Tello, R. & Shaman, J. (2025). Nowcasting from an epidemic's
-  reporting-delay: a censored regression approach. *Preprint*.
-- Gunther, F. et al. (2021). Nowcasting the COVID-19 pandemic in Bavaria.
-  *Biometrical Journal*.
+5. Re-fit -> the delay distribution is no longer distorted.
+
