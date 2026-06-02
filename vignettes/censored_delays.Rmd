@@ -53,8 +53,8 @@ The mathematical framework behind `diseasenowcasting` offers a principled fix
 **right-censored**.  Instead of telling the model "this case had delay exactly
 330", we tell it only "this case arrived *by* delay 330" — i.e. its delay is an
 **upper bound**.  In the likelihood the report then contributes
-\eqn{\log G_D(330)} (which is \eqn{\approx \log 1 = 0} for any sensible delay
-distribution) instead of the tiny tail density \eqn{\log \Delta G_D(330)}.  The
+$\log G_D(330)$ (which is $\approx \log 1 = 0$ for any sensible delay
+distribution) instead of the tiny tail density $\log \Delta G_D(330)$.  The
 outlier stops distorting the fit.
 
 ## Step 1 — fit a model and discover the surprise
@@ -75,19 +75,31 @@ tn <- tbl_now(covid,
               verbose     = FALSE)
 
 mdl <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
-nc  <- nowcast(tn, mdl, now = as.Date("2020-05-01"),
-               type = "one_stage", n_draws = 500,
-               temporal_effects = "none", seed = 1)
 ```
 
-Now imagine the next batch of data arrives and it contains a report with a
-330-day delay.  `update()` automatically scores the new data against the old
-fit and **warns** when something is surprising:
+To play out the "new data arrives" story we first fit on the reports available
+**as of** an early date, keeping only those reported by then:
+
+```{r fit-asof}
+asof  <- as.Date("2020-05-01")
+tn_asof <- covid |>
+  filter(diagnosis_date <= asof) |>
+  tbl_now(event_date  = notification_date, report_date = diagnosis_date,
+          case_count  = n, data_type = "count-incidence", verbose = FALSE)
+
+nc <- nowcast(tn_asof, mdl, now = asof, type = "one_stage",
+              n_draws = 500, temporal_effects = "none", seed = 1)
+```
+
+Now the next report arrives, and it carries an absurd 330-day delay.  `update()`
+automatically scores the new report against the old fit and **warns** when
+something is surprising:
 
 ```{r surprise, warning=TRUE}
 new_batch <- data.frame(
   notification_date = as.Date("2020-05-02"),
-  diagnosis_date    = as.Date("2020-05-02") + 330   # an absurd 330-day delay
+  diagnosis_date    = as.Date("2020-05-02") + 330,  # an absurd 330-day delay
+  n                 = 1                              # count-incidence needs the count column
 )
 
 nc_updated <- update(nc, new_batch, now = as.Date("2020-05-03"),

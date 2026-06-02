@@ -191,7 +191,7 @@ The `score()` output shows WIS, absolute percentage error (APE), and empirical
 coverage at 50 % and 90 %.  A well-calibrated nowcast should have coverage close
 to these nominal levels.
 
----
+
 
 ## Next steps
 

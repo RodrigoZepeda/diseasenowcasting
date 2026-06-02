@@ -6,7 +6,7 @@
 \usage{
 nowcast(
   data,
-  model = model(),
+  model = diseasenowcasting::model(),
   type = c("two_stage", "one_stage"),
   now = NULL,
   K = 25L,

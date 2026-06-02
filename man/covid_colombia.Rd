@@ -19,7 +19,7 @@ diagnosis was registered in the national system.}
 }
 \source{
 Instituto Nacional de Salud (INS), Colombia.  Data accessed via the
-SIVIGILA open-data platform and pre-processed for the diseasenowcast2
+SIVIGILA open-data platform and pre-processed for the diseasenowcasting
 benchmarking study.
 }
 \usage{

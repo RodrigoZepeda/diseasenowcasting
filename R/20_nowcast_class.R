@@ -72,7 +72,7 @@ nowcast_class <- S7::new_class(
 #'   # predict(nc); median(nc); coef(nc)
 #' }
 #' @export
-nowcast <- function(data, model = model(),
+nowcast <- function(data, model = diseasenowcasting::model(),
                     type = c("two_stage", "one_stage"), now = NULL,
                     K = 25L, n_draws = 2000L, delay_window = 120L, np_spread = 1,
                     floor_mu = 0.15, floor_sig_frac = 0.25,
