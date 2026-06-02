@@ -10,7 +10,7 @@ surprise_result(nc)
 \item{nc}{A \code{nowcast_class} object returned by \code{\link[=update]{update()}}.}
 }
 \value{
-A \code{dcast3_surprise} object, or \code{NULL} if no surprise was computed.
+A \code{diseasenowcasting_surprise} object, or \code{NULL} if no surprise was computed.
 }
 \description{
 Retrieve the surprise scores computed during the last \code{update()}

@@ -1,15 +1,15 @@
 # =============================================================================
-# score_dcast3.R — WIS + coverage: dcast3 vs NobBS vs Epinowcast
+# score_diseasenowcasting.R — WIS + coverage: diseasenowcasting vs NobBS vs Epinowcast
 # =============================================================================
-# Loads the dcast3 nowcasts (devel/results/<disease>_dcast3_steps.rds) and the
+# Loads the diseasenowcasting nowcasts (devel/results/<disease>_diseasenowcasting_steps.rds) and the
 # existing comparison nowcasts (NobBS + Epinowcast, from diseasenowcast2), pools
 # them, and scores the d*=0 nowcast (event AT date_run vs its eventual `final`)
 # with scoringutils on a COMMON date set — the same methodology as
 # diseasenowcast2/devel/plots_wis.R::score_nowcast().  Reports WIS, its
 # over/under/dispersion decomposition, and 50%/90% interval coverage per model.
 #
-#   Rscript devel/score_dcast3.R
-#   CMP_DIR=/path/to/diseasenowcast2/devel/results LAGS="0 1 2" Rscript devel/score_dcast3.R
+#   Rscript devel/score_diseasenowcasting.R
+#   CMP_DIR=/path/to/diseasenowcast2/devel/results LAGS="0 1 2" Rscript devel/score_diseasenowcasting.R
 # =============================================================================
 suppressPackageStartupMessages({
   library(dplyr); library(tidyr); library(readr); library(scoringutils); library(cli)
@@ -47,9 +47,9 @@ score_nowcast <- function(all_steps, ev, lag = 0L, period_days = 1L, use_common 
 }
 
 score_disease <- function(disease, period_days) {
-  own_p <- file.path(OWN_DIR, paste0(disease, "_dcast3_steps.rds"))
+  own_p <- file.path(OWN_DIR, paste0(disease, "_diseasenowcasting_steps.rds"))
   cmp_p <- file.path(CMP_DIR, paste0(disease, "_comparison_steps.rds"))
-  if (!file.exists(own_p)) { cli_alert_warning("{disease}: no dcast3 steps ({own_p}) — skip"); return(invisible()) }
+  if (!file.exists(own_p)) { cli_alert_warning("{disease}: no diseasenowcasting steps ({own_p}) — skip"); return(invisible()) }
   if (!file.exists(cmp_p)) { cli_alert_warning("{disease}: no comparison steps ({cmp_p}) — skip"); return(invisible()) }
   own <- read_rds(own_p); cmp <- read_rds(cmp_p)
   ev  <- own$event_date_col
@@ -67,18 +67,18 @@ score_disease <- function(disease, period_days) {
     arrange(wis)
   print(as.data.frame(tab), row.names = FALSE)
 
-  # Verdict: best dcast3 vs NobBS and best Epinowcast (WIS + coverage).
+  # Verdict: best diseasenowcasting vs NobBS and best Epinowcast (WIS + coverage).
   is_cmp <- grepl("NobBS|Epinowcast", tab$model)
   best_d <- tab[!is_cmp, ][1, ]
   nobbs  <- tab[grepl("NobBS", tab$model), ][1, ]
   enw    <- tab[grepl("Epinowcast", tab$model), ] %>% arrange(wis) %>% slice(1)
   cli_alert_info(paste0(
-    "best dcast3 = {best_d$model}: WIS {best_d$wis} cov90 {best_d$cov90} | ",
+    "best diseasenowcasting = {best_d$model}: WIS {best_d$wis} cov90 {best_d$cov90} | ",
     "NobBS WIS {nobbs$wis} cov90 {nobbs$cov90} | ",
     "best ENW {enw$model} WIS {enw$wis} cov90 {enw$cov90}"))
   beats_nobbs <- !is.na(best_d$wis) && !is.na(nobbs$wis) && best_d$wis <= nobbs$wis
   beats_enw   <- !is.na(best_d$wis) && nrow(enw) && best_d$wis <= enw$wis
-  cli_alert_success("{disease}: dcast3 beats NobBS = {beats_nobbs}; beats Epinowcast = {beats_enw} (WIS, lower=better)")
+  cli_alert_success("{disease}: diseasenowcasting beats NobBS = {beats_nobbs}; beats Epinowcast = {beats_enw} (WIS, lower=better)")
   invisible(tab)
 }
 
@@ -88,7 +88,7 @@ for (dz in c("dengue", "covid", "mpox")) score_disease(dz, period_of[[dz]])
 if (length(LAGS) > 1 || LAGS[1] != 0L) {
   cli_h1("WIS by lag (d* = lag)")
   for (dz in c("dengue","covid","mpox")) {
-    own_p <- file.path(OWN_DIR, paste0(dz,"_dcast3_steps.rds")); cmp_p <- file.path(CMP_DIR, paste0(dz,"_comparison_steps.rds"))
+    own_p <- file.path(OWN_DIR, paste0(dz,"_diseasenowcasting_steps.rds")); cmp_p <- file.path(CMP_DIR, paste0(dz,"_comparison_steps.rds"))
     if (!file.exists(own_p) || !file.exists(cmp_p)) next
     own <- read_rds(own_p); cmp <- read_rds(cmp_p); ev <- own$event_date_col
     as_ <- bind_rows(own$all_steps, cmp$all_steps); pd <- period_of[[dz]]

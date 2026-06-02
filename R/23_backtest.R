@@ -4,7 +4,7 @@
 # For each (as-of date, model) the model is fit as of that date, the
 # posterior-predictive nowcast drawn, and the newest-event (d*=0) summary kept
 # alongside the eventual truth.  Parallelised over (date x model) with doFuture
-# (register a plan(); requires dcast3 installed for multisession workers).
+# (register a plan(); requires diseasenowcasting installed for multisession workers).
 # =============================================================================
 
 #' Fitted backtest object
@@ -38,8 +38,35 @@ backtest_class <- S7::new_class(
 #' @param seed Optional base RNG seed.
 #' @param ... Passed to [nowcast()].
 #' @returns A `backtest_class` object.
+#'
+#' @details
+#' `backtest()` evaluates one nowcast per (as-of date x model) cell and these
+#' cells are **embarrassingly parallel**.  The work is dispatched with
+#' \pkg{foreach} + \pkg{doFuture}, so parallelism is controlled by the
+#' \pkg{future} plan you set *before* calling `backtest()`:
+#'
+#' ```r
+#' library(future)
+#' plan(multisession, workers = 4)   # 4 parallel R sessions
+#' bt <- backtest(data, models, dates = my_dates)
+#' plan(sequential)                  # back to serial when done
+#' ```
+#'
+#' With the default plan (`sequential`) the cells run one at a time.  For a grid
+#' of many dates x models, `plan(multisession, workers = N)` (or
+#' `plan(multicore)` on Linux/macOS) gives a near-linear speed-up up to the
+#' number of physical cores.  Each worker needs the package available, which is
+#' automatic for an installed package; with `devtools::load_all()` use
+#' `plan(multisession)` so workers re-load it.
+#'
+#' @examples
+#' if (interactive() && requireNamespace("tbl.now", quietly = TRUE)) {
+#'   # future::plan(future::multisession, workers = 4)   # opt in to parallelism
+#'   # bt <- backtest(my_tbl_now, list(model_a, model_b), dates = my_dates)
+#'   # future::plan("sequential")
+#' }
 #' @export
-backtest <- function(data, models = dcast3::model(), dates = NULL,
+backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
                      type = c("two_stage", "one_stage"), n_dates = 20L,
                      return_simulations = FALSE, n_draws = 1000L, K = 25L,
                      np_spread = 1, seed = NULL, ...) {
@@ -67,6 +94,17 @@ backtest <- function(data, models = dcast3::model(), dates = NULL,
   truth_by_evnum <- setNames(as.numeric(truth_final), as.integer(names(truth_final)))
 
   grid <- expand.grid(date_idx = seq_along(dates), model_idx = seq_along(models))
+
+  # Nudge the user toward parallelism when the grid is large and the plan is serial.
+  n_cells <- nrow(grid)
+  plan_is_sequential <- tryCatch(inherits(future::plan(), "sequential"), error = function(e) TRUE)
+  if (plan_is_sequential && n_cells >= 12L) {
+    cli::cli_inform(c(
+      "i" = "Running {n_cells} backtest cell{?s} sequentially.",
+      "*" = "For a large grid, set a parallel plan first: {.code future::plan(future::multisession, workers = N)}."
+    ))
+  }
+
   results_list <- foreach::foreach(row = seq_len(nrow(grid)),
                                    .options.future = list(seed = TRUE)) %dofuture% {
     di <- grid$date_idx[row]; mi <- grid$model_idx[row]

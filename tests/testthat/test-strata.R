@@ -26,7 +26,10 @@ test_that("stratified one-stage nowcast converges and totals are finite", {
   nc  <- nowcast(tn, mdl, type = "one_stage", n_draws = 200, seed = 1)
   expect_equal(nc@engine$num_strata, 2L)
   s <- summary(predict(nc, seed = 2))
-  expect_equal(nrow(s), nc@target)
+  # Stratified summary has per-stratum blocks + a "Total" block
+  expect_true("stratum" %in% names(s))
+  expect_setequal(unique(s$stratum), c("A", "B", "Total"))
+  expect_equal(nrow(s), nc@target * 3L)          # 2 strata + total
   expect_true(all(is.finite(s$median)))
 })
 

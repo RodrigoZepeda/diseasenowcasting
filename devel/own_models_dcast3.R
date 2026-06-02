@@ -1,23 +1,23 @@
 # =============================================================================
-# own_models_dcast3.R — dcast3 (RTMB) port of diseasenowcast2/devel/own_models.R
+# own_models_diseasenowcasting.R — diseasenowcasting (RTMB) port of diseasenowcast2/devel/own_models.R
 # =============================================================================
 # Parallel (foreach %dofuture% over evaluation dates).  Produces the SAME
-# per-disease *_dcast3_steps.rds outputs (same columns + same evaluation dates
-# via the shared seeds) so the scoring pipeline can compare dcast3 vs NobBS vs
+# per-disease *_diseasenowcasting_steps.rds outputs (same columns + same evaluation dates
+# via the shared seeds) so the scoring pipeline can compare diseasenowcasting vs NobBS vs
 # Epinowcast unchanged.  Also records per-(disease, model, date) wall-time +
 # series length for the fit-time-vs-series-length analysis.
 #
-# Requires dcast3 INSTALLED (R CMD INSTALL dcast3) so parallel workers can
-# library(dcast3).  Env vars (all optional):
+# Requires diseasenowcasting INSTALLED (R CMD INSTALL diseasenowcasting) so parallel workers can
+# library(diseasenowcasting).  Env vars (all optional):
 #   N_DATES=50  RUN_DENGUE/RUN_COVID/RUN_MPOX=TRUE  K_MULTISAMPLE=25
 #   TUNE_WORKERS=8  N_DRAWS_PER=200  MODELS=all|fast
 #   COVID_RDS=<path to covid_colombia_aggregated.rds>
-# Output (under devel/results/): {dengue,covid,mpox}_dcast3_steps.rds + dcast3_timing.rds
+# Output (under devel/results/): {dengue,covid,mpox}_diseasenowcasting_steps.rds + diseasenowcasting_timing.rds
 # =============================================================================
 
 suppressPackageStartupMessages({
   library(dplyr); library(tidyr); library(tibble); library(readr); library(purrr)
-  library(lubridate); library(tbl.now); library(dcast3)
+  library(lubridate); library(tbl.now); library(diseasenowcasting)
   library(foreach); library(future); library(doFuture)
 })
 
@@ -116,8 +116,8 @@ run_disease <- function(disease, tbl, event_col, dates, models, unit_fn, X_build
   if (nrow(rows_all) == 0) { cli::cli_warn("{disease}: no fits."); return(tim_all) }
   all_steps <- rows_all %>% mutate(t = .event_num) %>% filter(!is.na(mean))
   list(all_steps = all_steps, dates = dates, event_date_col = event_col) %>%
-    write_rds(file.path(OUT, "results", paste0(disease, "_dcast3_steps.rds")))
-  cli::cli_alert_success("{disease}: {nrow(all_steps)} rows -> {disease}_dcast3_steps.rds")
+    write_rds(file.path(OUT, "results", paste0(disease, "_diseasenowcasting_steps.rds")))
+  cli::cli_alert_success("{disease}: {nrow(all_steps)} rows -> {disease}_diseasenowcasting_steps.rds")
   tim_all
 }
 
@@ -164,7 +164,7 @@ if (RUN_MPOX) {
 }
 
 timing <- bind_rows(TIMING)
-write_rds(timing, file.path(OUT, "results", "dcast3_timing.rds"))
+write_rds(timing, file.path(OUT, "results", "diseasenowcasting_timing.rds"))
 if (nrow(timing) > 0) {
   wall_min <- as.numeric(difftime(Sys.time(), WALL_START, units = "mins"))
   cpu_min  <- sum(timing$elapsed_s) / 60

@@ -1,17 +1,17 @@
 # =============================================================================
-# Phase 1 oracle gate (dcast3): delay-only LogNormal vs the FIXED Stan engine.
+# Phase 1 oracle gate (diseasenowcasting): delay-only LogNormal vs the FIXED Stan engine.
 #
-# Compares dcast3::fit() (RTMB, per-time censoring) against the installed
+# Compares diseasenowcasting::fit() (RTMB, per-time censoring) against the installed
 # diseasenowcast2 fit_internal(delay_only = TRUE) MAP on windowed COVID data.
 # Gate: worst |Δ|/|Stan| <= 2% on delay_mu and delay_sigma.
 #
-#   N_DATES=5 Rscript devel/validate_phase1.R   # from ~/Documents/dcast3
+#   N_DATES=5 Rscript devel/validate_phase1.R   # from ~/Documents/diseasenowcasting
 # =============================================================================
 suppressPackageStartupMessages({
   library(dplyr); library(tibble); library(readr); library(lubridate)
   library(tbl.now); library(diseasenowcast2)   # Stan oracle
 })
-devtools::load_all(quiet = TRUE)                 # dcast3 (RTMB)
+devtools::load_all(quiet = TRUE)                 # diseasenowcasting (RTMB)
 
 N_DATES <- as.integer(Sys.getenv("N_DATES", "5"))
 DELAY_WINDOW <- as.integer(Sys.getenv("DELAY_WINDOW", "120"))
@@ -52,12 +52,12 @@ delay_s <- switch(FAMILY,
   gamma     = diseasenowcast2::gamma_delay(),
   gengamma  = diseasenowcast2::generalized_gamma_delay())
 delay_r <- switch(FAMILY,
-  lognormal = dcast3::lognormal_delay(),
-  gamma     = dcast3::gamma_delay(),
-  gengamma  = dcast3::generalized_gamma_delay())
+  lognormal = diseasenowcasting::lognormal_delay(),
+  gamma     = diseasenowcasting::gamma_delay(),
+  gengamma  = diseasenowcasting::generalized_gamma_delay())
 mdl_stan <- diseasenowcast2::model(diseasenowcast2::nb_likelihood(),
                                    diseasenowcast2::hsgp_epidemic(), delay_s)
-mdl_r <- dcast3::model(dcast3::nb_likelihood(), dcast3::hsgp_epidemic(), delay_r)
+mdl_r <- diseasenowcasting::model(diseasenowcasting::nb_likelihood(), diseasenowcasting::hsgp_epidemic(), delay_r)
 cat("FAMILY:", FAMILY, "\n")
 
 rows <- list()
@@ -69,7 +69,7 @@ for (di in seq_along(DATES)) {
   sd1 <- diseasenowcast2::data_to_stan(mdl_stan, B$m, max_time = B$max_time,
                                        d_star = B$d_star, delay_only = TRUE)
   pr1 <- diseasenowcast2::default_priors(mdl_stan, sd1)
-  # Assert the prior families dcast3 assumes, so a future prior change fails
+  # Assert the prior families diseasenowcasting assumes, so a future prior change fails
   # loudly here instead of silently mis-scoring. dist codes: 1=Normal (delay_mu),
   # 105=Gamma (delay_sigma); see prior_lpdf().
   stopifnot(pr1$prior_delay_param_1_dist %in% c(0L, 1L),       # Std/Normal log-mean
@@ -85,11 +85,11 @@ for (di in seq_along(DATES)) {
   stan_mu    <- as.numeric(mode_tbl[1, mu_col])
   stan_sigma <- as.numeric(mode_tbl[1, sig_col])
 
-  # --- dcast3 RTMB ---
-  dat <- dcast3::prepare_data(mdl_r, B$m, max_time = B$max_time,
+  # --- diseasenowcasting RTMB ---
+  dat <- diseasenowcasting::prepare_data(mdl_r, B$m, max_time = B$max_time,
                               d_star = B$d_star, delay_only = TRUE)
-  pr  <- dcast3::default_priors(mdl_r, dat)
-  rf  <- dcast3::fit(mdl_r, dat, priors = pr)
+  pr  <- diseasenowcasting::default_priors(mdl_r, dat)
+  rf  <- diseasenowcasting::fit(mdl_r, dat, priors = pr)
 
   rel_mu  <- abs(rf$delay_mu - stan_mu) / abs(stan_mu + 1e-8)
   rel_sig <- abs(rf$delay_sigma - stan_sigma) / abs(stan_sigma + 1e-8)

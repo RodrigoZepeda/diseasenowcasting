@@ -37,7 +37,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
 #' @keywords internal
 #' @noRd
 .fit_joint <- function(model, data, priors, init = NULL, n_tries = 6L,
-                       use_random = getOption("dcast3.use_random", FALSE),
+                       use_random = getOption("diseasenowcasting.use_random", FALSE),
                        control = list(iter.max = 1000, eval.max = 2000, rel.tol = 1e-9),
                        hierarchical_strata = FALSE) {
   base_init <- init %||% list()

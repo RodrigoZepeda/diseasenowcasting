@@ -12,3 +12,7 @@
 ^figure$
 ^\.claude$
 ^.*\.sh$
+^README\.Rmd$
+^_pkgdown\.yml$
+^pkgdown$
+^docs$

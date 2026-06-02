@@ -7,7 +7,7 @@
 model(
   likelihood = nb_likelihood(),
   epidemic = hsgp_epidemic(),
-  delay = dirichlet_delay(),
+  delay = lognormal_delay(),
   covariate_prior = std_normal_prior(),
   strata_pooling = "independent"
 )

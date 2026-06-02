@@ -1,12 +1,12 @@
 ---
-title: "Mathematical Foundations of dcast3"
-author: "dcast3 package"
+title: "Mathematical Foundations of diseasenowcasting"
+author: "diseasenowcasting package"
 output:
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 3
 vignette: >
-  %\VignetteIndexEntry{Mathematical Foundations of dcast3}
+  %\VignetteIndexEntry{Mathematical Foundations of diseasenowcasting}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 
 ## Overview
 
-This vignette derives the statistical model underlying `dcast3` from first
+This vignette derives the statistical model underlying `diseasenowcasting` from first
 principles.  It is intended for mathematically oriented readers who want to
 understand the likelihood construction, the epidemic process specifications, and
 the inference algorithm.  The main reference is Zepeda-Tello & Shaman (2025);
@@ -146,7 +146,7 @@ For the **Matérn 5/2** kernel with amplitude $\alpha$ and length-scale $\ell$:
 $$S(\lambda) = \alpha^2\, \frac{16\, (5/\ell^2)^{5/2}}{3\,(\lambda^2 + 5/\ell^2)^3}.$$
 
 This approximation reduces a $\mathcal{O}(T^3)$ GP computation to
-$\mathcal{O}(TM)$ (Riutort-Mayol et al., 2023).  `dcast3` uses $M$ chosen
+$\mathcal{O}(TM)$ (Riutort-Mayol et al., 2023).  `diseasenowcasting` uses $M$ chosen
 automatically as $\lceil 1.5\sqrt{T}\rceil$, capped at 20 for daily series longer
 than 400 days to avoid ill-conditioned Hessians.
 
@@ -235,7 +235,7 @@ $\mu_t^{(s)}$ and the GP/AR1/SIR trajectory parameters are **per-stratum**.
 
 ## 6. Bayesian inference via Laplace approximation
 
-`dcast3` performs inference via the **joint-mode Laplace approximation** (the
+`diseasenowcasting` performs inference via the **joint-mode Laplace approximation** (the
 same regime as `cmdstanr`'s `$laplace()` method).
 
 **Step 1 — MAP estimation.** Minimise the negative log-posterior

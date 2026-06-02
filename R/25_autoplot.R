@@ -63,25 +63,28 @@ theme_diseasenowcasting <- function(base_size = 11) {
     )
 }
 
-# ── autoplot re-export ────────────────────────────────────────────────────────
-
 #' @importFrom ggplot2 autoplot
 #' @export
 ggplot2::autoplot
 
 # ── autoplot(nowcast_prediction_class) ───────────────────────────────────────
-# Bar-chart style matching the original diseasenowcasting plot():
-#   Dark-green bars  = already-reported counts (observed so far)
-#   Light-sage bars  = predicted-but-not-yet-reported (median nowcast - observed)
-#   Error bars       = 5%-95% posterior interval of the TOTAL nowcast
+# Bar-chart style matching the original diseasenowcasting plot().  For each
+# event-time two bars are drawn from zero:
+#   * a SEMI-TRANSPARENT bar of height = MEDIAN of the total nowcast draws,
+#     drawn first so it sits BEHIND (the "predicted, not yet reported" total);
+#   * a SOLID bar of height = observed-so-far, drawn on top ("reported").
+# Because median >= observed at recent times, the lighter band shows through
+# above the solid reported portion.  An error bar (q5..q95 of the total nowcast
+# draws) is drawn on top.
 # x-axis: dates if `event_dates` supplied, else 0-indexed integers.
 # Strata: if the underlying fit had >1 stratum, facet_wrap by stratum name.
 
 #' Plot a posterior-predictive nowcast (bar-chart style)
 #'
-#' Replicates the original `diseasenowcasting` plot style: dark-green bars for
-#' already-reported cases, light sage bars for model-predicted-but-not-yet-
-#' reported cases, and error bars for the 5%-95% credible interval.
+#' Replicates the original `diseasenowcasting` plot style.  Each date shows a
+#' solid bar for the already-reported cases and, behind it, a semi-transparent
+#' bar reaching up to the median nowcast (the predicted, not-yet-reported total),
+#' with an error bar spanning the requested credible interval.
 #'
 #' @param object A `nowcast_prediction_class` from [predict()].
 #' @param event_dates Optional `Date` vector of length `max_time` mapping event
@@ -111,13 +114,19 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
   draws   <- object@draws                    # [n_draws x max_time] total
   n_time  <- ncol(draws)
   n_draws <- nrow(draws)
-  obs_total <- object@observed               # scalar (target event only)
+
+  # Fall back to slots stored on the prediction object
+  strata_draws    <- strata_draws    %||% object@strata_draws
+  observed_strata <- observed_strata %||% object@observed_strata
+  strata_names    <- strata_names    %||% object@strata_levels
+  event_dates     <- event_dates     %||% object@event_dates
+  obs_series      <- object@observed_series %||% { v <- rep(0, n_time); v[object@target] <- object@observed; v }
 
   quantile_label <- paste0(
     round(quantiles[1] * 100), "% - ", round(quantiles[2] * 100), "% interval"
   )
 
-  # ── Build per-stratum data if available, else use totals ───────────────────
+  # ── Build per-stratum data if available, else use the total ────────────────
   if (!is.null(strata_draws) && !is.null(observed_strata)) {
     n_strata <- dim(strata_draws)[3]
     if (is.null(strata_names)) strata_names <- paste0("Stratum ", seq_len(n_strata))
@@ -129,11 +138,7 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
     plot_df <- do.call(rbind, plot_list)
     has_strata <- n_strata > 1L
   } else {
-    # Reconstruct approximate observed from object@observed (only target event)
-    # Fall back to showing just the total nowcast without stratum split
-    obs_vec <- rep(0, n_time)
-    obs_vec[object@target] <- obs_total
-    plot_df    <- .make_nowcast_bar_df(draws, obs_vec, quantiles, "Total")
+    plot_df    <- .make_nowcast_bar_df(draws, obs_series, quantiles, "Total")
     has_strata <- FALSE
   }
 
@@ -148,18 +153,22 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
   }
 
   # ── Build plot ─────────────────────────────────────────────────────────────
-  col_predicted <- "#A8BFA9"   # light sage for predicted-unreported
-
+  # Both bars are drawn from 0.  The semi-transparent PREDICTED bar (height =
+  # median of the total nowcast draws) is drawn FIRST so it sits BEHIND; the
+  # SOLID observed bar (height = observed-so-far) is drawn SECOND on top.  Since
+  # the predicted median >= observed at recent times, the lighter band shows
+  # through above the solid reported portion.  The error bar (q5..q95 of the
+  # total nowcast draws) is drawn on top.
   p <- ggplot2::ggplot(plot_df) +
-    ggplot2::geom_bar(
+    ggplot2::geom_col(
+      ggplot2::aes(x = .data$x_val, y = .data$predicted_total,
+                   fill = "Predicted, not yet reported"),
+      colour = NA, alpha = 0.45, width = 0.9
+    ) +
+    ggplot2::geom_col(
       ggplot2::aes(x = .data$x_val, y = .data$reported,
                    fill = "Reported"),
-      stat = "identity", colour = NA, alpha = 0.8
-    ) +
-    ggplot2::geom_bar(
-      ggplot2::aes(x = .data$x_val, y = .data$predicted_extra,
-                   fill = "Predicted, not yet reported"),
-      stat = "identity", colour = NA, alpha = 0.45
+      colour = NA, alpha = 0.9, width = 0.9
     ) +
     ggplot2::geom_errorbar(
       ggplot2::aes(x = .data$x_val, ymin = .data$q_lo, ymax = .data$q_hi),
@@ -167,6 +176,7 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
     ) +
     ggplot2::scale_fill_manual(
       name   = NULL,
+      breaks = c("Reported", "Predicted, not yet reported"),
       values = c("Reported" = color,
                  "Predicted, not yet reported" = color),
       labels = c("Reported",
@@ -174,7 +184,7 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
     ) +
     ggplot2::guides(
       fill = ggplot2::guide_legend(
-        override.aes = list(alpha = c(0.8, 0.45), colour = NA)
+        override.aes = list(alpha = c(0.9, 0.45), colour = NA)
       )
     ) +
     ggplot2::labs(y = "Cases", title = title) +
@@ -217,17 +227,17 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
 #' @keywords internal
 #' @noRd
 .make_nowcast_bar_df <- function(draws_mat, obs_vec, quantiles, stratum_name) {
-  n_time <- ncol(draws_mat)
-  total_q_lo  <- apply(draws_mat, 2, stats::quantile, probs = quantiles[1], na.rm = TRUE)
-  total_q_hi  <- apply(draws_mat, 2, stats::quantile, probs = quantiles[2], na.rm = TRUE)
+  n_time       <- ncol(draws_mat)
+  total_q_lo   <- apply(draws_mat, 2, stats::quantile, probs = quantiles[1], na.rm = TRUE)
+  total_q_hi   <- apply(draws_mat, 2, stats::quantile, probs = quantiles[2], na.rm = TRUE)
   total_median <- apply(draws_mat, 2, stats::median, na.rm = TRUE)
   data.frame(
-    event_index    = seq_len(n_time) - 1L,
-    stratum        = stratum_name,
-    reported       = pmax(0, obs_vec),
-    predicted_extra = pmax(0, total_median - obs_vec),
-    q_lo           = pmax(0, total_q_lo),
-    q_hi           = pmax(0, total_q_hi),
+    event_index     = seq_len(n_time) - 1L,
+    stratum         = stratum_name,
+    reported        = pmax(0, obs_vec),               # solid bar (observed so far)
+    predicted_total = pmax(0, total_median),          # transparent bar behind (median nowcast)
+    q_lo            = pmax(0, total_q_lo),             # lower error-bar end (q5)
+    q_hi            = pmax(0, total_q_hi),             # upper error-bar end (q95)
     stringsAsFactors = FALSE
   )
 }
@@ -244,7 +254,7 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
 #' correct calendar dates and, for stratified fits, shows one panel per
 #' stratum.
 #'
-#' @param object A [nowcast_class] object.
+#' @param object A `nowcast_class` object.
 #' @param n_draws Number of posterior draws.
 #' @param quantiles Length-2 quantile vector for error bars (default `c(0.05, 0.95)`).
 #' @param color Bar fill colour (default `"#5F7E62"`).
@@ -260,62 +270,10 @@ S7::method(autoplot, nowcast_class) <- function(object, n_draws = NULL,
                                                  date_breaks = NULL,
                                                  title = NULL,
                                                  seed = NULL, ...) {
-  if (!is.null(seed)) set.seed(seed)
-  n_draws <- n_draws %||% min(object@n_draws, 500L)
-  fit     <- object@fits[[1]]
-  data    <- fit$data
-  n_time  <- data$max_time
-  n_strata <- as.integer(data$num_strata %||% 1L)
-
-  # ── Event dates from the tbl_now if available ─────────────────────────────
-  event_dates <- tryCatch({
-    min_event  <- object@engine$min_event %||% NULL
-    event_unit <- object@engine$event_unit %||% "day"
-    if (!is.null(min_event)) {
-      seq(as.Date(min_event), by = event_unit, length.out = n_time)
-    } else NULL
-  }, error = function(e) NULL)
-
-  # Fall back: try to get dates from the tbl_now data stored in nowcast
-  if (is.null(event_dates)) {
-    event_dates <- tryCatch({
-      tn  <- object@data
-      ev  <- tbl.now::get_event_date(tn)
-      eu  <- tbl.now::get_event_units(tn)
-      mn  <- min(tn[[ev]], na.rm = TRUE)
-      seq(as.Date(mn), by = as.character(eu), length.out = n_time)
-    }, error = function(e) NULL)
-  }
-
-  # ── Per-stratum draws and observed counts ─────────────────────────────────
-  draws_out <- .nowcast_draws(fit, target = n_time, n_draws = n_draws, seed = seed)
-  cc_mat    <- if (is.matrix(data$case_counts)) data$case_counts
-               else matrix(data$case_counts, n_time, n_strata)
-
-  # Strata names
-  strata_names <- tryCatch({
-    object@engine$strata_levels %||% paste0("Stratum ", seq_len(n_strata))
-  }, error = function(e) paste0("Stratum ", seq_len(n_strata)))
-
-  # Build a prediction_class for the convenience dispatch
-  observed_total <- rowSums(cc_mat)
-  obs_total_target <- observed_total[n_time]
-  pred_obj <- nowcast_prediction_class(
-    draws       = draws_out$M,
-    target      = n_time,
-    observed    = obs_total_target,
-    event_index = seq_len(n_time) - 1L
-  )
-
-  autoplot(pred_obj,
-           event_dates    = event_dates,
-           strata_names   = strata_names,
-           strata_draws   = if (n_strata > 1L) draws_out$M_strata else NULL,
-           observed_strata = if (n_strata > 1L) cc_mat else NULL,
-           quantiles   = quantiles,
-           color       = color,
-           date_breaks = date_breaks,
-           title       = title)
+  # predict() already attaches event dates, strata draws, and observed series.
+  pred <- predict(object, n_draws = n_draws %||% min(object@n_draws, 500L), seed = seed)
+  autoplot(pred, quantiles = quantiles, color = color,
+           date_breaks = date_breaks, title = title)
 }
 
 # ── autoplot(backtest_class) ─────────────────────────────────────────────────

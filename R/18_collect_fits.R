@@ -115,16 +115,44 @@
 #' @param fits list of fit objects.
 #' @param target event-time index.
 #' @param n_draws draws per fit.
-#' @returns list(M = pooled `[Sigman_draws x max_time]` matrix, lambda = pooled latent matrix).
+#' @returns list(M = pooled total `[Sigma n_draws x max_time]` matrix,
+#'   lambda = pooled latent total, M_strata = pooled `[Sigma n_draws x max_time
+#'   x n_strata]` array (or NULL when unstratified)).
 #' @keywords internal
 #' @noRd
 .pool_fit_draws <- function(fits, target, n_draws = 200L) {
   nowcast_blocks <- vector("list", length(fits))
   lambda_blocks  <- vector("list", length(fits))
+  strata_blocks  <- vector("list", length(fits))
+  n_strata <- 1L
   for (i in seq_along(fits)) {
     drawn <- .nowcast_draws(fits[[i]], target = target, n_draws = n_draws)
     nowcast_blocks[[i]] <- drawn$M
     lambda_blocks[[i]]  <- drawn$lambda_draws
+    strata_blocks[[i]]  <- drawn$M_strata
+    n_strata <- drawn$n_strata %||% 1L
   }
-  list(M = do.call(rbind, nowcast_blocks), lambda = do.call(rbind, lambda_blocks))
+  M_strata <- NULL
+  if (n_strata > 1L && all(!vapply(strata_blocks, is.null, logical(1)))) {
+    # rbind along the draws dimension, keeping [pooled_draws x max_time x n_strata]
+    n_time <- dim(strata_blocks[[1]])[2]
+    M_strata <- array(NA_real_, c(0L, n_time, n_strata))
+    for (blk in strata_blocks) M_strata <- abind_draws(M_strata, blk)
+  }
+  list(M = do.call(rbind, nowcast_blocks),
+       lambda = do.call(rbind, lambda_blocks),
+       M_strata = M_strata, n_strata = n_strata)
+}
+
+#' Bind two [draws x time x strata] arrays along the draws dimension (base R).
+#' @keywords internal
+#' @noRd
+abind_draws <- function(a, b) {
+  if (is.null(a) || dim(a)[1] == 0L) return(b)
+  if (is.null(b) || dim(b)[1] == 0L) return(a)
+  d <- dim(a); nt <- d[2]; ns <- d[3]
+  out <- array(NA_real_, c(dim(a)[1] + dim(b)[1], nt, ns))
+  out[seq_len(dim(a)[1]), , ] <- a
+  out[dim(a)[1] + seq_len(dim(b)[1]), , ] <- b
+  out
 }

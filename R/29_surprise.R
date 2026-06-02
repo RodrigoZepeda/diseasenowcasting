@@ -243,12 +243,12 @@ surprise.list <- function(object, new_data, type = c("both","count","delay"),
 
   structure(list(count_surprise = count_result, delay_surprise = delay_result,
                  type = type, n_draws = n_draws),
-            class = "dcast3_surprise")
+            class = "diseasenowcasting_surprise")
 }
 
 #' @export
-print.dcast3_surprise <- function(x, ...) {
-  cli::cli_h2("dcast3 surprise scores (type: {x$type}, n_draws: {x$n_draws})")
+print.diseasenowcasting_surprise <- function(x, ...) {
+  cli::cli_h2("diseasenowcasting surprise scores (type: {x$type}, n_draws: {x$n_draws})")
   if (!is.null(x$count_surprise)) {
     cli::cli_h3("Count surprise")
     print(x$count_surprise, row.names = FALSE)

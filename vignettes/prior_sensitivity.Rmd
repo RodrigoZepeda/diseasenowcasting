@@ -1,9 +1,9 @@
 ---
-title: "Understanding Priors in dcast3"
-author: "dcast3 package"
+title: "Understanding Priors in diseasenowcasting"
+author: "diseasenowcasting package"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Understanding Priors in dcast3}
+  %\VignetteIndexEntry{Understanding Priors in diseasenowcasting}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -20,11 +20,11 @@ knitr::opts_chunk$set(
 ```
 
 ```{r load, include=FALSE}
-library(dcast3)
+library(diseasenowcasting)
 library(ggplot2)
 
 # Load pre-computed sensitivity data (avoids re-running fits at install time)
-ps_file <- system.file("extdata", "prior_sensitivity.rds", package = "dcast3")
+ps_file <- system.file("extdata", "prior_sensitivity.rds", package = "diseasenowcasting")
 ps <- if (file.exists(ps_file)) readRDS(ps_file) else NULL
 
 # Helper: filter and plot a prior comparison
@@ -68,7 +68,7 @@ informative (many cases, long reporting history), the prior has little impact â€
 the data overwhelm it.  When the data are sparse or noisy (early epidemic,
 small populations), the prior can substantially shape the estimates.
 
-In `dcast3` every estimated parameter has a prior: the delay distribution, the
+In `diseasenowcasting` every estimated parameter has a prior: the delay distribution, the
 epidemic trend, the overdispersion, and the GP kernel hyperparameters.  This
 vignette shows what happens to the nowcast when you move each prior, using
 pre-computed results on three real diseases.
@@ -169,7 +169,7 @@ the pathogen.
 ## 4. Delay distribution priors
 
 The reporting-delay prior controls how the model thinks delays are distributed
-*before* seeing any data.  `dcast3` supports four delay families.
+*before* seeing any data.  `diseasenowcasting` supports four delay families.
 
 ### 4.1 Log-Normal delay (`lognormal_delay`)
 
@@ -285,13 +285,15 @@ knitr::kable(recs, caption = "Prior tuning recommendations by symptom.")
 ### Quick-reference prior changes
 
 ```r
-# Wider intervals (more overdispersion)
-phi <- lognormal_prior(log(5), 0.5)
-nc  <- nowcast(tn, mdl, phi = phi, ...)
+# Wider intervals (more overdispersion) -- set phi on the likelihood:
+mdl <- model(nb_likelihood(phi = lognormal_prior(log(5), 0.5)),
+             hsgp_epidemic(), lognormal_delay())
+nc  <- nowcast(tn, mdl, ...)
 
-# Narrower intervals (less overdispersion)
-phi <- lognormal_prior(log(50), 0.3)
-nc  <- nowcast(tn, mdl, phi = phi, ...)
+# Narrower intervals (less overdispersion):
+mdl <- model(nb_likelihood(phi = lognormal_prior(log(50), 0.3)),
+             hsgp_epidemic(), lognormal_delay())
+nc  <- nowcast(tn, mdl, ...)
 
 # Override any prior via default_priors() + fix_param()
 priors <- default_priors(mdl, engine)

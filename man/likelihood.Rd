@@ -8,13 +8,15 @@
 \usage{
 poisson_likelihood(mu = numeric(0))
 
-nb_likelihood(mu = numeric(0), phi = numeric(0))
+nb_likelihood(mu = numeric(0), phi = lognormal_prior(log(20), 0.5))
 }
 \arguments{
 \item{mu}{Log-scale mean intercept prior (or fixed numeric).}
 
 \item{phi}{Negative-binomial overdispersion prior (or fixed numeric);
-NB only.}
+NB only.  Defaults to \code{lognormal_prior(log(20), 0.5)}.  This is the \emph{only}
+place to set the overdispersion prior — \code{\link[=nowcast]{nowcast()}} reads it from the model
+and does not accept its own \code{phi} argument.}
 }
 \value{
 A \code{likelihood_class} object.
@@ -25,6 +27,7 @@ Count observation model for the (truncation-corrected) case counts.
 \examples{
 poisson_likelihood()
 nb_likelihood()
-nb_likelihood(phi = lognormal_prior(log(20), 0.5))
+# Wider overdispersion (heavier-tailed counts) -- set via the likelihood:
+nb_likelihood(phi = lognormal_prior(log(5), 0.5))
 
 }

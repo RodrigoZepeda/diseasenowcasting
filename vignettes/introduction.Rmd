@@ -1,9 +1,9 @@
 ---
-title: "Introduction to dcast3: Real-Time Epidemic Nowcasting"
-author: "dcast3 package"
+title: "Introduction to diseasenowcasting: Real-Time Epidemic Nowcasting"
+author: "Rodrigo Zepeda-Tello"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Introduction to dcast3: Real-Time Epidemic Nowcasting}
+  %\VignetteIndexEntry{Introduction to diseasenowcasting: Real-Time Epidemic Nowcasting}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -19,120 +19,85 @@ knitr::opts_chunk$set(
 )
 ```
 
-## What is nowcasting — and why does it matter?
+`diseasenowcasting` is an R package for nowcasting time series of epidemiological cases. Epidemiologic surveillance tools usually have an intrinsic delay between the **true date of an event** (`event_date`) and the **report date for that event** (`report_date`). Some examples include the true date being symptom onset or testing time and the report date corresponds to when the case was registered in the system. 
+`diseasenowcasting` uses censored Bayesian structural time series models (via R's Template Model Builder [`RTMB`](https://cran.r-project.org/web/packages/RTMB/index.html)) to infer the cases that have not yet been reported thus providing a prediction of the final number of cases.
 
-When a new infectious disease case occurs, it almost never appears in official
-surveillance data right away.  There is always a **reporting delay**: the time
-between a person getting sick (or being tested positive) and that case being
-entered into the national database.  This delay can range from a few days to
-several weeks, depending on the disease and the health system.  The practical
-consequence is that the most recent counts in any surveillance report are
-*systematically too low* — not because cases didn't happen, but because they
-haven't been reported yet.
-
-**Nowcasting** is the statistical task of estimating the *true* number of cases
-that have already occurred, correcting for this undercount.  A good nowcast
-answers the question: "Given what we can see today, what is the most likely
-epidemic size right now?"  This is essential for real-time public-health
-decision-making — triggering interventions, allocating resources, and
-communicating risk to the public — because acting on the raw, incomplete data
-can lead to systematically delayed or wrong decisions.
-
-The `dcast3` package implements a principled Bayesian nowcasting approach.  It
-models the reporting delay as a stochastic process and estimates the epidemic
-curve jointly with the delay distribution, so that uncertainty about both is
-propagated into every estimate.  The result is a full probability distribution
-over the current epidemic size, not just a point estimate.
-
----
 
 ## Your data: the `tbl_now` format
 
-`dcast3` works with data organised as a `tbl_now` object from the companion
-`tbl.now` package.  A `tbl_now` is simply a data frame that has been annotated
-with the roles of its columns: which column is the *event date* (e.g. symptom
-onset), which is the *report date* (e.g. date entered into the database), and
-— optionally — which columns define *strata* (e.g. sex, region).
+`diseasenowcasting` works with data organised as a `tbl_now` object from the companion
+[`tbl.now`](https://rodrigozepeda.github.io/tbl.now/) package.  A `tbl_now` is simply a data frame that has been annotated
+with the roles of its columns: 
++ *event date* when the event happened (e.g. symptom onset)
++ *report date*  when the event was reported (e.g. date entered into the database)
++ *strata* (optional) columns that defined all the strata (e.g. sex and region)
++ *now*  (optional) the date until which to nowcast (assumes all events and reports before the now have been observed)
+
+> A `tbl.now` allows the user to give both linelist and count-data.  
 
 ```{r load}
-library(dcast3)
+library(diseasenowcasting)
 library(tbl.now)
 library(ggplot2)
+set.seed(27653)
 ```
 
-As a quick example, here is how to build a `tbl_now` from the Colombia COVID-19
-data bundled with `dcast3`:
+As a quick example, here is how to build a `tbl_now` using surveillance data 
+for dengue in Puerto Rico:
 
 ```{r tblnow-demo}
-# covid_colombia ships with dcast3: 37,600 rows of daily counts by sex
-head(covid_colombia, 4)
+data(denguedat)
+```
 
-tn_covid <- tbl_now(
-  covid_colombia,
-  event_date  = notification_date,   # when the patient was notified / onset
-  report_date = diagnosis_date,      # when the record entered the database
-  strata      = sex,
-  case_count  = n,
-  data_type   = "count-incidence",
-  verbose     = FALSE
+```{r, echo = FALSE}
+head(denguedat, 6)
+```
+
+
+
+```{r}
+dn <- tbl_now(
+  denguedat,
+  event_date  = onset_week,    # symptom onset date
+  report_date = report_week,   # when the record was reported
+  strata      = gender,        # remove if no strata or add as vector all strata (e.g. strata = c(gender, age, region))
+  data_type   = "linelist",    # another option is "count-incidence"  if data is aggregated
+  now         =  as.Date("1991-01-01")
 )
-tn_covid
+dn
 ```
 
 Once your data is a `tbl_now`, a single call to `nowcast()` does the rest.
 
----
-
 ## Example 1 — Dengue fever (weekly, Puerto Rico)
 
-`tbl.now` ships a weekly dengue linelist from Puerto Rico (`denguedat`).  We fit
-an unstratified nowcast at a single point in time to illustrate the basic
-workflow. 
-
-```{r dengue-prep}
-# denguedat: onset_week, report_week, gender
-dn <- tbl_now(
-  denguedat,
-  event_date  = onset_week,
-  report_date = report_week,
-  data_type   = "linelist",
-  verbose     = FALSE,
-  now         =  as.Date("1991-01-01")
-)
-```
+We fit a stratified nowcast to illustrate the basic workflow. 
 
 ```{r dengue-fit}
-mdl_dengue <- model(
-  nb_likelihood(),      # negative-binomial counts (handles overdispersion)
-  hsgp_epidemic(),      # Hilbert-space GP trend (flexible, smooth)
-  lognormal_delay()     # log-normal reporting delay
-)
-
-nc_dengue <- nowcast(
-  dn, mdl_dengue,
-  type    = "two_stage",
-  n_draws = 300,
-  seed    = 42
-)
+nc_dengue <- nowcast(dn, n_draws = 1000)
 nc_dengue
 ```
 
-```{r dengue-results}
-# Full posterior-predictive nowcast at every event-time
-pred_dengue <- predict(nc_dengue, seed = 42)
-summary(pred_dengue) |> tail(6)   # last 6 weeks
-```
-
+The fitted model can be visualized with `autoplot`:
 ```{r dengue-plot}
-autoplot(pred_dengue) +
-  labs(title = "Dengue nowcast — Puerto Rico",
-       subtitle = paste("as of", get_now(dn)),
-       x = "Week index", y = "Cases") 
+autoplot(nc_dengue) 
 ```
 
-The shaded bands show the 50 % and 90 % credible intervals.  The most recent
+The shaded bars show the 50 % and 90 % credible intervals.  The most recent
 weeks (rightmost points) carry the widest intervals — this is the nowcast
 correcting for the fact that the latest data are the most incomplete.
+
+
+
+Or values can be obtained via `predict` and `summary`:
+
+```{r dengue-results}
+# Full posterior-predictive nowcast at every event-time
+pred_dengue <- predict(nc_dengue)
+
+#This creates a summary of mean and quantiles
+summary(pred_dengue) |> tail(6)   # last 6 weeks
+```
 
 ---
 
@@ -149,121 +114,70 @@ mp <- tbl_now(
   as.data.frame(mpoxdat),
   event_date  = dx_date,
   report_date = dx_report_date,
-  strata      = race,
   case_count  = n,
   data_type   = "count-incidence",
-  verbose     = FALSE
-) |>
-  add_temporal_effects(temporal_effects(day_of_week = TRUE)) |>
-  compute_temporal_effects()
-
-mp_now <- as.Date("2022-09-15")
+  now         =  as.Date("2022-08-15")
+) 
 ```
+
+A simple plot of the data shows that we should be taking into account daily effects. Although the model automatically tries to do it, we can also set it with [add_temporal_effects()]:
+
+```{r}
+mp <- mp |> 
+  add_temporal_effects(temporal_effects(day_of_week = TRUE))
+```
+
+```{r, echo = FALSE}
+mp
+```
+
+One can also choose between several likelihoods, epidemic processess and delay distributions
+and feed it into the [model()]. Here we use a Suceptible-Infected-Recovered model (SIR) with
+a delay that follows a lognormal distribution:
 
 ```{r mpox-fit}
-mdl_mpox <- model(
-  nb_likelihood(),
-  hsgp_epidemic(),
-  lognormal_delay()
-)
+#Models can be modified via the model() 
+mpox_model <- model(likelihood = nb_likelihood(), epidemic = sir_epidemic(), delay = lognormal_delay())
 
-nc_mpox <- nowcast(
-  mp, mdl_mpox,
-  now     = mp_now,
-  type    = "two_stage",   # delay uncertainty propagated via multiple imputation
-  K       = 5,             # 5 delay imputations (increase to 25 in production)
-  n_draws = 300,
-  seed    = 42
-)
-nc_mpox
+nc_mpox <- nowcast(mp, model = mpox_model)
+
+autoplot(nc_mpox) 
 ```
 
-```{r mpox-results}
-pred_mpox <- predict(nc_mpox, seed = 42)
-autoplot(pred_mpox) +
-  labs(title = "Mpox nowcast — United States (total across strata)",
-       subtitle = paste("as of", format(mp_now), "| two-stage, stratified by race"),
-       x = "Day index", y = "Cases")
-```
 
-Because the delay is shared across all race strata but each stratum has its own
-epidemic trend, the model borrows information about the delay from the full
-dataset while fitting independent curves per stratum.  The `predict()` output
-reports the *total* (summed over strata), which is what matters for overall
-epidemic monitoring.
-
----
-
-## Example 3 — COVID-19 (daily, Colombia, stratified by sex)
-
-Now we use the Colombia COVID-19 data bundled with `dcast3`.  We fit an
-unstratified one-stage nowcast to a 90-day window in the early pandemic.
-
-```{r covid-prep}
-tn_covid_fit <- tbl_now(
-  covid_colombia,
-  event_date  = notification_date,
-  report_date = diagnosis_date,
-  strata      = sex,
-  case_count  = n,
-  data_type   = "count-incidence",
-  verbose     = FALSE
-) |>
-  add_temporal_effects(temporal_effects(day_of_week = TRUE)) |>
-  compute_temporal_effects()
-
-cv_now <- as.Date("2020-06-01")
-```
-
-```{r covid-fit}
-mdl_covid <- model(
-  nb_likelihood(),
-  hsgp_epidemic(),
-  lognormal_delay()
-)
-
-nc_covid <- nowcast(
-  tn_covid_fit, mdl_covid,
-  now     = cv_now,
-  type    = "one_stage",
-  n_draws = 300,
-  seed    = 42
-)
-nc_covid
-```
-
-```{r covid-results}
-coef(nc_covid)   # delay mean/SD + epidemic parameters
-
-pred_covid <- predict(nc_covid, seed = 42)
-autoplot(pred_covid) +
-  labs(title = "COVID-19 nowcast — Colombia (total, female + male)",
-       subtitle = paste("as of", format(cv_now), "| stratified by sex"),
-       x = "Day index", y = "Cases")
-```
-
----
-
-## Example 4 — Comparing models with a backtest
+## Example 3 — Comparing models with a backtest
 
 A **backtest** reruns nowcasts at multiple historical dates and scores them
 against the eventually-observed totals.  This lets you objectively compare
 model families before committing to one for real-time monitoring.
 
+**Parallel execution.** `backtest()` fits one nowcast per (date × model) cell,
+and those cells run in parallel through the
+[future](https://future.futureverse.org/) framework.  By default they run
+sequentially; to use several CPU cores, set a parallel plan *before* calling
+`backtest()`:
+
+```{r backtest-plan, eval=FALSE}
+library(future)
+plan(multisession, workers = 4)   # 4 parallel R sessions
+# ... run backtest() ...
+plan(sequential)                  # restore serial execution when done
+```
+
 ```{r backtest}
-# Compare HSGP (flexible GP trend) vs AR1 (autoregressive trend) on dengue
+# Compare HSGP (flexible GP trend) vs AR1 (autoregressive trend) 
+# and SIR (susceptible, infected, recovered) on mpox
 models_to_compare <- list(
   model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
-  model(nb_likelihood(), ar1_epidemic(),  lognormal_delay())
+  model(nb_likelihood(), ar1_epidemic(),  lognormal_delay()),
+  model(nb_likelihood(), sir_epidemic(),  lognormal_delay())
 )
 
 bt <- backtest(
-  dn,
+  mp,
   models  = models_to_compare,
-  dates   = as.Date(c("2010-01-04", "2010-03-29", "2010-06-21")),
-  type    = "one_stage",
-  n_draws = 300,
-  K       = 5,
+  n_dates = 5, #Test 3 dates at random from the mpox data
+  type    = "two_stage",
   seed    = 42
 )
 ```
@@ -271,12 +185,6 @@ bt <- backtest(
 ```{r score}
 # Rank by Weighted Interval Score (WIS) — lower is better
 score(bt, metric = "wis", report = TRUE)
-```
-
-```{r backtest-plot}
-autoplot(bt) +
-  labs(title = "Dengue backtest — HSGP vs AR1",
-       subtitle = "Ribbons = 50 % and 90 % credible intervals; points = final observed")
 ```
 
 The `score()` output shows WIS, absolute percentage error (APE), and empirical
@@ -293,20 +201,7 @@ and comparing models with `backtest()` / `score()`.
 
 A few directions to explore next:
 
-- **Delay families** — swap `lognormal_delay()` for `gamma_delay()`,
-  `generalized_gamma_delay()`, or the non-parametric `dirichlet_delay()`.
-- **Epidemic models** — try `sir_epidemic()` for a mechanistic compartmental
-  model, or `ar1_epidemic()` when computational speed matters.
-- **Two-stage cascade** — set `type = "two_stage"` with `K = 25` for the full
-  multiple-imputation pipeline that propagates delay uncertainty into the final
-  epidemic estimate (recommended for production use).
-- **Custom priors** — pass a named list to the `phi` argument of `nowcast()` or
-  supply a `priors` list to `fit()` directly.
-- **Warm-start updates** — as new data arrive, `update(nc, new_rows)` refits
-  from the previous estimates rather than cold, saving substantial computation.
-- **Per-stratum results** — the fit object stores `[T × S]` lambda matrices
-  accessible via `nc@fits[[1]]$lambda`; the `M_strata` array in the draw list
-  gives per-stratum predictive counts.
+<!--- TODO: FILL HERE REFERENCING THE OTHER VIGNETTES. HAVE A MODEL VIGNETTE FOR PUBLIC HEALTH PRACTICIONERS--->
 
 See `?nowcast`, `?backtest`, `?score`, and `?model` for full documentation, and
 the `SKILL.md` file in the package root for an AI-oriented API reference.

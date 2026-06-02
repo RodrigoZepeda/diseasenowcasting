@@ -1,8 +1,8 @@
 # =============================================================================
-# Joint-fit parity gate (dcast3 vs Stan): HSGP + NB + LogNormal nowcast at d*=0
+# Joint-fit parity gate (diseasenowcasting vs Stan): HSGP + NB + LogNormal nowcast at d*=0
 # on real COVID data with day-of-week covariates.
 #
-#   N_DATES=2 Rscript devel/validate_joint.R   # from ~/Documents/dcast3
+#   N_DATES=2 Rscript devel/validate_joint.R   # from ~/Documents/diseasenowcasting
 # =============================================================================
 suppressPackageStartupMessages({
   library(dplyr); library(tidyr); library(tibble); library(readr); library(lubridate); library(stringr)
@@ -47,9 +47,9 @@ prep <- function(dr) {
 
 mdl_s <- diseasenowcast2::model(diseasenowcast2::nb_likelihood(), diseasenowcast2::hsgp_epidemic(),
                                 diseasenowcast2::lognormal_delay())
-mdl_r <- dcast3::model(dcast3::nb_likelihood(), dcast3::hsgp_epidemic(), dcast3::lognormal_delay())
+mdl_r <- diseasenowcasting::model(diseasenowcasting::nb_likelihood(), diseasenowcasting::hsgp_epidemic(), diseasenowcasting::lognormal_delay())
 PHI_s <- diseasenowcast2::lognormal_prior(log(20), 0.5)
-PHI_r <- dcast3::lognormal_prior(log(20), 0.5)
+PHI_r <- diseasenowcasting::lognormal_prior(log(20), 0.5)
 
 for (dr in DATES) {
   P <- prep(dr); Tn <- P$max_time
@@ -74,16 +74,16 @@ for (dr in DATES) {
     }
   }
 
-  # dcast3 joint + nowcast
-  dat <- dcast3::prepare_data(mdl_r, P$m, X = P$X, max_time = Tn, d_star = P$d_star)
-  prr <- dcast3::default_priors(mdl_r, dat, phi = PHI_r)
-  rr <- tryCatch(dcast3::fit(mdl_r, dat, priors = prr), error = function(e) NULL)
-  r_q <- if (!is.null(rr)) dcast3::nowcast(rr, n_draws = 2000, seed = 1)$quantiles else NULL
+  # diseasenowcasting joint + nowcast
+  dat <- diseasenowcasting::prepare_data(mdl_r, P$m, X = P$X, max_time = Tn, d_star = P$d_star)
+  prr <- diseasenowcasting::default_priors(mdl_r, dat, phi = PHI_r)
+  rr <- tryCatch(diseasenowcasting::fit(mdl_r, dat, priors = prr), error = function(e) NULL)
+  r_q <- if (!is.null(rr)) diseasenowcasting::nowcast(rr, n_draws = 2000, seed = 1)$quantiles else NULL
 
   cat("Stan  nowcast q:", if (is.null(stan_q)) "NULL" else paste(round(stan_q), collapse=" "), "\n")
-  cat("dcast3 nowcast q:", if (is.null(r_q)) "NULL" else paste(round(r_q), collapse=" "), "\n")
+  cat("diseasenowcasting nowcast q:", if (is.null(r_q)) "NULL" else paste(round(r_q), collapse=" "), "\n")
   if (!is.null(stan_q) && !is.null(r_q)) {
     relmed <- abs(stan_q[5] - r_q[5]) / abs(stan_q[5] + 1)
-    cat(sprintf("median Stan=%.0f dcast3=%.0f  rel=%.2f\n", stan_q[5], r_q[5], relmed))
+    cat(sprintf("median Stan=%.0f diseasenowcasting=%.0f  rel=%.2f\n", stan_q[5], r_q[5], relmed))
   }
 }

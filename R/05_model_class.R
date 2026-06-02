@@ -62,7 +62,7 @@ model_class <- S7::new_class(
 #' @export
 model <- function(likelihood      = nb_likelihood(),
                   epidemic        = hsgp_epidemic(),
-                  delay           = dirichlet_delay(),
+                  delay           = lognormal_delay(),
                   covariate_prior = std_normal_prior(),
                   strata_pooling  = "independent") {
   model_class(likelihood = likelihood, epidemic = epidemic,

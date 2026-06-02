@@ -6,7 +6,7 @@
 \usage{
 backtest(
   data,
-  models = dcast3::model(),
+  models = diseasenowcasting::model(),
   dates = NULL,
   type = c("two_stage", "one_stage"),
   n_dates = 20L,
@@ -47,4 +47,30 @@ A \code{backtest_class} object.
 }
 \description{
 Backtest one or more nowcast models across a set of as-of dates
+}
+\details{
+\code{backtest()} evaluates one nowcast per (as-of date x model) cell and these
+cells are \strong{embarrassingly parallel}.  The work is dispatched with
+\pkg{foreach} + \pkg{doFuture}, so parallelism is controlled by the
+\pkg{future} plan you set \emph{before} calling \code{backtest()}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{library(future)
+plan(multisession, workers = 4)   # 4 parallel R sessions
+bt <- backtest(data, models, dates = my_dates)
+plan(sequential)                  # back to serial when done
+}\if{html}{\out{</div>}}
+
+With the default plan (\code{sequential}) the cells run one at a time.  For a grid
+of many dates x models, \code{plan(multisession, workers = N)} (or
+\code{plan(multicore)} on Linux/macOS) gives a near-linear speed-up up to the
+number of physical cores.  Each worker needs the package available, which is
+automatic for an installed package; with \code{devtools::load_all()} use
+\code{plan(multisession)} so workers re-load it.
+}
+\examples{
+if (interactive() && requireNamespace("tbl.now", quietly = TRUE)) {
+  # future::plan(future::multisession, workers = 4)   # opt in to parallelism
+  # bt <- backtest(my_tbl_now, list(model_a, model_b), dates = my_dates)
+  # future::plan("sequential")
+}
 }

@@ -1,14 +1,14 @@
-# dcast3 — AI Agent Reference Guide
+# diseasenowcasting — AI Agent Reference Guide
 
 This document is a complete reference for AI assistants (and human contributors)
-working in the `dcast3` codebase.  It is designed so that you can write correct
-`dcast3` code from scratch without reading the source.
+working in the `diseasenowcasting` codebase.  It is designed so that you can write correct
+`diseasenowcasting` code from scratch without reading the source.
 
 ---
 
-## 1. What dcast3 does
+## 1. What diseasenowcasting does
 
-`dcast3` is a standalone R package for **Bayesian epidemic nowcasting** using
+`diseasenowcasting` is a standalone R package for **Bayesian epidemic nowcasting** using
 the RTMB autodiff engine (CppAD + built-in Laplace approximation).  It
 reimplements the `diseasenowcast2` Stan-based package with no Stan/cmdstanr
 dependency, matching the same public API: `model(likelihood(), epidemic(),
@@ -143,13 +143,17 @@ nc <- nowcast(
   floor_mu     = 0.15,         # minimum delay-mean spread for imputation
   floor_sig_frac = 0.25,       # minimum sigma spread fraction
   np_spread    = 1,            # Dirichlet simplex imputation covariance scale
-  phi = lognormal_prior(log(20), 0.5),  # NB overdispersion prior
+  temporal_effects = "auto",   # "auto" | "none"; auto-adds DOW/seasonality
   seed = NULL,
   ...                          # passed to prepare_from_tbl_now / prepare_data
 )
 ```
 
 Returns a `nowcast_class` S7 object.
+
+**NB overdispersion `phi` is NOT a `nowcast()` argument.** Set it on the
+likelihood: `model(nb_likelihood(phi = lognormal_prior(log(5), 0.5)), ...)`.
+The default `nb_likelihood()` uses `lognormal_prior(log(20), 0.5)`.
 
 ### one_stage vs two_stage
 
@@ -367,9 +371,9 @@ value).  Raw `delay_Q = -2` ≈ `shape_Q = 0.27` (near log-normal).
 
 ### joint-mode vs random= Laplace
 
-`use_random = FALSE` (default, via `getOption("dcast3.use_random", FALSE)`) uses
+`use_random = FALSE` (default, via `getOption("diseasenowcasting.use_random", FALSE)`) uses
 the joint Hessian — same as `cmdstanr $laplace()`.  Set
-`options(dcast3.use_random = TRUE)` to switch to the marginal nested Laplace
+`options(diseasenowcasting.use_random = TRUE)` to switch to the marginal nested Laplace
 (slower, sometimes more accurate for hierarchical models).
 
 ### HSGP num_basis for long daily series
@@ -404,7 +408,7 @@ The package handles this automatically when you use `nowcast()`.
 | `denguedat` | tbl.now | Weekly dengue linelist, Colombia | onset_week, report_week, gender |
 | `mpoxdat` | tbl.now | Daily mpox counts, USA 2022 | dx_date, dx_report_date, race, n |
 | `covidat` | tbl.now | Daily COVID counts (small demo) | date_of_symptom_onset, date_of_registry, sex, n |
-| `covid_colombia` | **dcast3** | Daily COVID counts, Colombia 2020–2023 (37,600 rows) | notification_date, diagnosis_date, sex, n |
+| `covid_colombia` | **diseasenowcasting** | Daily COVID counts, Colombia 2020–2023 (37,600 rows) | notification_date, diagnosis_date, sex, n |
 
 For `covid_colombia`: event = `notification_date`, report = `diagnosis_date`.
 
@@ -413,7 +417,7 @@ For `covid_colombia`: event = `notification_date`, report = `diagnosis_date`.
 ## 10. Typical session skeleton
 
 ```r
-library(dcast3)
+library(diseasenowcasting)
 library(tbl.now)
 
 # 1. Build tbl_now

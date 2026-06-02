@@ -45,7 +45,8 @@ S7::method(coef, nowcast_class) <- function(object, ...) {
 #' @param object A `nowcast_class` object.
 #' @param n_draws Posterior draws (per fit); defaults to the object's `n_draws`.
 #' @param summary If TRUE, return the [summarise_nowcast_matrix()] table directly
-#'   instead of a `nowcast_prediction_class` object.
+#'   instead of a `nowcast_prediction_class` object.  For a stratified fit the
+#'   summary gains a `stratum` column (one block per stratum, plus a `"Total"`).
 #' @param seed Optional RNG seed.
 #' @param ... Unused.
 #' @returns A `nowcast_prediction_class` object (or a summary data.frame).
@@ -55,22 +56,59 @@ S7::method(predict, nowcast_class) <- function(object, n_draws = NULL,
   if (!is.null(seed)) set.seed(seed)
   n_draws <- n_draws %||% object@n_draws
   per_fit <- max(1L, ceiling(n_draws / length(object@fits)))
-  draws_matrix <- .pool_fit_draws(object@fits, object@target, n_draws = per_fit)$M
-  if (summary) return(summarise_nowcast_matrix(draws_matrix))
-  cc <- object@engine$case_counts                                   # [T x S] (or vector)
-  observed_total <- if (is.matrix(cc)) rowSums(cc)[object@target] else cc[object@target]
-  nowcast_prediction_class(draws = draws_matrix, target = object@target,
-                           observed = observed_total,
-                           event_index = seq_len(ncol(draws_matrix)) - 1L)
+  pooled  <- .pool_fit_draws(object@fits, object@target, n_draws = per_fit)
+  draws_matrix <- pooled$M
+
+  # Event dates + strata labels (when available)
+  n_time      <- ncol(draws_matrix)
+  strata_lvls <- object@engine$strata_levels %||% NULL
+  event_dates <- tryCatch({
+    min_ev <- object@engine$min_event; eu <- object@engine$event_unit
+    if (!is.null(min_ev)) seq(as.Date(min_ev), by = as.character(eu), length.out = n_time) else NULL
+  }, error = function(e) NULL)
+
+  cc <- object@engine$case_counts
+  cc_mat <- if (is.matrix(cc)) cc else matrix(cc, n_time, 1L)
+  pred <- nowcast_prediction_class(
+    draws        = draws_matrix, target = object@target,
+    observed     = rowSums(cc_mat)[object@target],
+    event_index  = seq_len(n_time) - 1L,
+    strata_draws = pooled$M_strata,
+    strata_levels = strata_lvls,
+    event_dates  = event_dates,
+    observed_series = rowSums(cc_mat),
+    observed_strata = if (ncol(cc_mat) > 1L) cc_mat else NULL
+  )
+  if (summary) return(summary(pred))
+  pred
 }
 
 #' Summary of a nowcast prediction: mean/median/sd/quantiles per event
+#'
+#' For a stratified prediction the result has a `stratum` column with one block
+#' of rows per stratum followed by a `"Total"` block (summed over strata).
 #' @param object A `nowcast_prediction_class`.
 #' @param ... Unused.
-#' @returns A data.frame (one row per event time).
+#' @returns A data.frame (one row per event time, or per event-time x stratum).
 #' @noRd
 S7::method(summary, nowcast_prediction_class) <- function(object, ...) {
-  summarise_nowcast_matrix(object@draws)
+  total_tab <- summarise_nowcast_matrix(object@draws)
+  if (is.null(object@strata_draws)) {
+    if (!is.null(object@event_dates)) total_tab$event_date <- object@event_dates
+    return(total_tab)
+  }
+  # Per-stratum blocks + total
+  n_strata <- dim(object@strata_draws)[3]
+  lvls <- object@strata_levels %||% paste0("Stratum ", seq_len(n_strata))
+  per_stratum <- lapply(seq_len(n_strata), function(s) {
+    tab <- summarise_nowcast_matrix(object@strata_draws[, , s, drop = TRUE])
+    tab$stratum <- lvls[s]; tab
+  })
+  total_tab$stratum <- "Total"
+  out <- do.call(rbind, c(per_stratum, list(total_tab)))
+  if (!is.null(object@event_dates))
+    out$event_date <- rep(object@event_dates, length.out = nrow(out))
+  out
 }
 
 #' @noRd
@@ -136,10 +174,41 @@ S7::method(summary, nowcast_class) <- function(object, ...) {
   invisible(list(coef = parameters, latent = latent, type = object@type, rung = object@rung))
 }
 
+#' Pretty cli print of a fitted nowcast
 #' @noRd
 S7::method(print, nowcast_class) <- function(x, ...) {
-  cli::cli_text("<nowcast> {x@model@likelihood@name} / {x@model@epidemic@name} / {x@model@delay@name}",
-                " | {x@type} (rung {x@rung}, {length(x@fits)} fit(s)) as of {format(x@now)}")
-  cli::cli_text("predict() for the nowcast; mean()/median()/quantile() for latent incidence; coef() for parameters")
+  n_strata <- as.integer(x@engine$num_strata %||% 1L)
+  strata_txt <- if (n_strata > 1L) paste0(", ", n_strata, " strata") else ""
+
+  cli::cli_rule(left = cli::col_green(cli::style_bold("diseasenowcasting")),
+                right = "as of {format(x@now)}")
+  cli::cli_text("{.strong Model}: ", .model_oneline(x@model))
+  cli::cli_text(cli::col_grey(
+    "{x@type} ({x@target} event-time{?s}{strata_txt}; {length(x@fits)} fit{?s}, rung '{x@rung}')"))
+
+  # Newest-event nowcast headline (d* = 0) -- quick, small-n draw.
+  headline <- tryCatch({
+    pr <- predict(x, n_draws = 200L)
+    tgt <- x@target
+    draws_tgt <- pr@draws[, tgt]
+    med <- stats::median(draws_tgt, na.rm = TRUE)
+    lo  <- stats::quantile(draws_tgt, 0.05, na.rm = TRUE, names = FALSE)
+    hi  <- stats::quantile(draws_tgt, 0.95, na.rm = TRUE, names = FALSE)
+    obs <- pr@observed
+    list(obs = obs, med = med, lo = lo, hi = hi)
+  }, error = function(e) NULL)
+
+  if (!is.null(headline)) {
+    med_str <- cli::col_green(cli::style_bold(round(headline$med)))
+    cli::cli_text(
+      "{cli::symbol$bullet} {.strong Newest event}: observed {.val {round(headline$obs)}} ",
+      "{cli::symbol$arrow_right} nowcast median {med_str} ",
+      "[{round(headline$lo)}, {round(headline$hi)}] (90% CI)")
+  }
+
+  cli::cli_text(cli::col_grey(
+    "Use {.fn predict} / {.fn autoplot} for the nowcast, {.fn coef} / {.fn summary} for estimates."))
+  cli::cli_text(cli::col_grey(
+    "Call {.code print(nc@model)} for the full model spec (including priors)."))
   invisible(x)
 }

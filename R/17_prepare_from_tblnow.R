@@ -38,20 +38,15 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE, ..
   # As-of view: events and reports up to `now`.  `[.tbl_now` preserves the
   # tbl_now class/attributes, so to_count() works directly (no as_tbl_now round
   # trip, which would re-resolve the date columns and can mangle attributes).
+  #
+  # NOTE: we deliberately do NOT call complete_zeroes().  The censored
+  # likelihood handles event-times with zero observed cases natively (they
+  # enter via S_k with k = 0), and prepare_data() already fills the full
+  # max_time grid with zeros.  The covariate matrix X is built deterministically
+  # from the calendar dates below, so it does not need completed rows either.
   keep_rows <- which(data[[event_col]] <= now & data[[report_col]] <= now)
   as_of <- data[keep_rows, , drop = FALSE]
   incidence <- tbl.now::to_count(as_of, to = "count-incidence")
-  # Fill zero-count (event, delay) combinations so the covariate time grid is
-  # complete and zero-incidence event-times are scored as true zeros.
-  incidence <- tryCatch({
-    inc2 <- tbl.now::complete_zeroes(incidence)
-    # complete_zeroes() adds new zero-count rows but the computed temporal-effect
-    # columns (day-of-week dummies etc.) are NA for those rows.  Re-running
-    # compute_temporal_effects() fills them in deterministically from the event date.
-    te_cols <- tbl.now::get_temporal_effect_cols(inc2)
-    if (length(te_cols) > 0) inc2 <- tbl.now::compute_temporal_effects(inc2)
-    inc2
-  }, error = function(e) incidence)
 
   max_time <- as.integer(unit_steps(now) + 1L)
   event_num <- as.integer(unit_steps(incidence[[event_col]]))            # 0-indexed time
@@ -86,26 +81,77 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE, ..
   storage.mode(m) <- "double"
   d_star <- matrix(rev(seq_len(max_time)) - 1L, ncol = 1L)
 
-  # Time-grid covariate matrix X from the computed temporal-effect columns:
-  # each temporal effect is a deterministic function of the event time, so map
-  # event_num -> its effect-column values over the 1..max_time grid.
-  X <- NULL
-  if (length(effect_cols) > 0) {
-    grid_idx <- event_num + 1L                       # 1-indexed event time per row
-    X <- matrix(0.0, max_time, length(effect_cols))
-    for (j in seq_along(effect_cols)) {
-      first_per_time <- tapply(as.numeric(incidence[[effect_cols[j]]]), grid_idx, function(v) v[1])
-      slot_idx <- as.integer(names(first_per_time))
-      keep <- slot_idx >= 1 & slot_idx <= max_time
-      X[slot_idx[keep], j] <- as.numeric(first_per_time)[keep]
-    }
-  }
+  # Time-grid covariate matrix X computed DETERMINISTICALLY on the full grid.
+  # Temporal effects (day-of-week, seasonality, ...) are deterministic functions
+  # of the calendar date, so they are well-defined for EVERY event-time on the
+  # 1..max_time grid -- including event-times with no observed cases and event-
+  # times AFTER the last observation but before `now`.  Computing them from the
+  # observed data alone would (incorrectly) leave those rows at zero.
+  X <- .temporal_effect_matrix(data, min_event, event_unit, max_time, effect_cols)
 
   engine <- prepare_data(model, m, X = X, d_star = d_star, max_time = max_time,
                          num_strata = num_strata, delay_only = delay_only, ...)
   list(data = engine, now = now, event_col = event_col, min_event = min_event,
        event_unit = event_unit, max_time = max_time,
        strata_cols = strata_cols, strata_levels = cell_levels)
+}
+
+#' Calendar date of each event-time on the 1..max_time grid (origin `min_event`).
+#' @keywords internal
+#' @noRd
+.grid_event_dates <- function(min_event, event_unit, max_time) {
+  unit <- as.character(event_unit)
+  idx  <- seq_len(max_time) - 1L
+  if (unit %in% c("month", "months")) {
+    base <- as.POSIXlt(as.Date(min_event))
+    out  <- vapply(idx, function(k) {
+      d <- base; d$mon <- d$mon + k; as.numeric(as.Date(d))
+    }, numeric(1))
+    as.Date(out, origin = "1970-01-01")
+  } else {
+    mult <- if (unit %in% c("week", "weeks")) 7 else 1
+    as.Date(min_event) + idx * mult
+  }
+}
+
+#' Deterministic temporal-effect covariate matrix over the full event grid.
+#'
+#' Re-applies the temporal-effect specifications attached to `data` to a complete
+#' grid of event dates (`min_event` .. `min_event + (max_time-1) * unit`) and
+#' extracts the resulting effect columns.  This guarantees the covariates are
+#' correctly defined for every event-time, even those with no observations or
+#' those occurring after the last report but before `now`.  Returns `NULL` when
+#' the data carries no temporal effects.
+#' @keywords internal
+#' @noRd
+.temporal_effect_matrix <- function(data, min_event, event_unit, max_time, effect_cols) {
+  if (length(effect_cols) == 0L) return(NULL)
+  specs <- tryCatch(tbl.now::get_temporal_effects(data), error = function(e) NULL)
+  if (is.null(specs) || length(specs) == 0L) return(NULL)
+
+  grid_dates <- .grid_event_dates(min_event, event_unit, max_time)
+  grid_df <- data.frame(onset = grid_dates, reported = grid_dates)
+
+  built <- tryCatch({
+    gtn <- tbl.now::tbl_now(grid_df, event_date = onset, report_date = reported,
+                            data_type = "linelist", verbose = FALSE)
+    for (spec in specs) gtn <- tbl.now::add_temporal_effects(gtn, spec$t_effects)
+    gtn <- tbl.now::compute_temporal_effects(gtn)
+    as.data.frame(gtn)
+  }, error = function(e) NULL)
+
+  if (is.null(built)) {
+    cli::cli_warn(c("Could not recompute temporal effects on the full grid; using observed-only values.",
+                    "i" = conditionMessage(attr(built, "condition") %||% simpleError(""))))
+    return(NULL)
+  }
+  present <- intersect(effect_cols, names(built))
+  if (length(present) == 0L) return(NULL)
+  X <- as.matrix(built[seq_len(max_time), present, drop = FALSE])
+  storage.mode(X) <- "double"
+  X[!is.finite(X)] <- 0
+  colnames(X) <- present
+  X
 }
 
 #' Number of whole event-units from `from` to `to` (0 at `from`).

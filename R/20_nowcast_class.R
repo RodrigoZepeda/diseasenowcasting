@@ -48,10 +48,22 @@ nowcast_class <- S7::new_class(
 #' @param delay_window Recent window length for the parametric Stage-1 delay fit.
 #' @param np_spread Dirichlet simplex imputation covariance inflation (default 1).
 #' @param floor_mu,floor_sig_frac Imputation-spread floors (parametric families).
-#' @param phi NB overdispersion prior (default `lognormal_prior(log(20), 0.5)`).
+#' @param temporal_effects Controls automatic seasonal / day-of-week covariates.
+#'   `"auto"` (default) adds sensible effects based on the data's time unit
+#'   (weekly -> 52-period seasonality; daily -> day-of-week + 52-period
+#'   seasonality; monthly -> 12-period seasonality) **only if the `tbl_now`
+#'   does not already carry computed temporal effects**.  Use `"none"` (or
+#'   `"None"`) to disable, or pre-attach your own effects to the `tbl_now` with
+#'   `tbl.now::add_temporal_effects()` + `tbl.now::compute_temporal_effects()`.
 #' @param seed Optional RNG seed (imputation draws).
 #' @param ... Passed to [prepare_data()] (e.g. `gp_boundary_frac`).
 #' @returns A `nowcast_class` object.
+#'
+#' @section Overdispersion (`phi`):
+#' The negative-binomial overdispersion prior is **not** an argument of
+#' `nowcast()`.  Set it on the likelihood instead, e.g.
+#' `model(nb_likelihood(phi = lognormal_prior(log(5), 0.5)), ...)`.  The default
+#' `nb_likelihood()` already uses `lognormal_prior(log(20), 0.5)`.
 #'
 #' @examples
 #' if (requireNamespace("tbl.now", quietly = TRUE)) {
@@ -60,16 +72,19 @@ nowcast_class <- S7::new_class(
 #'   # predict(nc); median(nc); coef(nc)
 #' }
 #' @export
-nowcast <- function(data, model = dcast3::model(),
+nowcast <- function(data, model = model(),
                     type = c("two_stage", "one_stage"), now = NULL,
                     K = 25L, n_draws = 2000L, delay_window = 120L, np_spread = 1,
                     floor_mu = 0.15, floor_sig_frac = 0.25,
-                    phi = lognormal_prior(log(20), 0.5), seed = NULL, ...) {
+                    temporal_effects = "auto", seed = NULL, ...) {
   type <- match.arg(type)
   if (!is.null(seed)) set.seed(seed)
+  # The NB overdispersion prior lives on the likelihood, not on nowcast().
+  phi <- .likelihood_phi(model)
+  data <- .apply_default_temporal_effects(data, temporal_effects)
   prepared <- prepare_from_tbl_now(data, model, now = now, delay_only = FALSE, ...)
   engine   <- prepared$data
-  priors   <- default_priors(model, engine, phi = phi)
+  priors   <- default_priors(model, engine)
   collected <- .collect_nowcast_fits(model, engine, priors, type = type, K = K,
                                      floor_mu = floor_mu, floor_sig_frac = floor_sig_frac,
                                      np_spread = np_spread, delay_window = delay_window)
@@ -83,15 +98,79 @@ nowcast <- function(data, model = dcast3::model(),
                 engine = engine, priors = priors, phi = phi, n_draws = as.integer(n_draws))
 }
 
+#' The NB overdispersion prior carried by a model's likelihood (or `NULL`).
+#' @keywords internal
+#' @noRd
+.likelihood_phi <- function(model) {
+  lik <- model@likelihood
+  if (S7::S7_inherits(lik, nb_likelihood_class)) lik@phi else NULL
+}
+
+#' Apply default seasonal / day-of-week temporal effects to a tbl_now
+#'
+#' Foolproof default: unless the user opts out (`temporal_effects = "none"`) or
+#' has already attached their own effects, sensible covariates are added based
+#' on the data's time unit and a message is emitted.
+#' @keywords internal
+#' @noRd
+.apply_default_temporal_effects <- function(data, temporal_effects = "auto") {
+  # Opt-out
+  if (is.character(temporal_effects) &&
+      length(temporal_effects) == 1L &&
+      tolower(temporal_effects) %in% c("none", "off", "no", "false")) {
+    return(data)
+  }
+  if (!tbl.now::is_tbl_now(data)) return(data)
+
+  # Respect effects the user already computed
+  existing <- tryCatch(tbl.now::get_temporal_effect_cols(data), error = function(e) character(0))
+  if (length(existing) > 0L) return(data)
+
+  unit <- tryCatch(as.character(tbl.now::get_event_units(data)), error = function(e) "day")
+
+  # Choose effects by time unit
+  if (grepl("^day", unit)) {
+    eff   <- tbl.now::temporal_effects(day_of_week = TRUE)
+    descr <- "day-of-week + 52-period seasonality (daily data)"
+  } else if (grepl("^week", unit)) {
+    eff   <- tbl.now::temporal_effects(seasons = 52)
+    descr <- "52-period seasonality (weekly data)"
+  } else if (grepl("^month", unit)) {
+    eff   <- tbl.now::temporal_effects(seasons = 12)
+    descr <- "12-period seasonality (monthly data)"
+  } 
+
+  out <- tryCatch({
+    data |>
+      tbl.now::add_temporal_effects(eff) |>
+      tbl.now::compute_temporal_effects()
+  }, error = function(e) {
+    cli::cli_warn("Could not add default temporal effects: {conditionMessage(e)}")
+    data
+  })
+
+  cli::cli_inform(c(
+    "i" = "Added default temporal effects: {descr}.",
+    "*" = "To use your own effects, attach them to the {.cls tbl_now} with {.fn tbl.now::add_temporal_effects} + {.fn tbl.now::compute_temporal_effects} before calling {.fn nowcast}.",
+    "*" = "To disable, call {.code nowcast(..., temporal_effects = \"none\")}."
+  ))
+  out
+}
+
 #' The posterior-predictive nowcast (returned by [predict()] on a nowcast)
 #' @keywords internal
 #' @noRd
 nowcast_prediction_class <- S7::new_class(
   "nowcast_prediction",
   properties = list(
-    draws        = S7::class_any,    # [n_draws x max_time] predictive count matrix
-    target       = S7::class_numeric,
-    observed     = S7::class_numeric,
-    event_index  = S7::class_numeric # 0-indexed event numbers (columns of draws)
+    draws            = S7::class_any,    # [n_draws x max_time] TOTAL predictive count matrix
+    target           = S7::class_numeric,
+    observed         = S7::class_numeric, # observed total at the target event
+    event_index      = S7::class_numeric, # 0-indexed event numbers (columns of draws)
+    strata_draws     = S7::class_any,     # [n_draws x max_time x n_strata] per-stratum (or NULL)
+    strata_levels    = S7::class_any,     # character vector of stratum labels (or NULL)
+    event_dates      = S7::class_any,     # Date vector length max_time (or NULL)
+    observed_series  = S7::class_any,     # [max_time] observed total per event-time (or NULL)
+    observed_strata  = S7::class_any      # [max_time x n_strata] observed per stratum (or NULL)
   )
 )

@@ -1,21 +1,21 @@
-# dcast3 Docker image
+# diseasenowcasting Docker image
 # Base: rocker/tidyverse (R + tidyverse pre-installed)
-# Adds: RTMB, RTMBdist, tbl.now (GitHub), and dcast3 itself.
+# Adds: RTMB, RTMBdist, tbl.now (GitHub), and diseasenowcasting itself.
 #
 # Build:
-#   docker build -t dcast3 .
+#   docker build -t diseasenowcasting .
 #
 # Run (interactive R session):
-#   docker run --rm -it dcast3 R
+#   docker run --rm -it diseasenowcasting R
 #
 # Run (Rscript):
-#   docker run --rm -v $(pwd):/work dcast3 Rscript /work/my_analysis.R
+#   docker run --rm -v $(pwd):/work diseasenowcasting Rscript /work/my_analysis.R
 
 FROM rocker/tidyverse:4.4
 
-LABEL org.opencontainers.image.title="dcast3"
+LABEL org.opencontainers.image.title="diseasenowcasting"
 LABEL org.opencontainers.image.description="Epidemic nowcasting via censored regression (RTMB engine)"
-LABEL org.opencontainers.image.source="https://github.com/RodrigoZepeda/dcast3"
+LABEL org.opencontainers.image.source="https://github.com/RodrigoZepeda/diseasenowcasting"
 
 # System dependencies required by RTMB / Matrix / scoringutils
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -40,12 +40,12 @@ RUN Rscript -e "\
 # Install tbl.now from GitHub
 RUN Rscript -e "remotes::install_github('RodrigoZepeda/tbl.now', upgrade = 'never')"
 
-# Copy the dcast3 package source and install it
-COPY . /dcast3/
-RUN Rscript -e "remotes::install_local('/dcast3', dependencies = TRUE, upgrade = 'never')"
+# Copy the diseasenowcasting package source and install it
+COPY . /diseasenowcasting/
+RUN Rscript -e "remotes::install_local('/diseasenowcasting', dependencies = TRUE, upgrade = 'never')"
 
 # Clean up build artefacts
-RUN rm -rf /dcast3
+RUN rm -rf /diseasenowcasting
 
 # Default working directory for user scripts
 WORKDIR /work

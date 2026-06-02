@@ -6,7 +6,7 @@
 \usage{
 nowcast(
   data,
-  model = dcast3::model(),
+  model = model(),
   type = c("two_stage", "one_stage"),
   now = NULL,
   K = 25L,
@@ -15,7 +15,7 @@ nowcast(
   np_spread = 1,
   floor_mu = 0.15,
   floor_sig_frac = 0.25,
-  phi = lognormal_prior(log(20), 0.5),
+  temporal_effects = "auto",
   seed = NULL,
   ...
 )
@@ -42,7 +42,13 @@ latent-incidence summaries.}
 
 \item{floor_mu, floor_sig_frac}{Imputation-spread floors (parametric families).}
 
-\item{phi}{NB overdispersion prior (default \code{lognormal_prior(log(20), 0.5)}).}
+\item{temporal_effects}{Controls automatic seasonal / day-of-week covariates.
+\code{"auto"} (default) adds sensible effects based on the data's time unit
+(weekly -> 52-period seasonality; daily -> day-of-week + 52-period
+seasonality; monthly -> 12-period seasonality) \strong{only if the \code{tbl_now}
+does not already carry computed temporal effects}.  Use \code{"none"} (or
+\code{"None"}) to disable, or pre-attach your own effects to the \code{tbl_now} with
+\code{tbl.now::add_temporal_effects()} + \code{tbl.now::compute_temporal_effects()}.}
 
 \item{seed}{Optional RNG seed (imputation draws).}
 
@@ -59,6 +65,14 @@ posterior-predictive nowcast is produced lazily by \code{\link[=predict]{predict
 incidence by \code{\link[=mean]{mean()}}/\code{\link[=median]{median()}}/\code{\link[=quantile]{quantile()}}; the parameter estimates by
 \code{\link[=coef]{coef()}}.
 }
+\section{Overdispersion (\code{phi})}{
+
+The negative-binomial overdispersion prior is \strong{not} an argument of
+\code{nowcast()}.  Set it on the likelihood instead, e.g.
+\code{model(nb_likelihood(phi = lognormal_prior(log(5), 0.5)), ...)}.  The default
+\code{nb_likelihood()} already uses \code{lognormal_prior(log(20), 0.5)}.
+}
+
 \examples{
 if (requireNamespace("tbl.now", quietly = TRUE)) {
   # data <- tbl.now::tbl_now(my_linelist, event_date = onset, report_date = reported)

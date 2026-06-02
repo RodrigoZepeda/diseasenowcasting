@@ -28,6 +28,7 @@ utils::globalVariables(c(
   "delay", "weight", "cdf", "lo", "hi", "med", "pmf",
   "t_idx", "observed", "pred",
   "wis", "disease", "group",
+  "x_val", "reported", "predicted_total", "q_lo", "q_hi", "stratum", "event_date",
   # dplyr column names (score/backtest)
   "model", "date_run", "final", "quantile_level", "predicted",
   "epidemic_label", "nb_label", "delay_label", "n",
@@ -35,6 +36,7 @@ utils::globalVariables(c(
   "interval_coverage_50", "interval_coverage_90",
   # tbl.now / nowcast internals
   ".data", "window", "epidemic", "n_events", "now",
+  "onset", "reported",   # NSE column names in .temporal_effect_matrix grid
   # RTMB getAll() closure variables (delay-only objective)
   "delay_logits", "censoring_col", "obs_delays", "row_sums_exact",
   "col_sums_exact", "col_sums_cens",

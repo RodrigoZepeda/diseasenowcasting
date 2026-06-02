@@ -8,7 +8,7 @@
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-Implements Bayesian nowcasting models for incident disease cases using a censored-regression approach (Zepeda-Tello & Shaman, 2025). The reporting delay is modelled directly as a stochastic process, jointly with the epidemic dynamics, via the Guenther et al. (2021) censored likelihood. Inference uses RTMB (CppAD autodiff + Laplace approximation) with no Stan dependency. Supports multiple epidemic models (HSGP, AR1, SIR), multiple delay families (LogNormal, Gamma, GenGamma, Dirichlet), stratified data, two-stage multiple-imputation nowcasting, and full backtesting workflow.
+Implements Bayesian nowcasting models for incident disease cases using a censored-regression approach (Zepeda-Tello & Shaman, 2025). The reporting delay is modelled directly as a stochastic process, jointly with the epidemic dynamics, via a censored likelihood. Inference uses RTMB (CppAD autodiff + Laplace approximation). Supports multiple epidemic models (HSGP, AR1, SIR), multiple delay families (LogNormal, Gamma, GenGamma, Dirichlet), stratified data, two-stage multiple-imputation nowcasting, and full backtesting workflow.
 }
 \seealso{
 Useful links:

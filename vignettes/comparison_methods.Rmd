@@ -1,9 +1,9 @@
 ---
-title: "dcast3 vs NobBS and Epinowcast: Benchmark Comparison"
-author: "dcast3 package"
+title: "diseasenowcasting vs NobBS and Epinowcast: Benchmark Comparison"
+author: "diseasenowcasting package"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{dcast3 vs NobBS and Epinowcast: Benchmark Comparison}
+  %\VignetteIndexEntry{diseasenowcasting vs NobBS and Epinowcast: Benchmark Comparison}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
 
 ## Overview
 
-This vignette presents a systematic benchmark comparison of `dcast3` against two widely
+This vignette presents a systematic benchmark comparison of `diseasenowcasting` against two widely
 used nowcasting methods: **NobBS** (McGough et al., 2020) and **Epinowcast** (Abbott et al., 2023).
 We compare across three real-world disease surveillance datasets:
 
@@ -29,7 +29,7 @@ We compare across three real-world disease surveillance datasets:
 |---------|---------|---------------|--------|
 | `denguedat` (tbl.now) | Dengue fever | Weekly | Colombia |
 | `mpoxdat` (tbl.now)   | Mpox | Daily | USA 2022 |
-| `covid_colombia` (dcast3) | COVID-19 | Daily | Colombia 2020–2023 |
+| `covid_colombia` (diseasenowcasting) | COVID-19 | Daily | Colombia 2020–2023 |
 
 The comparison uses **50 evaluation dates** per disease, equally spaced across the
 available history, chosen with a shared random seed for reproducibility.  Forecasts are
@@ -51,7 +51,7 @@ into:
 Coverage at 50% and 90% credible intervals is also reported.  A well-calibrated model should
 have empirical coverage close to the nominal level.
 
-All comparisons are performed on a **common date set** — dates where both `dcast3` and the
+All comparisons are performed on a **common date set** — dates where both `diseasenowcasting` and the
 comparison method have produced a valid nowcast — ensuring fairness.
 
 ---
@@ -59,11 +59,11 @@ comparison method have produced a valid nowcast — ensuring fairness.
 ## Results
 
 ```{r load-data}
-library(dcast3)
+library(diseasenowcasting)
 library(ggplot2)
 
 # Pre-computed benchmark results (50 evaluation dates per disease)
-sc_file <- system.file("extdata", "comparison_scores.rds", package = "dcast3")
+sc_file <- system.file("extdata", "comparison_scores.rds", package = "diseasenowcasting")
 sc <- readRDS(sc_file)
 ```
 
@@ -81,8 +81,8 @@ knitr::kable(dengue_tab, digits = 2, row.names = FALSE,
 
 **Key findings (dengue):**
 
-- All `dcast3` HSGP variants beat NobBS and all Epinowcast variants on WIS.
-- Best `dcast3`: **HSGP / GenGamma**, WIS ≈ 7.0, cov90 ≈ 0.94.
+- All `diseasenowcasting` HSGP variants beat NobBS and all Epinowcast variants on WIS.
+- Best `diseasenowcasting`: **HSGP / GenGamma**, WIS ≈ 7.0, cov90 ≈ 0.94.
 - NobBS WIS ≈ `r round(sc$wis[sc$disease=="dengue" & grepl("NobBS",sc$model)][1], 1)`, cov90 ≈ `r round(sc$cov90[sc$disease=="dengue" & grepl("NobBS",sc$model)][1], 2)`.
 - Best Epinowcast WIS ≈ `r round(min(sc$wis[sc$disease=="dengue" & grepl("Epinowcast",sc$model)], na.rm=TRUE), 1)`.
 
@@ -97,8 +97,8 @@ knitr::kable(mpox_tab, digits = 2, row.names = FALSE,
 
 **Key findings (mpox):**
 
-- `dcast3` AR1 variants achieve the lowest WIS, beating NobBS by a wide margin (~7×).
-- Best `dcast3`: **AR1 / Gamma**, WIS ≈ `r round(sc$wis[sc$disease=="mpox" & !sc$is_comparison][1], 1)`, cov90 ≈ `r round(sc$cov90[sc$disease=="mpox" & !sc$is_comparison][1], 2)`.
+- `diseasenowcasting` AR1 variants achieve the lowest WIS, beating NobBS by a wide margin (~7×).
+- Best `diseasenowcasting`: **AR1 / Gamma**, WIS ≈ `r round(sc$wis[sc$disease=="mpox" & !sc$is_comparison][1], 1)`, cov90 ≈ `r round(sc$cov90[sc$disease=="mpox" & !sc$is_comparison][1], 2)`.
 - NobBS WIS ≈ `r round(sc$wis[sc$disease=="mpox" & grepl("NobBS",sc$model)][1], 1)` — substantially worse due to poor calibration (cov90 ≈ `r round(sc$cov90[sc$disease=="mpox" & grepl("NobBS",sc$model)][1], 2)`).
 - The mpox epidemic has a very short, sharp curve where the AR1 model's local-trend structure outperforms the global GP.
 
@@ -113,21 +113,21 @@ knitr::kable(covid_tab, digits = 2, row.names = FALSE,
 
 **Key findings (COVID-19):**
 
-- `dcast3` beats NobBS on WIS for COVID as well, but the margin depends on the delay family.
-- Best `dcast3`: **HSGP / GenGamma**, WIS ≈ `r round(sc$wis[sc$disease=="covid" & !sc$is_comparison][1], 0)`, cov90 ≈ `r round(sc$cov90[sc$disease=="covid" & !sc$is_comparison][1], 2)`.
+- `diseasenowcasting` beats NobBS on WIS for COVID as well, but the margin depends on the delay family.
+- Best `diseasenowcasting`: **HSGP / GenGamma**, WIS ≈ `r round(sc$wis[sc$disease=="covid" & !sc$is_comparison][1], 0)`, cov90 ≈ `r round(sc$cov90[sc$disease=="covid" & !sc$is_comparison][1], 2)`.
 - COVID's long daily series (700+ days) makes the GenGamma delay family advantageous: its flexible shape adapts to the changing delay distribution across epidemic waves.
 
 ---
 
 ## Summary across all diseases
 
-```{r summary-plot, fig.cap="WIS comparison (d*=0): dcast3 (HSGP best-per-disease) vs NobBS vs Epinowcast best. Lower is better."}
-# Extract best dcast3 per disease and comparison models
-best_dcast3 <- do.call(rbind, lapply(c("dengue","mpox","covid"), function(d) {
+```{r summary-plot, fig.cap="WIS comparison (d*=0): diseasenowcasting (HSGP best-per-disease) vs NobBS vs Epinowcast best. Lower is better."}
+# Extract best diseasenowcasting per disease and comparison models
+best_diseasenowcasting <- do.call(rbind, lapply(c("dengue","mpox","covid"), function(d) {
   sub <- sc[sc$disease == d & !sc$is_comparison, ]
   sub[which.min(sub$wis), ]
 }))
-best_dcast3$group <- "dcast3 (best)"
+best_diseasenowcasting$group <- "diseasenowcasting (best)"
 
 cmp_rows <- sc[sc$is_comparison, ]
 cmp_rows$group <- ifelse(grepl("NobBS", cmp_rows$model), "NobBS",
@@ -139,18 +139,18 @@ best_enw <- do.call(rbind, lapply(c("dengue","mpox","covid"), function(d) {
   sub[which.min(sub$wis), ]
 }))
 
-plot_data <- rbind(best_dcast3, cmp_rows[grepl("NobBS", cmp_rows$group), ], best_enw)
+plot_data <- rbind(best_diseasenowcasting, cmp_rows[grepl("NobBS", cmp_rows$group), ], best_enw)
 plot_data$disease_lab <- factor(plot_data$disease,
   levels = c("dengue","mpox","covid"),
   labels = c("Dengue\n(weekly)", "Mpox\n(daily)", "COVID-19\n(daily)"))
 plot_data$group <- factor(plot_data$group,
-  levels = c("dcast3 (best)", "NobBS", sort(unique(plot_data$group[grepl("Epinowcast",plot_data$group)]))))
+  levels = c("diseasenowcasting (best)", "NobBS", sort(unique(plot_data$group[grepl("Epinowcast",plot_data$group)]))))
 
 ggplot(plot_data, aes(x = disease_lab, y = wis, colour = group, group = group)) +
   geom_point(size = 3.5) +
   geom_line(aes(group = group), linetype = "dashed", alpha = 0.5) +
   scale_y_log10(labels = scales::comma) +
-  scale_colour_manual(values = c("dcast3 (best)" = "#e31a1c",
+  scale_colour_manual(values = c("diseasenowcasting (best)" = "#e31a1c",
                                   "NobBS"          = "#1f78b4",
                                   "Epinowcast (weekly RE)" = "#33a02c",
                                   "Epinowcast (default)"  = "#b2df8a",
@@ -170,28 +170,34 @@ summary_tab <- do.call(rbind, lapply(c("dengue","mpox","covid"), function(d) {
   enw    <- sub[grepl("Epinowcast", sub$model), ]; enw <- enw[which.min(enw$wis), ]
   data.frame(
     Disease = d,
-    `Best dcast3` = best_d$model, `dcast3 WIS` = best_d$wis, `dcast3 cov90` = best_d$cov90,
+    `Best diseasenowcasting` = best_d$model, `diseasenowcasting WIS` = best_d$wis, `diseasenowcasting cov90` = best_d$cov90,
     `NobBS WIS` = nb$wis, `NobBS cov90` = nb$cov90,
     `Best ENW WIS` = enw$wis, `Best ENW cov90` = enw$cov90,
-    `dcast3 beats NobBS` = best_d$wis < nb$wis,
+    `diseasenowcasting beats NobBS` = best_d$wis < nb$wis,
     check.names = FALSE
   )
 }))
 knitr::kable(summary_tab, digits = 2, row.names = FALSE,
-             caption = "Summary: best dcast3 model per disease vs comparison methods.")
+             caption = "Summary: best diseasenowcasting model per disease vs comparison methods.")
 ```
 
 ---
 
 ## How to reproduce with backtest()
 
-The results above were generated by running `devel/run_own_models_dcast3.sh` (which
-parallelises 50-date × 12-model fits via `own_models_dcast3.R`) and scoring with
-`devel/score_dcast3.R`.  You can reproduce the same evaluation methodology at smaller scale
-using `dcast3`'s built-in `backtest()` function:
+The results above were generated by running `devel/run_own_models_diseasenowcasting.sh` (which
+parallelises 50-date × 12-model fits via `own_models_diseasenowcasting.R`) and scoring with
+`devel/score_diseasenowcasting.R`.  You can reproduce the same evaluation methodology at smaller scale
+using `diseasenowcasting`'s built-in `backtest()` function.
+
+`backtest()` fits one nowcast per (date × model) cell and dispatches those cells
+in parallel via the [future](https://future.futureverse.org/) framework.  It is
+sequential unless you register a parallel plan first — set
+`future::plan(multisession, workers = N)` before calling `backtest()` to use
+`N` CPU cores (and `future::plan(sequential)` to restore serial execution).
 
 ```{r reproduce-code, eval=FALSE}
-library(dcast3)
+library(diseasenowcasting)
 library(tbl.now)
 library(future)
 

@@ -43,7 +43,7 @@ nb_likelihood_class <- S7::new_class(
     mu  = .valid_param_slot,  # log-scale mean intercept
     phi = .valid_param_slot   # NB overdispersion (> 0)
   ),
-  constructor = function(mu = numeric(0), phi = numeric(0)) {
+  constructor = function(mu = numeric(0), phi = lognormal_prior(log(20), 0.5)) {
     S7::new_object(S7::S7_object(), name = "nb", num_id = 1L, mu = mu, phi = phi)
   }
 )
@@ -54,14 +54,17 @@ nb_likelihood_class <- S7::new_class(
 #'
 #' @param mu  Log-scale mean intercept prior (or fixed numeric).
 #' @param phi Negative-binomial overdispersion prior (or fixed numeric);
-#'   NB only.
+#'   NB only.  Defaults to `lognormal_prior(log(20), 0.5)`.  This is the *only*
+#'   place to set the overdispersion prior — [nowcast()] reads it from the model
+#'   and does not accept its own `phi` argument.
 #'
 #' @returns A `likelihood_class` object.
 #'
 #' @examples
 #' poisson_likelihood()
 #' nb_likelihood()
-#' nb_likelihood(phi = lognormal_prior(log(20), 0.5))
+#' # Wider overdispersion (heavier-tailed counts) -- set via the likelihood:
+#' nb_likelihood(phi = lognormal_prior(log(5), 0.5))
 #'
 #' @name likelihood
 NULL
@@ -74,6 +77,6 @@ poisson_likelihood <- function(mu = numeric(0)) {
 
 #' @rdname likelihood
 #' @export
-nb_likelihood <- function(mu = numeric(0), phi = numeric(0)) {
+nb_likelihood <- function(mu = numeric(0), phi = lognormal_prior(log(20), 0.5)) {
   nb_likelihood_class(mu = mu, phi = phi)
 }

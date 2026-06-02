@@ -64,7 +64,18 @@
 S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
                                               K = 25L, np_spread = 1,
                                               compute_surprise = TRUE, ...) {
-  merged   <- stats::update(object@data, new_data = new_data)
+  # The stored data may carry computed temporal effects (added by default in
+  # nowcast()).  Strip them before merging so a raw `new_data` can be combined,
+  # then re-derive them on the merged tbl_now.
+  base_data <- object@data
+  te_cols   <- tryCatch(tbl.now::get_temporal_effect_cols(base_data), error = function(e) character(0))
+  had_effects <- length(te_cols) > 0L
+  if (had_effects)
+    base_data <- tryCatch(tbl.now::remove_temporal_effects(base_data), error = function(e) base_data)
+
+  merged <- stats::update(base_data, new_data = new_data)
+  if (had_effects)
+    merged <- .apply_default_temporal_effects(merged, "auto")
   prepared <- prepare_from_tbl_now(merged, object@model, now = now, delay_only = FALSE)
   engine   <- prepared$data
   priors   <- default_priors(object@model, engine, phi = object@phi)
@@ -112,6 +123,6 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
 
 #' Retrieve the surprise scores computed during the last `update()`
 #' @param nc A `nowcast_class` object returned by [update()].
-#' @returns A `dcast3_surprise` object, or `NULL` if no surprise was computed.
+#' @returns A `diseasenowcasting_surprise` object, or `NULL` if no surprise was computed.
 #' @export
 surprise_result <- function(nc) attr(nc, "surprise")

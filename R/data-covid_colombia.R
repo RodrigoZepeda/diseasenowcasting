@@ -13,7 +13,7 @@
 #'
 #' The dataset covers the full first three years of the Colombian epidemic
 #' (2020-03-02 to 2023-03-03) and was used in the NobBS comparison study to
-#' benchmark the dcast3 / diseasenowcast2 engine.
+#' benchmark the diseasenowcasting / diseasenowcast2 engine.
 #'
 #' @format A data frame with 35,501 rows and 4 variables:
 #' \describe{

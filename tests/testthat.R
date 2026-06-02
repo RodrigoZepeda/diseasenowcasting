@@ -1,4 +1,4 @@
 library(testthat)
-library(dcast3)
+library(diseasenowcasting)
 
-test_check("dcast3")
+test_check("diseasenowcasting")

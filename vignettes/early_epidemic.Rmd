@@ -1,6 +1,6 @@
 ---
 title: "Nowcasting at the Start of an Epidemic"
-author: "dcast3 package"
+author: "diseasenowcasting package"
 output:
   rmarkdown::html_vignette:
     toc: true
@@ -21,7 +21,7 @@ set.seed(42)
 ```
 
 ```{r load, message=FALSE}
-library(dcast3)
+library(diseasenowcasting)
 library(tbl.now)
 library(ggplot2)
 library(dplyr)
