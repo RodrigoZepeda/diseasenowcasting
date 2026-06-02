@@ -71,18 +71,30 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
                                               K = 25L, np_spread = 1,
                                               compute_surprise = TRUE,
                                               surprise_level = 0.99, ...) {
-  # The stored data may carry computed temporal effects (added by default in
-  # nowcast()).  Strip them before merging so a raw `new_data` can be combined,
-  # then re-derive them on the merged tbl_now.
-  base_data <- object@data
-  te_cols   <- tryCatch(tbl.now::get_temporal_effect_cols(base_data), error = function(e) character(0))
-  had_effects <- length(te_cols) > 0L
-  if (had_effects)
-    base_data <- tryCatch(tbl.now::remove_temporal_effects(base_data), error = function(e) base_data)
+  # Temporal effects must match on both sides of the tbl.now merge, otherwise it
+  # errors with "Cannot handle different temporal_effects".  The stored data and
+  # `new_data` may carry effects in different states (computed vs. only
+  # specified), so we strip BOTH sides, merge, then re-attach the ORIGINAL effect
+  # specification from the fitted object (preserving the user's choice rather
+  # than substituting the package defaults).  tbl.now's internal data-shaping
+  # warnings (e.g. non-unique rows) are not actionable here, so they are muffled.
+  orig_spec   <- tryCatch(tbl.now::get_temporal_effects(object@data), error = function(e) NULL)
+  had_effects <- !is.null(orig_spec) && length(orig_spec) > 0L
+  strip_te <- function(d) {
+    if (!tbl.now::is_tbl_now(d)) return(d)
+    tryCatch(tbl.now::remove_temporal_effects(d), error = function(e) d)
+  }
 
-  merged <- stats::update(base_data, new_data = new_data)
-  if (had_effects)
-    merged <- .apply_default_temporal_effects(merged, "auto")
+  merged <- suppressWarnings({
+    m <- stats::update(strip_te(object@data), new_data = strip_te(new_data))
+    if (had_effects) {
+      m <- tryCatch({
+        for (s in orig_spec) m <- tbl.now::add_temporal_effects(m, s$t_effects)
+        tbl.now::compute_temporal_effects(m)
+      }, error = function(e) m)
+    }
+    m
+  })
   prepared <- prepare_from_tbl_now(merged, object@model, now = now, delay_only = FALSE)
   engine   <- prepared$data
   priors   <- default_priors(object@model, engine, phi = object@phi)

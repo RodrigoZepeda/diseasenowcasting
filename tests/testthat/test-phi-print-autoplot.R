@@ -113,14 +113,15 @@ test_that("print(model) runs for all component combinations", {
                               strata_pooling = "hierarchical")))
 })
 
-test_that("print(nowcast) runs and shows the newest-event headline without error", {
+test_that("print(nowcast) shows the model spec without drawing the nowcast", {
   tn <- .daily_tn(seed = 7)
   nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                 type = "one_stage", n_draws = 120, seed = 1)
   out <- cli::cli_fmt(print(nc))
   expect_true(any(grepl("diseasenowcasting", out)))
-  expect_true(any(grepl("Newest event", out)))
   expect_true(any(grepl("NegBin / HSGP / LogNormal", out)))
+  # Printing must NOT compute the posterior-predictive nowcast (kept cheap).
+  expect_false(any(grepl("Newest event", out)))
   # print returns the object invisibly
   expect_identical(suppressMessages(print(nc)), nc)
 })

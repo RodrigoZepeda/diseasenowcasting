@@ -185,27 +185,8 @@ S7::method(print, nowcast_class) <- function(x, ...) {
   cli::cli_text("{.strong Model}: ", .model_oneline(x@model))
   cli::cli_text(cli::col_grey(
     "{x@type} ({x@target} event-time{?s}{strata_txt}; {length(x@fits)} fit{?s}, rung '{x@rung}')"))
-
-  # Newest-event nowcast headline (d* = 0) -- quick, small-n draw.
-  headline <- tryCatch({
-    pr <- predict(x, n_draws = 200L)
-    tgt <- x@target
-    draws_tgt <- pr@draws[, tgt]
-    med <- stats::median(draws_tgt, na.rm = TRUE)
-    lo  <- stats::quantile(draws_tgt, 0.05, na.rm = TRUE, names = FALSE)
-    hi  <- stats::quantile(draws_tgt, 0.95, na.rm = TRUE, names = FALSE)
-    obs <- pr@observed
-    list(obs = obs, med = med, lo = lo, hi = hi)
-  }, error = function(e) NULL)
-
-  if (!is.null(headline)) {
-    med_str <- cli::col_green(cli::style_bold(round(headline$med)))
-    cli::cli_text(
-      "{cli::symbol$bullet} {.strong Newest event}: observed {.val {round(headline$obs)}} ",
-      "{cli::symbol$arrow_right} nowcast median {med_str} ",
-      "[{round(headline$lo)}, {round(headline$hi)}] (90% CI)")
-  }
-
+  # NB: printing deliberately does NOT draw the posterior-predictive nowcast --
+  # that can be expensive on long/stratified series.  Use predict()/autoplot().
   cli::cli_text(cli::col_grey(
     "Use {.fn predict} / {.fn autoplot} for the nowcast, {.fn coef} / {.fn summary} for estimates."))
   cli::cli_text(cli::col_grey(
