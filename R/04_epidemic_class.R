@@ -160,6 +160,34 @@ sir_epidemic_class <- S7::new_class(
 #'
 #' @returns An `epidemic_process_class` object.
 #'
+#' @section Default priors:
+#' When a prior argument is left empty, [default_priors()] supplies these
+#' defaults (see also [nowcast(prior_only = TRUE)][nowcast] to visualise them):
+#'
+#' **HSGP** (`hsgp_epidemic`):
+#' \itemize{
+#'   \item `alpha` (GP amplitude): `half_normal_prior(0, 1)`
+#'   \item `ell` (GP length-scale): `inv_gamma_prior(3, 1)`
+#'   \item `basis_coefs`: `std_normal_prior()`
+#' }
+#'
+#' **AR(1)** (`ar1_epidemic`):
+#' \itemize{
+#'   \item `phi` (autocorrelation): `std_normal_prior()`
+#'   \item `sigma` (innovation SD): `exponential_prior(100)`
+#'   \item innovations: `std_normal_prior()`
+#' }
+#'
+#' **SIR** (`sir_epidemic`):
+#' \itemize{
+#'   \item `R0`: `lognormal_prior(log(2), 0.5)`
+#'   \item `gamma` (recovery rate): `lognormal_prior(log(1/5), 0.5)`
+#'   \item `N_eff` (susceptible fraction): `beta_prior(2, 5)`
+#' }
+#'
+#' The log-incidence intercept comes from the likelihood (`mu`), defaulting to a
+#' data-informed `normal_prior()` centred at the log median daily count.
+#'
 #' @examples
 #' hsgp_epidemic()
 #' hsgp_epidemic(gp_kernel = "sq_exp", num_basis = 20)

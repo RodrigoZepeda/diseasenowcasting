@@ -1,9 +1,9 @@
 ---
-title: "diseasenowcasting vs NobBS and Epinowcast: Benchmark Comparison"
+title: "Benchmark (diseasenowcasting vs NobBS and epinowcast)"
 author: "diseasenowcasting package"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{diseasenowcasting vs NobBS and Epinowcast: Benchmark Comparison}
+  %\VignetteIndexEntry{Benchmark (diseasenowcasting vs NobBS and epinowcast)}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

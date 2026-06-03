@@ -23,6 +23,16 @@
 #' @param ... Per-key overrides (e.g. `phi = lognormal_prior(log(20), 0.5)`,
 #'   `delay_mu = normal_prior(log(5), 0.3)`).
 #' @returns A named list of prior specs.
+#'
+#' @details
+#' The default prior for each parameter is documented on the component
+#' constructor: see the **Default priors** section of [epidemic_process]
+#' (HSGP / AR(1) / SIR), [delay_process] (LogNormal / Gamma / GenGamma /
+#' Dirichlet) and [likelihood] (the NB overdispersion `phi`).  To *see* what a
+#' set of priors implies for the epidemic curve before fitting, use
+#' [nowcast(prior_only = TRUE)][nowcast].
+#'
+#' @seealso [epidemic_process], [delay_process], [likelihood]
 #' @export
 default_priors <- function(mod, data = NULL, ...) {
   overrides <- list(...)

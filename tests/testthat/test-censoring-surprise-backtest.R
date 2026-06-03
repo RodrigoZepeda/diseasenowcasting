@@ -127,12 +127,13 @@ test_that("update() warns about a surprising new delay and stores the result", {
   expect_length(w, 1L)
   expect_match(w, "Surprising reporting delay of .* days")
   expect_match(w, "longer than the model expects")
-  expect_match(w, "surprise_result\\(nc\\)")          # code hint to see the surprises
+  expect_match(w, "extreme_values\\(nc\\)")          # code hint to see the surprises
 
-  sr <- surprise_result(nc2)
-  expect_s3_class(sr, "diseasenowcasting_surprise")
-  expect_null(sr$count_surprise)                       # epidemic/count surprise not computed
-  expect_true(any(sr$delay_surprise$is_surprising))
+  ev <- extreme_values(nc2)
+  expect_s3_class(ev, "data.frame")                    # tidy table of flagged surprises
+  expect_gte(nrow(ev), 1L)                             # the 300-day delay is flagged
+  expect_true(all(ev$surprise == "delay"))             # delay-only (no epidemic/count surprise)
+  expect_true(all(ev$direction == "long"))             # only too-long delays
 })
 
 test_that("update(compute_surprise = FALSE) is silent and still refits", {
@@ -147,6 +148,6 @@ test_that("update(compute_surprise = FALSE) is silent and still refits", {
   new <- data.frame(onset = start + 31, reported = start + 31 + 300)
   nc2 <- suppressMessages(update(nc, new, now = start + 31,
                                  compute_surprise = FALSE, temporal_effects = "none"))
-  expect_null(surprise_result(nc2))
+  expect_null(extreme_values(nc2))
   expect_true(is.finite(coef(nc2)["delay_mu"]))
 })

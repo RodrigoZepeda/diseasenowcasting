@@ -63,7 +63,7 @@
 #' @param surprise_level Credible level for the surprise flags (default `0.99`).
 #'   A count outside this predictive interval, or a delay whose tail probability
 #'   is below `1 - surprise_level`, raises a warning.  Retrieve the full table
-#'   with [surprise_result()].
+#'   with [extreme_values()].
 #' @param ... Unused.
 #' @returns A new `nowcast_class` object fit to the merged data.
 #' @noRd
@@ -106,14 +106,14 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
   # are shorter than expected -- only reports that arrived LATER than the fitted
   # delay distribution leads us to expect.  All surprises are collapsed into a
   # single warning.
-  surprise_result <- NULL
+  extreme_values <- NULL
   if (isTRUE(compute_surprise)) {
-    surprise_result <- tryCatch(
+    extreme_values <- tryCatch(
       .update_surprise(object, merged, surprise_level), error = function(e) NULL)
-    if (!is.null(surprise_result)) {
+    if (!is.null(extreme_values)) {
       unit <- tryCatch(as.character(tbl.now::get_event_units(merged)),
                        error = function(e) "event units")
-      .warn_surprise(surprise_result, surprise_level, unit)
+      .warn_surprise(extreme_values, surprise_level, unit)
     }
   }
 
@@ -127,15 +127,48 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
   new_nc <- nowcast_class(model = object@model, data = merged, now = prepared$now, type = object@type,
                           fits = collected$fits, rung = collected$rung, target = collected$target,
                           engine = engine, priors = priors, phi = object@phi, n_draws = object@n_draws)
-  if (!is.null(surprise_result)) attr(new_nc, "surprise") <- surprise_result
+  if (!is.null(extreme_values)) attr(new_nc, "surprise") <- extreme_values
   new_nc
 }
 
-#' Retrieve the surprise scores computed during the last `update()`
+#' Surprising (extreme) values flagged during the last `update()`
+#'
+#' Returns a tidy `data.frame` with one row per flagged surprise -- currently the
+#' reporting delays that arrived later than the model expects (`surprise =
+#' "delay"`, `direction = "long"`) -- together with their tail probability and
+#' the `level` used.  Returns `NULL` when nothing was flagged (or surprise was
+#' not computed).
 #' @param nc A `nowcast_class` object returned by [update()].
-#' @returns A `diseasenowcasting_surprise` object, or `NULL` if no surprise was computed.
+#' @returns A `data.frame` of flagged surprises, or `NULL`.
 #' @export
-surprise_result <- function(nc) attr(nc, "surprise")
+extreme_values <- function(nc) {
+  surprises <- attr(nc, "surprise")
+  if (is.null(surprises)) return(NULL)
+
+  parts <- list()
+  ds <- surprises$delay_surprise
+  if (!is.null(ds) && nrow(ds) > 0) {
+    keep <- ds[which(ds$is_surprising & ds$direction == "long"), , drop = FALSE]
+    if (nrow(keep) > 0) { keep$is_surprising <- NULL; keep$surprise <- "delay"
+                          parts[[length(parts) + 1L]] <- keep }
+  }
+  cs <- surprises$count_surprise
+  if (!is.null(cs) && nrow(cs) > 0) {
+    keep <- cs[which(cs$is_surprising), , drop = FALSE]
+    if (nrow(keep) > 0) { keep$is_surprising <- NULL; keep$surprise <- "epidemic"
+                          parts[[length(parts) + 1L]] <- keep }
+  }
+  if (length(parts) == 0L) return(NULL)
+
+  # Column-filling rbind (delay and count tables have different columns).
+  cols <- unique(unlist(lapply(parts, names)))
+  out  <- do.call(rbind, lapply(parts, function(d) {
+    for (cc in setdiff(cols, names(d))) d[[cc]] <- NA
+    d[cols]
+  }))
+  out$level <- surprises$level
+  out
+}
 
 #' Score the reporting-delay surprise of the new reports against the previous fit.
 #'
@@ -189,7 +222,7 @@ surprise_result <- function(nc) attr(nc, "surprise")
   msg <- stats::setNames(
     c(bullets,
       "If these are outliers, treat them as censored with `censor_delays_above()` and re-fit.",
-      "See all flagged delays with `surprise_result(nc)`."),
+      "See all flagged delays with `extreme_values(nc)`."),
     c(rep("!", length(bullets)), "i", "i"))
   cli::cli_warn(msg)
   invisible(NULL)

@@ -56,7 +56,7 @@ reference:
       - ppc
       - surprise
       - censor_delays_above
-      - surprise_result
+      - extreme_values
       - update.nowcast_class
 
   - title: "Backtesting and scoring"

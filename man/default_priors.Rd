@@ -22,3 +22,14 @@ A named list of prior specs.
 \description{
 Build the default prior bundle for an RTMB nowcast model
 }
+\details{
+The default prior for each parameter is documented on the component
+constructor: see the \strong{Default priors} section of \link{epidemic_process}
+(HSGP / AR(1) / SIR), \link{delay_process} (LogNormal / Gamma / GenGamma /
+Dirichlet) and \link{likelihood} (the NB overdispersion \code{phi}).  To \emph{see} what a
+set of priors implies for the epidemic curve before fitting, use
+\link[=nowcast]{nowcast(prior_only = TRUE)}.
+}
+\seealso{
+\link{epidemic_process}, \link{delay_process}, \link{likelihood}
+}

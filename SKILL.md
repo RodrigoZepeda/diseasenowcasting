@@ -284,12 +284,40 @@ s$delay_surprise   # delay, mean_tail_prob (P(D>=d)), cdf_prob (P(D<=d)), direct
 ### update() computes surprise automatically + warns
 
 ```r
-nc2 <- update(nc, new_rows, surprise_level = 0.99)   # warns if counts/delays are surprising
-surprise_result(nc2)                                  # the full diseasenowcasting_surprise table
+nc2 <- update(nc, new_rows, surprise_level = 0.99)   # one warning listing surprising delays
+extreme_values(nc2)                                  # tidy data.frame of flagged surprises (or NULL)
 update(nc, new_rows, compute_surprise = FALSE)        # silent
 ```
 
-`update()` scores **count revisions** (recent event-times whose total changed)
+`update()` scores only **too-long reporting delays** (upper-censored) against the
+previous fit and raises a single warning (in the data's time unit). It does NOT
+score the epidemic/count process. `extreme_values(nc)` returns the flagged rows.
+
+### prior_only: see what a prior implies
+
+```r
+# Draw the epidemic from the PRIORS only (no fitting); data just sets the grid.
+nc <- nowcast(tn, model(nb_likelihood(), sir_epidemic(R0 = lognormal_prior(log(3), 0.1)), lognormal_delay()),
+              prior_only = TRUE, n_draws = 300)
+quantile(nc, probs = c(0.05, 0.5, 0.95))   # prior-predictive epidemic band
+# Works for HSGP / AR1 / SIR; predict()/autoplot()/median() all apply.
+```
+
+### ess(): Laplace approximation diagnostic
+
+```r
+ess(nc, n_draws = 1000)   # importance-sampling ESS over the hyperparameters; warns if low
+# Low ESS = the Gaussian (Laplace) approximation is unreliable (skewed/weakly
+# identified posterior, common with little data). attr(,"ratio"), attr(,"n_hyper").
+```
+
+### Default priors
+
+Each component constructor documents its defaults in a **Default priors** roxygen
+section: `?epidemic_process` (HSGP alpha~HalfNormal(0,1), ell~InvGamma(3,1);
+AR1 phi~StdNormal, sigma~Exp(100); SIR R0~LogNormal(log2,0.5),
+gamma~LogNormal(log(1/5),0.5), N_eff~Beta(2,5)), `?delay_process`, `?likelihood`
+(phi~LogNormal(log20,0.5)). Delay means + the intercept are data-informed.
 and **new report delays** against the previous fit, and raises a cli warning
 naming exactly what was surprising (count too high/low, delay too long/short).
 

@@ -58,6 +58,24 @@ Specify the reporting-delay distribution.  Parameter slots accept a fixed
 numeric, a \code{prior_class} (e.g. \code{\link[=normal_prior]{normal_prior()}}), or \code{numeric(0)} for the
 default prior.
 }
+\section{Default priors}{
+
+When a prior argument is left empty, \code{\link[=default_priors]{default_priors()}} supplies these
+defaults.  The delay \emph{mean} prior is \strong{data-informed}: a \code{normal_prior()} on
+the log scale, centred at the log of the median observed delay.
+\itemize{
+\item \strong{LogNormal}: \code{mu} ~ data-informed \verb{normal_prior(log median delay)};
+\code{sigma} ~ \code{gamma_prior(2, 2)}.
+\item \strong{Gamma}: \code{shape} ~ data-informed \code{normal_prior(...)};
+\code{rate} ~ \code{gamma_prior(2, 2 / sd)} (data-informed SD).
+\item \strong{Generalised Gamma}: \code{mu} ~ data-informed \code{normal_prior(...)};
+\code{sigma} ~ \code{gamma_prior(2, 0.1)}; \code{Q} (shape) ~ \code{normal_prior(0, 0.5)}.
+\item \strong{Dirichlet}: \code{alpha} ~ a per-bin concentration vector, data-informed
+from the empirical delay pmf (\code{0.05 + (bins+1) * pmf}), else
+\code{rep(1, bins + 1)}.
+}
+}
+
 \examples{
 lognormal_delay()
 lognormal_delay(mu = normal_prior(log(7), 0.5))

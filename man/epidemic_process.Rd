@@ -89,6 +89,36 @@ Specify the latent epidemic process.  Parameter slots accept a fixed
 numeric, a \code{prior_class}, or \code{numeric(0)} for the default prior.  The
 log-incidence mean intercept is inherited from the likelihood (\code{mu}).
 }
+\section{Default priors}{
+
+When a prior argument is left empty, \code{\link[=default_priors]{default_priors()}} supplies these
+defaults (see also \link[=nowcast]{nowcast(prior_only = TRUE)} to visualise them):
+
+\strong{HSGP} (\code{hsgp_epidemic}):
+\itemize{
+\item \code{alpha} (GP amplitude): \code{half_normal_prior(0, 1)}
+\item \code{ell} (GP length-scale): \code{inv_gamma_prior(3, 1)}
+\item \code{basis_coefs}: \code{std_normal_prior()}
+}
+
+\strong{AR(1)} (\code{ar1_epidemic}):
+\itemize{
+\item \code{phi} (autocorrelation): \code{std_normal_prior()}
+\item \code{sigma} (innovation SD): \code{exponential_prior(100)}
+\item innovations: \code{std_normal_prior()}
+}
+
+\strong{SIR} (\code{sir_epidemic}):
+\itemize{
+\item \code{R0}: \code{lognormal_prior(log(2), 0.5)}
+\item \code{gamma} (recovery rate): \code{lognormal_prior(log(1/5), 0.5)}
+\item \code{N_eff} (susceptible fraction): \code{beta_prior(2, 5)}
+}
+
+The log-incidence intercept comes from the likelihood (\code{mu}), defaulting to a
+data-informed \code{normal_prior()} centred at the log median daily count.
+}
+
 \examples{
 hsgp_epidemic()
 hsgp_epidemic(gp_kernel = "sq_exp", num_basis = 20)

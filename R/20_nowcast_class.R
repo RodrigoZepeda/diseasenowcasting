@@ -55,6 +55,13 @@ nowcast_class <- S7::new_class(
 #'   does not already carry computed temporal effects**.  Use `"none"` (or
 #'   `"None"`) to disable, or pre-attach your own effects to the `tbl_now` with
 #'   `tbl.now::add_temporal_effects()` + `tbl.now::compute_temporal_effects()`.
+#' @param prior_only If `TRUE`, ignore the likelihood and draw the epidemic
+#'   parameters from their **priors** only, returning the prior-predictive latent
+#'   incidence.  Useful for understanding what a prior implies *before* seeing
+#'   data (e.g. how the SIR `R0` prior or the AR(1) `phi` prior reshapes the
+#'   epidemic).  The result is a normal `nowcast_class`, so `predict()` /
+#'   `autoplot()` / `median()` / `quantile()` all work; `data` only supplies the
+#'   time grid.  Default `FALSE`.
 #' @param seed Optional RNG seed (imputation draws).
 #' @param ... Passed to [prepare_data()] (e.g. `gp_boundary_frac`).
 #' @returns A `nowcast_class` object.
@@ -76,24 +83,41 @@ nowcast <- function(data, model = diseasenowcasting::model(),
                     type = c("two_stage", "one_stage"), now = NULL,
                     K = 25L, n_draws = 2000L, delay_window = 120L, np_spread = 1,
                     floor_mu = 0.15, floor_sig_frac = 0.25,
-                    temporal_effects = "auto", seed = sample.int(.Machine$integer.max, 1), ...) {
+                    temporal_effects = "auto", prior_only = FALSE,
+                    seed = sample.int(.Machine$integer.max, 1), ...) {
   type <- match.arg(type)
   if (!is.null(seed)) set.seed(seed)
   # The NB overdispersion prior lives on the likelihood, not on nowcast().
   phi <- .likelihood_phi(model)
-  data <- .apply_default_temporal_effects(data, temporal_effects)
+  # prior_only: don't auto-add temporal effects (keep the prior epidemic clean).
+  data <- .apply_default_temporal_effects(data, if (isTRUE(prior_only)) "none" else temporal_effects)
   prepared <- prepare_from_tbl_now(data, model, now = now, delay_only = FALSE, ...)
   engine   <- prepared$data
   priors   <- default_priors(model, engine)
-  collected <- .collect_nowcast_fits(model, engine, priors, type = type, K = K,
-                                     floor_mu = floor_mu, floor_sig_frac = floor_sig_frac,
-                                     np_spread = np_spread, delay_window = delay_window)
+
+  if (isTRUE(prior_only)) {
+    # Draw epidemic parameters from the PRIORS (no fitting) and reconstruct the
+    # prior-predictive latent incidence -- "what does this prior yield?".
+    hb   <- .hsgp_basis_for_engine(engine)
+    sims <- .simulate_prior_draws(engine, priors, n_draws = as.integer(n_draws),
+                                  Bmat = hb$Bmat, freq = hb$freq, seed = seed)
+    prior_fit <- list(data = engine, priors = priors, prior_only = TRUE,
+                      prior_sims = sims, Bmat = hb$Bmat, freq = hb$freq,
+                      delay_mu = NA_real_, delay_sigma = NA_real_, phi_nb = NA_real_,
+                      parList = list())
+    collected <- list(fits = list(prior_fit), rung = "prior", target = engine$max_time)
+  } else {
+    collected <- .collect_nowcast_fits(model, engine, priors, type = type, K = K,
+                                       floor_mu = floor_mu, floor_sig_frac = floor_sig_frac,
+                                       np_spread = np_spread, delay_window = delay_window)
+  }
   # Augment the engine list with date/strata metadata so autoplot() can recover
   # real calendar dates and stratum names without needing the tbl_now.
   engine$min_event    <- prepared$min_event
   engine$event_unit   <- as.character(prepared$event_unit)
   engine$strata_levels <- prepared$strata_levels
-  nowcast_class(model = model, data = data, now = prepared$now, type = type,
+  nowcast_class(model = model, data = data, now = prepared$now,
+                type = if (isTRUE(prior_only)) "prior_only" else type,
                 fits = collected$fits, rung = collected$rung, target = collected$target,
                 engine = engine, priors = priors, phi = phi, n_draws = as.integer(n_draws))
 }

@@ -16,6 +16,7 @@ nowcast(
   floor_mu = 0.15,
   floor_sig_frac = 0.25,
   temporal_effects = "auto",
+  prior_only = FALSE,
   seed = sample.int(.Machine$integer.max, 1),
   ...
 )
@@ -49,6 +50,14 @@ seasonality; monthly -> 12-period seasonality) \strong{only if the \code{tbl_now
 does not already carry computed temporal effects}.  Use \code{"none"} (or
 \code{"None"}) to disable, or pre-attach your own effects to the \code{tbl_now} with
 \code{tbl.now::add_temporal_effects()} + \code{tbl.now::compute_temporal_effects()}.}
+
+\item{prior_only}{If \code{TRUE}, ignore the likelihood and draw the epidemic
+parameters from their \strong{priors} only, returning the prior-predictive latent
+incidence.  Useful for understanding what a prior implies \emph{before} seeing
+data (e.g. how the SIR \code{R0} prior or the AR(1) \code{phi} prior reshapes the
+epidemic).  The result is a normal \code{nowcast_class}, so \code{predict()} /
+\code{autoplot()} / \code{median()} / \code{quantile()} all work; \code{data} only supplies the
+time grid.  Default \code{FALSE}.}
 
 \item{seed}{Optional RNG seed (imputation draws).}
 

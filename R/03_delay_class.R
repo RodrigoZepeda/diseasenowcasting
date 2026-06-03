@@ -131,6 +131,22 @@ dirichlet_delay_class <- S7::new_class(
 #'
 #' @returns A `delay_process_class` object.
 #'
+#' @section Default priors:
+#' When a prior argument is left empty, [default_priors()] supplies these
+#' defaults.  The delay *mean* prior is **data-informed**: a `normal_prior()` on
+#' the log scale, centred at the log of the median observed delay.
+#' \itemize{
+#'   \item **LogNormal**: `mu` ~ data-informed `normal_prior(log median delay)`;
+#'         `sigma` ~ `gamma_prior(2, 2)`.
+#'   \item **Gamma**: `shape` ~ data-informed `normal_prior(...)`;
+#'         `rate` ~ `gamma_prior(2, 2 / sd)` (data-informed SD).
+#'   \item **Generalised Gamma**: `mu` ~ data-informed `normal_prior(...)`;
+#'         `sigma` ~ `gamma_prior(2, 0.1)`; `Q` (shape) ~ `normal_prior(0, 0.5)`.
+#'   \item **Dirichlet**: `alpha` ~ a per-bin concentration vector, data-informed
+#'         from the empirical delay pmf (`0.05 + (bins+1) * pmf`), else
+#'         `rep(1, bins + 1)`.
+#' }
+#'
 #' @examples
 #' lognormal_delay()
 #' lognormal_delay(mu = normal_prior(log(7), 0.5))
