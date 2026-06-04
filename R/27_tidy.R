@@ -32,69 +32,86 @@ S7::method(tidy, nowcast_class) <- function(x, conf.level = 0.95, ...) {
   priors <- fit$priors
 
   # -- posterior precision from the Laplace mode ------------------------------
-  obj        <- fit$obj
-  mode_vec   <- obj$env$last.par.best
-  par_names  <- names(mode_vec)
-  estimates  <- as.numeric(mode_vec)
+  # `last.par.best` is the joint mode (fixed + random effects); its names label
+  # every estimated parameter, and its values are the point estimates.
+  obj             <- fit$obj
+  posterior_mode  <- obj$env$last.par.best
+  parameter_names <- names(posterior_mode)
+  estimates       <- as.numeric(posterior_mode)
 
-  # Posterior SDs via diagonal of H^{-1} (sparse Cholesky)
+  # Posterior SDs are the square roots of the diagonal of the inverse Hessian
+  # (the Laplace covariance).  The Hessian can be numerically non-positive-
+  # definite at a weakly-identified mode, so we retry the Cholesky factorisation
+  # with a progressively larger diagonal ridge until it succeeds.
   std_errors <- tryCatch({
-    H <- methods::as(obj$he(mode_vec), "sparseMatrix")
-    # Add small ridge if non-PD
-    for (ridge_exp in c(0, -6:-1)) {
-      chol <- tryCatch(Matrix::Cholesky(H + Matrix::Diagonal(nrow(H), 1e-8 * 10^ridge_exp),
-                                        super = TRUE), error = function(e) NULL)
-      if (!is.null(chol)) break
+    hessian <- methods::as(obj$he(posterior_mode), "sparseMatrix")
+    n_par   <- nrow(hessian)
+
+    cholesky_factor <- NULL
+    for (ridge_exponent in c(0, -6:-1)) {
+      ridge           <- 1e-8 * 10^ridge_exponent
+      cholesky_factor <- tryCatch(
+        Matrix::Cholesky(hessian + Matrix::Diagonal(n_par, ridge), super = TRUE),
+        error = function(e) NULL)
+      if (!is.null(cholesky_factor)) break
     }
-    if (is.null(chol)) rep(NA_real_, length(estimates))
-    else sqrt(diag(Matrix::solve(chol, Matrix::Diagonal(nrow(H)))))
+
+    if (is.null(cholesky_factor)) {
+      rep(NA_real_, length(estimates))
+    } else {
+      # diag(H^{-1}) via solving H X = I, then take the diagonal.
+      inverse_hessian <- Matrix::solve(cholesky_factor, Matrix::Diagonal(n_par))
+      sqrt(diag(inverse_hessian))
+    }
   }, error = function(e) rep(NA_real_, length(estimates)))
 
-  z <- stats::qnorm((1 + conf.level) / 2)
+  # Normal critical value for the requested two-sided credible level.
+  critical_z <- stats::qnorm((1 + conf.level) / 2)
 
-  # -- categorise parameters --------------------------------------------------
-  type_of <- function(nm) {
-    if (grepl("^delay|^simplex|^logit", nm))                "delay"
-    else if (grepl("^log_phi|^nb", nm))                     "likelihood"
-    else if (grepl("^log_gp|^basis_coefs|^gp", nm))         "epidemic_hsgp"
-    else if (grepl("^ar_|^log_ar", nm))                     "epidemic_ar1"
-    else if (grepl("^log_R0|^u_gamma|^u_neff", nm))         "epidemic_sir"
-    else if (grepl("^mu_intercept|^mu_global|^delta|^log_tau_intercept", nm)) "epidemic_intercept"
-    else if (grepl("^gamma", nm))                           "covariate"
-    else                                                    "other"
-  }
-
-  # -- back-transform to interpretable scale ---------------------------------
-  human_name <- function(nm) {
-    nm <- sub("^log_", "log(", nm)
-    if (grepl("log\\(", nm)) paste0(nm, ")")
-    else nm
+  # -- categorise each parameter by which model component it belongs to -------
+  classify_parameter <- function(parameter_name) {
+    if (grepl("^delay|^simplex|^logit", parameter_name))            "delay"
+    else if (grepl("^log_phi|^nb", parameter_name))                 "likelihood"
+    else if (grepl("^log_gp|^basis_coefs|^gp", parameter_name))     "epidemic_hsgp"
+    else if (grepl("^ar_|^log_ar", parameter_name))                 "epidemic_ar1"
+    else if (grepl("^log_R0|^u_gamma|^u_neff", parameter_name))     "epidemic_sir"
+    else if (grepl("^mu_intercept|^mu_global|^delta|^log_tau_intercept", parameter_name)) "epidemic_intercept"
+    else if (grepl("^gamma", parameter_name))                       "covariate"
+    else                                                            "other"
   }
 
   out <- data.frame(
-    term       = par_names,
+    term       = parameter_names,
     estimate   = estimates,
     std.error  = as.numeric(std_errors),
-    conf.low   = estimates - z * as.numeric(std_errors),
-    conf.high  = estimates + z * as.numeric(std_errors),
-    type       = vapply(par_names, type_of, character(1)),
+    conf.low   = estimates - critical_z * as.numeric(std_errors),
+    conf.high  = estimates + critical_z * as.numeric(std_errors),
+    type       = vapply(parameter_names, classify_parameter, character(1)),
     stringsAsFactors = FALSE
   )
 
-  # Average delay parameters across two-stage imputations
-  if (length(x@fits) > 1L) {
-    delay_cols <- grepl("^delay_mu$|^delay_sigma$|^delay_Q$", out$term)
-    if (any(delay_cols)) {
-      all_delay <- lapply(x@fits, function(f) {
-        pl <- f$parList; list(delay_mu = pl$delay_mu, delay_sigma = f$delay_sigma)
-      })
-      avg_mu  <- mean(vapply(all_delay, function(f) f$delay_mu %||% NA_real_, numeric(1)), na.rm = TRUE)
-      avg_sig <- mean(vapply(all_delay, function(f) f$delay_sigma %||% NA_real_, numeric(1)), na.rm = TRUE)
-      if ("delay_mu" %in% out$term && is.finite(avg_mu))
-        out$estimate[out$term == "delay_mu"] <- avg_mu
-      if (any(grepl("delay_sigma|log_delay_sigma", out$term)) && is.finite(avg_sig))
-        out$estimate[grepl("delay_sigma|log_delay_sigma", out$term)][1] <- log(max(avg_sig - 0.01, 1e-6))
-    }
+  # In a two-stage fit the delay is imputed K times, so the single mode reported
+  # above is just the first imputation.  Replace the delay point estimates with
+  # the average across imputations to reflect the pooled delay.
+  has_multiple_imputations <- length(x@fits) > 1L
+  has_delay_params <- any(grepl("^delay_mu$|^delay_sigma$|^delay_Q$", out$term))
+  if (has_multiple_imputations && has_delay_params) {
+    per_imputation_delay <- lapply(x@fits, function(fit_k) {
+      list(delay_mu = fit_k$parList$delay_mu, delay_sigma = fit_k$delay_sigma)
+    })
+    mean_delay_mu    <- mean(vapply(per_imputation_delay,
+                                    function(d) d$delay_mu %||% NA_real_, numeric(1)), na.rm = TRUE)
+    mean_delay_sigma <- mean(vapply(per_imputation_delay,
+                                    function(d) d$delay_sigma %||% NA_real_, numeric(1)), na.rm = TRUE)
+
+    if ("delay_mu" %in% out$term && is.finite(mean_delay_mu))
+      out$estimate[out$term == "delay_mu"] <- mean_delay_mu
+
+    # delay_sigma is reported on the log "excess" scale, so convert the averaged
+    # natural-scale SD back the same way (matching how the fit stores it).
+    is_sigma_row <- grepl("delay_sigma|log_delay_sigma", out$term)
+    if (any(is_sigma_row) && is.finite(mean_delay_sigma))
+      out$estimate[is_sigma_row][1] <- log(max(mean_delay_sigma - 0.01, 1e-6))
   }
 
   out <- out[order(out$type, out$term), ]
