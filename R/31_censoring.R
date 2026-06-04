@@ -42,22 +42,27 @@ censor_delays_above <- function(data, max_delay, quiet = FALSE) {
   event_unit <- tbl.now::get_event_units(data)
   min_event  <- min(data[[event_col]], na.rm = TRUE)
 
-  delay_u <- .unit_steps(min_event, data[[report_col]], event_unit) -
-             .unit_steps(min_event, data[[event_col]],  event_unit)
-  flag <- is.finite(delay_u) & delay_u > max_delay
+  # Reporting delay, in event units, as (report - event) measured from a common
+  # origin so month/week units are handled consistently by .unit_steps().
+  delay_in_units <- .unit_steps(min_event, data[[report_col]], event_unit) -
+                    .unit_steps(min_event, data[[event_col]],  event_unit)
+  is_too_long <- is.finite(delay_in_units) & delay_in_units > max_delay
 
-  cens_col <- tryCatch(tbl.now::get_is_censored(data), error = function(e) character(0))
-  if (length(cens_col) == 1L && cens_col %in% names(data)) {
-    current <- as.logical(data[[cens_col]]); current[is.na(current)] <- FALSE
-    data[[cens_col]] <- current | flag
+  # Merge with any existing censoring flags (don't un-censor what was already
+  # censored); create the column if the tbl_now has none yet.
+  censored_col_name <- tryCatch(tbl.now::get_is_censored(data), error = function(e) character(0))
+  if (length(censored_col_name) == 1L && censored_col_name %in% names(data)) {
+    already_censored <- as.logical(data[[censored_col_name]])
+    already_censored[is.na(already_censored)] <- FALSE
+    data[[censored_col_name]] <- already_censored | is_too_long
   } else {
-    data[[".is_censored"]] <- flag
+    data[[".is_censored"]] <- is_too_long
     data <- tbl.now::add_is_censored(data, ".is_censored")
   }
 
   if (!quiet)
     cli::cli_inform(c(
-      "i" = "Marked {sum(flag)} report{?s} with delay > {max_delay} event unit{?s} as censored.",
+      "i" = "Marked {sum(is_too_long)} report{?s} with delay > {max_delay} event unit{?s} as censored.",
       "*" = "Their delay is now an upper bound; re-fit with {.fn nowcast} to use it."))
   data
 }
