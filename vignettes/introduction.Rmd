@@ -12,7 +12,8 @@ vignette: >
 knitr::opts_chunk$set(
   message  = FALSE,
   warning  = FALSE,
-  fig.width  = 8,
+  fig.width  = 7,
+  fig.align='center',
   fig.height = 4,
   collapse = TRUE,
   comment  = "#>"
@@ -20,7 +21,7 @@ knitr::opts_chunk$set(
 ```
 
 `diseasenowcasting` is an R package for nowcasting time series of epidemiological cases. Epidemiologic surveillance tools usually have an intrinsic delay between the **true date of an event** (`event_date`) and the **report date for that event** (`report_date`). Some examples include the true date being symptom onset or testing time and the report date corresponds to when the case was registered in the system. 
-`diseasenowcasting` uses censored Bayesian structural time series models (via R's Template Model Builder [`RTMB`](https://cran.r-project.org/web/packages/RTMB/index.html)) to infer the cases that have not yet been reported thus providing a prediction of the final number of cases.
+`diseasenowcasting` uses censored Bayesian models (via R's Template Model Builder [`RTMB`](https://cran.r-project.org/web/packages/RTMB/index.html)) to infer the cases that have not yet been reported thus providing a prediction of the final number of casees.
 
 
 ## Your data: the `tbl_now` format
@@ -28,10 +29,16 @@ knitr::opts_chunk$set(
 `diseasenowcasting` works with data organised as a `tbl_now` object from the companion
 [`tbl.now`](https://rodrigozepeda.github.io/tbl.now/) package.  A `tbl_now` is simply a data frame that has been annotated
 with the roles of its columns: 
+
 + *event date* when the event happened (e.g. symptom onset)
+
 + *report date*  when the event was reported (e.g. date entered into the database)
+
 + *strata* (optional) columns that defined all the strata (e.g. sex and region)
-+ *now*  (optional) the date until which to nowcast (assumes all events and reports before the now have been observed)
+
++ *now*  (optional) the date until which to nowcast (assumes all events and reports before 
+the now have been observed and missing observations correspond to no observations - i.e. 
+if one day there were not cases the missingness can be translated into zero cases)
 
 
 ```{r load}
@@ -41,7 +48,7 @@ library(ggplot2)
 set.seed(27653)
 ```
 
-As a quick example, here is how to build a `tbl_now` using surveillance data 
+As a quick example, here is how to build a `tbl_now` using the following surveillance data 
 for dengue in Puerto Rico:
 
 ```{r tblnow-demo}
@@ -53,7 +60,7 @@ head(denguedat, 6)
 ```
 
 
-Which we can transform to a `tbl_now` by specifying the event and report dates as well as the `data_type`. A `tbl.now` allows the user to give both linelist and count-data.  
+We can transform the `data.frame` to a `tbl_now` by specifying the event and report dates (`onset` and `report` weeks respectively) as well as the `data_type` and the strata (in this case, `gender`). 
 
 ```{r}
 dengue_tbl <- tbl_now(
@@ -69,48 +76,53 @@ dengue_tbl
 
 Once your data is a `tbl_now`, a single call to `nowcast()` does the rest.
 
-## Example 1 -- Dengue fever (weekly, Puerto Rico)
+> For more information about `tbl_now` check [the package's website](https://rodrigozepeda.github.io/tbl.now/index.html). 
 
-We fit a stratified nowcast to illustrate the basic workflow. 
+## Example 1 -- Dengue fever (setting up a stratified nowcast)
+
+We fit a nowcast stratified by gender to illustrate the basic workflow. 
 
 ```{r dengue-fit}
 nc_dengue <- nowcast(dengue_tbl, n_draws = 1000)
 nc_dengue
 ```
 
-The fitted model can be visualized with [autoplot()]:
+The fitted model can be visualized with `autoplot()`. Note that the nowcast was already stratified by the strata specified in the `tbl_now`:
 
-```{r dengue-plot}
+```{r dengue-plot, fig.cap="_Nowcast for dengue example. The shaded bars show the median while the errorbar has the 90 % credible intervals._"}
 autoplot(nc_dengue) 
 ```
 
-The shaded bars show the median while the errorbar has the 90 % credible intervals.  
-
 Values can be obtained via `predict()` and `summary()`:
 
-```{r dengue-results}
+```{r dengue-results, eval = FALSE}
 # Full posterior-predictive nowcast at every event-time
 pred_dengue <- predict(nc_dengue)
 
 #This creates a summary of mean and quantiles
-summary(pred_dengue) |> tail(6)   # last 6 weeks
+summary(pred_dengue) 
+```
+
+```{r dengue-results2, echo = FALSE}
+# Full posterior-predictive nowcast at every event-time
+pred_dengue <- predict(nc_dengue)
+
+#This creates a summary of mean and quantiles
+summary(pred_dengue) |> dplyr::as_tibble() |> tail(6)
 ```
 
 
 Additionally the `nowcast_diagnostic()` shows the fitted distribution for the delay, the smoothed epidemic process as well as the aggregated nowcast (for the sum of all strata):
 
-```{r dengue-diagnostic}
+```{r dengue-diagnostic, fig.height=10}
 nowcast_diagnostic(nc_dengue) 
 ```
 
 
-## Example 2 -- Mpox (daily, USA, stratified by race)
+## Example 2 -- Mpox (modifying the nowcast model)
 
 The `mpoxdat` dataset (also in `tbl.now`) covers the 2022 mpox outbreak in New York City
-with daily case counts stratified by race.  We use the
-**two-stage** nowcast: Stage 1 estimates the delay distribution from a recent
-window of data; Stage 2 uses multiple imputations of that delay to fit the
-epidemic, correctly propagating delay uncertainty into the final estimates.
+with daily case counts stratified by race.  
 
 ```{r mpox-prep}
 data(mpoxdat)
@@ -125,17 +137,21 @@ mpox_tbl <- tbl_now(
 ) 
 ```
 
-A simple plot of the data shows that we should be taking into account daily effects. 
+A simple plot of the data shows that we should be taking into account day-of-the-week effects:
 
 ```{r mpoxplot}
 ggplot(mpox_tbl) +
   geom_col(aes(x = dx_date, y = n), fill = "#5F7E62") +
   labs(x = "Event date", y = "Case count") +
-  theme_diseasenowcasting() 
+  theme_diseasenowcasting() +
+  labs(
+    x = "Event date",
+    title = "Mpox cases in NYC (2022)"
+  )
 ```
 
 
-Although the model automatically tries to do it, we can also set it with `add_temporal_effects()`:
+The model will automatically attempt to do it, but we can also set it with `add_temporal_effects()`:
 
 ```{r}
 mpox_tbl <- mpox_tbl |> 
@@ -149,15 +165,19 @@ mpox_tbl
 ```
 
 One can also choose between several likelihoods, epidemic processess and delay distributions
-and feed it into the `model()`. Here we use a Suceptible-Infected-Recovered model (SIR) with
+and feed it into the `model()`. Here we use a Susceptible-Infected-Recovered model (SIR) with
 a delay that follows a lognormal distribution:
 
 ```{r mpox-fit}
 #Models can be modified via the model() 
-mpox_model <- model(likelihood = nb_likelihood(), epidemic = sir_epidemic(), delay = lognormal_delay())
+mpox_model <- model(likelihood = nb_likelihood(),   #Negative binomial (recommended)
+                    epidemic   = sir_epidemic(),    #SIR model
+                    delay      = lognormal_delay()) #Delay distribution
 
+#We can then fit the  model
 nc_mpox <- nowcast(mpox_tbl, model = mpox_model)
 
+#And show the nowcast
 autoplot(nc_mpox) 
 ```
 
@@ -165,13 +185,13 @@ autoplot(nc_mpox)
 ## Example 3 -- Comparing models with a backtest
 
 A **backtest** reruns nowcasts at multiple historical dates and scores them
-against the eventually-observed totals.  This lets you objectively compare
-model families before committing to one for real-time monitoring.
+against the eventually-observed totals.  This lets you compare between
+models before committing to one for real-time monitoring. 
 
-The `backtest()` fits one nowcast per (`date` x `model`) cell. Those cells run 
+>The `backtest()`  function fits one nowcast per `date` and `model` cell. Those cells run 
 in parallel through the [future](https://future.futureverse.org/) framework.  
 By default they run sequentially; to use several CPU cores, 
-set a parallel plan *before* calling `backtest()`:
+set a [parallel plan](https://future.futureverse.org/reference/plan.html) *before* calling `backtest()`:
 
 ```{r backtest-plan, eval=FALSE}
 library(future)
@@ -193,13 +213,20 @@ models_to_compare <- list(
   model(nb_likelihood(), sir_epidemic(),  lognormal_delay())
 )
 
+#Uncomment this line to use several of your cores
+#plan(multisession, workers = 4) 
+
 backtest_mpox <- backtest(
   mpox_tbl,
   models  = models_to_compare,
-  n_dates = 5, #Test 3 dates at random from the mpox data
-  seed    = 42
+  n_dates = 5 #Test 3 dates at random from the mpox data
 )
+
+#This closes the plan multisession opened above
+#plan(sequential)   
 ```
+
+We can then calculate the Weighted Interval Score (WIS) and interval coverage via `score()`:
 
 ```{r score}
 # Rank by Weighted Interval Score (WIS) -- lower is better
@@ -207,8 +234,13 @@ score(backtest_mpox, metric = "wis", report = TRUE)
 ```
 
 The `score()` output shows WIS, absolute percentage error (APE), and empirical
-coverage at 50 % and 90 %.  A well-calibrated nowcast should have coverage close
-to these levels.
+coverage at 50 % and 90 %.  A well-calibrated nowcast should have the lowest
+WIS and coverage close to these levels. 
+
+> In this specific test we would choose the SIR for
+having the lowest WIS at essentially the same coverage as HGSP. Note however that
+for the tutorial  we only used 5 historical dates which is too low to reach
+a definite conslusion. 
 
 ## Next steps
 
@@ -216,9 +248,34 @@ This vignette covered the basics: building a `tbl_now`, fitting a nowcast with
 `nowcast()`, inspecting results with `predict()` / `summary()` / `autoplot()`,
 and comparing models with `backtest()` / `score()`.
 
-A few directions to explore next:
+Depending on what you want to do next, check out the following
+vignettes:
 
-<!--- TODO: FILL HERE REFERENCING THE OTHER VIGNETTES. HAVE A MODEL VIGNETTE FOR PUBLIC HEALTH PRACTICIONERS--->
+- **[Nowcasting at the Start of an Epidemic](Nowcasting_at_the_start_of_an_Epidemic.html)**
+  —  A worked, end-to-end case study of monitoring an outbreak in real time: 
+  choosing a model when data are scarce, reading the nowcast as the epidemic grows, 
+  and experimenting with the prior to
+  encode what you already believe about the epidemic before much data arrives.
+
+- **[Understanding Priors in diseasenowcasting](Understanding_Priors.html)**
+  — *Make the model say what you mean.* Shows the package's default priors, how
+  to tighten or loosen them, and how the prior trades off against the data. Uses
+  the prior-predictive tools (`nowcast(..., prior_only = TRUE)`) to *see* what a
+  prior implies before fitting.
+
+- **[Handling Outlier Delays with Censoring](Handling_Outlier_Delays_with_Censoring.html)**
+  — *Robustness to reporting glitches.* How the censored likelihood copes with
+  unusually long reporting delays, and how to flag extreme 
+  delays in your surveillance stream.
+
+- **[Benchmark (diseasenowcasting vs NobBS and epinowcast)](Benchmark.html)**
+  — *How does it compare?* A reproducible backtest comparing `diseasenowcasting`
+  against the `NobBS` and `epinowcast` packages.
+
+- **[Mathematical Foundations of diseasenowcasting](Mathematics.html)**
+  — *Under the hood.* The censored likelihood, the epidemic processes
+  (HSGP, AR(1), SIR), the delay families, and the Laplace-approximation inference
+  that powers `RTMB`.
 
 See `?nowcast`, `?backtest`, `?score`, and `?model` for full documentation, and
 the `SKILL.md` file in the package root for an AI-oriented API reference.

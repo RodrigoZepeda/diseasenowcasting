@@ -1,0 +1,533 @@
+\documentclass{article}
+\usepackage{comment}
+\usepackage[english]{babel}
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=1.5cm,right=1.5cm,marginparwidth=1.75cm]{geometry}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage[svgnames]{xcolor}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+
+\lstset{
+    language=R,
+    basicstyle=\small\ttfamily,
+    stringstyle=\color{DarkGreen},
+    commentstyle=\color{DarkGreen},
+    keywordstyle=\color{blue},
+    alsoletter={_},
+    % 1. Add your custom keywords here
+    morekeywords={TRUE, FALSE, NobBS, sampler, refresh, verbose, show_messages, enw_model, enw_fit_opts, enw_pathfinder, epinowcast},
+    % 2. Remove unwanted base R keywords here
+    deletekeywords={data, date, frame, length, as, character, report, window, model},
+    % 3. Force numbers and decimals to color blue using 'literate'
+    literate=
+        {0}{{\textcolor{purple}{0}}}{1}
+        %{1}{{\textcolor{purple}{1}}}{1}
+        {2}{{\textcolor{purple}{2}}}{1}
+        {3}{{\textcolor{purple}{3}}}{1}
+        {4}{{\textcolor{purple}{4}}}{1}
+        {5}{{\textcolor{purple}{5}}}{1}
+        {6}{{\textcolor{purple}{6}}}{1}
+        {7}{{\textcolor{purple}{7}}}{1}
+        {8}{{\textcolor{purple}{8}}}{1}
+        {9}{{\textcolor{purple}{9}}}{1}
+        {.0}{{\textcolor{purple}{.0}}}{2}
+        {.1}{{\textcolor{purple}{.1}}}{2}
+        {.2}{{\textcolor{purple}{.2}}}{2}
+        {.3}{{\textcolor{purple}{.3}}}{2}
+        {.4}{{\textcolor{purple}{.4}}}{2}
+        {.5}{{\textcolor{purple}{.5}}}{2}
+        {.6}{{\textcolor{purple}{.6}}}{2}
+        {.7}{{\textcolor{purple}{.7}}}{2}
+        {.8}{{\textcolor{purple}{.8}}}{2}
+}
+  
+\title{Supplementary appendix. Nowcasting from an epidemic's reporting-delay.}
+\author{Rodrigo Zepeda-Tello \and Rami Yaari \and Jeffrey Shaman}
+
+\begin{document}
+
+
+
+  
+\maketitle
+
+{\color{blue} \Large This is the latest version. Review this one.}
+
+
+\section{Bayesian model}
+\subsection{Data}
+We model a dataset consisting of three columns where each row represents a case:
+\begin{itemize}
+    \item \textbf{Time}, $t$, denotes the date a case occurred starting at $t = 0$. 
+    \item \textbf{Delay}, $d$, is the difference between the reporting date and the case date (\textit{i.e.} the case that happened at $t$ was reported at time $t + d$). The minimum delay possible is $d = 0$. We assume that all delays are bounded above by $d^*$ ($d \leq d^*$).  
+    \item \textbf{Delay bound}, $b$ ($b \leq d^*$), upper bound for the delay $d$ in case $d$ was not observed (see \ref{sec:batch}).   
+\end{itemize}
+The main objective of the model is to predict $N_t$ the overall number of cases that happened at time $t$ (regardless of the reporting delay). 
+\subsection{Assumptions}
+For time $t$ we have the following assumptions:
+\begin{enumerate}
+    \item \textbf{Truncation:} Only cases with delays $d \leq d^*$ are observed (\textit{i.e.} for example, if it is day 100 of the epidemic, $t = 100$, and the maximum delay, $d^*$, can be of 100, corresponding to cases on day $t = 0$).
+    \item \textbf{Observed data:} We have observed $k_1 \geq 0$ cases with integer delays $d_1, d_2, \dots, d_{k_1}$ and $k_2 \geq 0$ cases where we only know the delay's upper bound $b_1, b_2, \dots, b_{k_2}$. The total number of observations is $k = k_1 + k_2$. The maximum observed delay is $d_{\max} = \max \{ d_1, \dots, d_{k_1}\}$.
+    \item \textbf{Aggregated data:} Let $m_0$ the number of observed delays of length $0$, $m_1$ the number of observed delays of length $1$, and in general $m_\ell$ the number of observed delays of length $\ell$. That is:
+    \begin{equation}
+    	m_{\ell} = \sum\limits_{i = 1}^{k_1} \mathbb{I}_{\{d_i = \ell\}}.
+    \end{equation}
+    Denote $\mathbf{m} = (m_0, m_1, \dots, m_{d_{\max}})$ the collection of those counts. 
+	\item \textbf{Delay process:} Delays are independent and follow a parametric distribution with cumulative distribution function $G_D(d|\theta_t)$.   
+    \item \textbf{Epidemic process:} The (unobserved) total number of cases at time $t$, $N_t$, has a parametric probability mass function $P_{N_t}(n|\theta_t)$
+    \item \textbf{Parameters:} The vector $\theta_t$ contains all of the model's parameters; its prior is $\pi(\theta_t)$. 
+\end{enumerate}
+
+In what follows first we explain the derivation where all delays have been exactly observed ($k = k_1$) and then extend it in section \ref{sec:batch} to the case where some are censored. 
+
+\subsection{Likelihood}
+To construct the likelihood for the observed delays, we will marginalize over the unobserved true case count, $N_t$. 
+
+For each time $t$, the likelihood function (at time $t$) for $\theta_t$ is denoted $
+\mathcal{L}_t(\theta_t  | d_1^t, \dots, d_{k}^t)$.
+For now, we'll drop the $t$ subscripts in what follows:
+
+\begin{equation}\label{likelihood_v1}
+    \begin{aligned}
+    \mathcal{L}_t(\theta  | d_1, \dots, d_{k_1})  
+    &\propto \pi(\theta)\cdot P(d_1, \dots, d_{k_1} | \theta) = \pi(\theta)\cdot \sum\limits_{n \geq k_1} P(d_1, \dots, d_{k_1} |\theta, N = n) \cdot P_N(n | \theta) \\
+    & = \pi(\theta)\cdot \sum\limits_{n \geq k_1} P(d_1, \dots, d_{k_1} |\theta, N = n) \cdot P_N(n | \theta)   
+    \end{aligned}
+\end{equation}
+
+
+
+When the number of cases, $n$, is fixed and knowing that the first $k_1$ are less than $d^*$ while the last $n - k_1$ are more than $d^*$ we obtain the following expression:
+\begin{equation}\label{gooddelay}
+    \begin{aligned}
+    P(d_1, \dots, d_{k_1} |\theta_t, N_t = n)  &= \left[ \prod\limits_{i=1}^{k_1} P\big(d_i - 1 < D_{(i)} \leq d_i|\theta_t\big)\right] \cdot \left[ \prod\limits_{i=k_1+1}^n P\big(D_{(i)} > d^{*}|\theta_t\big)\right] \\
+    & = \binom{n}{k_1}\left[ \prod\limits_{i=1}^{k_1} \Delta G_D(d_i|\theta_t) \right] \cdot \left[ \prod\limits_{i=k_1+1}^n \left[1 - G_D(d^*|\theta_t)\right]\right] 
+    \\ & = \binom{n}{k_1}\left[ \prod\limits_{i=1}^k \Delta G_D(d_i|\theta_t) \right] \cdot  \left[1 - G_D(d^*|\theta_t)\right]^{n-k_1}
+    \\ & = \binom{n}{k_1}\left[ \prod\limits_{l=1}^{d_{\max}} \big[\Delta G_D(l|\theta_t)\big]^{m_l} \right] \cdot  \left[1 - G_D(d^*|\theta_t)\right]^{n-k_1}
+    \end{aligned}
+\end{equation}
+where
+\begin{equation}
+    \Delta G_D(d_i|\theta_t) = \begin{cases}
+        G_D(d_i|\theta_t) - G_D\big(\max \{d_i - 1, 0\}|\theta_t) & \text{ if } G_{D} \text{ is continuous},\\\\
+        g_D(d_i|\theta_t)  & \text{ if } G_{D} \text{ is discrete with mass } g_{D}.
+    \end{cases}
+\end{equation}
+and $k_1 = \sum_{i=1}^{d_{\max}} m_i$.
+Hence integrating into \eqref{likelihood_v1}:
+
+\begin{equation}\label{eq2}
+    \begin{aligned}
+    \mathcal{L}(\theta_t & | d_1, \dots, d_{k_1})  \propto  \pi(\theta_t) \cdot \sum\limits_{n \geq k} P(d_1, \dots, d_{k_1} |\theta_t, N_t = n) P(N_t = n | \theta_t) \\
+    & = \pi(\theta_t) \cdot \sum\limits_{n \geq k} \binom{n}{k_1}\left[ \prod\limits_{i=1}^L \big[\Delta G_D(i|\theta_t)\big]^{m_i} \right]  \cdot \left[1 - G_D(d^*|\theta_t)\right]^{n - k_1} \cdot P(N_t = n|\theta_t) 
+    \\ & = \pi(\theta_t) \cdot \left[ \prod\limits_{i=1}^L \big[\Delta G_D(i|\theta_t)\big]^{m_i} \right]\cdot  \sum\limits_{n \geq k} \binom{n}{k_1}   \cdot \left[1 - G_D(d^*|\theta_t)\right]^{n - k_1} \cdot P(N_t = n|\theta_t)
+    \\ & = \pi(\theta_t) \cdot\left[ \prod\limits_{i=1}^L \big[\Delta G_D(i|\theta_t)\big]^{m_i} \right]\cdot  S_{k_1}(\theta_t)
+    \end{aligned}
+\end{equation}
+where
+\begin{equation}\label{snk}
+    S_{k_1}(\theta_t) = \sum\limits_{n \geq k} \binom{n}{k_1}   \cdot \left[1 - G_D(d^*|\theta_t)\right]^{n - k_1} \cdot P(N_t = n|\theta_t).
+\end{equation}
+
+The log-likelihood is then:
+\begin{equation}
+\begin{aligned}
+    \ell(\theta_t & | d_1, \dots, d_{k_1}) = 
+    \ln{\pi(\theta_t)} + \sum\limits_{l=0}^{d_{\max}} m_l\ln{\left(\Delta G_D(d_l|\theta_t)\right)} + \ln{\left(S_{k_1}(\theta_t)\right)} 
+\end{aligned}
+\end{equation}
+
+\subsubsection{Poisson case}\label{poisec}
+Suppose $N_t$ has a Poisson distribution:
+$$
+P(N_t = n|\theta_t) = \dfrac{\lambda_t^n e^{-\lambda_t}}{n!}
+$$
+and substituting into \eqref{snk}:
+\begin{equation}\label{poissonlikelihood}
+\begin{aligned}
+    S_{k_1}(\theta_t) & = \sum\limits_{n \geq k} \binom{n}{k_1}   \cdot \left[1 - G_D(d^*|\theta_t)\right]^{n - k_1} \cdot P(N_t = n|\theta_t) \\
+    & = \sum\limits_{n \geq k_1} \frac{n!}{k_1! (n - k_1)!} \left[1 - G_D(d^*|\theta_t)\right]^{n - k_1} \dfrac{\lambda_t^n e^{-\lambda_t}}{n!} 
+    \\ & = \frac{\lambda_t^{k_1}}{k_1!} e^{-\lambda_t}  \sum\limits_{n \geq k} \frac{\big(\left[1 - G_D(d^*|\theta_t)\right] \lambda_t\big)^{n-k_1}}{(n - k_1)!} 
+    \\ & = \frac{\lambda_t^{k_1}}{k_1!} e^{-\lambda_t} \cdot e^{[1 - G_D(d^*|\theta_t)]\lambda_t}
+    \\ & = \frac{\lambda_t^{k_1}}{k_1!}\cdot e^{ - G_D(d^*|\theta_t)\cdot \lambda_t}
+\end{aligned}
+\end{equation}
+And the logarithm of $S_{k_1}(\theta_t)$ is given by:
+\begin{equation}\label{poissonloglikelihood}
+\begin{aligned}
+\ln{\left(S_k(\theta_t)\right)} & = k_1 \ln{\lambda_t} - \ln{k_1!} - G_D(d^*|\theta_t)\cdot \lambda_t.
+\end{aligned}
+\end{equation}
+which also represents the case of $S_0(\theta_t)$ when $k_1 = 0$. 
+
+\subsubsection{Negative Binomial Case}\label{negbinsect}
+
+Suppose $N_t$ follows a Negative Binomial distribution:
+$$
+P(N_t = n|\theta_t) = \binom{n + r_t - 1}{n} (1 - p_t)^n p_t^{r_t},
+$$
+thus substituting into \eqref{snk} we obtain:
+\begin{equation}\label{negbinlikelihood}
+\begin{aligned}
+    S_{k_1}(\theta_t) & = \sum\limits_{n \geq k_1} \binom{n}{k_1} \left[1 - G_D(d^*|\theta_t)\right]^{n - k_1} \binom{n + r_t - 1}{n} (1 - p_t)^n p_t^{r_t}
+    \\ & = (1 - p_t)^{k_1} p_t^{r_t} \cdot \sum\limits_{n \geq k_1} \binom{n}{k_1} \binom{n + r_t - 1}{n} \left(\left[1 - G_D(d^*|\theta_t)\right](1 - p_t)\right)^{n - k_1}  
+\end{aligned}
+\end{equation}
+We use the identity:
+\begin{equation}
+    \binom{n}{k_1} \binom{n + r_t - 1}{n} =\binom{k_1 + r_t - 1}{k_1}\binom{n + r_t - 1}{n - k_1}
+\end{equation}
+to transform the sum:
+\begin{equation}\label{sumnegbin}
+\begin{aligned}
+S_{k_1}(\theta_t) &  = (1 - p_t)^{k_1} p_t^{r_t} \cdot \sum\limits_{n \geq k_1} \binom{n}{k_1} \binom{n + r_t - 1}{n} \left(\left[1 - G_D(d^*|\theta_t)\right](1 - p_t)\right)^{n - k_1} \\
+    \\ & = (1 - p_t)^{k_1} p_t^{r_t} \cdot\binom{k_1 + r_t - 1}{k_1} \sum\limits_{n \geq k_1}  \binom{n + r_t - 1}{n -k_1}\left(\left[1 - G_D(d^*|\theta_t)\right](1 - p_t)\right)^{n - k_1} 
+    \\ & = (1 - p_t)^{k_1} p_t^{r_t}\cdot \binom{k + r_t - 1}{k_1} \sum\limits_{n \geq k_1}  \binom{(n  - k_1) + (k_1 + r_t - 1)}{n -k_1}\left(\left[1 - G_D(d^*|\theta_t)\right]\cdot(1 - p_t)\right)^{n - k_1} 
+    \\ & = (1 - p_t)^{k} p_t^{r_t}\cdot\binom{k + r_t - 1}{k_1} \sum\limits_{m = 0}^{\infty}  \binom{m + (k_1 + r_t) - 1}{m}\left(\left[1 - G_D(d^*|\theta_t)\right]\cdot(1 - p_t)\right)^{m} 
+    \\ & = (1 - p_t)^{k_1} p_t^{r_t}\cdot\binom{k_1 + r_t - 1}{k} \cdot \Big[1 -  \left[1 - G_D(d^*|\theta_t)\right]\cdot(1 - p_t) \Big]^{-(k_1 + r_t)}
+    \\ & = (1 - p_t)^{k} p_t^{r_t}\cdot\binom{k_1 + r_t - 1}{k_1} \cdot \Big[p_t + G_D(d^*|\theta_t)\cdot (1 - p_t) \Big]^{-(k_1 + r_t)}
+\end{aligned}
+\end{equation}
+where the last equality follows from the negative binomial series for $|q| < 1$:
+\begin{equation}
+    \sum\limits_{m = 0}^{\infty} \binom{m + a - 1}{m} (1 - q)^m = q^{-a}.
+\end{equation}
+The logarithm of $S_k(\theta_t)$ in this case is given by:
+\begin{equation}\label{negbinloglikelihood}
+\begin{aligned}
+\ln{\left(S_{k_1}(\theta_t)\right)} & = k_1 \ln{(1 - p_t)} + r_t \ln{p_t} + \ln{\binom{k_1 + r_t - 1}{k_1}} - (k_1 + r_t) \ln{\Big[p_t + G_D(d^*|\theta_t)\cdot (1 - p_t) \Big]}
+\end{aligned}
+\end{equation}
+which also generalizes the case for $S_0(\theta_t)$. 
+
+\subsubsection{General result in terms of probability generating functions}
+
+Suppose $N$ has a probability generating function:
+\begin{equation}
+    \phi(z) = \sum\limits_{k_1 = 0}^{\infty}  z^{k_1} P(N_t = k_1 | \theta_t)
+\end{equation}
+we can rewrite \eqref{snk} in terms of the $k_1$-th derivative of $\phi$ as:
+
+\begin{equation}
+\begin{aligned}
+    S_{k_1}(\theta_t) & = \sum\limits_{n \geq k_1} \binom{n}{k}   \cdot \left[1 - G_D(d^*|\theta_t)\right]^{n - k_1} \cdot P(N_t = n|\theta_t).
+    \\ & = \frac{1}{k_1!} \sum\limits_{n \geq k_1} \frac{n!}{(n-k_1)!} \cdot \left[1 - G_D(d^*|\theta_t)\right]^{n - k_1} \cdot P(N_t = n|\theta_t).
+    \\ & = \frac{1}{k_1!}  \sum\limits_{n \geq k_1} \left[\frac{d^{k_1}}{dz^{k_1}} z^n\right]\Bigg|_{z = 1 - G_D(d^*|\theta_t)} \cdot P(N_t = n|\theta_t).
+    \\ & = \frac{1}{k_1!} \phi^{(k_1)}\big(1 - G_D(d^*|\theta_t)\big)
+\end{aligned}    
+\end{equation}
+
+\begin{comment}
+\subsubsection{Generalized Poisson}
+%Generalized Poisson random variable: its distributional properties and actuarial applications
+%https://cs.uwaterloo.ca/research/tr/1993/03/W.pdf
+
+In the case of a generalized Poisson random variable, the term $S_k(\theta_t)$ can be written as the k-th derivative of the probability generating function:
+
+\begin{equation}
+    \phi(x) = \exp\Big(-\frac{\lambda}{\theta}\big(W(-\theta e^{-\theta} x) + \theta\big)\Big)
+\end{equation}
+where $W$ is Lambert's $W$ function that solves:
+$$
+W(x) e^{W(x)} = x
+$$
+\end{comment}
+
+\subsection{Model with a censored reporting-delay}\label{sec:batch}
+We consider the case where the delay is not accurately measured and we only know that the delay is at most $b$ with $d \leq b \leq d^{*}$. In this case \eqref{gooddelay} becomes the following:
+
+\begin{equation}\label{batcheddelay}
+    \begin{aligned}
+    P(b_1, \dots, b_{k_2} |\theta_t, N_t = n)  &= \left[ \prod\limits_{j=1}^{k_2} P\big( D_{(j)} \leq b_j|\theta_t\big)\right] \cdot \left[ \prod\limits_{j=k_2+1}^n P\big(D_{(j)} > d^{*}|\theta_t\big)\right] \\
+    & = \binom{n}{k_2}\left[ \prod\limits_{j=1}^{k_2} G_D(b_j|\theta_t) \right] \cdot \left[ \prod\limits_{j=k_2+1}^n \left[1 - G_D(d^*|\theta_t)\right]\right] 
+    \\ & = \binom{n}{k_2}\left[ \prod\limits_{j=1}^{k_2} G_D(b_j|\theta_t)\right] \cdot  \left[1 - G_D(d^*|\theta_t)\right]^{n-{k_2}}
+    \end{aligned}
+\end{equation}
+
+\subsection{General likelihood including censored delays}
+
+In general we consider that $k_1$ delays have been measured to the nearest integer: $d_1, d_2, \dots, d_{k_1}$ and $k_2$ delays have been measured as batched: $b_1, b_2, \dots, b_{k_2}$. Let $k = k_1 + k_2$, then the following equation expresses the probability of the observations:
+
+\begin{equation}\label{batchedexact}
+    \begin{aligned}
+    P(d_1, \dots, d_{k_1}, & b_1, \dots, b_{k_2} |\theta_t, N_t = n)  
+    \\ & = \binom{n}{k_1} \left[ \prod\limits_{i=1}^{k_1} \Delta G_D(d_i|\theta_t) \right] \cdot \binom{n - k_1}{k_2} \left[ \prod\limits_{j=1}^{k_2} G_D(b_j|\theta_t) \right] \cdot  \left[ 1 - G_D(d^*|\theta_t)\right]^{n-k}   
+    \\ & = \binom{n}{k} \binom{k}{k_1} \left[ \prod\limits_{i=1}^{k_1} \Delta G_D(d_i|\theta_t) \right] \left[ \prod\limits_{j=1}^{k_2} G_D(b_j|\theta_t) \right] \left[ 1 - G_D(d^*|\theta_t)\right]^{n-k}
+    \\ & \propto  \left[ \prod\limits_{i=1}^{k_1} \Delta G_D(d_i|\theta_t) \right] \left[ \prod\limits_{j=1}^{k_2} G_D(b_j|\theta_t) \right]\binom{n}{k} \left[ 1 - G_D(d^*|\theta_t)\right]^{n-k}
+    \end{aligned}
+\end{equation}
+
+Thus the likelihood is given by the following:
+\begin{equation}\label{grallikelihood}
+    \begin{aligned}
+    \mathcal{L}(\theta_t & | d_1, \dots, d_{k_1}, b_1, \dots, b_{k_2})  
+    \propto  \pi(\theta_t)\cdot  \left[ \prod\limits_{i=1}^{k_1} \Delta G_D(d_i|\theta_t) \right]\cdot \left[ \prod\limits_{j=1}^{k_2} G_D(b_j|\theta_t)\right] \cdot  S_k(\theta_t)
+    \end{aligned}
+\end{equation}
+where $S_k(\theta_t)$ is given as in \eqref{snk} with the specific examples discussed in sections \ref{poisec} and \ref{negbinsect}. The log-likelihood is then:
+\begin{equation}\label{loglik1}
+    \begin{aligned}
+        \ell(\theta_t & | d_1, \dots, d_{k_1}, b_1, \dots, b_{k_2}) 
+        \\ & = \ln{\pi(\theta_t)} + \sum\limits_{i=1}^{k_1} \ln{\left(\Delta G_D(d_i|\theta_t)\right)} +\sum\limits_{j=1}^{k_2} \ln{\left(G_D(b_j|\theta_t)\right)} + \ln{\left(S_k(\theta_t)\right)}
+    \end{aligned}
+\end{equation}
+\subsubsection{Alternative expression}
+We can rewrite the likelihood in terms of the number of observed cases for each delay (from $0$ to $t$) and for each batch (from $0$ to $t$) as $m_i$ and $m^{*}_j$ respectively. Where $m_i = \sum_{\ell=1}^{k_1} \mathbb{I}(d_{\ell} = i)$ represents the number of observations with delay $i$ and $m_j^{*} = \sum_{\ell=1}^{k_2} \mathbb{I}(b_{\ell} = j)$ the number of observations with delay of at most $j$ (the batched observations). Then we can rewrite \eqref{loglik1} as:
+
+\begin{equation}\label{logliksimplified}
+    \begin{aligned}
+        \ell(\theta_t & | m_0, \dots, m_{t}, m_0^{*}, \dots, m_{t}^{*}) 
+        \\ & = \ln{\pi(\theta_t)} + \sum\limits_{i=0}^{t} m_i \cdot \ln{\left(\Delta G_D(i|\theta_t)\right)} +\sum\limits_{j=0}^{t} m_j^{*} \cdot \ln{\left(G_D(j|\theta_t)\right)} + \ln{\left(S_k(\theta_t)\right)}
+    \end{aligned}
+\end{equation}
+
+\section{Model implementation}
+
+\subsection{Current model}
+
+\subsubsection*{Observation likelihood}
+
+For the implementations in this paper, the complete case count $N_t$ follows either a Poisson
+\begin{equation}
+  N_t \mid \lambda_t \;\sim\; \mathrm{Poisson}\!\left(\lambda_t,\right),
+\end{equation}
+with mean $\lambda_t = \exp(\mu_t)$ or a Negative Binomial  distribution,
+\begin{equation}
+  N_t \mid \lambda_t, r \;\sim\; \mathrm{NegBin}\!\left(\lambda_t,\, r\right),
+\end{equation}
+with mean $\lambda_t$ as before and precision $\phi > 0$ (
+$\mathrm{Var}(N_t) = \lambda_t + \lambda_t^2/\phi$).  The precision prior is:
+\begin{equation}
+  \phi \sim \mathrm{LogNormal}(\ln 20,\; 0.5).
+\end{equation}
+
+
+\subsubsection*{Epidemic process: HSGP}
+
+Log-incidence is decomposed as
+\begin{equation}\label{eq:mu}
+  \mu_t = \alpha_0 + \mathbf{x}_t^{\top}\boldsymbol{\gamma} + f(t),
+\end{equation}
+where $\alpha_0$ is a global intercept, $\mathbf{x}_t$ are optional time-varying
+covariates (day-of-week indicators for daily data in the case of mpox; two-harmonic Fourier terms for
+weekly data in the case of dengue), $\boldsymbol{\gamma} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$
+independently, and $f$ is a zero-mean Gaussian process (GP) with a stationary covariance kernel.
+
+\paragraph{Hilbert-Space GP approximation.}
+We approximate $f$ using the Hilbert-Space GP (HSGP) method of
+\cite{riutort2023practical} on an asymmetric domain $[-L_\ell, L_r]$. The domain length is $S = L_\ell + L_r$ with $L_\ell = \rho \cdot 2\ell_{\mathrm{GP}}$ and
+$L_r = (1-\rho)\cdot 2\ell_{\mathrm{GP}}$, where $\ell_{\mathrm{GP}} = 1.5$ and $\rho=0.62$.
+Setting $\rho > 0.5$ shortens the right margin so that the GP reverts toward its
+prior mean more rapidly near the data's right boundary. The Laplacian eigenfunctions satisfying Dirichlet boundary conditions on $[-L_\ell, L_r]$
+are
+\begin{equation}
+  \phi_m(x) = \sqrt{\tfrac{2}{S}}\,
+    \sin\!\Bigl(\tfrac{m\pi(x+L_\ell)}{S}\Bigr), \quad m=1,\ldots,M,
+\end{equation}
+with eigenfrequencies $\omega_m = m\pi/S$.
+Evaluating at the scaled time coordinate $t_s \in [-1,1]$, the GP is approximated as
+\begin{equation}
+  f(t) \approx \sum_{m=1}^{M} \beta_m\,\sqrt{S_K(\omega_m)}\,\phi_m(t_s),
+  \qquad \beta_m \overset{\mathrm{iid}}{\sim} \mathcal{N}(0,1),
+\end{equation}
+where $S_K(\omega)$ is the spectral density of the chosen kernel, in our case a Matérn($3/2$),
+\begin{equation}
+  S_{3/2}(\omega) = \alpha^2 \,\frac{4c^3}{(c^2+\omega^2)^2}, \quad c = \tfrac{\sqrt{3}}{\ell}.
+\end{equation}
+The number of basis functions $M = 2\lfloor\sqrt{T}\rfloor$ is set automatically where $T$ is the time frame of the epidemic. 
+Finally we set the HGSP priors:
+\begin{equation}
+  \alpha \sim \mathrm{HalfNormal}(0,1), \qquad
+  \ell   \sim \mathrm{InvGamma}(3,1).
+\end{equation}
+The data-informed intercept prior is $\alpha_0 \sim \mathcal{N}(\hat\mu_0, \hat\sigma_0)$,
+where $\hat\mu_0$ and $\hat\sigma_0$ are data-driven and derived from the historical log-count mean and
+spread.
+
+\subsubsection*{Epidemic process: AR(1)}
+
+Log-incidence follows \eqref{eq:mu} with $f(t)$ replaced by an AR(1) trend
+$\{z_t\}$, specified in non-centred form:
+\begin{equation}
+  z_1 = \varepsilon_1\,\frac{\sigma_{AR}}{\sqrt{1-\psi_{AR}^2}}, \qquad
+  z_t = \psi_{AR}\,z_{t-1} + \varepsilon_t\,\sigma_{AR}, \quad t \geq 2,
+  \qquad \varepsilon_t \overset{\mathrm{iid}}{\sim}\mathcal{N}(0,1).
+\end{equation}
+Initialising from the stationary variance ensures the chain starts in equilibrium. Priors are given by:
+\begin{equation}
+  \psi_{AR} = \tanh(\tilde\psi_{AR}),
+  \quad \tilde\psi_{AR} \sim \mathcal{N}(0,1); \qquad
+  \sigma_{AR} \sim \mathrm{Exponential}(100)\;\text{on}\;(0, 1].
+\end{equation}
+
+\subsubsection*{Epidemic process: discrete-time SIR}
+
+We implement a discrete-time SIR model with a time-varying transmission rate.
+Let $S_t$ and $I_t$ denote the fractions of the effective population
+$N_{\mathrm{eff}} = \varrho N$ that are susceptible and infectious, respectively,
+where $\varrho$ is an estimated effective-population fraction.
+New infections at time $t$ are
+\begin{align}
+  i_t &= S_{t-1}\Bigl(1 - \exp\bigl(-\beta_t\,\textstyle\sum_s I_{t-1,s}\bigr)\Bigr), \\
+  S_t &= S_{t-1} - i_t, \\
+  I_t &= i_t + (1-\gamma_{\mathrm{SIR}})\,I_{t-1},
+\end{align}
+with expected log-incidence $\mu_t = \ln(i_t \cdot N_{\mathrm{eff}})$.
+The baseline transmission rate is $\beta_0 = R_0\,\gamma_{\mathrm{SIR}}$, and
+$\beta_t = \beta_0\,\exp(\xi_t)$ where $\{\xi_t\}$ follows the same AR(1) non-centred
+parameterisation as above (innovation clamped to $[-5,5]$ for numerical stability). Priors for the SIR model are given by:
+\begin{align}
+  R_0 &\sim \mathrm{LogNormal}(\ln 2,\; 0.5), \\
+  \gamma_{\mathrm{SIR}} &\sim \mathrm{LogNormal}(\ln 0.2,\; 0.5), \\
+  \varrho &\sim \mathrm{Beta}(2,\; 5); \qquad
+  \phi_{AR},\,\sigma_{AR}\text{ as in the AR(1) model.}
+\end{align}
+
+\subsubsection*{Delay distribution: log-normal}
+
+\begin{equation}
+  D \sim \mathrm{LogNormal}(\mu_D,\sigma_D);  \mu_D \sim \mathcal{N}(\ln\bar{d}, 1) \text{ where } \bar{d} \text{ is the empirical mean delay}; \;\sigma_D \sim \mathrm{Gamma}(2,2).
+\end{equation}
+
+\subsubsection*{Delay distribution: generalised gamma}
+
+We utilized a generalized gamma parametrized by its log-mean $\mu_D$,
+log-scale $\sigma$, and shape $Q$.  The CDF is
+\begin{equation}
+  G_D(d;\,\mu_D,\sigma,Q) =
+  \begin{cases}
+    \Phi\!\bigl(\tfrac{\ln d - \mu_D}{\sigma}\bigr) & Q = 0\text{ (log-normal)}, \\[4pt]
+    I\!\left(\tfrac{1}{Q^2};\;
+      \tfrac{1}{Q^2}\exp\!\bigl[Q\bigl(\tfrac{\ln d - \mu_D}{\sigma}\bigr)\bigr]
+    \right) & Q \neq 0,
+  \end{cases}
+\end{equation}
+where $I(a;\,x)$ is the regularized lower incomplete gamma function \cite{prentice1974log}.
+We utilized the priors:
+$\mu_D \sim \mathcal{N}(\ln\bar{d},\, 1)$; $\;Q \sim \mathrm{Gamma}(2,\,0.1)$;
+$\;\sigma \sim \mathrm{Gamma}(2,\,0.1)$.
+
+\subsubsection*{Delay distribution: Dirichlet (non-parametric)}
+
+Let $D_{\max}$ be the largest observed delay.
+The delay mass function is modeled non-parametrically as a probability vector with
+a uniform Dirichlet prior:
+\begin{equation}
+  (p_0,\,p_1,\,\ldots,\,p_{d_{\max}},\,p_+) \sim \mathrm{Dirichlet}(\mathbf{1}),
+\end{equation}
+where $p_+ = 1 - \sum_{d=0}^{d_{\max}} p_d$ captures residual probability for
+delays exceeding $d_{\max}$, approximated via an exponential tail extension.
+
+
+\subsection{NobBS}
+
+For \cite{nobbs} we used the following command in R:
+
+\begin{lstlisting}
+NobBS(
+    data          = nobbs_data,
+    now           = date_run,
+    units         = "1 week",
+    onset_date    = event_date,
+    report_date   = report_date,
+    moving_window = 50, 
+    specs         = list(
+      dist      = "NB",
+      quantiles = c(0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975)
+    )
+\end{lstlisting}
+
+\subsection{Epinowcast}
+
+For \cite{epinowcast} we implemented the following options:
+\subsubsection{Default model (default)}
+\begin{lstlisting}
+ epinowcast(
+    data  = p_data,
+    model = enw_model(verbose = FALSE),
+    fit   = enw_fit_opts(sampler = enw_pathfinder,
+                         refresh = 0, 
+                         show_messages = FALSE))
+\end{lstlisting}
+
+
+\subsubsection{Weekly / daily effect (point effect)}
+For dengue:
+\begin{lstlisting}
+epinowcast(
+    data        = p_data,
+    expectation = enw_expectation(r = ~ 1 + (1 | week), data = p_data),
+    model       = enw_model(verbose = FALSE),
+    fit         = enw_fit_opts(sampler = enw_pathfinder,
+                               refresh = 0, 
+                               show_messages = FALSE))
+\end{lstlisting}
+and for mpox:
+\begin{lstlisting}
+epinowcast(
+    data        = p_data,
+    expectation = enw_expectation(r = ~ 1 + day_of_week, data = p_data),
+    model       = enw_model(verbose = FALSE),
+    fit         = enw_fit_opts(sampler = enw_pathfinder,
+                               refresh = 0, 
+                               show_messages = FALSE)
+  )
+\end{lstlisting}
+\subsubsection{Random Walk (RW)}
+\begin{lstlisting}
+epinowcast(
+    data        = p_data,
+    expectation = enw_expectation(r = ~ 1 + (1 | week), data = p_data),
+    model       = enw_model(verbose = FALSE),
+    fit         = enw_fit_opts(sampler = enw_pathfinder,
+                               refresh = 0, 
+                               show_messages = FALSE))
+\end{lstlisting}
+
+
+\section{\color{red} Identifiability and the two-stage estimation strategy}
+
+{\color{red}
+\subsection{The identifiability problem}
+Near the nowcast boundary the joint likelihood is only weakly identified in the incidence level and the delay coverage. To see this, note that under the Poisson count model the expected number of cases already observable by the analysis time $t$ is
+\begin{equation}\label{eq:identif}
+  \mathbb{E}[k_1 \mid \theta_t] = \lambda_t\, G_D(d^* \mid \theta_t),
+\end{equation}
+so that the data observed so far constrain primarily the \emph{product} $\lambda_t\, G_D(d^*\mid\theta_t)$. At the most recent times, where $d^*$ is small and $G_D(d^*\mid\theta_t)$ is itself uncertain, a decrease in the observed count is equally consistent with a fall in $\lambda_t$ (declining incidence) and with a fall in $G_D(d^*\mid\theta_t)$ (a lengthening reporting delay). Since the eventual nowcast behaves like
+\begin{equation}
+  \widehat{N}_t \;\approx\; \frac{k_1}{G_D(d^*\mid\theta_t)},
+\end{equation}
+it inherits the full uncertainty of the delay estimate, and a biased delay estimate maps directly into a biased incidence estimate. Informative priors on $\theta^{D}$ are often enough to resolve the trade-off, but when they are not, the following two-stage procedure separates the two processes explicitly.
+
+\subsection{Two-stage estimation}
+\begin{enumerate}
+  \item \textbf{Stage 1 (delay).} Using a recent window of width $W$ ending at the analysis time, we estimate the delay parameters $\theta^{D}$ from the delay marginal of the censored likelihood \eqref{logliksimplified}, retaining the $\Delta G_D$ and $G_D$ terms while conditioning on the observed totals (equivalently, profiling out the latent term $S_k$). Restricting to a recent window keeps the delay estimate local in time and avoids the cost of carrying the full, possibly decades-long, history.
+  \item \textbf{Stage 2 (incidence).} We fix the delay distribution at the Stage-1 estimate, $\theta^{D} = \widehat{\theta}^{D}$, and infer the epidemic-process parameters from the full censored likelihood. With the delay held fixed, $\lambda_t$ is identified through $k_1 / G_D(d^*\mid\widehat\theta^{D})$ by \eqref{eq:identif}.
+\end{enumerate}
+
+\subsection{Multiple imputation for delay uncertainty}
+Fixing the delay at a single point estimate would understate predictive uncertainty. We therefore draw $K$ values $\widehat\theta^{D}_{(1)}, \dots, \widehat\theta^{D}_{(K)}$ from a (dispersed approximation to the) Stage-1 posterior, run Stage 2 once for each, and pool the resulting posterior predictive draws,
+\begin{equation}
+  \widehat{p}(N_t \mid \mathcal{D}_{\le t}) = \frac{1}{K}\sum_{j=1}^{K} p\big(N_t \mid \mathcal{D}_{\le t},\, \widehat\theta^{D}_{(j)}\big).
+\end{equation}
+Because the map $G_D(d^*) \mapsto k_1 / G_D(d^*)$ is convex and increases sharply as $G_D(d^*) \to 0$, pooling over delay draws inflates the upper tail of the predictive distribution, yielding the right-skewed intervals that are appropriate near the boundary. In the \texttt{diseasenowcasting} package this corresponds to \texttt{nowcast(..., type = "two\_stage", K = K)}.
+}
+
+\section{\color{red} Computing the surprise}
+
+{\color{red}
+The surprise defined in the main text is a posterior expectation that we evaluate by Monte Carlo over the Laplace approximation. Let $\theta^{(1)}, \dots, \theta^{(B)}$ be draws from the Gaussian Laplace approximation to $\pi(\theta_t \mid \mathcal{D}_{\le t})$. For a newly observed delay $d$ we compute the posterior predictive CDF and the two-sided tail probability (surprise),
+\begin{equation}
+  \widehat F_t(d^-) = \frac{1}{B}\sum_{b=1}^{B} G_D\big(d^- \mid \theta^{(b)}\big), \qquad
+  \widehat s_t(d) = 2\min\bigl\{\widehat F_t(d^-),\; 1 - \widehat F_t(d^-)\bigr\},
+\end{equation}
+together with the posterior-mean log predictive mass $B^{-1}\sum_{b} \ln \Delta G_D\big(d \mid \theta^{(b)}\big)$. The count-surprise is computed analogously from the predictive distribution of $N_t$ implied by $P_{N_t}(\cdot \mid \theta^{(b)})$ through the latent term $S_k(\theta^{(b)})$. An observation is flagged when $\widehat s_t(d) < \alpha$ (default $\alpha = 0.01$). In the package these quantities are returned by the surprise/outlier utilities, with columns for the predictive CDF, the tail probability, and the log predictive density.
+}
+
+\bibliographystyle{plain}
+\bibliography{sample}
+
+\end{document}

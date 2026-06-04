@@ -39,7 +39,7 @@ model_class <- S7::new_class(
 #' @param likelihood      A `likelihood_class` ([poisson_likelihood()] /
 #'   [nb_likelihood()]).  Default: [nb_likelihood()].
 #' @param epidemic        An `epidemic_process_class`.  Default: [hsgp_epidemic()].
-#' @param delay           A `delay_process_class`.  Default: [dirichlet_delay()].
+#' @param delay           A `delay_process_class`.  Default: [lognormal_delay()].
 #' @param covariate_prior A `prior_class` applied to all covariate coefficients.
 #'   Default: [std_normal_prior()].
 #' @param strata_pooling  `"independent"` (default) fits fully separate intercepts

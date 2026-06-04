@@ -145,27 +145,25 @@ extreme_values <- function(nc) {
   surprises <- attr(nc, "surprise")
   if (is.null(surprises)) return(NULL)
 
-  parts <- list()
-  ds <- surprises$delay_surprise
-  if (!is.null(ds) && nrow(ds) > 0) {
-    keep <- ds[which(ds$is_surprising & ds$direction == "long"), , drop = FALSE]
-    if (nrow(keep) > 0) { keep$is_surprising <- NULL; keep$surprise <- "delay"
-                          parts[[length(parts) + 1L]] <- keep }
+  # Extract and label each surprise type; tag() returns NULL when nothing flagged.
+  tag <- function(df, type, keep_rows) {
+    if (is.null(df) || nrow(df) == 0L) return(NULL)
+    df <- df[keep_rows(df), , drop = FALSE]
+    if (nrow(df) == 0L) return(NULL)
+    df$is_surprising <- NULL
+    df$surprise <- type
+    df
   }
-  cs <- surprises$count_surprise
-  if (!is.null(cs) && nrow(cs) > 0) {
-    keep <- cs[which(cs$is_surprising), , drop = FALSE]
-    if (nrow(keep) > 0) { keep$is_surprising <- NULL; keep$surprise <- "epidemic"
-                          parts[[length(parts) + 1L]] <- keep }
-  }
+
+  parts <- Filter(Negate(is.null), list(
+    tag(surprises$delay_surprise, "delay",    \(d) d$is_surprising & d$direction == "long"),
+    tag(surprises$count_surprise, "epidemic", \(d) d$is_surprising)
+  ))
+
   if (length(parts) == 0L) return(NULL)
 
-  # Column-filling rbind (delay and count tables have different columns).
-  cols <- unique(unlist(lapply(parts, names)))
-  out  <- do.call(rbind, lapply(parts, function(d) {
-    for (cc in setdiff(cols, names(d))) d[[cc]] <- NA
-    d[cols]
-  }))
+  # dplyr::bind_rows handles tables with different columns by filling missing ones with NA
+  out <- dplyr::bind_rows(parts)
   out$level <- surprises$level
   out
 }
@@ -208,16 +206,18 @@ extreme_values <- function(nc) {
 .warn_surprise <- function(s, level, unit = "event units") {
   ds <- s$delay_surprise
   if (is.null(ds)) return(invisible(NULL))
-  bad <- ds[which(ds$is_surprising & ds$direction == "long"), , drop = FALSE]
+
+  bad <- ds |>
+    dplyr::filter(is_surprising, direction == "long") |>
+    dplyr::arrange(dplyr::desc(delay))
   if (nrow(bad) == 0L) return(invisible(NULL))
 
-  bad <- bad[order(-bad$delay), , drop = FALSE]
-  bullets <- vapply(seq_len(nrow(bad)), function(i) {
-    rpt <- bad$weight[i]
-    paste0("Surprising reporting delay of ", bad$delay[i], " ", unit,
-           " (", rpt, " report", if (rpt != 1) "s" else "", "): longer than the ",
-           "model expects (P(D >= d) = ", signif(bad$mean_tail_prob[i], 2), ").")
-  }, character(1))
+  bullets <- sprintf(
+    "Surprising reporting delay of %d %s (%d report%s): longer than the model expects (P(D >= d) = %s).",
+    bad$delay, unit, bad$weight,
+    ifelse(bad$weight != 1, "s", ""),
+    signif(bad$mean_tail_prob, 2)
+  )
 
   msg <- stats::setNames(
     c(bullets,

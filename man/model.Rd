@@ -18,7 +18,7 @@ model(
 
 \item{epidemic}{An \code{epidemic_process_class}.  Default: \code{\link[=hsgp_epidemic]{hsgp_epidemic()}}.}
 
-\item{delay}{A \code{delay_process_class}.  Default: \code{\link[=dirichlet_delay]{dirichlet_delay()}}.}
+\item{delay}{A \code{delay_process_class}.  Default: \code{\link[=lognormal_delay]{lognormal_delay()}}.}
 
 \item{covariate_prior}{A \code{prior_class} applied to all covariate coefficients.
 Default: \code{\link[=std_normal_prior]{std_normal_prior()}}.}

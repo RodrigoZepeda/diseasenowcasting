@@ -37,6 +37,7 @@ Depends:
 Imports:
     cli,
     doFuture,
+    dplyr,
     foreach,
     future,
     ggplot2,
@@ -52,7 +53,6 @@ Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
-    dplyr,
     scales,
     covr,
     patchwork,

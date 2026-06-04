@@ -34,6 +34,10 @@ utils::globalVariables(c(
   "epidemic_label", "nb_label", "delay_label", "n",
   "overprediction", "underprediction", "dispersion",
   "interval_coverage_50", "interval_coverage_90",
+  # dplyr NSE column names used in prepare_data helpers (09_prepare_data.R)
+  "time", "strata", "count",
+  # dplyr NSE column names used in update helpers (22_update.R)
+  "is_surprising", "direction",
   # tbl.now / nowcast internals
   ".data", "window", "epidemic", "n_events", "now",
   "onset", "reported",   # NSE column names in .temporal_effect_matrix grid

@@ -97,8 +97,7 @@ S7::method(print, dirichlet_delay_class) <- function(x, ..., digits = 4) {
 #' @noRd
 S7::method(print, hsgp_epidemic_class) <- function(x, ..., digits = 4) {
   cli::cli_text(paste0(cli::col_magenta("HSGP"), "(",
-    .fmt_slot("alpha", x@alpha), ", ", .fmt_slot("ell", x@ell), ", ",
-    .fmt_slot("basis_coefs", x@basis_coefs),
+    .fmt_slot("alpha", x@alpha), ", ", .fmt_slot("ell", x@ell),
     " ; {.emph kernel} = {.val ", .gp_kernel_label(x@gp_kernel),
     "}, {.emph num_basis} = {.val ", ifelse(x@num_basis > 0, x@num_basis, "auto"),
     "}, {.emph tmax} = {.val ", ifelse(x@tmax_model > 0, x@tmax_model, "auto"), "})"))
@@ -120,15 +119,6 @@ S7::method(print, sir_epidemic_class) <- function(x, ..., digits = 4) {
     .fmt_slot("R0", x@R0), ", ", .fmt_slot("gamma", x@gamma), ", ", .fmt_slot("N_eff", x@N_eff),
     " ; {.emph N_pop} = {.val ", format(x@N_pop, big.mark = ",", scientific = FALSE),
     "}, {.emph beta_rw} = {.val ", rw_lbl, "})"))
-  invisible(x)
-}
-
-#' @noRd
-S7::method(print, spline_epidemic_class) <- function(x, ..., digits = 4) {
-  cli::cli_text(paste0(cli::col_magenta("B-Splines"), "(",
-    .fmt_slot("tau", x@tau), ", ", .fmt_slot("basis_coefs", x@basis_coefs),
-    "; {.emph degree} = {.val ", x@spline_degree,
-    "}, {.emph num_basis} = {.val ", ifelse(x@num_basis > 0, x@num_basis, "auto"), "})"))
   invisible(x)
 }
 

@@ -61,19 +61,28 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
            if (ncol(dd) == 1L) matrix(dd[, 1], max_time, num_strata) else dd }
 
   # -- per-time delay aggregation (FIXED censoring routing) ----------------------
-  # cases_by_delay[delay_index, time] = total cases with that delay at that event-time.
-  aggregate_by_delay_and_time <- function(observation_matrix) {
-    if (nrow(observation_matrix) == 0L)
+  # Builds a [n_observed_delays x max_time] count matrix and returns its marginals.
+  # row_sums[d] = total cases with delay d (summed over all event-times)
+  # col_sums[t] = total cases at event-time t (summed over all observed delays)
+  aggregate_by_delay_and_time <- function(obs_mat) {
+    if (nrow(obs_mat) == 0L)
       return(list(obs_delays = numeric(0), row_sums = numeric(0), col_sums = rep(0, max_time)))
-    unique_delays <- sort(unique(as.integer(observation_matrix[, 3])))
-    delay_index   <- match(as.integer(observation_matrix[, 3]), unique_delays)
-    time_index    <- as.integer(observation_matrix[, 1])
-    flat_index    <- (time_index - 1L) * length(unique_delays) + delay_index
-    cell_counts   <- tapply(as.numeric(observation_matrix[, 2]), flat_index, sum)
-    cases_matrix  <- matrix(0.0, length(unique_delays), max_time)
-    cases_matrix[as.integer(names(cell_counts))] <- as.numeric(cell_counts)
+
+    df <- data.frame(time  = as.integer(obs_mat[, 1]),
+                     delay = as.integer(obs_mat[, 3]),
+                     count = as.numeric(obs_mat[, 2]))
+
+    agg <- df |>
+      dplyr::group_by(delay, time) |>
+      dplyr::summarise(count = sum(count), .groups = "drop")
+
+    unique_delays <- sort(unique(agg$delay))
+    cases_mat <- matrix(0.0, length(unique_delays), max_time)
+    cases_mat[cbind(match(agg$delay, unique_delays), agg$time)] <- agg$count
+
     list(obs_delays = as.numeric(unique_delays),
-         row_sums = rowSums(cases_matrix), col_sums = colSums(cases_matrix))
+         row_sums   = rowSums(cases_mat),
+         col_sums   = colSums(cases_mat))
   }
   exact_agg    <- aggregate_by_delay_and_time(m)
   censored_agg <- aggregate_by_delay_and_time(m_censored)
@@ -82,21 +91,29 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
   censoring_col <- as.numeric(max_time - seq_len(max_time) + 1L)
 
   # -- per-(time, stratum) case counts [max_time x num_strata] ------------------
-  count_matrix <- function(obs_matrix) {
-    if (nrow(obs_matrix) == 0L) return(matrix(0.0, max_time, num_strata))
-    cell <- if (ncol(obs_matrix) >= 4L) as.integer(obs_matrix[, 4]) else rep(1L, nrow(obs_matrix))
-    agg <- tapply(as.numeric(obs_matrix[, 2]),
-                  list(factor(as.integer(obs_matrix[, 1]), levels = seq_len(max_time)),
-                       factor(cell, levels = seq_len(num_strata))), sum)
-    agg[is.na(agg)] <- 0
-    matrix(as.numeric(agg), max_time, num_strata)
+  # Returns a [max_time x num_strata] matrix; missing (time, stratum) pairs are zero.
+  count_matrix <- function(obs_mat) {
+    if (nrow(obs_mat) == 0L) return(matrix(0.0, max_time, num_strata))
+
+    df <- data.frame(
+      time   = as.integer(obs_mat[, 1]),
+      count  = as.numeric(obs_mat[, 2]),
+      strata = if (ncol(obs_mat) >= 4L) as.integer(obs_mat[, 4]) else 1L
+    )
+
+    agg <- df |>
+      dplyr::group_by(time, strata) |>
+      dplyr::summarise(count = sum(count), .groups = "drop")
+
+    mat <- matrix(0.0, max_time, num_strata)
+    mat[cbind(agg$time, agg$strata)] <- agg$count
+    mat
   }
   case_counts <- count_matrix(m) + count_matrix(m_censored)
   casemax <- max(case_counts, na.rm = TRUE)
 
   # -- num_basis (auto) ---------------------------------------------------------
-  nb_model <- if (S7::S7_inherits(epi, hsgp_epidemic_class) ||
-                  S7::S7_inherits(epi, spline_epidemic_class)) epi@num_basis else 0L
+  nb_model <- if (S7::S7_inherits(epi, hsgp_epidemic_class)) epi@num_basis else 0L
   num_basis_val <- if (nb_model > 0L) as.integer(nb_model)
                    else if (max_time < 10) 3L
                    else if (max_time < 20) 8L
@@ -136,8 +153,6 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     gp_L = gp_L,
     gp_L_left  = 2 * gp_L * gp_boundary_frac,
     gp_L_right = max(2 * gp_L * (1 - gp_boundary_frac), 1e-6),
-    n_harmonics = if (S7::S7_inherits(epi, hsgp_epidemic_class)) epi@n_harmonics else 0L,
-    seasonal_period = if (S7::S7_inherits(epi, hsgp_epidemic_class)) epi@seasonal_period else 52,
     # SIR
     N_pop = if (S7::S7_inherits(epi, sir_epidemic_class)) epi@N_pop else 1e6,
     use_beta_rw_trend = if (S7::S7_inherits(epi, sir_epidemic_class)) as.integer(epi@use_beta_rw_trend) else 1L,

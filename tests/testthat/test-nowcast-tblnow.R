@@ -29,6 +29,25 @@ test_that("nowcast() fits a tbl_now and the accessors work", {
   expect_equal(nrow(s), nc@target)
 })
 
+test_that("a `now` passed to nowcast() overrides the tbl_now's own `now`", {
+  tn <- .make_synth_tblnow(Tn = 80L, seed = 2)
+  # Attach a `now` to the tbl_now itself, then pass a DIFFERENT, earlier now.
+  tbl_now_date <- max(tn[[tbl.now::get_event_date(tn)]], na.rm = TRUE)
+  tn <- suppressWarnings(tbl.now::change_now(tn, tbl_now_date))
+  passed_now <- tbl_now_date - 20
+
+  # Engine layer: prepared `now` follows the passed argument, not the tbl_now's.
+  prep <- diseasenowcasting:::prepare_from_tbl_now(
+    tn, model(), now = passed_now)
+  expect_equal(as.Date(prep$now), as.Date(passed_now))
+  expect_false(isTRUE(as.Date(prep$now) == as.Date(tbl_now_date)))
+
+  # Full nowcast(): the stored as-of date is the passed one.
+  nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
+                type = "one_stage", now = passed_now, n_draws = 200, seed = 1)
+  expect_equal(as.Date(nc@now), as.Date(passed_now))
+})
+
 test_that("two-stage nowcast on a tbl_now pools imputations", {
   tn  <- .make_synth_tblnow(Tn = 90L, seed = 5)
   mdl <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())

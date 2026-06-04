@@ -11,7 +11,7 @@ vignette: >
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   message = FALSE, warning = FALSE,
-  fig.width = 8, fig.height = 4,
+  fig.width = 7, fig.height = 4,
   collapse = TRUE, comment = "#>"
 )
 ```
@@ -23,6 +23,22 @@ library(tbl.now)
 library(dplyr)
 library(ggplot2)
 ```
+
+## TL; DR
+
+In general the workflow is: 
+
+1. Fit a nowcast.
+
+2. When new data arrives use `update()` to get warnings about extreme values.
+
+3. A human with domain-knowledge identifies which ones correspond to outliers and which correspond
+to true values. 
+
+4. The `censor_delays_above()` function turns extreme delays into upper bounds. 
+
+5. Model is re-updated using the censored data consequently improving the delay distribution.
+
 
 ## The problem: an extreme delay
 
@@ -94,12 +110,14 @@ at an early date:
 ```{r filter-asof}
 #Initial data
 initial_tbl <- tbl_covid |> 
-  filter(notification_date <= as.Date("2020-08-31") & diagnosis_date <= as.Date("2020-08-31")) |> 
+  filter(
+    notification_date <= as.Date("2020-08-31") & 
+    diagnosis_date <= as.Date("2020-08-31")) |> 
   change_now() #Update the "now" of the nowcast to the latest date
 ```
 
 
-Fit a nowcast to this data
+We then fit a nowcast to this data:
 
 ```{r fit-asof}
 initial_ncast <- nowcast(initial_tbl)
@@ -111,11 +129,13 @@ We can then get new data:
 
 ```{r filert-asof2}
 new_data_tbl <- tbl_covid |> 
-  filter(notification_date <= as.Date("2020-09-01") & diagnosis_date <= as.Date("2020-09-01")) |> 
+  filter(
+    notification_date <= as.Date("2020-09-01") & 
+    diagnosis_date <= as.Date("2020-09-01")) |> 
   change_now()
 ```
 
-And,  `update()` the model. This will automatically score the new report against 
+and  `update()` the model. This will automatically score the new report against 
 the old fit and **warn** that something is amiss:
 
 ```{r surprise, warning=TRUE}
@@ -129,7 +149,7 @@ than usual).  The full table is available via `extreme_values()`:
 extreme_values(nc_updated)
 ```
 
-The `mean_tail_prob` expressess the probability of observing such a value, The `cdf_prob` the probability of lying below that value. Variable `level` shows the level of certainty to qualify something as an outlier (default = `0.99`) and can be modified in `update(..., level = 0.95)`. 
+The `mean_tail_prob` expressess the probability of observing such a value, The `cdf_prob` the probability of lying below that value. Variable `level` shows the level of certainty to qualify something as an outlier (default = `0.99`) and can be modified in `update(..., level = 0.95)`. Column `delay` corresponds to the observed delay and `weight` corresponds to how many times it was observed. Finally `lpd` stands for the log pointwise predictive density value. 
 
 ## 3) Censor the outliers and re-fit
 
@@ -152,7 +172,7 @@ new_data_tbl_censored |> dplyr::select(.is_censored, dplyr::everything())
 ```
 
 
-We refit:
+We refit with the censored data:
 
 ```{r refit}
 nc_updated_censored <- update(initial_ncast, new_data_tbl_censored)

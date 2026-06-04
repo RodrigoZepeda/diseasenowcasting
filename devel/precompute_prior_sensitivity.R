@@ -1,256 +1,329 @@
 # =============================================================================
-# Precompute prior-sensitivity data for vignettes/prior_sensitivity.Rmd
+# Precompute prior-sensitivity data for vignettes/Understanding_Priors.Rmd
 # =============================================================================
-# Runs ~120 nowcast fits (3 scenarios × ~40 prior × disease combinations).
-# Each fit extracts the full summary table [T rows × quantile cols].
-# Output: inst/extdata/prior_sensitivity.rds
+# For EVERY estimated prior we fit three nowcasts -- "tight", "default", "loose"
+# -- on ONE disease (dengue) at dates and windows chosen to make THAT prior's
+# effect as visible as possible.  For each fit we extract the THREE quantities
+# a prior can move, so the vignette can show them side by side in one row:
 #
-# Run once from the package root:
-#   Rscript devel/precompute_prior_sensitivity.R
+#   1. Reporting-delay distribution   (fitted delay pmf)
+#   2. Smoothed epidemic process      (latent incidence lambda_t, via quantile())
+#   3. Nowcast                        (posterior-predictive counts, via predict())
+#
+# Key design choices:
+#   * Each scenario carries its OWN (window_weeks, now_offset_weeks) so the
+#     time frame is chosen to make the prior effect maximally visible:
+#       - Long windows (80-150 weeks) reveal GP length-scale, basis-count, AR
+#         persistence, covariate effects, and SIR population-size effects.
+#       - Short windows (6-8 weeks) give the delay priors room to act.
+#       - A past-peak window helps display SIR recovery rate.
+#   * One-stage (joint) fits so delay priors visibly reshape the delay pmf.
+#   * ps$observed is stored per-prior so each plot uses its own observed data.
+#
+# Output: inst/extdata/prior_sensitivity.rds  -- list(data, observed, specs, meta)
+#
+# Run once from the package root:  Rscript devel/precompute_prior_sensitivity.R
 # =============================================================================
+set.seed(23694)
+devtools::load_all(".", quiet = TRUE)
+library(tbl.now)
+library(dplyr)
+library(tidyr)
 
-suppressMessages({
-  devtools::load_all(".", quiet = TRUE)
-  library(tbl.now)
-  library(dplyr)
-})
+N_DRAWS   <- 500L
+DELAY_MAX <- 18L          # weeks shown in the delay-distribution panel
+`%||%`    <- function(a, b) if (is.null(a)) b else a
 
-# ── Helper: build tbl_now objects for each disease ─────────────────────────
-build_tblnow <- function(disease, now) {
-  switch(disease,
-    dengue = {
-      tbl_now(denguedat, event_date = onset_week, report_date = report_week,
-              data_type = "linelist", verbose = FALSE)
-    },
-    mpox = {
-      tbl_now(as.data.frame(mpoxdat), event_date = dx_date,
-              report_date = dx_report_date, case_count = n,
-              data_type = "count-incidence", verbose = FALSE) |>
-        add_temporal_effects(temporal_effects(day_of_week = TRUE)) |>
-        compute_temporal_effects()
-    },
-    covid = {
-      tbl_now(covid_colombia, event_date = notification_date,
-              report_date = diagnosis_date, strata = sex,
-              case_count = n, data_type = "count-incidence", verbose = FALSE) |>
-        add_temporal_effects(temporal_effects(day_of_week = TRUE)) |>
-        compute_temporal_effects()
-    }
-  )
-}
+# ── Dengue data (full series) ─────────────────────────────────────────────────
+data(denguedat)
+agg <- denguedat %>% count(onset_week, report_week, name = "n")
+tbl_full <- tbl_now(agg, event_date = onset_week, report_date = report_week,
+                    case_count = n, data_type = "count-incidence", verbose = FALSE)
 
-DISEASES <- list(
-  dengue = list(now = as.Date("2010-06-14")),
-  mpox   = list(now = as.Date("2022-09-15")),
-  covid  = list(now = as.Date("2020-06-01"))
+weekly <- agg %>% group_by(onset_week) %>% summarise(tot = sum(n), .groups = "drop") %>%
+  arrange(onset_week)
+peak_date <- weekly$onset_week[which.max(ifelse(weekly$onset_week < as.Date("1995-01-01"),
+                                                weekly$tot, -Inf))]
+event_col  <- get_event_date(tbl_full)
+report_col <- get_report_date(tbl_full)
+
+# Full-data version with 52-period seasonality (for covariate_prior scenarios).
+tbl_full_te <- suppressMessages(
+  tbl_full |>
+    tbl.now::add_temporal_effects(tbl.now::temporal_effects(seasons = 52)) |>
+    tbl.now::compute_temporal_effects()
 )
 
-# ── Helper: run one nowcast and extract summary ─────────────────────────────
-run_scenario <- function(disease, now, mdl, priors_override = NULL,
-                         n_draws = 300, seed = 42) {
-  tn <- build_tblnow(disease, now)
-  tryCatch({
-    prep  <- prepare_from_tbl_now(tn, mdl, now = now)
-    eng   <- prep$data
-    pris  <- default_priors(mdl, eng)
-    if (!is.null(priors_override)) {
-      for (nm in names(priors_override)) pris[[nm]] <- priors_override[[nm]]
-    }
-    fit_result <- fit(mdl, eng, priors = pris)
-    draws_out  <- .nowcast_draws(fit_result, target = eng$max_time,
-                                 n_draws = n_draws, seed = seed)
-    smry <- draws_out$nowcast
-    smry$disease <- disease
-    smry
-  }, error = function(e) { message("SKIP: ", disease, " - ", conditionMessage(e)); NULL })
+# ── Scenario catalogue ────────────────────────────────────────────────────────
+# Each entry specifies:
+#   prior_name, section, tight/default/loose models, display labels,
+#   window_weeks   -- how far back from NOW to include data
+#   now_offset_weeks -- NOW = peak_date + 7 * now_offset_weeks
+#                       (negative = before the peak; positive = after)
+#   use_temporal_effects -- use tbl_full_te instead of tbl_full
+scn <- function(prior_name, section, tight, default, loose,
+                lab_tight, lab_default = "package default", lab_loose,
+                window_weeks = 16L, now_offset_weeks = 2L,
+                use_temporal_effects = FALSE) {
+  list(prior_name = prior_name, section = section,
+       models = list(tight = tight, default = default, loose = loose),
+       labels = list(tight = lab_tight, default = lab_default, loose = lab_loose),
+       window_weeks       = as.integer(window_weeks),
+       now_offset_weeks   = as.integer(now_offset_weeks),
+       use_temporal_effects = isTRUE(use_temporal_effects))
+}
+hs <- function(...) model(nb_likelihood(), hsgp_epidemic(...), lognormal_delay())
+ar <- function(...) model(nb_likelihood(), ar1_epidemic(...),  lognormal_delay())
+si <- function(...) model(nb_likelihood(), sir_epidemic(...),  lognormal_delay())
+
+# Generic model builders that FIX one slot to a plain number (val = NULL keeps
+# the package default).  A numeric in a constructor slot is treated by
+# default_priors() as a hard-fixed (is_constant) value -- exactly the "set a
+# parameter to a number" pedagogy the numbers panels rely on.
+mk_epi <- function(epi_fn, slot = NULL, val = NULL) {
+  args <- if (is.null(slot) || is.null(val)) list() else stats::setNames(list(val), slot)
+  model(nb_likelihood(), do.call(epi_fn, args), lognormal_delay())
+}
+mk_delay <- function(delay_fn, slot = NULL, val = NULL) {
+  args <- if (is.null(slot) || is.null(val)) list() else stats::setNames(list(val), slot)
+  model(nb_likelihood(), hsgp_epidemic(), do.call(delay_fn, args))
+}
+mk_phi <- function(val = NULL) {
+  lik <- if (is.null(val)) nb_likelihood() else nb_likelihood(phi = val)
+  model(lik, hsgp_epidemic(), lognormal_delay())
 }
 
-# ── Helper: build a prior list entry (mirrors default_priors format) ────────
-mk_prior <- function(dist_num, params) {
-  list(dist = dist_num, params = .pad3(params), is_constant = 0L, fixed = numeric(0))
+# A "numbers" scenario: a SMALL fixed value, the package default, a LARGE fixed
+# value.  `build(v)` returns the model with the slot fixed to v (build(NULL) =
+# default).  Reuses scn()/plot_prior() with the small/default/large slots.
+nums <- function(name, section, build, small, large, lab_small, lab_large,
+                 window_weeks, now_offset_weeks = 2L, use_temporal_effects = FALSE) {
+  scn(name, section, build(small), build(NULL), build(large),
+      lab_small, "package default", lab_large,
+      window_weeks = window_weeks, now_offset_weeks = now_offset_weeks,
+      use_temporal_effects = use_temporal_effects)
 }
 
-# ── Scenario grid ────────────────────────────────────────────────────────────
-# Each entry: section, prior_name, scenario, prior_list_override, model_fn
-# Scenarios: "tight", "default", "loose"
+# NOTE: each parameter is shown TWO ways -- a "(numbers)" scenario (small vs
+# large FIXED value, the easy-to-imagine pedagogy) and, where a prior is the
+# natural control, a "(prior)" scenario (tight vs loose).  tight/loose are
+# *center-shifted* so the effect is visible.  Long windows reveal process-level
+# effects; short windows let delay priors dominate.
+scenarios <- list(
 
-normal_id     <- normal_prior(0, 1)@num_id          # 1
-lognormal_id  <- lognormal_prior(0, 1)@num_id        # 109
-gamma_id      <- gamma_prior(2, 0.5)@num_id          # 105
+  # ======================= HSGP epidemic ====================================
+  nums("gp_alpha (numbers)", "HSGP", function(v) mk_epi(hsgp_epidemic, "alpha", v),
+       0.1, 8, "alpha = 0.1  (rigid, flat trend)", "alpha = 8  (very flexible)", 16L),
+  scn("gp_alpha (prior)", "HSGP",
+      hs(alpha = half_normal_prior(0, 0.1)), hs(), hs(alpha = half_normal_prior(0, 8)),
+      "half_normal_prior(0, 0.1)  (rigid)", , "half_normal_prior(0, 8)  (very flexible)",
+      window_weeks = 16L),
 
-scenarios <- list()
+  nums("gp_ell (numbers)", "HSGP", function(v) mk_epi(hsgp_epidemic, "ell", v),
+       2, 60, "ell = 2  (short, wiggly)", "ell = 60  (long, smooth)", 80L),
+  scn("gp_ell (prior)", "HSGP",
+      hs(ell = inv_gamma_prior(10, 1)), hs(), hs(ell = inv_gamma_prior(2, 8)),
+      "inv_gamma_prior(10, 1)  (short, wiggly)", , "inv_gamma_prior(2, 8)  (long, smooth)",
+      window_weeks = 80L),
 
-# ── Section 1: HSGP priors (gp_alpha, gp_ell) ──────────────────────────────
-# gp_alpha: log-scale amplitude prior; tight=log-Normal(0,0.2), default=LogN(0,0.5), loose=LogN(0,1.5)
-for (scen in list(
-  list(scenario="tight",   params=c(log(1),0.2)),
-  list(scenario="default", params=c(log(1),0.5)),
-  list(scenario="loose",   params=c(log(1),1.5))
-)) {
-  override <- list(gp_alpha = mk_prior(lognormal_id, scen$params))
-  scenarios[[length(scenarios)+1]] <- list(
-    section="HSGP", subsection="GP amplitude (gp_alpha)",
-    prior_name="gp_alpha", scenario=scen$scenario, prior_value=scen$params[2],
-    override=override, model_fn=function() model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
-  )
-}
+  # num_basis is inherently a number -- the numbers panel IS the demonstration.
+  nums("num_basis (numbers)", "HSGP", function(v) mk_epi(hsgp_epidemic, "num_basis", v),
+       3, 50, "3 basis functions  (coarse)", "50 basis functions  (fine-grained)", 150L),
 
-# gp_ell: length-scale prior; tight=LogN(0,0.2), default=LogN(0,0.5), loose=LogN(0,1.5)
-for (scen in list(
-  list(scenario="tight",   params=c(log(1),0.2)),
-  list(scenario="default", params=c(log(1),0.5)),
-  list(scenario="loose",   params=c(log(1),1.5))
-)) {
-  override <- list(gp_ell = mk_prior(lognormal_id, scen$params))
-  scenarios[[length(scenarios)+1]] <- list(
-    section="HSGP", subsection="GP length-scale (gp_ell)",
-    prior_name="gp_ell", scenario=scen$scenario, prior_value=scen$params[2],
-    override=override, model_fn=function() model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
-  )
-}
+  # ======================= AR(1) epidemic ===================================
+  nums("ar_phi (numbers)", "AR(1)", function(v) mk_epi(ar1_epidemic, "phi", v),
+       0.1, 0.95, "phi = 0.1  (no memory)", "phi = 0.95  (near random walk)", 104L),
+  scn("ar_phi (prior)", "AR(1)",
+      ar(phi = normal_prior(0.95, 0.02)), ar(), ar(phi = normal_prior(-0.95, 0.02)),
+      "normal_prior(0.95, 0.02)  (persistent)", , "normal_prior(-0.95, 0.02)  (alternating)",
+      window_weeks = 104L),
 
-# ── Section 2: AR(1) priors ─────────────────────────────────────────────────
-for (scen in list(
-  list(scenario="tight",   ar_phi=c(0,0.1), ar_sig=c(0.1,0.05)),
-  list(scenario="default", ar_phi=c(0,0.5), ar_sig=c(0.3,0.1)),
-  list(scenario="loose",   ar_phi=c(0,1.0), ar_sig=c(0.5,0.3))
-)) {
-  override_phi <- list(ar_phi   = mk_prior(normal_id,    scen$ar_phi),
-                       ar_sigma = mk_prior(lognormal_id, log(scen$ar_sig)))
-  scenarios[[length(scenarios)+1]] <- list(
-    section="AR1", subsection="AR1 autocorrelation (ar_phi)",
-    prior_name="ar_phi/ar_sigma", scenario=scen$scenario, prior_value=scen$ar_phi[2],
-    override=override_phi, model_fn=function() model(nb_likelihood(), ar1_epidemic(), lognormal_delay())
-  )
-}
+  nums("ar_sigma (numbers)", "AR(1)", function(v) mk_epi(ar1_epidemic, "sigma", v),
+       0.05, 1, "sigma = 0.05  (tiny jumps)", "sigma = 1  (large jumps)", 104L),
+  scn("ar_sigma (prior)", "AR(1)",
+      ar(sigma = exponential_prior(800)), ar(), ar(sigma = exponential_prior(3)),
+      "exponential_prior(800)  (tiny jumps)", , "exponential_prior(3)  (large jumps)",
+      window_weeks = 104L),
 
-# ── Section 3: SIR priors (R0, recovery_rate) ───────────────────────────────
-# R0 prior: log-scale ~ Normal(log(R0), sd); tight=0.1, default=0.5, loose=1.5
-for (scen in list(
-  list(scenario="tight",   r0=c(log(2),0.1)),
-  list(scenario="default", r0=c(log(2),0.5)),
-  list(scenario="loose",   r0=c(log(2),1.5))
-)) {
-  override <- list(R0 = mk_prior(lognormal_id, scen$r0))
-  scenarios[[length(scenarios)+1]] <- list(
-    section="SIR", subsection="Basic reproduction number (R0)",
-    prior_name="R0", scenario=scen$scenario, prior_value=scen$r0[2],
-    override=override, model_fn=function() model(nb_likelihood(), sir_epidemic(), lognormal_delay())
-  )
-}
+  # ======================= SIR epidemic =====================================
+  nums("R0 (numbers)", "SIR", function(v) mk_epi(sir_epidemic, "R0", v),
+       1.2, 3.5, "R0 = 1.2  (slow spread)", "R0 = 3.5  (explosive)", 24L, now_offset_weeks = 0L),
+  scn("R0 (prior)", "SIR",
+      si(R0 = lognormal_prior(log(1.3), 0.05)), si(), si(R0 = lognormal_prior(log(3.5), 0.7)),
+      "lognormal_prior(log 1.3, 0.05)  (low, confident)", ,
+      "lognormal_prior(log 3.5, 0.7)  (high, diffuse)",
+      window_weeks = 24L, now_offset_weeks = 0L),
 
-# ── Section 4: LogNormal delay priors ────────────────────────────────────────
-for (scen in list(
-  list(scenario="tight",   mu_sd=0.1, sig_shape=5),
-  list(scenario="default", mu_sd=0.5, sig_shape=2),
-  list(scenario="loose",   mu_sd=1.5, sig_shape=0.5)
-)) {
-  override <- list(
-    delay_mu    = mk_prior(normal_id,   c(log(5), scen$mu_sd)),
-    delay_sigma = mk_prior(gamma_id,    c(scen$sig_shape, 1))
-  )
-  scenarios[[length(scenarios)+1]] <- list(
-    section="Delay", subsection="Log-Normal delay",
-    prior_name="delay_mu/sigma (LogNormal)", scenario=scen$scenario, prior_value=scen$mu_sd,
-    override=override, model_fn=function() model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
-  )
-}
+  nums("gamma_sir (numbers)", "SIR", function(v) mk_epi(sir_epidemic, "gamma", v),
+       1/10, 1/2, "gamma = 0.1  (slow recovery)", "gamma = 0.5  (fast recovery)",
+       30L, now_offset_weeks = 6L),
+  scn("gamma_sir (prior)", "SIR",
+      si(gamma = lognormal_prior(log(1/8), 0.05)), si(), si(gamma = lognormal_prior(log(1/2), 0.3)),
+      "lognormal_prior(log 1/8, 0.05)  (slow recovery)", ,
+      "lognormal_prior(log 1/2, 0.3)  (fast recovery)",
+      window_weeks = 30L, now_offset_weeks = 6L),
 
-# ── Section 5: Gamma delay priors ────────────────────────────────────────────
-for (scen in list(
-  list(scenario="tight",   mu_sd=0.1, sig_shape=5),
-  list(scenario="default", mu_sd=0.5, sig_shape=2),
-  list(scenario="loose",   mu_sd=1.5, sig_shape=0.5)
-)) {
-  override <- list(
-    delay_mu    = mk_prior(normal_id, c(log(5), scen$mu_sd)),
-    delay_sigma = mk_prior(gamma_id,  c(scen$sig_shape, 1))
-  )
-  scenarios[[length(scenarios)+1]] <- list(
-    section="Delay", subsection="Gamma delay",
-    prior_name="delay_mu/sigma (Gamma)", scenario=scen$scenario, prior_value=scen$mu_sd,
-    override=override, model_fn=function() model(nb_likelihood(), hsgp_epidemic(), gamma_delay())
-  )
-}
+  nums("N_eff (numbers)", "SIR", function(v) mk_epi(sir_epidemic, "N_eff", v),
+       0.1, 0.9, "N_eff = 0.1  (small susceptible pool)", "N_eff = 0.9  (almost everyone)", 24L),
+  scn("N_eff (prior)", "SIR",
+      si(N_eff = beta_prior(40, 160)), si(), si(N_eff = beta_prior(1, 1)),
+      "beta_prior(40, 160)  (~0.2, confident)", , "beta_prior(1, 1)  (uniform)",
+      window_weeks = 24L),
 
-# ── Section 6: GenGamma delay Q prior ─────────────────────────────────────────
-for (scen in list(
-  list(scenario="tight",   q_shape=10, q_rate=10),  # concentrated near Q=1
-  list(scenario="default", q_shape=2,  q_rate=2),
-  list(scenario="loose",   q_shape=0.5,q_rate=0.5)
-)) {
-  override <- list(delay_Q = mk_prior(gamma_id, c(scen$q_shape, scen$q_rate)))
-  scenarios[[length(scenarios)+1]] <- list(
-    section="Delay", subsection="GenGamma shape (Q)",
-    prior_name="delay_Q", scenario=scen$scenario, prior_value=scen$q_shape/scen$q_rate,
-    override=override, model_fn=function() model(nb_likelihood(), hsgp_epidemic(), generalized_gamma_delay())
-  )
-}
+  nums("N_pop (numbers)", "SIR", function(v) mk_epi(sir_epidemic, "N_pop", v),
+       5000, 500000, "N_pop = 5000  (rapid saturation)", "N_pop = 500 000  (slow saturation)", 30L),
 
-# ── Section 7: Dirichlet concentration ────────────────────────────────────────
-for (scen in list(
-  list(scenario="tight",   alpha=5.0),
-  list(scenario="default", alpha=1.0),
-  list(scenario="loose",   alpha=0.1)
-)) {
-  val <- scen$alpha
-  scenarios[[length(scenarios)+1]] <- list(
-    section="Delay", subsection="Dirichlet concentration",
-    prior_name="dirichlet_alpha", scenario=scen$scenario, prior_value=val,
-    override=NULL,   # alpha baked into the delay constructor
-    model_fn=function(v=val) model(nb_likelihood(), hsgp_epidemic(), dirichlet_delay(alpha=v))
-  )
-}
+  # ======================= Delay: LogNormal =================================
+  # Short windows (6-8 weeks) so few observed delays let the setting dominate.
+  nums("delay_mu LN (numbers)", "Delay", function(v) mk_delay(lognormal_delay, "mu", v),
+       log(0.6), log(8), "mu = log(0.6)  (~half-week)", "mu = log(8)  (~8 weeks)", 6L),
+  scn("delay_mu LN (prior)", "Delay",
+      model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(mu = normal_prior(log(0.6), 0.03))),
+      hs(),
+      model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(mu = normal_prior(log(5), 1.2))),
+      "mu ~ normal(log 0.6, 0.03)  (confident short)", "package default (data-informed)",
+      "mu ~ normal(log 5, 1.2)  (diffuse, longer)", window_weeks = 6L),
 
-# ── Section 8: NB overdispersion (phi) ─────────────────────────────────────
-for (scen in list(
-  list(scenario="tight",   params=c(log(50), 0.2)),   # phi ~ 50, narrow
-  list(scenario="default", params=c(log(20), 0.5)),   # phi ~ 20, default
-  list(scenario="loose",   params=c(log(5),  1.0))    # phi ~ 5, very dispersed
-)) {
-  override <- list(phi_nb = mk_prior(lognormal_id, scen$params))
-  scenarios[[length(scenarios)+1]] <- list(
-    section="Likelihood", subsection="NB overdispersion (phi)",
-    prior_name="phi_nb", scenario=scen$scenario, prior_value=exp(scen$params[1]),
-    override=override, model_fn=function() model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
-  )
-}
+  nums("delay_sigma LN (numbers)", "Delay", function(v) mk_delay(lognormal_delay, "sigma", v),
+       0.2, 2.5, "sigma = 0.2  (sharp, concentrated)", "sigma = 2.5  (very dispersed)", 6L),
 
-# ── Run all scenarios for each disease ────────────────────────────────────────
-cat("Running", length(scenarios), "scenarios × 3 diseases =",
-    length(scenarios)*3, "total fits\n")
+  # ======================= Delay: Gamma =====================================
+  # (slightly less extreme + a longer window so the one-stage joint fit converges)
+  nums("delay_shape Gamma (numbers)", "Delay", function(v) mk_delay(gamma_delay, "shape", v),
+       1, 8, "shape = 1  (exponential)", "shape = 8  (peaked)", 10L),
+  nums("delay_rate Gamma (numbers)", "Delay", function(v) mk_delay(gamma_delay, "rate", v),
+       0.4, 2, "rate = 0.4  (long delays)", "rate = 2  (short delays)", 10L),
 
-all_results <- list()
-for (dis in names(DISEASES)) {
-  now <- DISEASES[[dis]]$now
-  for (sc in scenarios) {
-    mdl <- sc$model_fn()
-    key <- paste(sc$section, sc$subsection, sc$scenario, dis, sep="|")
-    cat(sprintf("  %-70s", key)); flush.console()
-    t0 <- proc.time()[3]
-    smry <- run_scenario(dis, now, mdl, priors_override = sc$override)
-    dt   <- round(proc.time()[3] - t0, 1)
-    if (!is.null(smry)) {
-      smry$section    <- sc$section
-      smry$subsection <- sc$subsection
-      smry$prior_name <- sc$prior_name
-      smry$scenario   <- sc$scenario
-      smry$prior_value<- sc$prior_value
-      all_results[[length(all_results)+1]] <- smry
-      cat(sprintf(" OK (%.1fs)\n", dt))
+  # ======================= Delay: Generalized-Gamma =========================
+  nums("delay_mu GG (numbers)", "Delay", function(v) mk_delay(generalized_gamma_delay, "mu", v),
+       log(0.6), log(8), "mu = log(0.6)  (short)", "mu = log(8)  (long)", 8L),
+  nums("delay_sigma GG (numbers)", "Delay", function(v) mk_delay(generalized_gamma_delay, "sigma", v),
+       0.3, 1.5, "sigma = 0.3  (concentrated)", "sigma = 1.5  (dispersed)", 8L),
+  nums("delay_Q GG (numbers)", "Delay", function(v) mk_delay(generalized_gamma_delay, "Q", v),
+       0.1, 1.5, "Q = 0.1  (light tail)", "Q = 1.5  (heavy tail)", 10L),
+  scn("delay_Q GG (prior)", "Delay",
+      model(nb_likelihood(), hsgp_epidemic(), generalized_gamma_delay(Q = normal_prior(0.1, 0.05))),
+      model(nb_likelihood(), hsgp_epidemic(), generalized_gamma_delay()),
+      model(nb_likelihood(), hsgp_epidemic(), generalized_gamma_delay(Q = normal_prior(1.5, 0.5))),
+      "Q ~ normal(-1.5, 0.05)  (light tail)", , "Q ~ normal(1.5, 0.5)  (heavy tail)",
+      window_weeks = 8L),
+
+  # ======================= Delay: Dirichlet =================================
+  nums("dirichlet_alpha (numbers)", "Delay", function(v) mk_delay(dirichlet_delay, "alpha", v),
+       1.e-3, 100, "alpha = 0.1  (sparse, spiky)", "alpha = 8  (flat, uniform)", 2L),
+
+  # ======================= Likelihood: NB overdispersion ====================
+  nums("phi_nb (numbers)", "Likelihood", function(v) mk_phi(v),
+       -1, log(30), "phi = 3  (very overdispersed)", "phi = 1000  (near-Poisson)", 16L),
+  scn("phi_nb (prior)", "Likelihood",
+      mk_phi(lognormal_prior(log(30), 0.1)), mk_phi(), mk_phi(lognormal_prior(-1, 0.6)),
+      "phi ~ lognormal(log 30, 0.1)  (near-Poisson)", ,
+      "phi ~ lognormal(-1, 0.6)  (very overdispersed)", window_weeks = 16L),
+
+  # ======================= Covariate (seasonality) ==========================
+  # 16-week window with 52-period seasonality attached so the covariate acts.
+  scn("covariate_prior (prior)", "Covariates",
+      model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(), covariate_prior = normal_prior(0, 0.01)),
+      model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
+      model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(), covariate_prior = normal_prior(0, 10)),
+      "normal_prior(0, 0.01)  (ignores seasonality)", "package default  (std_normal_prior(0, 1))",
+      "normal_prior(0, 10)  (large seasonal effects)",
+      window_weeks = 16L, use_temporal_effects = TRUE)
+)
+
+# ── Extract the three panels from one fitted nowcast ─────────────────────────
+extract_three <- function(nc) {
+  # 3. Nowcast (posterior-predictive counts) -- exported predict()/summary().
+  ncs <- as.data.frame(summary(predict(nc, seed = 2)))
+  nowcast_df <- tibble(panel = "3. Nowcast", x = ncs$.event_num,
+                       median = ncs$median, lower = ncs$q5, upper = ncs$q95)
+  # 2. Smoothed epidemic (latent lambda_t) -- exported quantile() method.
+  q <- quantile(nc, probs = c(0.05, 0.5, 0.95))
+  epi_df <- tibble(panel = "2. Smoothed epidemic", x = seq_len(nrow(q)) - 1L,
+                   median = q[, 2], lower = q[, 1], upper = q[, 3])
+  # 1. Reporting-delay distribution (fitted pmf) -- via package internals.
+  fit <- nc@fits[[1]]; data <- fit$data; priors <- fit$priors; rc <- fit$reconstruct
+  fam <- data$delay_family; dseq <- seq(0, DELAY_MAX, by = 0.5)
+  fns <- tryCatch({
+    if (fam == 4L) {
+      nb <- as.integer(data$np_model_length); pl <- fit$parList
+      sp <- if (isTRUE(priors$delay_probs$is_constant == 1L)) priors$delay_probs$fixed
+            else { el <- exp(pl$delay_logits); c(el, 1) / (sum(el) + 1) }
+      diseasenowcasting:::.nonparametric_delay_functions(sp, nb)
+    } else if (fam == 3L) {
+      diseasenowcasting:::.delay_distribution_functions(
+        3L, rc$delay_mu,
+        diseasenowcasting:::.gengamma_shape_transform(fit$parList$delay_Q %||% -2)$shape_Q,
+        rc$delay_sigma)
     } else {
-      cat(" SKIP\n")
+      diseasenowcasting:::.delay_distribution_functions(fam, rc$delay_mu, rc$delay_sigma)
+    }
+  }, error = function(e) NULL)
+  delay_df <- if (is.null(fns)) NULL else tibble(
+    panel = "1. Reporting delay", x = dseq,
+    median = pmax(0, as.numeric(fns$cdf(dseq + 0.5)) - as.numeric(fns$cdf(pmax(0, dseq - 0.5)))),
+    lower = NA_real_, upper = NA_real_)
+  bind_rows(delay_df, epi_df, nowcast_df)
+}
+
+# ── Run all scenarios ────────────────────────────────────────────────────────
+cat("Fitting", length(scenarios) * 3, "nowcasts (", length(scenarios),
+    "priors x 3 scenarios), dengue, peak =", as.character(peak_date), "\n")
+
+all_rows  <- list()
+spec_rows <- list()
+obs_rows  <- list()   # per-prior observed data (for nowcast panel reference)
+
+for (sc in scenarios) {
+
+  # Per-scenario time window
+  now_sc    <- peak_date + 7L * sc$now_offset_weeks
+  window_sc <- 7L * sc$window_weeks
+  base_tbl  <- if (isTRUE(sc$use_temporal_effects)) tbl_full_te else tbl_full
+
+  data_sc <- base_tbl %>%
+    filter(.data[[event_col]] <= now_sc, .data[[report_col]] <= now_sc,
+           .data[[event_col]] >= now_sc - window_sc)
+
+  # Observed-so-far and eventual truth for the "3. Nowcast" reference points.
+  obs_now_sc <- data_sc %>% get_latest_reported_cases() %>% as_tibble() %>%
+    transmute(x = .event_num, observed = n)
+  truth_sc <- tbl_full %>%
+    filter(.data[[event_col]] <= now_sc, .data[[event_col]] >= now_sc - window_sc) %>%
+    get_latest_reported_cases() %>% as_tibble() %>%
+    transmute(x = .event_num, final = n)
+  obs_rows[[length(obs_rows) + 1L]] <- full_join(obs_now_sc, truth_sc, by = "x") %>%
+    mutate(prior_name = sc$prior_name)
+
+  cat(sprintf("%-28s  [%d-week window, offset %+d]\n",
+              sc$prior_name, sc$window_weeks, sc$now_offset_weeks))
+
+  for (scenario in c("tight", "default", "loose")) {
+    spec_rows[[length(spec_rows) + 1L]] <- tibble(
+      prior_name = sc$prior_name, section = sc$section,
+      scenario = scenario, spec = sc$labels[[scenario]])
+    cat(sprintf("  %-8s ...", scenario)); flush.console()
+    res <- tryCatch({
+      nc <- nowcast(data_sc, model = sc$models[[scenario]], type = "one_stage",
+                    now = now_sc, n_draws = N_DRAWS, temporal_effects = "none", seed = 1)
+      extract_three(nc)
+    }, error = function(e) { cat(" SKIP:", conditionMessage(e), "\n"); NULL })
+    if (!is.null(res)) {
+      all_rows[[length(all_rows) + 1L]] <- res %>%
+        mutate(prior_name = sc$prior_name, section = sc$section, scenario = scenario)
+      cat(" OK\n")
     }
   }
 }
 
-combined <- do.call(rbind, all_results)
-cat("\nTotal rows:", nrow(combined), "\n")
+out <- list(
+  data     = bind_rows(all_rows),
+  observed = bind_rows(obs_rows),   # data.frame with prior_name column
+  specs    = bind_rows(spec_rows),
+  meta     = list(disease = "dengue", peak_date = peak_date))
 
-# Save
-outdir <- file.path("inst", "extdata")
+outdir  <- file.path("inst", "extdata")
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
-outfile <- file.path(outdir, "prior_sensitivity.rds")
-saveRDS(combined, outfile)
-cat("Saved to:", outfile, "\n")
-cat("Object size:", format(object.size(combined), units="MB"), "\n")
+saveRDS(out, file.path(outdir, "prior_sensitivity.rds"))
+cat("\nSaved", file.path(outdir, "prior_sensitivity.rds"),
+    "(", format(object.size(out), units = "MB"), ")\n")

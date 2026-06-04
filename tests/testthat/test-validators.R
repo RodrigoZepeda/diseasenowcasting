@@ -27,11 +27,6 @@ test_that("sir_epidemic() rejects negative N_pop", {
   expect_error(sir_epidemic(N_pop = -1), regexp = "N_pop")
 })
 
-test_that("spline_epidemic() constructor works and stores degree", {
-  ep <- spline_epidemic()
-  expect_true(S7::S7_inherits(ep, diseasenowcasting:::epidemic_process_class))
-})
-
 # ── 03_delay_class.R validators ──────────────────────────────────────────────
 
 test_that("delay_process_class rejects unknown name", {

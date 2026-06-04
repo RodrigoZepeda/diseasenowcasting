@@ -1,163 +1,3 @@
----
-title: "Benchmark (diseasenowcasting vs NobBS and epinowcast)"
-author: "Rodrigo Zepeda-Tello"
-output: rmarkdown::html_vignette
-bibliography: references.bib
-vignette: >
-  %\VignetteIndexEntry{Benchmark (diseasenowcasting vs NobBS and epinowcast)}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  message  = FALSE,
-  warning  = FALSE,
-  fig.width  = 9,
-  fig.height = 4.5,
-  collapse = TRUE,
-  comment  = "#>"
-)
-```
-
-## TL; DR
-
-We compared different datasets across distinct `diseasenowcasting` models as well as
-NobBS and epinowcast. The `HSGP/LogNormal` and `HSGP/GeneralizedGamma` are the suggested models as they are
-consistently the ranking among the top performers. 
-
-
-## Overview
-
-This vignette presents a systematic benchmark comparison of `diseasenowcasting` against two widely
-used nowcasting methods: [**NobBS**](https://cran.r-project.org/web/packages/NobBS/index.html)  and 
-[**Epinowcast**](https://github.com/epinowcast/epinowcast).  We compare across three real-world disease surveillance datasets:
-
-| Dataset | Disease | Temporal unit | Source |
-|---------|---------|---------------|--------|
-| `denguedat` (tbl.now) | Dengue fever | Weekly | [@mcgough2020nowcasting] |
-| `mpoxdat` (tbl.now)   | Mpox | Daily | [@rohrer2025nowcasting] |
-| `covid_colombia` (diseasenowcasting) | COVID-19 | Daily | [@colombia] |
-
-The comparison uses **50 evaluation dates** per disease, selected at random. Forecasts are scored for a nowcast at a 0 delay, that is, the newest event time 
-at each evaluation date. 
-
-
-## Scoring methodology
-
-All methods are scored using the **Weighted Interval Score (WIS)**.  WIS decomposes
-into:
-
-- **Overprediction** — penalty for predicted intervals that are too high relative to the truth.
-- **Underprediction** — penalty for predicted intervals that are too low.
-- **Dispersion** — penalty for uncertainty intervals that are too wide.
-
-Coverage at 50% and 90% credible intervals is also reported.  A good model should
-have empirical coverage close to the corresponding level.
-
-All comparisons are performed on a **common date set** — dates where both `diseasenowcasting` and the
-comparison method have produced a valid nowcast — ensuring fairness.
-
-
-## Results
-
-You can access the results from inside the package:
-
-```{r load-data}
-library(diseasenowcasting)
-library(dplyr)
-
-# Pre-computed benchmark results (50 evaluation dates per disease)
-scoring_file <- system.file("extdata", "comparison_scores.rds", package = "diseasenowcasting")
-scores_df    <- readRDS(scoring_file) 
-
-#Rename the columns
-scores_df <- scores_df |> 
-  rename(Model = model, WIS = wis, Overprediction = over, Underprediction = under,
-         Dispersion = disp, Bias = bias, Cov50 = cov50, Cov90 = cov90, `N dates` = n_dates)
-```
-
-### Dengue fever (weekly, Colombia)
-
-```{r dengue-table, echo = FALSE}
-#Read the dengue tab
-dengue_tab <- scores_df |> 
-  filter(disease == "dengue") |> 
-  select(Model, WIS, Overprediction, Underprediction, Dispersion, Bias,
-         Cov50, Cov90, `N dates`)
-
-
-knitr::kable(dengue_tab, digits = 2, row.names = FALSE,
-             caption = "Dengue nowcast scores at d*=0 (50 common evaluation dates, weekly).")
-```
-
-**Key findings (dengue):**
-
-- All `diseasenowcasting` HSGP variants beat NobBS and all Epinowcast variants on WIS.
-- Best `diseasenowcasting`: **HSGP / GenGamma**, WIS ≈ 7.0, cov90 ≈ 0.94.
-
-### Mpox (daily, USA)
-
-```{r mpox-table, echo = FALSE}
-mpox_tab <- scores_df |> 
-  filter(disease == "mpox") |> 
-  select(Model, WIS, Overprediction, Underprediction, Dispersion, Bias,
-         Cov50, Cov90, `N dates`)
-
-knitr::kable(mpox_tab, digits = 2, row.names = FALSE,
-             caption = "Mpox nowcast scores at d*=0 (49 common evaluation dates, daily).")
-```
-
-**Key findings (mpox):**
-
-- `diseasenowcasting` AR1 variants achieve the lowest WIS, beating NobBS by a wide margin (~7×).
-- Best `diseasenowcasting`: **AR1 / Gamma**, 
-
-### COVID-19 (daily, Colombia)
-
-```{r covid-table, echo = FALSE}
-covid_tab <- scores_df |> 
-  filter(disease == "covid") |> 
-  select(Model, WIS, Overprediction, Underprediction, Dispersion, Bias,
-         Cov50, Cov90, `N dates`)
-
-knitr::kable(covid_tab, digits = 2, row.names = FALSE,
-             caption = "COVID-19 nowcast scores at d*=0 (50 common evaluation dates, daily).")
-```
-
-**Key findings (COVID-19):**
-
-- `diseasenowcasting` beats NobBS on WIS for COVID as well, but the margin depends on the delay family.
-- Best `diseasenowcasting`: **HSGP / GenGamma**.
-
-## Conclusion
-
-`HSGP/LogNormal` and `HSGP/GeneralizedGamma` are the suggested models as they are
-consistently the ranking among the top performers. 
-
-## How to reproduce: the full benchmark script
-
-The script below is the **complete, self-contained backtest** used to produce
-the tables above.  Copy it into a file (e.g. `benchmark.R`), run it with
-`Rscript benchmark.R`, and it will refit all three methods on 50 evaluation
-dates per disease and rebuild the score tables (saving them to
-`comparison_scores.rds`).
-
-It is organised in four parts:
-
-1. **Setup** -- packages, the 50-date samplers, and the quantile grid.
-2. **Helpers** -- one function per method (`diseasenowcasting`, NobBS,
-   epinowcast) that returns the **d\*=0** nowcast quantiles in a single shared
-   long format `(method, date_run, observed, predicted, quantile_level)`.
-3. **Run** -- loop over diseases and dates (in parallel via `future`).
-4. **Score** -- a common-date set per disease, then WIS (+ decomposition) and
-   coverage via `scoringutils`.
-
-> Requirements: install `NobBS` and `epinowcast` (the latter needs `cmdstanr`
-> and a working CmdStan).  Without them, delete the corresponding helper calls
-> and only the `diseasenowcasting` rows will be produced.
-
-```{r reproduce-code, eval=FALSE}
 # =============================================================================
 # 1. SETUP
 # =============================================================================
@@ -170,10 +10,12 @@ library(future)
 library(furrr)        # parallel map over evaluation dates
 library(scoringutils)
 library(NobBS)
+
+epinowcast::enw_set_cache(tempdir(), type = c('session'))
 library(epinowcast)
 
-future::plan(multisession, 
-             workers = max(parallel::detectCores(logical = TRUE) - 1, 1))
+
+future::plan(multisession, workers = 8)
 
 N_DATES  <- 50L
 PROBS    <- c(0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975)
@@ -281,7 +123,7 @@ build <- list(
                               report_date = report_week, data_type = "linelist",
                               verbose = FALSE, 
                               t_effects = temporal_effects(seasons = 52)),
-  mpox   = function() tbl_now(as.data.frame(mpoxdat), event_date = dx_date,
+  mpox   = function() tbl_now(mpoxdat, event_date = dx_date,
                               report_date = dx_report_date, case_count = n,
                               data_type = "count-incidence", verbose = FALSE,
                               t_effects = temporal_effects(day_of_week = T)),
@@ -336,11 +178,3 @@ future::plan(sequential)
 
 # Save so the vignette tables can be rebuilt from this object.
 saveRDS(scores_df, "comparison_scores.rds")
-```
-
-The resulting `comparison_scores.rds` has exactly the columns the tables at the
-top of this vignette consume (`model`, `wis`, `over`, `under`, `disp`, `bias`,
-`cov50`, `cov90`, `n_dates`, `disease`) -- drop it into
-`inst/extdata/comparison_scores.rds` to refresh them.
-
-## References

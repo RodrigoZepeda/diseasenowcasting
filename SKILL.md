@@ -14,7 +14,7 @@ reimplements the `diseasenowcast2` Stan-based package with no Stan/cmdstanr
 dependency, matching the same public API: `model(likelihood(), epidemic(),
 delay())`.
 
-**Core idea (Günther et al. 2021):** The reporting delay is a stochastic
+**Core idea:** The reporting delay is a stochastic
 process modelled jointly with the epidemic.  The likelihood depends only on
 *observed* delays (not a reporting triangle), so censoring is handled cleanly.
 The Laplace approximation marginalises over the latent epidemic coefficients;
@@ -49,7 +49,6 @@ model(likelihood, epidemic, delay)   # combine three components
 | `hsgp_epidemic(num_basis, gp_kernel=2, gp_basis=1, tmax_model=0, gp_boundary_frac=0.62)` | `num_basis` (int, 0=auto) | Hilbert-space GP; flexible smooth trend. Shared kernel (alpha, ell) across strata. |
 | `ar1_epidemic()` | — | AR(1) trend; fast, per-stratum phi/sigma. |
 | `sir_epidemic(N_pop=1e6, use_beta_rw_trend=TRUE)` | `N_pop` | Discrete-time SIR; coupled force of infection across strata. |
-| `spline_epidemic()` | — | B-spline trend (experimental, not baked into production models). |
 
 ### Delay families
 
@@ -301,14 +300,6 @@ nc <- nowcast(tn, model(nb_likelihood(), sir_epidemic(R0 = lognormal_prior(log(3
               prior_only = TRUE, n_draws = 300)
 quantile(nc, probs = c(0.05, 0.5, 0.95))   # prior-predictive epidemic band
 # Works for HSGP / AR1 / SIR; predict()/autoplot()/median() all apply.
-```
-
-### ess(): Laplace approximation diagnostic
-
-```r
-ess(nc, n_draws = 1000)   # importance-sampling ESS over the hyperparameters; warns if low
-# Low ESS = the Gaussian (Laplace) approximation is unreliable (skewed/weakly
-# identified posterior, common with little data). attr(,"ratio"), attr(,"n_hyper").
 ```
 
 ### Default priors

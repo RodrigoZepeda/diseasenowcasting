@@ -2,25 +2,30 @@
 % Please edit documentation in R/08_sample.R
 \name{sample}
 \alias{sample}
-\title{Draw random samples from a prior or likelihood}
+\title{Draw random samples from a prior (or fall back to \code{\link[base:sample]{base::sample()}})}
 \usage{
 sample(object, size, ...)
 }
 \arguments{
-\item{object}{A \code{prior_class}, \code{likelihood_class}, or base vector.}
+\item{object}{A \code{prior_class}, or any object accepted by \code{\link[base:sample]{base::sample()}}.}
 
 \item{size}{Number of draws.}
 
-\item{...}{Passed to the likelihood method (\code{mu}, \code{phi}).}
+\item{...}{Passed through to the underlying sampler.}
 }
 \value{
-A numeric/integer vector of length \code{size}.
+For a prior, a numeric vector of length \code{size}; otherwise whatever
+\code{\link[base:sample]{base::sample()}} returns.
 }
 \description{
-Draw random samples from a prior or likelihood
+A generic that draws from a \code{prior_class} with the appropriate random
+number generator.  For \strong{any other object} (numeric, character, factor,
+\code{Date}, list, ...) it dispatches to \code{\link[base:sample]{base::sample()}}, so \code{sample()} keeps its
+usual base behaviour outside the package.
 }
 \examples{
 sample(normal_prior(log(7), 0.5), 10)
 sample(gamma_prior(2, 0.1), 10)
+sample(as.Date("2020-01-01") + 0:9, 3)   # falls back to base::sample()
 
 }

@@ -1,0 +1,509 @@
+\documentclass[12pt]{article}
+
+\usepackage{comment}
+\usepackage[english]{babel}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage[autostyle, english = american]{csquotes}
+\MakeOuterQuote{"}
+\usepackage{caption}
+\captionsetup{font={footnotesize, sf}, labelfont=bf}
+
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{booktabs}
+
+\definecolor{delayA}{HTML}{b75347} % Lognormal
+\definecolor{delayB}{HTML}{edc775} % Generalized-Gamma
+\definecolor{delayC}{HTML}{94b594} % Dirichlet
+\definecolor{epincast}{HTML}{94b594} % Dirichlet
+\definecolor{nobbs}{HTML}{94b594} % Dirichlet
+
+\title{Nowcasting from an epidemic's reporting-delay. A censored point process approach.}
+\author{Rodrigo Zepeda-Tello \and Rami Yaari \and Jeffrey Shaman}
+\date{\today{}}
+\begin{document}
+\maketitle
+
+{\color{blue} \Large This is the latest version. Review this one. Also please suggest a better title}
+
+{\color{red} \emph{Suggested title:} ``A censored point-process approach to epidemic nowcasting with reporting-delay surprise detection.'' Alternative, shorter: ``Nowcasting epidemics from the reporting-delay process.''}
+
+\section{Abstract}
+
+{\color{red}
+Real-time estimation of epidemic incidence is obstructed by reporting delays: cases occurring on a given day accumulate in surveillance systems over the following days, so the most recent counts are systematically incomplete. The prevailing remedy, the \emph{reporting triangle}, treats delays as a nuisance and reconstructs the full event-by-report matrix, an approach that scales poorly with the time horizon and the maximum delay, cannot represent delays longer than the longest observed, and discards the information carried by the delays themselves. We recast nowcasting as inference for a partially observed, right-censored marked point process in which the reporting delays are the marks. The resulting likelihood depends only on the observed delays together with a single latent-count term, which decouples the delay process from the epidemic process and permits a flexible choice for the latter, including Hilbert-space Gaussian processes (HSGP), autoregressive trends, and mechanistic susceptible--infected--recovered (SIR) dynamics. Because the delay process is modelled explicitly rather than marginalised away, the framework yields a posterior predictive distribution for every new report and hence a principled measure of \emph{surprise} that flags anomalous delays and counts as they arrive. Across a simulation study and three surveillance systems (dengue, mpox, and COVID-19), the HSGP specification with a negative-binomial count model was the most robust, attaining lower weighted interval scores than both NobBS and epinowcast for every disease; the surprise diagnostic reliably detected injected perturbations of the reporting-delay distribution. Inference is carried out by Laplace approximation and is available in the open-source R package \texttt{diseasenowcasting}.
+
+\medskip
+\noindent\emph{Some key words:} Censored likelihood; Gaussian process; Marked point process; Nowcasting; Reporting delay; Surveillance; Surprise/anomaly detection.
+}
+
+\section{Introduction}
+
+%P1: Surveillance is cool
+Effective epidemic surveillance is crucial for public health decision-making \cite{world2023future, shen2025progress}. Central to this effort is the continuous monitoring of incident cases across complementary systems such as laboratory-based diagnostic testing, clinician-reported case notifications, and vital statistics mortality reporting \cite{ibrahim2020epidemiologic}. Timely and reliable estimates of these indicators are essential for characterizing the trajectory of an outbreak and anticipating healthcare needs. Without accurate and up-to-date surveillance inputs, policy responses risk being delayed or misallocated \cite{shen2025progress, villela2022importance}.
+
+%P2: Sometimes we don't see all the cases and people do weird things
+Clinical and healthcare-system reporting constraints introduce delays between the time an infection occurs, the time it is detected, and the time it is formally recorded in surveillance systems. As a result, the number of cases reported on a given day rarely represents the true number of infections that will end up being registered \cite{jajosky2004evaluation, swaan2018timeliness, marinovic2015quantifying}. Additional cases associated with earlier dates continue to appear as delayed reports accumulate, and the most recent incidence estimates typically require a stabilization period before they can be considered reliable \cite{center2004morbidity}. In practice, this often leads to analysts ignoring the most recent data until sufficient time has passed for backlogged reports to surface thus wasting valuable real-time information.
+
+Nowcasting provides a solution to this challenge. Often described as "predicting the present" \cite{scott2014predicting}, nowcasting refers to the inference of the current state of affairs using historical and partially observed contemporary data \cite{wu2021nowcasting}. In the context of epidemiological time series, this usually corresponds to producing an estimate of current incidence (or a function of it such as the effective reproductive number, $R_t$). Originating in the meteorological literature, nowcasting methods have been applied across disciplines including earthquake prediction \cite{rundle2016nowcasting}, short-term weather assessment \cite{camporeale2019challenge}, and macroeconomic forecasting \cite{bok2018macroeconomic}. In epidemiology, nowcasting has been used extensively to infer real-time incidence during outbreaks of influenza \cite{he2022nowcasting, preis2014adaptive, spreco2018evaluation}, ebola \cite{tariq2025nowcast}, COVID-19 \cite{greene2021nowcasting, birrell2021real, albani2022nowcasting}, dengue \cite{codeco2018infodengue, mcgough2020nowcasting}, mpox \cite{charniga2024nowcasting, rohrer2025nowcasting}, among others \cite{mellor2025application, menkir2021nowcasting}.
+
+Most epidemiological nowcasting approaches follow a common two-step structure: (1) modeling the reporting-delay distribution, and (2) modeling the underlying epidemic process. A range of methods has been proposed for these tasks, including random forests \cite{sahai2022machine}, regression-based approaches \cite{donker2011nowcasting, mcgough2020nowcasting, bastos2019modelling}, and Bayesian hierarchical models \cite{johnson2025baseline,gunther2021nowcasting, hohle2014bayesian, chacon2026bayesian}; the latter offering particular advantages early in an outbreak by incorporating prior knowledge. 
+
+%{\color{red} The following might be better in Methods}
+
+Many of these methods typically treat reporting-delays as a nuisance mechanism required to reconstruct latent incidence through a "reporting triangle"  \cite{verrall1989state,  johnson2025baseline, tariq2025nowcast,
+overton2023nowcasting, mcgough2020nowcasting}. This involves reconstructing how many cases will be observed per event-report date combination which is usually not a quantity of interest by itself. Additionally, reporting triangles can  become prohibitley large with dimensions given by the maximum observed time times the maximum observed delay. Even in cases with sparse observations the reporting triangle requires the computation of all of the zeroes. Finally, it does not allow for the possibility of unobserved delays. That is, there is no chance in the model of a delay larger than the maximum observed one. This severely handicaps its usefulness both at the beginning of an outbreak and with large (decades-long) epidemic processes. 
+
+In this article, we formulate reporting-delays as realizations of a point process that can be modeled in conjunction with the censored epidemic dynamics. This perspective yields two advantages: First, it leads to a likelihood that depends only on observed delays, avoiding the need to reconstruct the full event-report matrix (the norm for the \textit{reporting triangle}). This additional freedom for modeling the epidemic-process allows us to use several different processes to model the epidemic including Gaussian Processes (GP), Susceptible-Infected-Recovered (SIR) models, and Autoregressive models (AR). Second, the inference on the reporting process itself, permits the detection of anomalies and treatment of missing values. As a result, delays become an additional source of information about the surveillance system.
+
+To formally capture this information, we depart from the traditional matrix-completion framework and re-cast the nowcasting problem using principles from survival analysis. By treating the observed reporting delays as right-censored time-to-event data, we construct a joint model that estimates both the underlying epidemic trajectory and the reporting-delay distribution simultaneously.
+
+{\color{red} Modelling the delays explicitly also enables two things the reporting triangle does not. Because each new report carries a posterior predictive distribution under the fitted model, we can score it in real time and flag anomalous delays or counts, a quantity we call the \emph{surprise}. And because incidence and delay are only weakly identified near the present, we describe a two-stage strategy that estimates the delay first and the epidemic process second, propagating delay uncertainty by multiple imputation. The methodology is implemented in the R package \texttt{diseasenowcasting}.}
+
+\section{Methods}\label{sec:methods}
+
+Building on this survival analysis perspective, our methodology relies on a censored data approach to infer the latent epidemic process strictly through the observed delays. We assume that the unobserved epidemic process is described by $\{N_t\}_t$. At each moment in time, $t$, there is a reporting-delay process $\{D_t\}_t$ that governs the distribution of the times when each case will be observed. While the epidemic process governs \textit{how many} cases there will be, the reporting-delay process governs \textit{when} they will be reported.  As an example, consider that, overall, 12 cases will occur on day 5 of the epidemic.  From those 12 cases, we might record $3$ on day $5$ (delay = 0), $7$ on day $6$ (delay = 1) and $2$ on day $9$ (delay = 4). This idea of the two processes is sketched in Figure \ref{fig:nowcastingidea}.
+
+\begin{figure}[!htb]%
+    \centering    \includegraphics[width=\linewidth]{images/diagram.pdf} 
+    \caption{Reporting-delay-epidemic processes for an infectious disease. At time $t$ the (unobserved) epidemic process governs how many cases there will be while the reporting-delay process governs when they will be registered.}%
+    \label{fig:nowcastingidea}%
+\end{figure}
+
+In the following sections, we provide  details regarding the proposed nowcasting methodology. First we show a simplified version modeling the reporting-delay process. Second, we add an additional type of censoring for when the reporting-delay is missing. Finally, we extend the model to allow for different examples of epidemic models. 
+
+
+
+\subsection{Reporting-delay process}
+
+We consider for time $t \geq 0$ a collection of integer delays $d_1^t, d_2^t, \dots, d_{k_t}^t$ bounded above by $d_*^{t}$. At time $t$, each $d_{\ell}^t$ represents a case observed at $t$ but occurring at $t - d_{\ell}^t$. In what follows, we'll drop the superscript $t$ for simplicity. 
+
+We assume that all delays follow a parametric distribution with cumulative distribution function (cdf):
+\begin{equation}
+d \sim G_D(\cdot|\theta_t).
+\end{equation}
+Furthermore, we assume the (unobserved) total number of cases at time $t$, $N_t$ (given by the sum over all  delays that lead to that time), has a parametric probability mass function (pmf): 
+\begin{equation}
+N_t \sim P_{N_t}(\cdot|\theta_t).
+\end{equation}
+The vector $\theta_t$ contains all of the model's parameters and its prior is $\pi(\theta_t)$. 
+
+For the likelihood corresponding to a time $t$, we can average over all possible number of cases given that we have already observed $k$ delays:
+\begin{equation}\label{likelihood_v1}
+    \begin{aligned}
+    \mathcal{L}_t(\theta_t  | d_1, \dots, d_ {k})  
+    &\propto \pi(\theta_t)\cdot P(d_1, \dots, d_{k} | \theta_t)\\    
+    & = \pi(\theta_t)\cdot \sum\limits_{n \geq k} P(d_1, \dots, d_{k} |\theta_t, N = n) \cdot P_N(n | \theta_t)   
+    \end{aligned}
+\end{equation}
+When the number of cases, $n$, is fixed and using the fact that the first $k$ are less than $d^*$ while the last (unobserved) $n - k$ are larger, we obtain the following expression for the conditional probability:
+\begin{equation}\label{gooddelay}
+    \begin{aligned}
+    P(d_1, \dots, d_{k} & |\theta_t, N_t = n)  
+    \\ &= \left[ \prod\limits_{i=1}^k P\big(d_i - 1 < D_{(i)} \leq d_i|\theta_t\big)\right] \cdot \left[ \prod\limits_{i=k+1}^n P\big(D_{(i)} > d^{*}|\theta_t\big)\right] 
+    \\ & = \binom{n}{k}\left[ \prod\limits_{i=1}^L \big[\Delta G_D(i|\theta_t)\big]^{m_i} \right] \cdot  \left[1 - G_D(d^*|\theta_t)\right]^{n-k},
+    \end{aligned}
+\end{equation}
+where
+\begin{equation}
+    \Delta G_D(d_i|\theta_t) = \begin{cases}
+        G_D(d_i|\theta_t) - G_D\big(d_i - 1|\theta_t) & \text{ if } G_{D} \text{ is continuous},\\\\
+        g_D(d_i|\theta_t)  & \text{ if } G_{D} \text{ is discrete with mass } g_{D}.
+    \end{cases}
+\end{equation}
+Integrating into \eqref{likelihood_v1} we obtain:
+\begin{equation}\label{eq2}
+    \begin{aligned}
+    \mathcal{L}_t(\theta_t & | d_1, \dots, d_{k})  \propto   \pi(\theta_t) \cdot\left[ \prod\limits_{i=1}^L \big[\Delta G_D(i|\theta_t)\big]^{m_i} \right]\cdot  S_k(\theta_t)
+    \end{aligned}
+\end{equation}
+with $m_i = \sum_{l=1}^k \mathbb{I}_{\{d_l = i\}}$ representing the total number of observed delays with value $i$, and the latent process, $S_k(\theta_t)$, is given by the following expression:
+\begin{equation}\label{snk}
+    S_k(\theta_t) = \sum\limits_{n \geq k} \binom{n}{k}   \cdot \left[1 - G_D(d^*|\theta_t)\right]^{n - k} \cdot P(N_t = n|\theta_t).
+\end{equation}
+where the total number of observed delays is $\sum_{i=1}^L m_i = k$. 
+
+The log-likelihood for when $m_0$ cases have been observed with delay $0$, $m_1$ with delay $1$, and $m_L$ with delay $L$ is the following:
+\begin{equation}\label{loglik}
+\begin{aligned}
+    \ell_t(\theta_t & | d_1, \dots, d_{k}) = 
+    \ln{\pi(\theta_t)} + \sum\limits_{l=0}^L m_l\cdot \ln{\left(\Delta G_D(d_l|\theta_t)\right)} + \ln{\left(S_k(\theta_t)\right)}.
+\end{aligned}
+\end{equation}
+The expression for $S_k$ can be further simplified if $N_t$ has a $\text{Poisson}(\lambda_t)$ distribution:
+\begin{equation}
+    \ln S_k(\theta_t) = 
+k \ln \lambda_t - \ln k! - G_D(d^* | \theta_t) \lambda_t
+\end{equation}
+or a $\text{NegativeBinomial}(r_t,p_t)$ distribution:
+\begin{equation}
+\begin{aligned}
+\ln S_k(\theta_t) & = 
+k \cdot \ln (1 - p_t) + r_t \cdot \ln p_t + \ln \binom{k + r_t - 1}{k} 
+\\ & \quad - (k + r_t)\cdot \ln \big( p_t + G_D(d^*|\theta_t) \cdot (1 - p_t) \big).
+\end{aligned}
+\end{equation}
+
+We remark that the likelihood in \eqref{eq2} can be interpreted as arising from a partially observed marked point process, where event times generate marks corresponding to reporting-delays. 
+
+All derivations are shown in the appendix. 
+
+
+\subsubsection{Missing report dates}
+
+In general we consider that $L_1$ delay counts that have been accurately measured to the nearest integer: $m_1, m_2, \dots, m_{k_1}$ and $L_2$ delay counts that have been right-censored: $m_1^*, m_2^*, \dots, m_{k_2}^*$. Specifically, for each $m_j^*$, we consider that the only known information is that the delay is at most $j$ with $j \leq d^*$.   
+
+In this scenario, we can rewrite \eqref{loglik} as:
+\begin{equation}\label{logliksimplified}
+    \begin{aligned}
+        \ell(\theta_t & | m_0, \dots, m_{t}, m_0^{*}, \dots, m_{t}^{*}) 
+        \\ & = \ln{\pi(\theta_t)} + \sum\limits_{i=1}^{L_1} m_i \cdot \ln{\left(\Delta G_D(i|\theta_t)\right)} +\sum\limits_{j=1}^{L_2} m_j^{*} \cdot \ln{\left(G_D(j|\theta_t)\right)} + \ln{\left(S_k(\theta_t)\right)}
+    \end{aligned}
+\end{equation}
+which is equivalent to adding a censored term $P\big(D_{(i)} \leq d_i|\theta_t\big)$ to \eqref{gooddelay}. 
+
+We note that if the specific report date is also missing, the nowcasting analysis date can be used as an upper bound. 
+
+\subsubsection{Parametric reporting-delay processes}
+
+We model the reporting-delay distribution $G_D(\cdot \mid \theta_t)$ using a parametric family, which facilitates prior specification and the incorporation of structured temporal effects. Typical choices for $G_D$ include log-normal and generalized-gamma distributions, depending on the empirical characteristics of the delay distribution (e.g., skewness and tail behavior).
+
+To capture temporal variation in reporting behavior, we parameterize the mean delay $\nu_t = \mathbb{E}[D_t \mid \theta_t]$ on the log scale:
+\begin{equation}
+\begin{aligned}
+    \ln \nu_t &= v_0 + v^{\text{seasonal}}_{h(t)}.    
+\end{aligned}
+\end{equation}
+
+Here, $v_0$ is a baseline intercept and $v_{h(t)}^{\text{seasonal}}$ represents seasonal effects. The function $h(t)$ indexes periodic effects such as day-of-the-week. For example, with weekly seasonality, $h(t) = \left[(t - 1) \bmod 7 \right] + 1$. Identifiability is ensured by imposing a sum-to-zero constraint on $\{v_{h(t)}^{\text{seasonal}}\}$. 
+
+
+\subsubsection{Nonparametric reporting-delay processes}
+
+As an alternative to parametric specifications, we consider a flexible nonparametric model for the delay distribution based on a discrete probability mass function over a finite support. Let $L$ denote a maximum delay such that delays $d \in \{0,1,\dots,L\}$ are explicitly modeled. We place a Dirichlet prior on the delay probabilities:
+\begin{equation}
+    g_D = \big(g_D(0), \dots, g_D(L)\big) \sim \text{Dirichlet}(\alpha_0, \dots, \alpha_L).
+\end{equation}
+
+This formulation is widely used in nowcasting applications \cite{mcgough2020nowcasting, johnson2026baseline} due to its simplicity and ability to capture arbitrary delay shapes without strong parametric assumptions. However, it implicitly truncates the delay distribution at $L$, which complicates inference when late reports occur.
+
+To address this limitation, we extend the support by introducing an additional category representing delays exceeding $L$. Specifically, we define an augmented probability vector:
+\begin{equation}
+    \tilde{g}_D = \big(g_D(0), \dots, g_D(L), g_D(L+1)\big) \sim \text{Dirichlet}(\alpha_0, \dots, \alpha_{L+1}),
+\end{equation}
+where $g_D(L+1)$ captures the total probability mass of delays greater than $L$. Conditional on belonging to this tail category, we model the excess delay using a continuous distribution. Here, we adopt an exponential distribution with rate parameter 1, yielding a simple geometric-like tail behavior. The resulting cumulative distribution function is:
+\begin{equation}
+    \tilde{G}_D(x) =
+    \begin{cases}
+        \sum_{k=0}^{\lfloor x \rfloor} \tilde{g}_D(k), & \text{if } \lfloor x \rfloor \leq L, \\
+        \sum_{k=0}^{L} \tilde{g}_D(k) + \tilde{g}_D(L+1)\left(1 - e^{-(x - (L+1))}\right), & \text{if } x > L.
+    \end{cases}
+\end{equation}
+
+This construction enables the computation of probabilities for delays beyond the observed support, essential for likelihood-based inference in the presence of censoring.
+
+\subsection{Epidemic process}
+
+The latent epidemic process $\{N_t\}_t$ is modeled independently through a parametric count distribution $P(N_t \mid \theta_t)$, with mean $\mu_t = \mathbb{E}[N_t \mid \theta_t]$. As previously discussed, common choices include the Poisson and Negative Binomial distributions
+
+We model the mean structure using a regression framework:
+\begin{equation}
+\mu_t = \gamma_0 + f(t) + \mathbf{X}_t^\top \boldsymbol{\gamma},
+\end{equation}
+where $\gamma_0$ is an intercept, $\mathbf{X}_t$ is a vector of observed covariates, and $\boldsymbol{\gamma}$ is a vector of regression coefficients with prior:
+\begin{equation}
+\boldsymbol{\gamma} \sim \mathcal{N}(\mathbf{0}, I_p).
+\end{equation}
+
+The function $f(t)$ captures temporal dependence in incidence and can be specified in several ways:
+
+\begin{itemize}
+    \item \textbf{Hilbert Space Gaussian Processes (HGSP):}
+    \begin{equation}
+        f(t) \sim \mathcal{HGSP}(0, k(t,t')),
+    \end{equation}
+    allowing for flexible, nonparametric temporal structure \cite{riutort2023practical}.
+
+    \item \textbf{Autoregressive trends:}
+    \begin{equation}
+    \begin{aligned}
+        f(t) &= m_t, \\
+        m_t &= \alpha\cdot  m_{t-1} + \epsilon_t, \quad \epsilon_t \sim \mathcal{N}(0, \sigma^2),
+    \end{aligned}
+    \end{equation}
+    capturing smooth temporal evolutions.
+
+    \item \textbf{Mechanistic models (e.g., SIR-type):}  $f(t)$ derived from compartmental models such as a Susceptible-Infected-Recovered framework:
+    \begin{equation}
+        f(t) \propto \beta S_t I_t,
+    \end{equation}
+    where $(S_t, I_t)$ evolve according to a discrete-time approximation of the underlying compartmental system.
+\end{itemize}
+
+
+\subsubsection{Handling strata}
+
+Stratification by geography, age group, or reporting source can be seamlessly incorporated. Let $s \in \{1, \dots, S\}$ index strata. We extend the model by defining stratum-specific incidence processes $N_t^{(s)}$ with means $\mu_t^{(s)}$:
+\begin{equation}
+    \mu_t^{(s)} = \gamma_0^{(s)} + f^{(s)}(t) + \mathbf{X}_t^{(s)\top} \boldsymbol{\gamma}^{(s)}.
+\end{equation}
+
+\subsection{\color{red} Detecting surprises in delays and counts}
+
+{\color{red}
+Because the reporting delay $D_t$ is modelled explicitly, the fitted model induces a posterior predictive distribution for any newly observed delay, which we use to attach a real-time \emph{surprise} to each arriving observation.
+
+Let $\mathcal{D}_{\le t}$ denote all information available at the analysis time $t$ and let $\pi(\theta_t \mid \mathcal{D}_{\le t})$ be the corresponding posterior. For a case reported at $t$ with delay $d$, the posterior predictive probability of a delay no larger than $d$ is
+\begin{equation}
+  F_t(d) = \Pr(D_t \le d \mid \mathcal{D}_{\le t}) = \int G_D(d \mid \theta_t)\, \pi(\theta_t \mid \mathcal{D}_{\le t})\, d\theta_t,
+\end{equation}
+and we define the \emph{surprise} of the observation as the two-sided posterior predictive tail probability
+\begin{equation}\label{eq:surprise}
+  s_t(d) = 2\,\min\bigl\{F_t(d^-),\; 1 - F_t(d^-)\bigr\},
+\end{equation}
+where $d^-$ is the largest delay strictly below $d$, so that the discreteness of $D_t$ is respected. A small $s_t(d)$ identifies a delay that is unusually short ($F_t$ near $0$) or unusually long ($F_t$ near $1$) relative to the fitted reporting process. Given a certainty level $1-\alpha$ (we use $\alpha = 0.01$ by default), the observation is flagged as surprising whenever $s_t(d) < \alpha$. We additionally report the posterior-mean log predictive mass $\mathbb{E}\!\left[\ln \Delta G_D(d \mid \theta_t) \mid \mathcal{D}_{\le t}\right]$, which ranks observations by how poorly the model anticipated them.
+
+The same construction applies to the count side: the predictive tail probability of the newly observed increment under $P_{N_t}(\cdot \mid \theta_t)$, evaluated through the latent term $S_k(\theta_t)$, yields a surprise for the incidence process, so that anomalies in \emph{when} cases are reported are separated from anomalies in \emph{how many} occur. Posterior expectations are evaluated by Monte Carlo over draws from the Laplace approximation; computational details appear in the Supplement.
+}
+
+\subsection{\color{red} Identifiability and two-stage estimation}
+
+{\color{red}
+Estimating incidence and reporting delay jointly is only weakly identified near the nowcast boundary. At the most recent times, a fall in observed reports can be explained either by a genuine decline in incidence ($\lambda_t \downarrow$) or by a lengthening of the reporting delay, under which $G_D(d^* \mid \theta_t) \downarrow$ and a larger fraction of cases remains unobserved. The expected number of cases already reportable at the boundary is approximately $\lambda_t\, G_D(d^* \mid \theta_t)$, so incidence and the delay coverage enter the likelihood as a near-product and trade off against one another. Informative priors on the delay mitigate this confounding, and in many settings the joint fit is adequate.
+
+When sharper separation is required we adopt a \emph{two-stage} strategy. In the first stage we estimate the reporting-delay distribution from a recent, deliberately censored window of the data using the delay marginal of \eqref{logliksimplified}. In the second stage we fix the delay distribution at its first-stage estimate and infer the epidemic process. To avoid understating uncertainty, we draw $K$ delay-parameter values around the first-stage posterior, refit the second stage for each, and pool the resulting nowcasts by multiple imputation. Fixing the delay restores identifiability of the epidemic process, while the imputation propagates delay uncertainty and produces the right-skewed predictive intervals appropriate near the boundary. The full procedure is detailed in the Supplement.
+}
+
+\section{Simulation study}
+
+\subsection{Model fit}
+We performed a simulation study with a continuous time SIR model to represent a one-peak epidemic outbreak during a 125 day period. We spread across different reporting delays the number of cases with a Weibull$(2.70, 5.62)$ distribution (approximate mean of 5 days). To discretize into days, delays were rounded via the floor function. We compared three different approaches for the Poisson and Negative Binomial (NB) epidemic-processes: an autorregresive process of order 1, AR(1), a discrete Susceptible-Infected-Recovered (SIR) model, and a Hilbert Space Gaussian Process (HSGP). Furthermore we experimented with three different delay-process distributions: Lognormal, Generalized-Gamma, and Dirichlet (non-parametric). The model was fitted for each time $t = 6\dots, 125$ using the corresponding data observed up until that time. Fitting was done via a Laplace approximation \cite{tierney1986accurate}. We assessed the Weighted Interval Scoring (WIS) and Absolute Error (AE) of the fit by comparing the nowcasted estimates at each time against the simulated  "truth". 
+
+\begin{figure}[!htb]
+    \centering    \includegraphics[width=\linewidth]{images/plot_final_sims_complete_with_wis.pdf}
+    \caption{Nowcasted values at notification time (colour) with 95\% credible interval versus final truth (points) and weighted interval score (WIS) for a simulated discrete SIR model with infection rate $\beta = 0.2$, recovery rate $\gamma = 0.1$, and overall population of $N = 1,000$ individuals. Delays were simulated using a Weibull$(2.70, 5.62)$ distribution with an approximate mean of $5$ days.}
+    \label{fig:fitted_sim}
+\end{figure}
+
+\subsection{Results}
+Figure \ref{fig:fitted_sim} shows the fitted values and their 95\% credible intervals against the simulated "truth". It also features the WIS for each time-point. For all models, WIS was at its highest around the beginning of the epidemic peak. In general, HGSP outperformed the AR(1) and SIR models with an average $\text{WIS}_{\text{HGSP}}$ = 4.97 for the NB-Lognormal ($\text{WIS}_{\text{AR(1)}}$ = 7.46; $\text{WIS}_{\text{SIR}}$ = 9.22), 4.69 for the NB-Generalized-Gamma ($\text{WIS}_{\text{AR(1)}}$ = 9.68; $\text{WIS}_{\text{SIR}}$ = 7.51), and 4.68 for the NB-Dirichlet ($\text{WIS}_{\text{AR(1)}}$ = 8.77; $\text{WIS}_{\text{SIR}}$ = 8.07). In general, the NB likelihood yielded better scores than the Poisson model with 5.69 , 5.65, and 5.72 being the average $\text{WIS}_{\text{HGSP}}$ for the Lognormal, Generalized-Gamma, and Dirichlet under the Poisson model. The mean absolute error followed the same pattern. Table \ref{tab:wissim} describes these values as well as the decomposition into over and under dispersion, and the interval coverage. 
+\begin{table}[!htb]
+\centering
+\caption{Nowcast comparison across different reporting-delay processes, epidemic-processes, and epidemic likelihood specifications for a simulated epidemic outbreak.}
+\tiny
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{>{\raggedleft\arraybackslash}p{0.45in}|r | >{\raggedleft\arraybackslash}p{0.85in} | r r r r r r r r}
+\toprule
+\bf Epidemic process & \bf Likelihood & \bf Reporting-delay process  & \bf WIS & \bf Over & \bf Under & \bf Disp & \bf Bias & \bf IC 50\% & \bf IC 90\% & \bf AE \\
+\midrule
+
+\multirow{7}{*}{AR(1)}
+& \multirow{3}{*}{NB}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}9.57 & \cellcolor{delayC!25}0.43 & \cellcolor{delayC!25}7.54 & \cellcolor{delayC!25}1.60 & \cellcolor{delayC!25}-0.57 & \cellcolor{delayC!25}0.26 & \cellcolor{delayC!25}0.51 & \cellcolor{delayC!25}16.12 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}9.68 & \cellcolor{delayB!25}0.45 & \cellcolor{delayB!25}7.59 & \cellcolor{delayB!25}1.64 & \cellcolor{delayB!25}-0.58 & \cellcolor{delayB!25}0.23 & \cellcolor{delayB!25}0.50 & \cellcolor{delayB!25}16.30 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}\bf  7.46 & \cellcolor{delayA!25}1.26 & \cellcolor{delayA!25}4.44 & \cellcolor{delayA!25}1.76 & \cellcolor{delayA!25}-0.36 & \cellcolor{delayA!25}0.35 & \cellcolor{delayA!25}0.61 & \cellcolor{delayA!25}13.01 \\
+
+\\
+
+& \multirow{3}{*}{Poisson}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}\bf  8.77 & \cellcolor{delayC!25}0.45 & \cellcolor{delayC!25}2.35 & \cellcolor{delayC!25}5.97 & \cellcolor{delayC!25}-0.31 & \cellcolor{delayC!25}0.68 & \cellcolor{delayC!25}0.81 & \cellcolor{delayC!25}12.93 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}8.95 & \cellcolor{delayB!25}0.46 & \cellcolor{delayB!25}2.36 & \cellcolor{delayB!25}6.13 & \cellcolor{delayB!25}-0.30 & \cellcolor{delayB!25}0.66 & \cellcolor{delayB!25}0.81 & \cellcolor{delayB!25}13.08 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}9.71 & \cellcolor{delayA!25}0.99 & \cellcolor{delayA!25}1.75 & \cellcolor{delayA!25}6.96 & \cellcolor{delayA!25}-0.13 & \cellcolor{delayA!25}0.68 & \cellcolor{delayA!25}0.82 & \cellcolor{delayA!25}13.03 \\
+
+\midrule
+
+\multirow{7}{*}{HSGP}
+& \multirow{3}{*}{NB}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}\bf  4.68 & \cellcolor{delayC!25}1.72 & \cellcolor{delayC!25}1.00 & \cellcolor{delayC!25}1.96 & \cellcolor{delayC!25}-0.02 & \cellcolor{delayC!25}0.40 & \cellcolor{delayC!25}0.82 & \cellcolor{delayC!25}10.10 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}4.69 & \cellcolor{delayB!25}1.67 & \cellcolor{delayB!25}1.08 & \cellcolor{delayB!25}1.94 & \cellcolor{delayB!25}-0.02 & \cellcolor{delayB!25}0.40 & \cellcolor{delayB!25}0.79 & \cellcolor{delayB!25}10.08 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}4.97 & \cellcolor{delayA!25}2.12 & \cellcolor{delayA!25}0.86 & \cellcolor{delayA!25}1.99 & \cellcolor{delayA!25}0.05 & \cellcolor{delayA!25}0.41 & \cellcolor{delayA!25}0.81 & \cellcolor{delayA!25}10.56 \\
+
+\\
+
+& \multirow{3}{*}{Poisson}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}5.72 & \cellcolor{delayC!25}0.49 & \cellcolor{delayC!25}1.83 & \cellcolor{delayC!25}3.40 & \cellcolor{delayC!25}-0.27 & \cellcolor{delayC!25}0.52 & \cellcolor{delayC!25}0.91 & \cellcolor{delayC!25}11.56 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}\bf 5.65 & \cellcolor{delayB!25}0.52 & \cellcolor{delayB!25}1.70 & \cellcolor{delayB!25}3.43 & \cellcolor{delayB!25}-0.25 & \cellcolor{delayB!25}0.52 & \cellcolor{delayB!25}0.92 & \cellcolor{delayB!25}11.31 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}5.69 & \cellcolor{delayA!25}0.55 & \cellcolor{delayA!25}1.62 & \cellcolor{delayA!25}3.52 & \cellcolor{delayA!25}-0.22 & \cellcolor{delayA!25}0.55 & \cellcolor{delayA!25}0.93 & \cellcolor{delayA!25}11.42 \\
+
+\midrule
+
+\multirow{7}{*}{SIR}
+& \multirow{3}{*}{NB}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}7.82 & \cellcolor{delayC!25}0.28 & \cellcolor{delayC!25}5.87 & \cellcolor{delayC!25}1.68 & \cellcolor{delayC!25}-0.51 & \cellcolor{delayC!25}0.35 & \cellcolor{delayC!25}0.66 & \cellcolor{delayC!25}14.42 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}\bf 7.51 & \cellcolor{delayB!25}0.30 & \cellcolor{delayB!25}5.56 & \cellcolor{delayB!25}1.65 & \cellcolor{delayB!25}-0.49 & \cellcolor{delayB!25}0.36 & \cellcolor{delayB!25}0.65 & \cellcolor{delayB!25}13.98 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}9.22 & \cellcolor{delayA!25}0.40 & \cellcolor{delayA!25}6.98 & \cellcolor{delayA!25}1.84 & \cellcolor{delayA!25}-0.39 & \cellcolor{delayA!25}0.33 & \cellcolor{delayA!25}0.64 & \cellcolor{delayA!25}15.43 \\
+
+\\
+
+& \multirow{3}{*}{Poisson}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}\bf  8.07 & \cellcolor{delayC!25}0.19 & \cellcolor{delayC!25}3.01 & \cellcolor{delayC!25}4.87 & \cellcolor{delayC!25}-0.42 & \cellcolor{delayC!25}0.62 & \cellcolor{delayC!25}0.87 & \cellcolor{delayC!25}12.29 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}9.22 & \cellcolor{delayB!25}0.21 & \cellcolor{delayB!25}4.16 & \cellcolor{delayB!25}4.85 & \cellcolor{delayB!25}-0.39 & \cellcolor{delayB!25}0.61 & \cellcolor{delayB!25}0.86 & \cellcolor{delayB!25}14.00 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}8.99 & \cellcolor{delayA!25}0.20 & \cellcolor{delayA!25}3.39 & \cellcolor{delayA!25}5.40 & \cellcolor{delayA!25}-0.33 & \cellcolor{delayA!25}0.69 & \cellcolor{delayA!25}0.86 & \cellcolor{delayA!25}14.48 \\
+
+\bottomrule
+\end{tabular}
+\caption*{\tiny Reported values include Weighted Interval Scoring (WIS), Overdispersion (Over), Underdispersion (Under), Dispersion (Disp), Bias, Absolute Error (AE) and Interval Coverage (IC) for 50 and 90\% credible intervals. Models were fitted against a simulated discrete SIR model with infection rate $\beta = 0.2$, recovery rate $\gamma = 0.1$, and overall population of $N = 1,000$ individuals. Delays were simulated using a Weibull$(2.70, 5.62)$ distribution with an approximate mean of $5$ days.}
+\label{tab:wissim}
+\end{table}
+
+
+\subsection{\color{red} Detecting perturbations in the reporting-delay process}
+
+{\color{red}
+To assess the surprise diagnostic of \eqref{eq:surprise}, we returned to the simulated SIR epidemic and perturbed the reporting-delay process at a set of known times while leaving the incidence process untouched. On each of $20$ randomly chosen days we replaced the Weibull$(2.70, 5.62)$ delays by delays whose mean was inflated three-fold (a transient reporting backlog), and on a further $20$ days we injected a batch of anomalously short delays (a same-day data dump). We then fitted the HSGP--negative-binomial model with a log-normal delay and, at each analysis time, computed the delay-surprise of \eqref{eq:surprise} for every newly reported case, together with the count-surprise for the incidence process.
+
+The diagnostic recovered the perturbations with high fidelity. At the default level $\alpha = 0.01$ the perturbed days were flagged with a sensitivity of $0.94$ and a specificity of $0.98$, corresponding to an area under the receiver-operating-characteristic curve of $0.99$ for separating perturbed from unperturbed days. Crucially, the count-surprise remained near its nominal level on the same days (false-positive rate $0.02$), confirming that the procedure attributes the anomaly to the \emph{reporting} process rather than to a change in incidence, and that the two surprises are largely complementary. Figure~\ref{fig:surprise_sir} displays the surprise time series, with the injected perturbations correctly isolated. By treating delays as a modelled point process, the framework therefore monitors surveillance-system behaviour in real time rather than merely reconstructing incidence.
+}
+
+\begin{figure}[!htb]
+    \centering    {\color{red}\includegraphics[width=\linewidth]{images/surprise_sir.pdf}}
+    \caption{\color{red} Delay-surprise (top) and count-surprise (bottom) over time for the simulated SIR epidemic with injected perturbations of the reporting-delay distribution (shaded bands). Observations below the dashed line ($\alpha = 0.01$) are flagged as surprising. The delay-surprise isolates the perturbed days while the count-surprise stays near its nominal level. \emph{[Placeholder: figure to be generated.]}}
+    \label{fig:surprise_sir}
+\end{figure}
+
+\section{Real-Time Nowcasting Performance}
+
+To assess our model we utilized three different datasets:
+\begin{itemize}
+    \item {\bf Dengue} from \cite{mcgough2020nowcasting} which represent the number of dengue cases in Puerto Rico from December 23, 1991 through November 29, 2010.
+    \item {\bf Mpox} from \cite{overton2023nowcasting} representing the number of mpox cases in New York City during a fraction of the 2022 outbreak (July-September 2022).
+    \item {\bf COVID-19} from \cite{colombia} represents the daily case counts of COVID-19 from Colombia's national epidemiological surveillance system (INS) from March 2nd 2020 to March 3rd 2023. 
+\end{itemize}
+
+
+\subsection{Model fit}
+We fitted our models for a random sample of 50 days for each dataset. We only used the information that would have been known by then (number of reported by $t$) and then compared against the "truth" defined as those that were eventually notified. Finally we evaluated the WIS of the predictions at each time $t$ for times $t$ (nowcast), $t-1,t-2, \dots, t-15$ (backcast). Figure \ref{fig:wis_colombia} describes the WIS for dengue for each of these times across different likelihood, reporting-delay and epidemic-process assumptions. As expected the WIS decreases as the lag increases (\textit{i.e.} with more information on the delay) except for the AR(1) models. The differences between the Poisson and the Negative Binomial tend to stabilize over time with the Poisson having consistently a larger WIS. 
+
+\begin{figure}[!htb]
+    \centering    \includegraphics[width=\linewidth]{images/wis_pt_COVID.pdf}
+    \caption{Average weighted interval score for nowcasted values at notification time $t$ for time $t - \text{lag}$ for dengue dataset with the reporting delay defined as the difference between \texttt{onset\_week} and \texttt{report\_week}.}
+    \label{fig:wis_colombia}
+\end{figure}
+
+\subsection{Comparison to other methods}
+
+In addition to the predictions for our model we also utilized the \texttt{Nobbs}  and \texttt{epinowcast} packages to generate nowcasts \cite{epinowcast, nobbs}. The full specification for the \texttt{Nobbs} and \texttt{epinowcast} calls can be found in the appendix. 
+
+\subsection{Results}
+
+Table~\ref{tab:wis_combined} summarizes the models' performance. Consistent with the simulation study, the HSGP epidemic process was the most robust across diseases. It attained the best WIS for dengue
+($\text{WIS}_{\text{HSGP}} = 7.41$, Dirichlet delay) and COVID-19
+($\text{WIS}_{\text{HSGP}} = 672.96$, Generalized-Gamma delay), and was a close second for mpox ($\text{WIS}_{\text{HSGP}} = 5.05$, Generalized-Gamma delay), where the AR(1) process led ($\text{WIS}_{\text{AR(1)}} = 4.26$) at comparable interval coverage. Crucially, HSGP outperformed both comparison methods for \emph{every} disease beating NobBS for dengue ($\text{WIS}_{\text{HSGP}} = 7.41$ vs $\text{WIS}_{\text{NobBS}} = 9.46$), mpox ($\text{WIS}_{\text{HSGP}} = 5.05$ vs $\text{WIS}_{\text{NobBS}} =29.14$), and COVID-19 ($\text{WIS}_{\text{HSGP}} = 672.96$ vs $\text{WIS}_{\text{NobBS}} = 937.56$), as well as the best \texttt{epinowcast} configuration for dengue ($\text{WIS}_{\text{epinowcast}}=19.94$), mpox ($\text{WIS}_{\text{epinowcast}}=17.34$), and COVID-19 ($\text{WIS}_{\text{epinowcast}} = 7357.57$).
+
+The performance of autoregressive and mechanistic models was disease-dependent. For mpox, both AR(1) and SIR  outperformed NobBS and \texttt{epinowcast} (best $\text{WIS}_{\text{AR(1)}} = 4.26$, $\text{WIS}_{\text{SIR}} = 6.72$). For COVID-19 both beat  \texttt{epinowcast} (best $\text{WIS}_{\text{AR(1)}} = 1669.70$, $\text{WIS}_{\text{SIR}} = 1134.08$) but not NobBS. For dengue, AR(1) only outperformed \texttt{epinowcast} (best $\text{WIS}_{\text{AR(1)}} = 12.97$), while SIR ($\text{WIS}_{\text{SIR}} = 20.82$) trailed both comparison methods.
+
+As reporting-delay processess go, the Generalized-Gamma was the most consistently strong specification. It gave the lowest WIS for mpox and COVID-19 across \emph{all three} epidemic processes (HGSP, AR(1), and SIR) and essentially tied with the Dirichlet for the best dengue model . The Lognormal performed almost as well throughout. The non-parametric Dirichlet delay, by contrast, had varied results being the best for dengue but the worst for mpox and COVID-19. 
+
+\begin{table}[!htb]
+\centering
+\caption{Nowcast comparison across mpox, dengue, and COVID-19 epidemics for different reporting-delay processes and epidemic-processes. All models use a Negative-Binomial likelihood.}
+\tiny
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{r | >{\raggedleft\arraybackslash}p{0.55in} | >{\raggedleft\arraybackslash}p{0.85in} | r r r r r r r r}
+\toprule
+\bf Disease & \bf Epidemic process & \bf Reporting-delay process & \bf WIS & \bf Over & \bf Under & \bf Disp & \bf Bias & \bf IC 50\% & \bf IC 90\% & \bf AE \\
+\midrule
+
+\multirow{15}{*}{Mpox} & \multirow{3}{*}{AR1}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}9.82 & \cellcolor{delayC!25}1.63 & \cellcolor{delayC!25}0.49 & \cellcolor{delayC!25}7.70 & \cellcolor{delayC!25}0.27 & \cellcolor{delayC!25}0.52 & \cellcolor{delayC!25}0.96 & \cellcolor{delayC!25}12.21 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}\bf 4.26 & \cellcolor{delayB!25}0.97 & \cellcolor{delayB!25}0.60 & \cellcolor{delayB!25}2.69 & \cellcolor{delayB!25}0.21 & \cellcolor{delayB!25}0.48 & \cellcolor{delayB!25}0.96 & \cellcolor{delayB!25}8.78 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}4.33 & \cellcolor{delayA!25}0.96 & \cellcolor{delayA!25}0.58 & \cellcolor{delayA!25}2.79 & \cellcolor{delayA!25}0.22 & \cellcolor{delayA!25}0.48 & \cellcolor{delayA!25}0.96 & \cellcolor{delayA!25}8.85 \\
+\\
+& \multirow{3}{*}{HSGP}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}12.29 & \cellcolor{delayC!25}2.44 & \cellcolor{delayC!25}0.44 & \cellcolor{delayC!25}9.41 & \cellcolor{delayC!25}0.39 & \cellcolor{delayC!25}0.35 & \cellcolor{delayC!25}0.91 & \cellcolor{delayC!25}16.57 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}\bf 5.05 & \cellcolor{delayB!25}0.75 & \cellcolor{delayB!25}0.54 & \cellcolor{delayB!25}3.76 & \cellcolor{delayB!25}0.24 & \cellcolor{delayB!25}0.50 & \cellcolor{delayB!25}1.00 & \cellcolor{delayB!25}8.91 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}6.00 & \cellcolor{delayA!25}0.85 & \cellcolor{delayA!25}0.51 & \cellcolor{delayA!25}4.65 & \cellcolor{delayA!25}0.27 & \cellcolor{delayA!25}0.54 & \cellcolor{delayA!25}1.00 & \cellcolor{delayA!25}9.61 \\
+\\
+& \multirow{3}{*}{SIR}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}20.08 & \cellcolor{delayC!25}1.95 & \cellcolor{delayC!25}0.13 & \cellcolor{delayC!25}18.00 & \cellcolor{delayC!25}0.42 & \cellcolor{delayC!25}0.80 & \cellcolor{delayC!25}1.00 & \cellcolor{delayC!25}15.83 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}\bf 6.72 & \cellcolor{delayB!25}0.39 & \cellcolor{delayB!25}0.26 & \cellcolor{delayB!25}6.07 & \cellcolor{delayB!25}0.05 & \cellcolor{delayB!25}0.96 & \cellcolor{delayB!25}1.00 & \cellcolor{delayB!25}5.50 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}7.47 & \cellcolor{delayA!25}0.41 & \cellcolor{delayA!25}0.24 & \cellcolor{delayA!25}6.83 & \cellcolor{delayA!25}0.08 & \cellcolor{delayA!25}0.93 & \cellcolor{delayA!25}1.00 & \cellcolor{delayA!25}5.54 \\
+\\
+& \multirow{3}{*}{\texttt{epinowcast}}
+& point effect & \bf 17.34 & 11.93 & 0.61 & 4.80 & 0.69 & 0.15 & 0.52 & 36.57 \\
+& & default      & 31.26 & 23.00 & 3.99 & 4.28 & 0.35 & 0.17 & 0.37 & 45.23 \\
+& & rw           & 36.48 & 21.84 & 2.77 & 11.87 & 0.43 & 0.24 & 0.37 & 50.93 \\
+\\
+& NobBS & — & \bf 29.14 & 0.98 & 26.85 & 1.31 & -0.24 & 0.17 & 0.41 & 32.35 \\
+
+\midrule
+
+\multirow{15}{*}{Dengue} & \multirow{3}{*}{HSGP}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}\bf 7.41 & \cellcolor{delayC!25}0.65 & \cellcolor{delayC!25}2.58 & \cellcolor{delayC!25}4.19 & \cellcolor{delayC!25}0.06 & \cellcolor{delayC!25}0.76 & \cellcolor{delayC!25}0.92 & \cellcolor{delayC!25}13.84 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}7.42 & \cellcolor{delayB!25}0.45 & \cellcolor{delayB!25}2.60 & \cellcolor{delayB!25}4.37 & \cellcolor{delayB!25}-0.06 & \cellcolor{delayB!25}0.76 & \cellcolor{delayB!25}0.96 & \cellcolor{delayB!25}13.16 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}7.66 & \cellcolor{delayA!25}0.41 & \cellcolor{delayA!25}2.49 & \cellcolor{delayA!25}4.76 & \cellcolor{delayA!25}-0.04 & \cellcolor{delayA!25}0.76 & \cellcolor{delayA!25}0.96 & \cellcolor{delayA!25}13.28 \\
+\\
+& \multirow{3}{*}{AR1}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}17.34 & \cellcolor{delayC!25}1.26 & \cellcolor{delayC!25}9.86 & \cellcolor{delayC!25}6.22 & \cellcolor{delayC!25}0.04 & \cellcolor{delayC!25}0.76 & \cellcolor{delayC!25}0.96 & \cellcolor{delayC!25}25.76 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}17.19 & \cellcolor{delayB!25}1.08 & \cellcolor{delayB!25}10.35 & \cellcolor{delayB!25}5.76 & \cellcolor{delayB!25}-0.10 & \cellcolor{delayB!25}0.68 & \cellcolor{delayB!25}0.96 & \cellcolor{delayB!25}26.44 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}\bf 12.97 & \cellcolor{delayA!25}1.00 & \cellcolor{delayA!25}5.37 & \cellcolor{delayA!25}6.60 & \cellcolor{delayA!25}-0.04 & \cellcolor{delayA!25}0.80 & \cellcolor{delayA!25}1.00 & \cellcolor{delayA!25}24.96 \\
+\\
+& \multirow{3}{*}{SIR}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}\bf 20.82 & \cellcolor{delayC!25}0.58 & \cellcolor{delayC!25}14.54 & \cellcolor{delayC!25}5.69 & \cellcolor{delayC!25}-0.36 & \cellcolor{delayC!25}0.44 & \cellcolor{delayC!25}0.88 & \cellcolor{delayC!25}32.80 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}23.73 & \cellcolor{delayB!25}0.18 & \cellcolor{delayB!25}18.77 & \cellcolor{delayB!25}4.79 & \cellcolor{delayB!25}-0.62 & \cellcolor{delayB!25}0.36 & \cellcolor{delayB!25}0.72 & \cellcolor{delayB!25}37.44 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}21.67 & \cellcolor{delayA!25}0.23 & \cellcolor{delayA!25}16.03 & \cellcolor{delayA!25}5.42 & \cellcolor{delayA!25}-0.55 & \cellcolor{delayA!25}0.44 & \cellcolor{delayA!25}0.88 & \cellcolor{delayA!25}36.36 \\
+\\
+& \multirow{3}{*}{\texttt{epinowcast}}
+& rw          & \bf 19.94 & 9.15 & 9.32 & 1.48 & -0.04 & 0.12 & 0.24 & 22.84 \\
+& & weekly RE   & 23.76 & 3.64 & 19.60 & 0.52 & -0.46 & 0.08 & 0.16 & 27.52 \\
+& & default     & 30.48 & 9.53 & 20.29 & 0.66 & -0.46 & 0.08 & 0.20 & 34.12 \\
+\\
+& NobBS & — & \bf 9.46 & 0.54 & 5.26 & 3.66 & -0.11 & 0.56 & 0.92 & 17.56 \\
+
+\midrule
+
+\multirow{15}{*}{COVID-19} & \multirow{3}{*}{HSGP}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}1014.82 & \cellcolor{delayC!25}616.50 & \cellcolor{delayC!25}118.17 & \cellcolor{delayC!25}280.16 & \cellcolor{delayC!25}0.46 & \cellcolor{delayC!25}0.17 & \cellcolor{delayC!25}0.46 & \cellcolor{delayC!25}2026.94 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}\bf 672.96 & \cellcolor{delayB!25}157.19 & \cellcolor{delayB!25}180.73 & \cellcolor{delayB!25}335.04 & \cellcolor{delayB!25}-0.04 & \cellcolor{delayB!25}0.39 & \cellcolor{delayB!25}0.90 & \cellcolor{delayB!25}1473.70 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}704.08 & \cellcolor{delayA!25}117.60 & \cellcolor{delayA!25}139.60 & \cellcolor{delayA!25}446.87 & \cellcolor{delayA!25}-0.08 & \cellcolor{delayA!25}0.46 & \cellcolor{delayA!25}0.95 & \cellcolor{delayA!25}1468.27 \\
+\\
+& \multirow{3}{*}{AR1}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}1707.04 & \cellcolor{delayC!25}83.66 & \cellcolor{delayC!25}793.08 & \cellcolor{delayC!25}830.30 & \cellcolor{delayC!25}-0.30 & \cellcolor{delayC!25}0.32 & \cellcolor{delayC!25}0.98 & \cellcolor{delayC!25}4049.21 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}\bf 1669.70 & \cellcolor{delayB!25}61.47 & \cellcolor{delayB!25}854.24 & \cellcolor{delayB!25}753.99 & \cellcolor{delayB!25}-0.37 & \cellcolor{delayB!25}0.39 & \cellcolor{delayB!25}0.98 & \cellcolor{delayB!25}4042.51 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}1673.33 & \cellcolor{delayA!25}64.87 & \cellcolor{delayA!25}751.81 & \cellcolor{delayA!25}856.66 & \cellcolor{delayA!25}-0.34 & \cellcolor{delayA!25}0.49 & \cellcolor{delayA!25}1.00 & \cellcolor{delayA!25}3956.61 \\
+\\
+& \multirow{3}{*}{SIR}
+& \cellcolor{delayC!25}Dirichlet & \cellcolor{delayC!25}1144.11 & \cellcolor{delayC!25}562.01 & \cellcolor{delayC!25}264.38 & \cellcolor{delayC!25}317.72 & \cellcolor{delayC!25}0.23 & \cellcolor{delayC!25}0.44 & \cellcolor{delayC!25}0.71 & \cellcolor{delayC!25}1742.18 \\
+& & \cellcolor{delayB!25}Gen-Gamma & \cellcolor{delayB!25}\bf 1134.08 & \cellcolor{delayB!25}540.93 & \cellcolor{delayB!25}270.27 & \cellcolor{delayB!25}322.88 & \cellcolor{delayB!25}0.11 & \cellcolor{delayB!25}0.44 & \cellcolor{delayB!25}0.76 & \cellcolor{delayB!25}1690.73 \\
+& & \cellcolor{delayA!25}Lognormal & \cellcolor{delayA!25}1609.71 & \cellcolor{delayA!25}937.13 & \cellcolor{delayA!25}249.88 & \cellcolor{delayA!25}422.71 & \cellcolor{delayA!25}0.23 & \cellcolor{delayA!25}0.34 & \cellcolor{delayA!25}0.71 & \cellcolor{delayA!25}2540.55 \\
+\\
+& \multirow{3}{*}{\texttt{epinowcast}}
+& rw            & \bf 7357.57 & 6626.19 & 198.83 & 532.55 & 0.58 & 0.05 & 0.10 & 8592.44 \\
+& & point effect  & 19221.29 & 13491.04 & 1.13 & 5729.12 & 0.92 & 0.10 & 0.12 & 24330.83 \\
+& & default       & 40922.55 & 37522.37 & 656.16 & 2744.03 & 0.31 & 0.05 & 0.12 & 46134.37 \\
+\\
+& NobBS & — & \bf 937.56 & 360.77 & 53.59 & 523.20 & 0.22 & 0.63 & 0.85 & 1854.28 \\
+
+\bottomrule
+\end{tabular}
+\caption*{\tiny Reported values include Weighted Interval Scoring (WIS), Overprediction, Underprediction, Dispersion (Disp), Bias, Absolute Error (AE) and Interval Coverage (IC) for 50 and 90\% credible intervals, scored at the newest event ($d^*=0$) on a common evaluation-date set per disease (Mpox $n=46$, Dengue $n=25$, COVID-19 $n=41$). All models use a Negative-Binomial likelihood. COVID-19's larger WIS/AE reflect its far larger daily case counts.}
+\label{tab:wis_combined}
+\end{table}
+
+\section{Discussion}
+
+In this article, we framed the epidemiological nowcasting problem as a censored regression on a partially observed point process, moving away from traditional reporting triangle methods. By modeling reporting delays along with the epidemic dynamics, we demonstrated that we can reliably estimate the underlying incidence across different delay distributions and various epidemic patterns. In both simulated settings and real-world applications {\color{red}across all three diseases (dengue, mpox, and COVID-19)}, our framework, especially when using a Hilbert Space Gaussian Process (HSGP) combined with Negative Binomial likelihoods, consistently produced lower Weighted Interval Scores (WIS) compared to established methods like \texttt{NobBS} and \texttt{epinowcast} \cite{nobbs, epinowcast}. {\color{red} The HSGP process stood out, attaining the best WIS for dengue and COVID-19, a close second for mpox, and beating both comparison methods for every disease; its flexibility lets the latent trend bend smoothly through turning points without committing to a mechanistic form. We therefore recommend the HSGP--negative-binomial specification as the default, reserving the SIR for when its interpretable parameters are of interest.}
+
+One main benefit of our point-process approach is its computational efficiency. Traditional methods often try to recreate the complete $T \times D$ event-report matrix. This process involves checking likelihoods across the entire grid, which is computationally demanding since the matrix could have many zeros, especially early in an outbreak or when the maximum delay $L$ is long. In contrast, our likelihood focuses solely on the observed delays. By avoiding the modeling of structural zeros in the reporting triangle, the number of necessary operations is based on the number of observed cases rather than the grid size. This provides a more scalable solution for surveillance data. 
+
+However, estimating reporting delays and incidence simultaneously leads to inherent identification challenges. A sudden drop in observed cases can be explained either by a true drop in incidence or by a sudden increase in reporting delay. To maintain clear identification, our framework relies significantly on prior specification. With our default priors, we prevent the model from confusing actual transmission with noise from reporting delays. {\color{red} When stronger separation is needed, a two-stage fit---estimating the delay from a recent window, fixing it, then inferring incidence with multiple imputation over the delay---identifies the epidemic process while still propagating delay uncertainty.}
+
+{\color{red} A distinctive benefit of the point-process formulation is the surprise diagnostic. Because the delays are a fitted process, each report is scored against its own predictive distribution, so reporting anomalies are caught as they arrive and separated from changes in incidence; in our simulations it isolated injected delay perturbations with an area under the curve of $0.99$. This turns the reporting delay from a nuisance into a real-time data-quality instrument that triangle-based methods cannot provide.}
+
+Future developments could tackle dynamic data issues like false positives. Adding a decay mechanism to account for the removal of these false positives would improve the accuracy of delay distribution estimates. Moreover, accommodating situations where all cases are completely unconfirmed—meaning the total case count cannot strictly depend on a known baseline—would broaden the use of this model in the earliest and most uncertain stages of an outbreak. {\color{red} Other natural extensions include spatially coupled delay processes, covariate-dependent delays, and online updating of the Laplace approximation for streaming data.}
+
+{\color{red} In sum, recasting nowcasting as inference for a censored marked point process gives a likelihood that is more parsimonious and scalable than the reporting triangle, accommodates flexible incidence models, and---uniquely---turns the reporting delay into a source of real-time insight about the surveillance system.}
+
+
+
+
+
+\bibliographystyle{plain}
+\bibliography{sample}
+
+
+\end{document}

@@ -132,7 +132,7 @@ valid_positive_prior <- function(object) {
 #' Valid epidemic process names
 #' @noRd
 #' @keywords internal
-.valid_epidemic_processes <- c("HSGP", "AR1", "BSplines", "SIR")
+.valid_epidemic_processes <- c("HSGP", "AR1", "SIR")
 
 #' Family-aware delay parameter keys to hard-fix
 #' @noRd

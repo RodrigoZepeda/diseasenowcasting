@@ -9,7 +9,7 @@
 # Keys produced (only the ones relevant to the model are consumed downstream):
 #   delay_mu, delay_sigma, delay_Q, delay_sigma_gengamma, delay_probs(alpha)
 #   mu_intercept, phi_nb, gamma_cov
-#   gp_alpha, gp_ell, basis_coefs              (HSGP / spline)
+#   gp_alpha, gp_ell                           (HSGP)
 #   ar_phi, ar_sigma                           (AR1 / SIR-RW)
 #   R0, gamma_sir, N_eff                       (SIR)
 # =============================================================================
@@ -100,12 +100,11 @@ default_priors <- function(mod, data = NULL, ...) {
 
   # -- Epidemic process priors ------------------------------------------------
   if (S7::S7_inherits(epi, hsgp_epidemic_class)) {
-    pr$gp_alpha    <- .res(epi@alpha,       half_normal_prior(0, 1), key = "gp_alpha")
-    pr$gp_ell      <- .res(epi@ell,         inv_gamma_prior(3, 1),   key = "gp_ell")
-    pr$basis_coefs <- .res(epi@basis_coefs, std_normal_prior(),      key = "basis_coefs")
-  } else if (S7::S7_inherits(epi, spline_epidemic_class)) {
-    pr$tau         <- .res(epi@tau,         exponential_prior(1),    key = "tau")
-    pr$basis_coefs <- .res(epi@basis_coefs, std_normal_prior(),      key = "basis_coefs")
+    # The HSGP basis coefficients use a non-centred parameterisation: they are
+    # fixed at N(0, 1) inside the objective (the trend amplitude is carried by
+    # `gp_alpha`), so there is no user-settable prior for them here.
+    pr$gp_alpha <- .res(epi@alpha, half_normal_prior(0, 1), key = "gp_alpha")
+    pr$gp_ell   <- .res(epi@ell,   inv_gamma_prior(3, 1),   key = "gp_ell")
   } else if (S7::S7_inherits(epi, ar1_epidemic_class)) {
     pr$ar_phi   <- .res(epi@phi,   std_normal_prior(),     key = "ar_phi")
     pr$ar_sigma <- .res(epi@sigma, exponential_prior(100), key = "ar_sigma")

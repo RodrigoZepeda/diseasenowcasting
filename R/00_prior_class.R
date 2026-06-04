@@ -12,7 +12,7 @@
 #' @description
 #' Internal S7 class storing a prior as a distribution code plus parameters.
 #'
-#' @param name Human-readable distribution name.
+#' @param name   Human-readable distribution name.
 #' @param num_id Integer distribution code (see `prior_lpdf()`).
 #' @param params Length-3 numeric vector (trailing zeros for shorter families).
 #'   Retained under the historical name `stan_params` for compatibility.

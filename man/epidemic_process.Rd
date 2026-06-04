@@ -4,33 +4,19 @@
 \alias{epidemic_process}
 \alias{hsgp_epidemic}
 \alias{ar1_epidemic}
-\alias{spline_epidemic}
 \alias{sir_epidemic}
 \title{Epidemic process for the Bayesian Nowcast}
 \usage{
 hsgp_epidemic(
   alpha = numeric(0),
   ell = numeric(0),
-  basis_coefs = numeric(0),
   gp_kernel = "matern32",
   gp_basis = "dirichlet",
   num_basis = 0,
-  tmax_model = 0,
-  n_harmonics = 0L,
-  seasonal_period = 52,
-  season_alpha = numeric(0),
-  season_ell = numeric(0),
-  season_coefs = numeric(0)
+  tmax_model = 0
 )
 
 ar1_epidemic(phi = numeric(0), sigma = numeric(0), error = numeric(0))
-
-spline_epidemic(
-  tau = numeric(0),
-  basis_coefs = numeric(0),
-  spline_degree = 3L,
-  num_basis = 0
-)
 
 sir_epidemic(
   R0 = numeric(0),
@@ -45,31 +31,19 @@ sir_epidemic(
 
 \item{ell}{HSGP GP length-scale prior (> 0).}
 
-\item{basis_coefs}{HSGP / spline basis-coefficient prior.}
-
 \item{gp_kernel}{HSGP kernel: \code{"sq_exp"}, \code{"matern32"} (default), \code{"matern52"}.}
 
 \item{gp_basis}{HSGP eigenbasis: \code{"dirichlet"}/\code{"sine"} (default) or \code{"neumann"}/\code{"cosine"}.}
 
-\item{num_basis}{HSGP / spline basis count; \code{numeric(0)}/\code{0} = auto from series length.}
+\item{num_basis}{HSGP basis count; \code{numeric(0)}/\code{0} = auto from series length.}
 
 \item{tmax_model}{HSGP time normalisation; \code{0} = auto (newest point at the right boundary).}
-
-\item{n_harmonics}{HSGP seasonal Fourier harmonics (\code{0} disables).}
-
-\item{seasonal_period}{HSGP seasonal cycle length (used when \code{n_harmonics > 0}).}
-
-\item{season_alpha, season_ell, season_coefs}{HSGP seasonal priors.}
 
 \item{phi}{AR(1) autocorrelation prior in (-1, 1).}
 
 \item{sigma}{AR(1) innovation SD prior (> 0).}
 
 \item{error}{AR(1) standardised innovation prior.}
-
-\item{tau}{Spline smoothness penalty prior (> 0).}
-
-\item{spline_degree}{Spline polynomial degree (default 3).}
 
 \item{R0}{SIR basic reproduction number prior (> 0).}
 
@@ -98,7 +72,6 @@ defaults (see also \link[=nowcast]{nowcast(prior_only = TRUE)} to visualise them
 \itemize{
 \item \code{alpha} (GP amplitude): \code{half_normal_prior(0, 1)}
 \item \code{ell} (GP length-scale): \code{inv_gamma_prior(3, 1)}
-\item \code{basis_coefs}: \code{std_normal_prior()}
 }
 
 \strong{AR(1)} (\code{ar1_epidemic}):

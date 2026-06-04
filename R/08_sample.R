@@ -2,16 +2,23 @@
 # sample() generic -- draw from a prior or likelihood (numeric, non-AD)
 # =============================================================================
 
-#' Draw random samples from a prior or likelihood
+#' Draw random samples from a prior (or fall back to [base::sample()])
 #'
-#' @param object A `prior_class`, `likelihood_class`, or base vector.
+#' A generic that draws from a `prior_class` with the appropriate random
+#' number generator.  For **any other object** (numeric, character, factor,
+#' `Date`, list, ...) it dispatches to [base::sample()], so `sample()` keeps its
+#' usual base behaviour outside the package.
+#'
+#' @param object A `prior_class`, or any object accepted by [base::sample()].
 #' @param size Number of draws.
-#' @param ... Passed to the likelihood method (`mu`, `phi`).
-#' @returns A numeric/integer vector of length `size`.
+#' @param ... Passed through to the underlying sampler.
+#' @returns For a prior, a numeric vector of length `size`; otherwise whatever
+#'   [base::sample()] returns.
 #'
 #' @examples
 #' sample(normal_prior(log(7), 0.5), 10)
 #' sample(gamma_prior(2, 0.1), 10)
+#' sample(as.Date("2020-01-01") + 0:9, 3)   # falls back to base::sample()
 #'
 #' @name sample
 #' @export
@@ -21,8 +28,10 @@ sample <- S7::new_generic("sample", "object", function(object, size, ...) {
 
 #' @name sample
 #' @export
-S7::method(sample, S7::new_union(S7::class_character, S7::class_numeric,
-                                 S7::class_vector, S7::class_factor)) <-
+# Default for ANY other class (numeric, character, factor, Date, ...): the base
+# sampler.  Registered on class_any so it is the lowest-priority fallback; the
+# prior_class method below is more specific and still wins for priors.
+S7::method(sample, S7::class_any) <-
   function(object, size, ...) base::sample(object, size = size, ...)
 
 #' @name sample

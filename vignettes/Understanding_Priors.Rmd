@@ -1,0 +1,465 @@
+---
+title: "Understanding Priors in diseasenowcasting"
+author: "Rodrigo Zepeda-Tello"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Understanding Priors in diseasenowcasting}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  message   = FALSE,
+  warning   = FALSE,
+  fig.width  = 10,
+  fig.height = 3.3,
+  fig.align  = "center",
+  collapse  = TRUE,
+  comment   = "#>"
+)
+```
+
+```{r load, include=FALSE}
+library(diseasenowcasting)
+library(ggplot2)
+
+# Pre-computed sensitivity data (so the vignette never refits at build time).
+# Schema: list(data, observed, specs, meta) produced by
+# devel/precompute_prior_sensitivity.R.  Every PARAMETER is shown two ways:
+#   * "<name> (numbers)" -- a SMALL fixed value / default / LARGE fixed value
+#   * "<name> (prior)"   -- a tight / default / loose PRIOR
+# and for each setting we stored the THREE things a parameter can move:
+#   panel "1. Reporting delay"   -> the fitted delay distribution
+#   panel "2. Smoothed epidemic" -> the latent incidence lambda_t
+#   panel "3. Nowcast"           -> the posterior-predictive nowcast
+# When knitting interactively (Knit button), knitr's working directory is
+# vignettes/, so ../inst/extdata/ reaches the source-tree copy -- which is
+# always up-to-date after running devel/precompute_prior_sensitivity.R.
+# When the package is installed and built, system.file() is the fallback.
+local_file <- file.path("..", "inst", "extdata", "prior_sensitivity.rds")
+if (file.exists(local_file)){
+  ps_file <- local_file
+}  else {
+  ps_file <- system.file("extdata", "prior_sensitivity.rds", package = "diseasenowcasting")
+}
+ps      <- if (file.exists(ps_file)) readRDS(ps_file) else NULL
+ps_data <- ps$data
+ps_obs  <- ps$observed
+ps_spec <- ps$specs
+ps_meta <- ps$meta
+
+scen_cols <- c(tight = "#5F7E62", default = "#377eb8", loose = "#DA6529")
+
+# Display labels for a "(numbers)" scenario: the tight/default/loose slots hold
+# the small / default / large fixed values.
+numbers_labels <- c(tight = "small", default = "default", loose = "large")
+
+# Explicit tight / default / loose prior for one parameter.
+prior_table <- function(prior_name) {
+  if (is.null(ps_spec)) return(invisible(NULL))
+  tab <- ps_spec[ps_spec$prior_name == prior_name, c("scenario", "spec")]
+  tab <- tab[match(c("tight", "default", "loose"), tab$scenario), ]
+  knitr::kable(tab, col.names = c("Scenario", "Prior used"), row.names = FALSE)
+}
+
+# One prior -> a single row of three panels (delay | epidemic | nowcast).
+# Each prior uses its own time window (stored in ps$observed per prior_name),
+# and crops the epidemic/nowcast panels to the most recent 30 event-times so
+# longer windows don't waste space on the quiet early phase.
+# `scenario_labels`: named vector mapping tight/default/loose -> display text.
+plot_prior <- function(prior_name, title = NULL, lower_lim = 29L,
+                       scenario_labels = c(tight = "tight", default = "default", loose = "loose")) {
+  if (is.null(ps_data))
+    return(ggplot() + annotate("text", x = 1, y = 1,
+      label = "Pre-computed data not found.\nRun devel/precompute_prior_sensitivity.R.") +
+      theme_void())
+  d <- ps_data[ps_data$prior_name == prior_name, ]
+  if (nrow(d) == 0)
+    return(ggplot() + theme_void() + labs(title = paste("No data for", prior_name)))
+
+  # Per-prior crop: show at most the last 30 event-times in the epidemic/nowcast
+  # panels (the delay panel always shows the full delay range 0..DELAY_MAX).
+  n_epi     <- max(d$x[d$panel != "1. Reporting delay"], na.rm = TRUE)
+  crop_from <- max(0L, n_epi - lower_lim)
+
+  d <- d[d$panel == "1. Reporting delay" | d$x >= crop_from, ]
+  # Show only the two extremes (small/tight vs large/loose); drop the default.
+  # tight and small share a colour (red); loose and large share a colour (green).
+  d <- d[d$scenario != "default", , drop = FALSE]
+  d$scenario <- factor(d$scenario, levels = c("tight", "loose"))
+  levels(d$scenario) <- scenario_labels[c("tight", "loose")]
+
+  # Observed data is stored per-prior (each prior has its own time window).
+  obs_pn <- if (!is.null(ps_obs) && "prior_name" %in% names(ps_obs))
+              ps_obs[ps_obs$prior_name == prior_name, ]
+            else ps_obs   # backwards-compat with old RDS
+  obs <- transform(obs_pn[obs_pn$x >= crop_from, ], panel = "3. Nowcast")
+
+  # Map colours to the (possibly renamed) display labels.
+  disp_cols <- stats::setNames(scen_cols, scenario_labels[names(scen_cols)])
+
+  ggplot(d, aes(x, colour = scenario, fill = scenario)) +
+    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.15,  linewidth = 0.1, na.rm = TRUE) +
+    geom_line(aes(y = median), linewidth = 0.8, na.rm = TRUE) +
+    geom_point(data = obs, aes(x = x, y = observed), inherit.aes = FALSE,
+               colour = "grey25", size = 1) +
+    geom_point(data = obs, aes(x = x, y = final), inherit.aes = FALSE,
+               shape = 21, fill = "white", colour = "grey25", size = 1) +
+    facet_wrap(~ panel, scales = "free", nrow = 1) +
+    scale_colour_manual("Scenario", values = disp_cols) +
+    scale_fill_manual("Scenario",  values = disp_cols) +
+    labs(x = "Weeks", y = NULL, title = title %||% prior_name) +
+    theme_diseasenowcasting() +
+    theme(panel.grid = element_blank())
+}
+`%||%` <- function(a, b) if (is.null(a)) b else a
+```
+
+## What this vignette shows
+
+A **prior** is a probability distribution that encodes your beliefs about a parameter before
+seeing the data. When the data is informative (many cases, long reporting history), the prior has little impact and the data overwhelms it. When the data is sparse or noisy (early epidemic, small populations), the prior can substantially shape the estimates.
+
+This vignette teaches the impact of the prior. It does it by showing how two priors (a *tight* distribution vs a *loose* diffuse one) 
+result in different values. When data are abundant the prior barely matters; when they are
+sparse or censored  (exactly the situation a nowcast faces at the most recent
+times) the setting shapes the answer.
+
+Each figure has the same three panels, because a parameter can move three
+different things:
+
+```
+ 1. Reporting delay            2. Smoothed epidemic               3. Nowcast
+ (fitted delay distribution)   (latent unobserved incidence)   (predicted nowcast)
+```
+
+In the nowcast panel, solid grey points are the counts **reported so far** and
+hollow points are the **eventually-observed truth**. 
+
+For this simulation we use the `denguedat` dataset (weekly dengue cases from Puerto
+Rico). However the qualitative impact of the priors can be translated to any
+other disease.
+
+# 1. Likelihood prior: NB precision (`phi`)
+
+The negative-binomial precision `phi` controls how much count variability is
+*not* explained by the trend. It is the single biggest driver of **interval
+width**. As a number, small precision `phi` is very overdispersed (wide intervals); large
+`phi` is very precise.
+
+```{r fig-phi, echo=FALSE}
+plot_prior("phi_nb (prior)",   "NB overdispersion (phi)")
+```
+
+**What to watch:** `phi`'s main job is the **width** of the epidemic process (both nowcast and smoothed epidemic); it
+barely moves the delay (panel 1). If your 90%
+intervals routinely miss the truth, use a smaller `phi` (more overdispersion); if
+they are needlessly wide, use a larger one.
+
+
+# 2. Reporting-delay parameters
+
+Delay parameters act first on **panel 1** (the fitted delay distribution) and
+then propagate to the nowcast (**panel 3**), which inflates the most-recent counts. 
+Intuitively, if a delay is usually larger the nowcast will have a wider
+interval as cases can arrive in potentially more future times. 
+
+## 2.1 Log-Normal delay
+
+### 2.1.1 Location (`mu`)
+
+`mu` is the (log) typical delay (i.e. if a delay usually takes 2 weeks then $\mu \approx log(2)$). Small =
+reports arrive within days; large = a long mean delay.
+
+```{r fig-ln-mu, echo=FALSE}
+plot_prior("delay_mu LN (numbers)", "Log-Normal delay location (mu)", scenario_labels = numbers_labels)
+```
+
+**What to watch:** panel 1 slides left/right with `mu`. If the fitted delay is
+too short the nowcast under-inflates recent weeks (panel 3 sits too low); too
+long and it over-inflates.
+
+### 2.1.2 Scale (`sigma`)
+
+`sigma` (> 0) is the spread of the log-normal (i.e. how concentrated the delays are).
+Small = a sharp spike at the typical delay; large = a long, heavy tail.
+
+```{r fig-ln-sigma, echo=FALSE}
+plot_prior("delay_sigma LN (numbers)", "Log-Normal delay scale (sigma)", scenario_labels = numbers_labels)
+```
+
+**What to watch:** `sigma` changes the *shape* of panel 1 without moving its
+centre. A heavier tail means more cases are still expected to arrive, so the
+nowcast inflates the recent past more.
+
+<!-- FIXME Gamma-->
+<!--
+## 2.3 Gamma delay: shape (`shape`)
+
+The Gamma family is parameterised by `shape` and `rate`. `shape` near 1 is
+exponential-like (mode at 0); large `shape` is bell-shaped and peaked.
+
+```{r fig-ga-shape, echo=FALSE}
+plot_prior("delay_shape Gamma (numbers)", "Gamma delay shape", scenario_labels = numbers_labels)
+```
+
+**What to watch:** small `shape` puts most mass at very short delays (panel 1
+spikes near 0); large `shape` moves the mode away from 0 into a rounded bump.
+
+## 2.4 Gamma delay: rate (`rate`)
+
+`rate` (> 0) is the inverse-scale: the mean delay is `shape / rate`. Small rate =
+long delays; large rate = short delays.
+
+```{r fig-ga-rate, echo=FALSE}
+plot_prior("delay_rate Gamma (numbers)", "Gamma delay rate", scenario_labels = numbers_labels)
+```
+
+**What to watch:** `rate` stretches or compresses panel 1 horizontally -- a small
+rate spreads the delay distribution out to longer values, inflating the nowcast.
+-->
+
+## 2.2 Generalized-Gamma delay
+
+### 2.2.1 Location (`mu`)
+
+The Generalized-Gamma adds a tail-shape parameter `Q` to a log-location `mu` and
+scale `sigma`. `mu` behaves like the Log-Normal location.
+
+```{r fig-gg-mu, echo=FALSE}
+plot_prior("delay_mu GG (numbers)", "Generalized-Gamma delay location (mu)", scenario_labels = numbers_labels)
+```
+
+**What to watch:** as for the Log-Normal, `mu` slides the whole delay
+distribution (panel 1) to shorter or longer delays.
+
+### 2.2.2 Scale (`sigma`)
+
+`sigma` (> 0) controls the spread around the location.
+
+```{r fig-gg-sigma, echo=FALSE}
+plot_prior("delay_sigma GG (numbers)", "Generalized-Gamma delay scale (sigma)", scenario_labels = numbers_labels)
+```
+
+**What to watch:** small `sigma` concentrates the delay; large `sigma` disperses
+it, widening the right tail the nowcast must account for.
+
+## 2.2.3 Tail shape (`Q`)
+
+`Q` interpolates the tail.  Small (negative) = a light tail; large (positive) = a heavy tail.
+
+```{r fig-gg-q, echo=FALSE}
+plot_prior("delay_Q GG (numbers)", "Generalized-Gamma tail shape (Q)", scenario_labels = numbers_labels)
+```
+
+**What to watch:** `Q` reshapes the *tail* of panel 1 while leaving the bulk
+roughly fixed -- a heavy tail keeps more late reports possible.
+
+## 2.3 Dirichlet (non-parametric) delay
+
+### 2.3.1 Concentration (`alpha`)
+
+The Dirichlet delay learns a free histogram. Its concentration `alpha` controls
+how that histogram is regularised: small (< 1) lets it spike on a few delays,
+large pushes it toward uniform.
+
+```{r fig-dirichlet, echo=FALSE}
+plot_prior("dirichlet_alpha (numbers)", "Dirichlet delay concentration (alpha)", scenario_labels = numbers_labels)
+```
+
+**What to watch:** panel 1 shows the effect most directly -- a small `alpha` lets
+the delay pmf spike on the observed delays, a large `alpha` flattens it toward
+uniform.
+
+
+# 3. Epidemic-process parameters
+
+The epidemic process is the smooth latent trend the nowcast extrapolates. The
+package offers three: the flexible **HSGP**, the simpler **AR(1)**, and the
+mechanistic **SIR**.
+
+## 3.1 HSGP
+
+### 3.1.1 Amplitude (`alpha`)
+
+`alpha` as the GP amplitude dictates how far the latent trend may swing. Small means a
+near-flat trend; large lets it reach high.
+
+```{r fig-gp-alpha, echo=FALSE}
+plot_prior("gp_alpha (prior)",   "GP amplitude (alpha)")
+```
+
+**What to watch:** the amplitude controls the height of the latent trend (panel
+2) and the width of the nowcast (panel 3); the delay (panel 1) is untouched.
+(As a *number*, fixing the amplitude is subtle because the basis coefficients
+adapt -- the prior row makes the effect clearer.)
+
+### 3.1.2 Length-scale (`ell`)
+
+`ell` is the GP length-scale -- the horizontal "wavelength" of the trend. Small =
+wiggly and quick to bend; large = long and smooth.
+
+```{r fig-gp-ell, echo=FALSE}
+plot_prior("gp_ell (prior)",   "GP length-scale (ell)")
+```
+
+**What to watch:** a short length-scale lets the trend bend sharply through the
+peak (panel 2) at the cost of wiggle; a long one forces a smoother curve that can
+lag turning points.
+
+### 3.1.4 HSGP: number of basis functions (`num_basis`)
+
+`num_basis` is the **resolution** of the GP. It is inherently a number, so it
+only has a numbers row. The default is automatic (~$1.5\sqrt{T}$) with $T$ being the
+maximum time planned to be observed.
+
+```{r fig-num-basis, echo=FALSE}
+plot_prior("num_basis (numbers)", "Number of HSGP basis functions", lower_lim = 100,
+           scenario_labels = numbers_labels)
+```
+
+**What to watch:** few basis functions force an over-smooth trend that can lag
+the peak (panel 2); many let the model track rapid change but risk over-fitting
+noise near the end. The delay (panel 1) is unaffected.
+
+## 3.2 AR(1)
+
+### 3.2.1 Autocorrelation (`phi`)
+
+`phi` in (-1, 1) is the persistence of the autoregressive trend. Near 0 it
+forgets the past immediately; near 1 it behaves like a random walk.
+
+```{r fig-ar-phi, echo=FALSE}
+plot_prior("ar_phi (prior)",   "AR(1) autocorrelation (phi)")
+```
+
+**What to watch:** high `phi` makes recent moves persist into the nowcast
+(panel 2-3); low `phi` mean-reverts quickly.
+
+### 3.2.2 Innovation SD (`sigma`)
+
+`sigma` (> 0) is the size of the random step the trend takes each week. Small =
+smooth and stable; large = jumpy.
+
+```{r fig-ar-sigma, echo=FALSE}
+plot_prior("ar_sigma (prior)",   "AR(1) innovation SD (sigma)")
+```
+
+**What to watch:** small `sigma` keeps the trend smooth with narrow intervals;
+large `sigma` lets it jump, widening the nowcast.
+
+## 3.3 SIR 
+
+### 3.3.1 Basic reproduction number (`R0`)
+
+`R0` (> 0) sets how fast a mechanistic SIR epidemic grows. Below ~1 it fizzles;
+large values grow explosively.
+
+```{r fig-r0, echo=FALSE}
+plot_prior("R0 (prior)",   "SIR reproduction number (R0)")
+```
+
+**What to watch:** `R0` acts through the *shape* of the epidemic curve (panel 2)
+-- how steeply it climbs. A confident, mis-specified `R0` can pull the nowcast
+away from the data.
+
+### 3.3.2 Recovery rate (`gamma`)
+
+`gamma` in (0, 1) is the rate people leave the infectious pool (1/`gamma` is the
+mean infectious period). Small = slow recovery, long epidemic; large = fast.
+
+```{r fig-gamma, echo=FALSE}
+plot_prior("gamma_sir (prior)",   "SIR recovery rate (gamma)")
+```
+
+**What to watch:** `gamma` sets the epidemic's *duration* and the speed of its
+decline (panel 2), so it is shown a few weeks past the peak.
+
+### 3.3.3 Susceptible fraction (`N_eff`)
+
+`N_eff` in (0, 1) is the fraction of the population actually at risk. Small =
+tiny pool, the epidemic saturates fast and low; large = almost everyone.
+
+```{r fig-neff, echo=FALSE}
+plot_prior("N_eff (prior)",   "SIR susceptible fraction (N_eff)")
+```
+
+**What to watch:** `N_eff` (together with `N_pop`) sets the size of the
+susceptible pool and hence the peak height (panel 2).
+
+### 3.3.4 Total population (`N_pop`)
+
+`N_pop` is the assumed total population -- a fixed scalar, shown as numbers only.
+
+```{r fig-npop, echo=FALSE}
+plot_prior("N_pop (numbers)", "SIR total population (N_pop)",
+           scenario_labels = c(tight = "small (500)", default = "default (10 000)",
+                               loose = "large (500 000)"))
+```
+
+**What to watch:** a small `N_pop` saturates the susceptible pool quickly
+(short, sharp peak); a large one lets the epidemic grow slowly over more time.
+
+
+# 4. Covariate priors (`covariate_prior`)
+
+When temporal effects (seasonality, day-of-week) are attached to a `nowcast()`
+call, each effect column becomes a covariate. `model(covariate_prior = ...)` sets
+a shared prior on every covariate coefficient. The fits below use weekly dengue
+data with 52-period seasonality attached.
+
+```{r fig-cov, echo=FALSE}
+plot_prior("covariate_prior (prior)", "Covariate prior")
+```
+
+**What to watch:** a tight prior (near-zero coefficients) forces the HSGP to
+explain all variation alone, smoothing out the seasonal pattern; a loose prior
+lets the seasonal covariate pull the curve up or down strongly.
+
+
+# 5. Practical guidance
+
+Set any parameter the same way -- pass a **number** to fix it, or a `*_prior()`
+object to give it a prior -- then call `nowcast()`:
+
+```r
+# Fix values you know (numbers):
+mdl <- model(nb_likelihood(), hsgp_epidemic(num_basis = 5),
+             lognormal_delay(mu = log(2)))
+
+# Or give priors (tight = confident, loose = diffuse):
+mdl <- model(nb_likelihood(phi = lognormal_prior(log(5), 0.5)),
+             hsgp_epidemic(alpha = half_normal_prior(0, 5)),
+             lognormal_delay(mu = normal_prior(log(7), 0.1)))
+
+# Inspect what the defaults resolve to:
+default_priors(model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()))
+```
+
+
+### Summary 
+
+The settings most worth getting right, in order:
+
+1. **`phi`** -- interval width. Start here **if coverage is off**.
+
+2. **`delay_mu` / `delay_sigma`** -- how much the most-recent past is inflated.
+   Anchor on a known or hypothesized reporting delay if you have one.
+   
+3. **`ell`** (HSGP) / **`sigma`** (AR1) -- how flexible the trend is near a
+   turning point
+   
+4. **`R0` / `gamma` / `N_eff`** (SIR only) -- the mechanistic shape; keep these
+   loose unless you have strong epidemiological knowledge
+   
+5. **`N_pop`** (SIR only) -- set it to the actual population at risk.
+
+6. **`num_basis`** (HSGP) -- increase if the trend looks too smooth, decrease if
+   too noisy. The auto default is a sensible start.
+   
+7. **`covariate_prior`** -- only matters when other covariates are attached and
+   their effect is very strong.
