@@ -38,6 +38,8 @@ utils::globalVariables(c(
   "time", "strata", "count",
   # dplyr NSE column names used in update helpers (22_update.R)
   "is_surprising", "direction",
+  # foreach %dofuture% iterator variable (23_backtest.R)
+  "cell_row",
   # tbl.now / nowcast internals
   ".data", "window", "epidemic", "n_events", "now",
   "onset", "reported",   # NSE column names in .temporal_effect_matrix grid
