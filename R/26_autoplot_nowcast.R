@@ -32,33 +32,39 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
                              else matrix(data$case_counts, n_time, 1))
 
   # -- PANEL 1: Delay distribution ------------------------------------------
-  delay_vals <- data$m[, 3]
-  delay_wts  <- data$m[, 2]
-  max_delay_plot <- min(quantile(rep(delay_vals, times = pmax(1, round(delay_wts))),
+  # Observed delays (column 3) and their case weights (column 2), trimmed to a
+  # high quantile so the long tail does not stretch the axis (cap at 60).
+  observed_delays  <- data$m[, 3]
+  observed_weights <- data$m[, 2]
+  max_delay_plot <- min(quantile(rep(observed_delays, times = pmax(1, round(observed_weights))),
                                  0.995, na.rm = TRUE) + 2, 60)
-  hist_df <- data.frame(delay = delay_vals, weight = delay_wts) |>
+  hist_df <- data.frame(delay = observed_delays, weight = observed_weights) |>
     (\(d) d[d$delay <= max_delay_plot, ])()
 
-  rc   <- fit$reconstruct
-  is_np <- family == 4L
+  reconstructed     <- fit$reconstruct
+  is_nonparametric  <- family == 4L
   # Fitted delay DENSITY (discretised pmf): the probability mass in a unit-width
   # window centred at each delay, directly comparable to the proportion histogram.
   delay_density_df <- tryCatch({
-    d_seq <- seq(0, max_delay_plot, by = 0.2)
-    fns <- if (is_np) {
-      n_bins <- as.integer(data$np_model_length)
-      pl <- fit$parList
-      simplex <- if (isTRUE(priors$delay_probs$is_constant == 1L)) priors$delay_probs$fixed
-                 else { el <- exp(pl$delay_logits); c(el, 1) / (sum(el) + 1) }
+    delay_grid <- seq(0, max_delay_plot, by = 0.2)
+    delay_fns <- if (is_nonparametric) {
+      n_bins  <- as.integer(data$np_model_length)
+      simplex <- if (isTRUE(priors$delay_probs$is_constant == 1L)) {
+        priors$delay_probs$fixed
+      } else {
+        exp_logits <- exp(fit$parList$delay_logits)
+        c(exp_logits, 1) / (sum(exp_logits) + 1)
+      }
       .nonparametric_delay_functions(simplex, n_bins)
     } else if (family == 3L) {
-      .delay_distribution_functions(3L, rc$delay_mu,
-        .gengamma_shape_transform(fit$parList$delay_Q %||% -2)$shape_Q, rc$delay_sigma)
+      .delay_distribution_functions(3L, reconstructed$delay_mu,
+        .gengamma_shape_transform(fit$parList$delay_Q %||% -2)$shape_Q, reconstructed$delay_sigma)
     } else {
-      .delay_distribution_functions(family, rc$delay_mu, rc$delay_sigma)
+      .delay_distribution_functions(family, reconstructed$delay_mu, reconstructed$delay_sigma)
     }
-    dens <- as.numeric(fns$cdf(d_seq + 0.5)) - as.numeric(fns$cdf(pmax(0, d_seq - 0.5)))
-    data.frame(delay = d_seq, density = pmax(0, dens))
+    pmf <- as.numeric(delay_fns$cdf(delay_grid + 0.5)) -
+           as.numeric(delay_fns$cdf(pmax(0, delay_grid - 0.5)))
+    data.frame(delay = delay_grid, density = pmax(0, pmf))
   }, error = function(e) NULL)
 
   pal <- dn_palette()

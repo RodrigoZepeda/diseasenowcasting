@@ -144,26 +144,32 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
     ))
   }
 
-  results_list <- foreach::foreach(row = seq_len(nrow(grid)),
+  # One worker per (date, model) cell.  Each fits a nowcast as of that date and
+  # records its per-event summary joined to the eventual truth.  The fit happens
+  # inside the worker because the RTMB object cannot cross processes.
+  results_list <- foreach::foreach(cell_row = seq_len(nrow(grid)),
                                    .options.future = list(seed = TRUE)) %dofuture% {
-    di <- grid$date_idx[row]; mi <- grid$model_idx[row]
-    as_of <- dates[di]
-    out <- tryCatch({
-      nc <- nowcast(data, models[[mi]], type = type, now = as_of,
+    date_index  <- grid$date_idx[cell_row]
+    model_index <- grid$model_idx[cell_row]
+    as_of       <- dates[date_index]
+    tryCatch({
+      nc <- nowcast(data, models[[model_index]], type = type, now = as_of,
                     K = K, np_spread = np_spread, n_draws = n_draws, ...)
-      pred_summary <- predict(nc, summary = TRUE)              # data.frame per event
-      pred_summary$model    <- model_labels[mi]
+      pred_summary <- predict(nc, summary = TRUE)              # data.frame, one row per event
+      pred_summary$model    <- model_labels[model_index]
       pred_summary$date_run <- as_of
       pred_summary$final    <- truth_by_evnum[as.character(pred_summary$.event_num)]
       pred_summary$target   <- nc@target
       list(summary = pred_summary,
            sims = if (return_simulations) predict(nc, n_draws = n_draws)@draws else NULL)
-    }, error = function(e) NULL)
-    out
+    }, error = function(e) NULL)   # a failed cell contributes nothing
   }
 
-  summaries <- do.call(rbind, lapply(results_list, function(x) if (is.null(x)) NULL else x$summary))
-  sims <- if (return_simulations) lapply(results_list, function(x) if (is.null(x)) NULL else x$sims) else NULL
+  # Drop failed cells (NULL) and stack the per-cell summaries / simulation draws.
+  summaries <- do.call(rbind, lapply(results_list,
+    function(cell) if (is.null(cell)) NULL else cell$summary))
+  sims <- if (return_simulations)
+    lapply(results_list, function(cell) if (is.null(cell)) NULL else cell$sims) else NULL
 
   backtest_class(data = data, models = models, dates = dates, type = type,
                  results = summaries, simulations = sims)
