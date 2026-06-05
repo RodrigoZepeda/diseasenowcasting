@@ -120,7 +120,13 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
   observed_strata <- observed_strata %||% object@observed_strata
   strata_names    <- strata_names    %||% object@strata_levels
   event_dates     <- event_dates     %||% object@event_dates
-  obs_series      <- object@observed_series %||% { v <- rep(0, n_time); v[object@target] <- object@observed; v }
+  # Observed-so-far per event-time; if not stored, build a zero series with only
+  # the target event populated.
+  obs_series <- object@observed_series %||% {
+    series <- rep(0, n_time)
+    series[object@target] <- object@observed
+    series
+  }
 
   quantile_label <- paste0(
     round(quantiles[1] * 100), "% - ", round(quantiles[2] * 100), "% interval"
@@ -130,12 +136,12 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
   if (!is.null(strata_draws) && !is.null(observed_strata)) {
     n_strata <- dim(strata_draws)[3]
     if (is.null(strata_names)) strata_names <- paste0("Stratum ", seq_len(n_strata))
-    plot_list <- lapply(seq_len(n_strata), function(s) {
-      obs_s  <- as.numeric(observed_strata[, s])
-      draw_s <- strata_draws[, , s, drop = TRUE]   # [n_draws x max_time]
-      .make_nowcast_bar_df(draw_s, obs_s, quantiles, strata_names[s])
+    per_stratum_df <- lapply(seq_len(n_strata), function(stratum_index) {
+      observed_stratum <- as.numeric(observed_strata[, stratum_index])
+      stratum_draws_2d <- strata_draws[, , stratum_index, drop = TRUE]   # [n_draws x max_time]
+      .make_nowcast_bar_df(stratum_draws_2d, observed_stratum, quantiles, strata_names[stratum_index])
     })
-    plot_df <- do.call(rbind, plot_list)
+    plot_df <- do.call(rbind, per_stratum_df)
     has_strata <- n_strata > 1L
   } else {
     plot_df    <- .make_nowcast_bar_df(draws, obs_series, quantiles, "Total")
@@ -223,18 +229,25 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
   p
 }
 
-#' Build bar-chart data frame for one stratum
+#' Build the bar-chart data frame for one stratum
+#'
+#' @param draws_matrix Numeric `[n_draws x max_time]` matrix of total nowcast draws.
+#' @param observed_per_time Numeric vector of observed-so-far counts per event-time.
+#' @param quantiles Length-2 numeric vector of error-bar quantiles.
+#' @param stratum_name Character label for this stratum.
+#' @returns A data frame with one row per event-time: `event_index`, `stratum`,
+#'   `reported`, `predicted_total`, `q_lo`, `q_hi`.
 #' @keywords internal
 #' @noRd
-.make_nowcast_bar_df <- function(draws_mat, obs_vec, quantiles, stratum_name) {
-  n_time       <- ncol(draws_mat)
-  total_q_lo   <- apply(draws_mat, 2, stats::quantile, probs = quantiles[1], na.rm = TRUE)
-  total_q_hi   <- apply(draws_mat, 2, stats::quantile, probs = quantiles[2], na.rm = TRUE)
-  total_median <- apply(draws_mat, 2, stats::median, na.rm = TRUE)
+.make_nowcast_bar_df <- function(draws_matrix, observed_per_time, quantiles, stratum_name) {
+  n_time       <- ncol(draws_matrix)
+  total_q_lo   <- apply(draws_matrix, 2, stats::quantile, probs = quantiles[1], na.rm = TRUE)
+  total_q_hi   <- apply(draws_matrix, 2, stats::quantile, probs = quantiles[2], na.rm = TRUE)
+  total_median <- apply(draws_matrix, 2, stats::median, na.rm = TRUE)
   data.frame(
     event_index     = seq_len(n_time) - 1L,
     stratum         = stratum_name,
-    reported        = pmax(0, obs_vec),               # solid bar (observed so far)
+    reported        = pmax(0, observed_per_time),     # solid bar (observed so far)
     predicted_total = pmax(0, total_median),          # transparent bar behind (median nowcast)
     q_lo            = pmax(0, total_q_lo),             # lower error-bar end (q5)
     q_hi            = pmax(0, total_q_hi),             # upper error-bar end (q95)
