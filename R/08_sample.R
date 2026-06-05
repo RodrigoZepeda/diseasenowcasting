@@ -37,27 +37,37 @@ S7::method(sample, S7::class_any) <-
 #' @name sample
 #' @export
 S7::method(sample, prior_class) <- function(object, size, ...) {
-  p <- object@stan_params
+  # Distribution parameters, padded to length 3 (params[1] = location/shape,
+  # params[2] = scale/rate, params[3] = extra, e.g. Student-t scale).
+  params <- object@stan_params
+
+  # Double-exponential (Laplace) draws use the inverse-CDF: with u ~ U(-1/2, 1/2),
+  # the quantile is  location - scale * sign(u) * log(1 - 2|u|).
+  laplace_draw <- function(location, scale) {
+    u <- runif(size, -0.5, 0.5)
+    location - scale * sign(u) * log(1 - 2 * abs(u))
+  }
+
   switch(object@name,
     "StdNormal"  = rnorm(size, 0, 1),
-    "Normal"     = rnorm(size, p[1], p[2]),
-    "Cauchy"     = rcauchy(size, p[1], p[2]),
-    "StudentT"   = rt(size, df = p[1]) * p[3] + p[2],
-    "DoubleExponential" = { u <- runif(size, -0.5, 0.5); p[1] - p[2] * sign(u) * log(1 - 2 * abs(u)) },
+    "Normal"     = rnorm(size, params[1], params[2]),
+    "Cauchy"     = rcauchy(size, params[1], params[2]),
+    "StudentT"   = rt(size, df = params[1]) * params[3] + params[2],
+    "DoubleExponential" = laplace_draw(params[1], params[2]),
     "Flat"       = runif(size, -.Machine$integer.max, .Machine$integer.max),
     "HalfStdNormal" = abs(rnorm(size, 0, 1)),
-    "HalfNormal"    = abs(rnorm(size, p[1], p[2])),
-    "HalfCauchy"    = abs(rcauchy(size, p[1], p[2])),
-    "HalfStudentT"  = abs(rt(size, df = p[1]) * p[2]),
-    "HalfDoubleExponential" = { u <- runif(size, -0.5, 0.5); abs(p[1] - p[2] * sign(u) * log(1 - 2 * abs(u))) },
-    "Gamma"       = rgamma(size, shape = p[1], rate = p[2]),
-    "Weibull"     = rweibull(size, shape = p[1], scale = p[2]),
-    "InvGamma"    = 1 / rgamma(size, shape = p[1], rate = p[2]),
-    "LogNormal"   = rlnorm(size, meanlog = p[1], sdlog = p[2]),
-    "ChiSquare"   = rchisq(size, df = p[1]),
-    "Exponential" = rexp(size, rate = p[1]),
-    "Logistic"    = rlogis(size, location = p[1], scale = p[2]),
-    "Beta"        = rbeta(size, shape1 = p[1], shape2 = p[2]),
+    "HalfNormal"    = abs(rnorm(size, params[1], params[2])),
+    "HalfCauchy"    = abs(rcauchy(size, params[1], params[2])),
+    "HalfStudentT"  = abs(rt(size, df = params[1]) * params[2]),
+    "HalfDoubleExponential" = abs(laplace_draw(params[1], params[2])),
+    "Gamma"       = rgamma(size, shape = params[1], rate = params[2]),
+    "Weibull"     = rweibull(size, shape = params[1], scale = params[2]),
+    "InvGamma"    = 1 / rgamma(size, shape = params[1], rate = params[2]),
+    "LogNormal"   = rlnorm(size, meanlog = params[1], sdlog = params[2]),
+    "ChiSquare"   = rchisq(size, df = params[1]),
+    "Exponential" = rexp(size, rate = params[1]),
+    "Logistic"    = rlogis(size, location = params[1], scale = params[2]),
+    "Beta"        = rbeta(size, shape1 = params[1], shape2 = params[2]),
     "FlatPos"     = runif(size, 0, .Machine$integer.max),
     cli::cli_abort("sample(): no sampler registered for prior {.val {object@name}}.")
   )

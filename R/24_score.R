@@ -25,36 +25,46 @@ score <- function(object, metric = c("wis", "ape", "mse"), report = TRUE) {
   quantile_names <- c("q2.5", "q5", "q10", "q25", "q50", "q75", "q90", "q95", "q97.5")
   quantile_levels <- c(0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975)
 
-  # d*=0 target: the newest event per (model, date_run).
+  # d*=0 target: keep only the NEWEST event-time per (model, as-of date), since
+  # that is the most-censored nowcast we want to score.  Drop rows with no truth.
   results <- results[is.finite(results$final), , drop = FALSE]
-  newest <- do.call(rbind, by(results, list(results$model, results$date_run), function(block) {
-    block[which.max(block$.event_num), , drop = FALSE]
-  }))
+  newest <- do.call(rbind, by(results, list(results$model, results$date_run),
+    function(model_date_block) {
+      newest_row <- which.max(model_date_block$.event_num)
+      model_date_block[newest_row, , drop = FALSE]
+    }))
 
   # -- WIS via scoringutils ----------------------------------------------------
-  long <- do.call(rbind, lapply(seq_along(quantile_names), function(j) {
+  # scoringutils wants one row per (model, date_run, quantile_level), so pivot the
+  # wide q2.5..q97.5 columns into that long form.
+  quantile_long <- do.call(rbind, lapply(seq_along(quantile_names), function(q_index) {
     data.frame(model = newest$model, date_run = newest$date_run, observed = newest$final,
-               predicted = newest[[quantile_names[j]]], quantile_level = quantile_levels[j])
+               predicted = newest[[quantile_names[q_index]]],
+               quantile_level = quantile_levels[q_index])
   }))
   wis_tbl <- tryCatch({
-    forecast <- scoringutils::as_forecast_quantile(long, observed = "observed",
+    forecast <- scoringutils::as_forecast_quantile(quantile_long, observed = "observed",
       predicted = "predicted", quantile_level = "quantile_level",
       forecast_unit = c("model", "date_run"))
-    scored <- scoringutils::score(forecast)
-    agg <- scoringutils::summarise_scores(scored, by = "model")
-    data.frame(model = agg$model, wis = agg$wis,
-               coverage_50 = agg$interval_coverage_50, coverage_90 = agg$interval_coverage_90)
+    scored_per_date  <- scoringutils::score(forecast)
+    scored_per_model <- scoringutils::summarise_scores(scored_per_date, by = "model")
+    data.frame(model = scored_per_model$model, wis = scored_per_model$wis,
+               coverage_50 = scored_per_model$interval_coverage_50,
+               coverage_90 = scored_per_model$interval_coverage_90)
   }, error = function(e) {
     cli::cli_warn("scoringutils WIS failed: {conditionMessage(e)}")
     data.frame(model = unique(newest$model), wis = NA_real_, coverage_50 = NA_real_, coverage_90 = NA_real_)
   })
 
-  # -- APE (mean abs % error) and MSE (of the median point forecast) -----------
-  point_tbl <- do.call(rbind, by(newest, newest$model, function(block) {
-    point <- block$q50
-    ape <- mean(abs(point - block$final) / pmax(block$final, 1), na.rm = TRUE)
-    mse <- mean((point - block$final)^2, na.rm = TRUE)
-    data.frame(model = block$model[1], ape = ape, mse = mse, n = nrow(block))
+  # -- APE (mean absolute % error) and MSE of the median point forecast --------
+  point_tbl <- do.call(rbind, by(newest, newest$model, function(model_block) {
+    median_forecast <- model_block$q50
+    truth           <- model_block$final
+    # APE guards against divide-by-zero with pmax(truth, 1).
+    abs_pct_error <- mean(abs(median_forecast - truth) / pmax(truth, 1), na.rm = TRUE)
+    mean_sq_error <- mean((median_forecast - truth)^2, na.rm = TRUE)
+    data.frame(model = model_block$model[1], ape = abs_pct_error, mse = mean_sq_error,
+               n = nrow(model_block))
   }))
 
   out <- merge(wis_tbl, point_tbl, by = "model")

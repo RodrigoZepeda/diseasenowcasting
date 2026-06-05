@@ -26,15 +26,23 @@
 #' @returns A named numeric vector of parameter estimates.
 #' @noRd
 S7::method(coef, nowcast_class) <- function(object, ...) {
-  representative <- object@fits[[1]]
-  delay_mu    <- mean(vapply(object@fits, function(f) f$delay_mu %||% NA_real_, numeric(1)))
-  delay_sigma <- mean(vapply(object@fits, function(f) f$delay_sigma %||% NA_real_, numeric(1)))
+  # The first fit represents the non-delay parameters; the delay is averaged over
+  # all fits (one-stage has a single fit, two-stage has K delay imputations).
+  representative_fit <- object@fits[[1]]
+  delay_mu    <- mean(vapply(object@fits, function(fit_k) fit_k$delay_mu    %||% NA_real_, numeric(1)))
+  delay_sigma <- mean(vapply(object@fits, function(fit_k) fit_k$delay_sigma %||% NA_real_, numeric(1)))
+
   out <- c(delay_mu = delay_mu, delay_sigma = delay_sigma)
-  if (!is.na(representative$phi_nb %||% NA_real_)) out["phi_nb"] <- representative$phi_nb
-  pl <- representative$parList
-  for (nm in intersect(c("mu_intercept", "log_gp_alpha", "log_gp_ell", "ar_phi_unc",
-                         "log_ar_sigma_unc", "log_R0", "u_gamma", "u_neff"), names(pl)))
-    out[nm] <- pl[[nm]][1]
+  if (!is.na(representative_fit$phi_nb %||% NA_real_))
+    out["phi_nb"] <- representative_fit$phi_nb
+
+  # Append whichever epidemic-process hyperparameters this model actually has
+  # (HSGP, AR(1) or SIR populate different entries of the parameter list).
+  representative_parlist <- representative_fit$parList
+  epidemic_param_names <- c("mu_intercept", "log_gp_alpha", "log_gp_ell", "ar_phi_unc",
+                            "log_ar_sigma_unc", "log_R0", "u_gamma", "u_neff")
+  for (param_name in intersect(epidemic_param_names, names(representative_parlist)))
+    out[param_name] <- representative_parlist[[param_name]][1]
   out
 }
 
