@@ -108,6 +108,22 @@ test_that("surprise() flags a surprisingly long delay", {
   expect_true(long_row$is_surprising)
 })
 
+test_that("delay surprise works for the Dirichlet (non-parametric) delay", {
+  # Regression: the Dirichlet branch of the delay-surprise modal-pmf computation
+  # used to reference an undefined `rc`/`parlist` and error.
+  tn <- .make_synth_tblnow(Tn = 60L, seed = 6)
+  nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), dirichlet_delay()),
+                type = "one_stage", n_draws = 150, seed = 1)
+  s  <- surprise(nc, data.frame(delay = c(2, 5, 12, 300)),
+                 type = "delay", level = 0.99, n_draws = 120, seed = 2)
+  ds <- s$delay_surprise
+  expect_equal(nrow(ds), 4L)
+  expect_true(all(c("mean_tail_prob", "relative_surprise", "direction", "is_surprising") %in% names(ds)))
+  expect_true(all(is.finite(ds$mean_tail_prob)))               # no NA/crash
+  expect_true(all(diff(ds$mean_tail_prob) <= 1e-8))            # P(D >= d) is non-increasing in d
+  expect_equal(ds$direction[ds$delay == 300], "long")          # a 300-unit delay is surprisingly long
+})
+
 test_that("update() warns about a surprising new delay and stores the result", {
   set.seed(7); start <- as.Date("2020-01-01")
   df <- data.frame(onset = start + rep(0:40, each = 4))
