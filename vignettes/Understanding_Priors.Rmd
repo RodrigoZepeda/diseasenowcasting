@@ -4,7 +4,7 @@ author: "Rodrigo Zepeda-Tello"
 output:
   rmarkdown::html_vignette:
     toc: true
-    toc_depth: 2
+    toc_depth: 3
 vignette: >
   %\VignetteIndexEntry{Understanding Priors in diseasenowcasting}
   %\VignetteEngine{knitr::rmarkdown}
@@ -119,10 +119,26 @@ plot_prior <- function(prior_name, title = NULL, lower_lim = 29L,
 `%||%` <- function(a, b) if (is.null(a)) b else a
 ```
 
-## What this vignette shows
 
 A **prior** is a probability distribution that encodes your beliefs about a parameter before
 seeing the data. When the data is informative (many cases, long reporting history), the prior has little impact and the data overwhelms it. When the data is sparse or noisy (early epidemic, small populations), the prior can substantially shape the estimates.
+
+
+## Quick reference
+
+Here we show what to change depending on your situation:
+
+| Priority | Setting(s) | What it Controls | When to Adjust |
+|----------|------------|------------------|----------------|
+| 1 | `phi` | Interval width (i.e. coverage) | Start here if coverage is off. |
+| 2 | Delay's `mu`, `sigma` and `Q` if applicable | How much the most-recent past is inflated. | Change here if nowcasting for previous dates (backcasting) has too wide or too short intervals. |
+| 3 | `ell` (HSGP), `sigma` (AR1) | Trend flexibility near turning points | Adjust when the trend is too rigid or too reactive around inflection points. |
+| 4 | `R0`, `gamma`, `N_eff` (SIR only) | Mechanistic epidemic shape | Keep these loose unless you have strong epidemiological knowledge. |
+| 5 | `N_pop` (SIR only) | Population at risk | Set to the actual population at risk. |
+| 6 | `num_basis` (HSGP) | Trend smoothness/complexity | Increase if the trend looks too smooth; decrease if it looks too noisy. |
+| 7 | `covariate_prior` | Strength of covariate effects | Mainly matters when additional covariates are included and have strong effects. |
+
+## What the rest of the vignette shows:
 
 This vignette teaches the impact of the prior. It does it by showing how two priors (a *tight* distribution vs a *loose* diffuse one) 
 result in different values. When data are abundant the prior barely matters; when they are
@@ -143,6 +159,7 @@ hollow points are the **eventually-observed truth**.
 For this simulation we use the `denguedat` dataset (weekly dengue cases from Puerto
 Rico). However the qualitative impact of the priors can be translated to any
 other disease.
+
 
 # 1. Likelihood prior: NB precision (`phi`)
 
@@ -165,15 +182,15 @@ they are needlessly wide, use a larger one.
 
 Delay parameters act first on **panel 1** (the fitted delay distribution) and
 then propagate to the nowcast (**panel 3**), which inflates the most-recent counts. 
-Intuitively, if a delay is usually larger the nowcast will have a wider
-interval as cases can arrive in potentially more future times. 
+Intuitively, if a delay has a heavier tail, the nowcast will have a wider
+interval in the past as cases have more time to arrive. 
 
 ## 2.1 Log-Normal delay
 
 ### 2.1.1 Location (`mu`)
 
-`mu` is the (log) typical delay (i.e. if a delay usually takes 2 weeks then $\mu \approx log(2)$). Small =
-reports arrive within days; large = a long mean delay.
+`mu` is the (log) typical delay in the delay units (i.e. if a delay usually takes 2 weeks then $\mu \approx log(2)$ if units are weeks or $\mu \approx log(2 * 7)$ if units are days ). Small =
+reports arrive fast; large = a long mean delay.
 
 ```{r fig-ln-mu, echo=FALSE}
 plot_prior("delay_mu LN (numbers)", "Log-Normal delay location (mu)", scenario_labels = numbers_labels)
@@ -248,7 +265,7 @@ plot_prior("delay_sigma GG (numbers)", "Generalized-Gamma delay scale (sigma)", 
 **What to watch:** small `sigma` concentrates the delay; large `sigma` disperses
 it, widening the right tail the nowcast must account for.
 
-## 2.2.3 Tail shape (`Q`)
+### 2.2.3 Tail shape (`Q`)
 
 `Q` interpolates the tail.  Small (negative) = a light tail; large (positive) = a heavy tail.
 
@@ -257,23 +274,23 @@ plot_prior("delay_Q GG (numbers)", "Generalized-Gamma tail shape (Q)", scenario_
 ```
 
 **What to watch:** `Q` reshapes the *tail* of panel 1 while leaving the bulk
-roughly fixed -- a heavy tail keeps more late reports possible.
+roughly fixed. A heavier tail makes more late reports possible.
 
 ## 2.3 Dirichlet (non-parametric) delay
 
 ### 2.3.1 Concentration (`alpha`)
 
 The Dirichlet delay learns a free histogram. Its concentration `alpha` controls
-how that histogram is regularised: small (< 1) lets it spike on a few delays,
-large pushes it toward uniform.
+how that histogram is regularised: small (< 1) lets it spike on only a few delays,
+large pushes it towards assigning positive probability to more values.
 
 ```{r fig-dirichlet, echo=FALSE}
 plot_prior("dirichlet_alpha (numbers)", "Dirichlet delay concentration (alpha)", scenario_labels = numbers_labels)
 ```
 
 **What to watch:** panel 1 shows the effect most directly -- a small `alpha` lets
-the delay pmf spike on the observed delays, a large `alpha` flattens it toward
-uniform.
+the delay pmf spike on the observed delays, a large `alpha` flattens it letting
+more delays be possible. 
 
 
 # 3. Epidemic-process parameters
@@ -440,26 +457,6 @@ mdl <- model(nb_likelihood(phi = lognormal_prior(log(5), 0.5)),
 default_priors(model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()))
 ```
 
+See also the summary at the beginning of this vignette for specific steps.
 
-### Summary 
 
-The settings most worth getting right, in order:
-
-1. **`phi`** -- interval width. Start here **if coverage is off**.
-
-2. **`delay_mu` / `delay_sigma`** -- how much the most-recent past is inflated.
-   Anchor on a known or hypothesized reporting delay if you have one.
-   
-3. **`ell`** (HSGP) / **`sigma`** (AR1) -- how flexible the trend is near a
-   turning point
-   
-4. **`R0` / `gamma` / `N_eff`** (SIR only) -- the mechanistic shape; keep these
-   loose unless you have strong epidemiological knowledge
-   
-5. **`N_pop`** (SIR only) -- set it to the actual population at risk.
-
-6. **`num_basis`** (HSGP) -- increase if the trend looks too smooth, decrease if
-   too noisy. The auto default is a sensible start.
-   
-7. **`covariate_prior`** -- only matters when other covariates are attached and
-   their effect is very strong.
