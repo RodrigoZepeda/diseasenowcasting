@@ -92,18 +92,17 @@ and the day is flagged when that minimum falls below `1 − level` (default
 `level = 0.99`). Ground truth = whether the day was perturbed. The ROC sweeps the
 threshold; AUC / sensitivity / specificity are reported per model.
 
-> **Note on the Dirichlet delay.** The exported `surprise()` currently errors for
-> the non-parametric (Dirichlet) delay family (an undefined `rc`/`parlist` in the
-> `relative_surprise` branch of `.surprise_internal`). The analysis therefore
-> computes the delay tail probability with a small **fallback**
-> (`delay_tail_fallback()` in `simulation_study_analysis.R`) that reuses the same
-> package internals as `devel/precompute_prior_sensitivity.R` — so all 18 models
-> are scored **without modifying the package**. If/when `surprise()` is fixed, the
-> official path is used automatically for every family.
+All 18 models are scored with the exported `surprise(type = "delay")`, including
+the Dirichlet (non-parametric) delay. (Earlier, `surprise()` errored for the
+Dirichlet family — an undefined `rc`/`parlist` in `.surprise_internal` — and the
+analysis carried a `delay_tail_fallback()` workaround; that bug is now fixed in
+the package and the workaround has been removed.)
 
-## Why `FIT_TYPE = "one_stage"`
+## Fit type (per delay family)
 
-The analysis uses one-stage (joint) fits. With this data they are well
-calibrated (NB clearly beats Poisson) and much faster than two-stage; switch to
-`"two_stage"` at the top of the analysis script if you want the multiple-
-imputation delay pooling instead.
+Fitting is **two-stage** for every model except the Dirichlet (non-parametric)
+delay, which uses one-stage (its two-stage simplex imputation is unstable here).
+Two-stage re-injects the reporting-delay uncertainty, giving wider, better-
+calibrated intervals — the recommended HSGP/NB model reaches ~0.9 90%-interval
+coverage while still beating AR(1) and SIR on WIS. See `fit_type_for()` in the
+analysis script.

@@ -116,58 +116,19 @@ build_model <- function(cfg) {
 }
 
 # ── Delay tail-probability P(D >= d) for the surprise ROC ────────────────────
-# We score every model's reporting-delay surprise.  The exported surprise()
-# covers the parametric delays; for the Dirichlet (non-parametric) family we use
-# a small fallback that computes the SAME posterior-mean tail probability via the
-# package internals (the established pattern in precompute_prior_sensitivity.R),
-# so all 18 models are scored WITHOUT modifying the package.
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0) b else a
-
-delay_tail_fallback <- function(nc, delays, n_draws = 300L, seed = 1L) {
-  set.seed(seed)
-  fit  <- nc@fits[[1]]
-  data <- fit$data; priors <- fit$priors; family <- data$delay_family
-  obj  <- fit$obj; mode_vec <- obj$env$last.par.best
-  prec <- tryCatch(methods::as(obj$he(mode_vec), "sparseMatrix"), error = function(e) NULL)
-  draws <- if (!is.null(prec))
-    tryCatch(diseasenowcasting:::.sample_mvnorm_precision(as.numeric(mode_vec), prec, n_draws),
-             error = function(e) matrix(as.numeric(mode_vec), ncol = 1L))
-  else matrix(as.numeric(mode_vec), ncol = 1L)
-  pn <- names(mode_vec)
-  cdf_at <- function(pl) {
-    if (family == 4L) {
-      n_b <- as.integer(data$np_model_length)
-      sp <- if (isTRUE(priors$delay_probs$is_constant == 1L)) priors$delay_probs$fixed
-            else { el <- exp(pl$delay_logits); c(el, 1) / (sum(el) + 1) }
-      diseasenowcasting:::.nonparametric_delay_functions(sp, n_b)
-    } else {
-      rc <- diseasenowcasting:::.joint_reconstruct(data, priors, pl, fit$Bmat, fit$freq)
-      if (family == 3L)
-        diseasenowcasting:::.delay_distribution_functions(3L, rc$delay_mu,
-          diseasenowcasting:::.gengamma_shape_transform(pl$delay_Q %||% -2)$shape_Q, rc$delay_sigma)
-      else diseasenowcasting:::.delay_distribution_functions(family, rc$delay_mu, rc$delay_sigma)
-    }
-  }
-  tail_mat <- vapply(seq_len(ncol(draws)), function(i) {
-    pl  <- diseasenowcasting:::.split_named_vector(setNames(draws[, i], pn))
-    fns <- tryCatch(cdf_at(pl), error = function(e) NULL)
-    if (is.null(fns)) return(rep(NA_real_, length(delays)))
-    as.numeric(1 - fns$cdf(delays))
-  }, numeric(length(delays)))
-  if (length(delays) == 1L) mean(tail_mat, na.rm = TRUE)
-  else rowMeans(matrix(tail_mat, nrow = length(delays)), na.rm = TRUE)
-}
-
-# Mean tail probability for a set of delays: official surprise() first, fallback
-# (Dirichlet / any failure) second.  Returns one P(D >= d) per delay, in order.
+# Mean posterior tail probability P(D >= d) for a set of delays, via the exported
+# surprise() (which now scores every delay family, including the Dirichlet
+# non-parametric delay).  Returns one value per delay, in order, or NA when the
+# score is unavailable.
 delay_tail_prob <- function(nc, delays, n_draws, seed = 284675L) {
-  sp <- tryCatch(
+  delay_surprise <- tryCatch(
     diseasenowcasting::surprise(nc, new_data = data.frame(delay = delays),
       type = "delay", level = SURPRISE_LEVEL, n_draws = n_draws, seed = seed)$delay_surprise,
     error = function(e) NULL)
-  if (!is.null(sp) && nrow(sp) == length(delays) && all(is.finite(sp$mean_tail_prob)))
-    return(sp$mean_tail_prob)
-  delay_tail_fallback(nc, delays, n_draws = n_draws, seed = seed)
+  if (!is.null(delay_surprise) && nrow(delay_surprise) == length(delays))
+    delay_surprise$mean_tail_prob
+  else
+    rep(NA_real_, length(delays))
 }
 
 # ── Plot infrastructure ──────────────────────────────────────────────────────
