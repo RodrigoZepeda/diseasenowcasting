@@ -112,7 +112,11 @@ nowcast_twostage <- function(model, m, X = NULL, d_star = NULL, max_time = NULL,
           if (imputation_fit$convergence != 0) NULL
           else .nowcast_draws(imputation_fit, target = target, n_draws = n_draws_per)$M
         }, error = function(e) NULL)
-        if (!is.null(imputation_draws)) { pooled_draws[[length(pooled_draws) + 1]] <- imputation_draws; n_converged <- n_converged + 1L }
+        # Keep only imputations whose Stage-2 fit converged.
+      if (!is.null(imputation_draws)) {
+        pooled_draws[[length(pooled_draws) + 1]] <- imputation_draws
+        n_converged <- n_converged + 1L
+      }
       }
       if (n_converged >= 1L) pool_and_summarise(pooled_draws, "multi", n_converged) else NULL
     }, error = function(e) NULL)
@@ -152,7 +156,11 @@ nowcast_twostage <- function(model, m, X = NULL, d_star = NULL, max_time = NULL,
         if (imputation_fit$convergence != 0) NULL
         else .nowcast_draws(imputation_fit, target = target, n_draws = n_draws_per)$M
       }, error = function(e) NULL)
-      if (!is.null(imputation_draws)) { pooled_draws[[length(pooled_draws) + 1]] <- imputation_draws; n_converged <- n_converged + 1L }
+      # Keep only imputations whose Stage-2 fit converged.
+      if (!is.null(imputation_draws)) {
+        pooled_draws[[length(pooled_draws) + 1]] <- imputation_draws
+        n_converged <- n_converged + 1L
+      }
     }
     if (n_converged >= 1L) return(pool_and_summarise(pooled_draws, "multi", n_converged))
   }
