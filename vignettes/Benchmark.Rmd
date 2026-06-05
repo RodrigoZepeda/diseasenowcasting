@@ -15,6 +15,7 @@ knitr::opts_chunk$set(
   warning  = FALSE,
   fig.width  = 9,
   fig.height = 4.5,
+  fig.align='center',
   collapse = TRUE,
   comment  = "#>"
 )
@@ -281,9 +282,9 @@ build <- list(
                               report_date = report_week, data_type = "linelist",
                               verbose = FALSE, 
                               t_effects = temporal_effects(seasons = 52)),
-  mpox   = function() tbl_now(as.data.frame(mpoxdat), event_date = dx_date,
+  mpox   = function() tbl_now(mpoxdat, event_date = dx_date,
                               report_date = dx_report_date, case_count = n,
-                              data_type = "count-incidence", verbose = FALSE,
+                              data_type = "linelist", verbose = FALSE,
                               t_effects = temporal_effects(day_of_week = T)),
   covid  = function() tbl_now(covid_colombia, event_date = notification_date,
                               report_date = diagnosis_date, strata = sex, case_count = n,
