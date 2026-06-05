@@ -121,38 +121,58 @@
 #' @keywords internal
 #' @noRd
 .pool_fit_draws <- function(fits, target, n_draws = 200L) {
+  # Draw from each fit separately, then stack the draws.  For a one-stage fit
+  # there is a single block; for two-stage there is one block per imputation, and
+  # stacking them pools the delay uncertainty across imputations.
   nowcast_blocks <- vector("list", length(fits))
   lambda_blocks  <- vector("list", length(fits))
   strata_blocks  <- vector("list", length(fits))
   n_strata <- 1L
-  for (i in seq_along(fits)) {
-    drawn <- .nowcast_draws(fits[[i]], target = target, n_draws = n_draws)
-    nowcast_blocks[[i]] <- drawn$M
-    lambda_blocks[[i]]  <- drawn$lambda_draws
-    strata_blocks[[i]]  <- drawn$M_strata
-    n_strata <- drawn$n_strata %||% 1L
+  for (fit_index in seq_along(fits)) {
+    fit_draws <- .nowcast_draws(fits[[fit_index]], target = target, n_draws = n_draws)
+    nowcast_blocks[[fit_index]] <- fit_draws$M
+    lambda_blocks[[fit_index]]  <- fit_draws$lambda_draws
+    strata_blocks[[fit_index]]  <- fit_draws$M_strata
+    n_strata <- fit_draws$n_strata %||% 1L
   }
-  M_strata <- NULL
+
+  # Per-stratum draws are a 3-D array [draws x time x strata]; only pool them when
+  # the fit is actually stratified and every block produced one.
+  pooled_strata <- NULL
   if (n_strata > 1L && all(!vapply(strata_blocks, is.null, logical(1)))) {
-    # rbind along the draws dimension, keeping [pooled_draws x max_time x n_strata]
     n_time <- dim(strata_blocks[[1]])[2]
-    M_strata <- array(NA_real_, c(0L, n_time, n_strata))
-    for (blk in strata_blocks) M_strata <- abind_draws(M_strata, blk)
+    pooled_strata <- array(NA_real_, c(0L, n_time, n_strata))   # empty; grown below
+    for (stratum_block in strata_blocks)
+      pooled_strata <- abind_draws(pooled_strata, stratum_block)
   }
+
   list(M = do.call(rbind, nowcast_blocks),
        lambda = do.call(rbind, lambda_blocks),
-       M_strata = M_strata, n_strata = n_strata)
+       M_strata = pooled_strata, n_strata = n_strata)
 }
 
-#' Bind two `draws x time x strata` arrays along the draws dimension (base R).
+#' Bind two `[draws x time x strata]` arrays along the draws (first) dimension
+#'
+#' A small base-R stand-in for `abind::abind(..., along = 1)`, used to pool
+#' per-stratum draw arrays without taking on an extra dependency.
+#'
+#' @param first,second Numeric 3-D arrays sharing the same time and strata
+#'   dimensions (either may be `NULL` or have zero draws, in which case the other
+#'   is returned unchanged).
+#' @returns The two arrays stacked along the first (draws) dimension.
 #' @keywords internal
 #' @noRd
-abind_draws <- function(a, b) {
-  if (is.null(a) || dim(a)[1] == 0L) return(b)
-  if (is.null(b) || dim(b)[1] == 0L) return(a)
-  d <- dim(a); nt <- d[2]; ns <- d[3]
-  out <- array(NA_real_, c(dim(a)[1] + dim(b)[1], nt, ns))
-  out[seq_len(dim(a)[1]), , ] <- a
-  out[dim(a)[1] + seq_len(dim(b)[1]), , ] <- b
-  out
+abind_draws <- function(first, second) {
+  if (is.null(first)  || dim(first)[1]  == 0L) return(second)
+  if (is.null(second) || dim(second)[1] == 0L) return(first)
+
+  n_draws_first  <- dim(first)[1]
+  n_draws_second <- dim(second)[1]
+  n_time         <- dim(first)[2]
+  n_strata       <- dim(first)[3]
+
+  combined <- array(NA_real_, c(n_draws_first + n_draws_second, n_time, n_strata))
+  combined[seq_len(n_draws_first), , ] <- first
+  combined[n_draws_first + seq_len(n_draws_second), , ] <- second
+  combined
 }

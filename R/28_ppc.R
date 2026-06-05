@@ -43,109 +43,137 @@ S7::method(ppc, nowcast_class) <- function(object, n_draws = 500L, seed = sample
   is_nb  <- data$is_negative_binomial == 1L
 
   # -- Sample posterior parameters --------------------------------------------
-  obj       <- fit$obj
-  mode_vec  <- obj$env$last.par.best
-  prec_mat  <- methods::as(obj$he(mode_vec), "sparseMatrix")
-  par_draws <- tryCatch({
-    .sample_mvnorm_precision(as.numeric(mode_vec), prec_mat, n_draws)
-  }, error = function(e) NULL)
+  # Draw from the Laplace posterior N(mode, Hessian^{-1}); fall back to the MAP
+  # (a single "draw") if the precision matrix cannot be sampled.
+  obj            <- fit$obj
+  posterior_mode <- obj$env$last.par.best
+  precision      <- methods::as(obj$he(posterior_mode), "sparseMatrix")
+  par_draws <- tryCatch(
+    .sample_mvnorm_precision(as.numeric(posterior_mode), precision, n_draws),
+    error = function(e) NULL)
   if (is.null(par_draws)) {
     cli::cli_warn("Could not sample from posterior precision -- using MAP for PPC.")
-    par_draws <- matrix(as.numeric(mode_vec), ncol = 1L)
+    par_draws <- matrix(as.numeric(posterior_mode), ncol = 1L)
   }
-  par_names <- names(mode_vec)
+  par_names <- names(posterior_mode)
 
   # -- Panel 1: Delay PPC ----------------------------------------------------
-  obs_delays <- as.integer(data$m[, 3])
-  obs_wts    <- as.numeric(data$m[, 2])
-  max_d_plot <- min(as.integer(quantile(rep(obs_delays, times = pmax(1L, round(obs_wts))),
-                                         0.995, na.rm = TRUE)) + 2L, 60L)
-  d_seq      <- seq(0, max_d_plot, by = 0.5)
+  # Observed delays and their case weights (column 3 = delay, column 2 = count).
+  observed_delays <- as.integer(data$m[, 3])
+  observed_weights <- as.numeric(data$m[, 2])
+  # Plot delays up to a high quantile of the observed (cap at 60) so the long
+  # right tail does not dominate the axis.
+  max_delay_to_plot <- min(
+    as.integer(quantile(rep(observed_delays, times = pmax(1L, round(observed_weights))),
+                        0.995, na.rm = TRUE)) + 2L,
+    60L)
+  delay_grid <- seq(0, max_delay_to_plot, by = 0.5)
 
-  # Posterior-predictive delay PMF for each draw
-  delay_ppc_draws <- lapply(seq_len(ncol(par_draws)), function(i) {
-    pl  <- .split_named_vector(setNames(par_draws[, i], par_names))
-    fns <- tryCatch({
+  # Posterior-predictive delay PMF for each parameter draw: reconstruct the delay
+  # distribution for that draw, then difference its CDF over the delay grid.
+  delay_ppc_draws <- lapply(seq_len(ncol(par_draws)), function(draw_index) {
+    parlist_draw <- .split_named_vector(setNames(par_draws[, draw_index], par_names))
+    delay_fns <- tryCatch({
       if (family == 4L) {
-        n_b <- as.integer(data$np_model_length)
-        sp  <- if (isTRUE(priors$delay_probs$is_constant == 1L)) priors$delay_probs$fixed
-               else { el <- exp(pl$delay_logits); c(el, 1) / (sum(el) + 1) }
-        .nonparametric_delay_functions(sp, n_b)
+        # Dirichlet (non-parametric): the simplex is either fixed or rebuilt from
+        # this draw's logits.
+        n_bins <- as.integer(data$np_model_length)
+        simplex <- if (isTRUE(priors$delay_probs$is_constant == 1L)) {
+          priors$delay_probs$fixed
+        } else {
+          exp_logits <- exp(parlist_draw$delay_logits)
+          c(exp_logits, 1) / (sum(exp_logits) + 1)
+        }
+        .nonparametric_delay_functions(simplex, n_bins)
       } else {
-        rc <- .joint_reconstruct(data, priors, pl, fit$Bmat, fit$freq)
+        reconstructed <- .joint_reconstruct(data, priors, parlist_draw, fit$Bmat, fit$freq)
         if (family == 3L)
-          .delay_distribution_functions(3L, rc$delay_mu, .gengamma_shape_transform(pl$delay_Q %||% -2)$shape_Q, rc$delay_sigma)
-        else .delay_distribution_functions(family, rc$delay_mu, rc$delay_sigma)
+          .delay_distribution_functions(3L, reconstructed$delay_mu,
+            .gengamma_shape_transform(parlist_draw$delay_Q %||% -2)$shape_Q,
+            reconstructed$delay_sigma)
+        else
+          .delay_distribution_functions(family, reconstructed$delay_mu, reconstructed$delay_sigma)
       }
     }, error = function(e) NULL)
-    if (is.null(fns)) return(NULL)
-    cdf_vals <- as.numeric(fns$cdf(d_seq + 0.5)) - as.numeric(fns$cdf(pmax(0, d_seq - 0.5)))
-    data.frame(delay = d_seq, pmf = cdf_vals, draw = i)
+    if (is.null(delay_fns)) return(NULL)
+    pmf <- as.numeric(delay_fns$cdf(delay_grid + 0.5)) -
+           as.numeric(delay_fns$cdf(pmax(0, delay_grid - 0.5)))
+    data.frame(delay = delay_grid, pmf = pmf, draw = draw_index)
   })
   delay_ppc_df <- do.call(rbind, Filter(Negate(is.null), delay_ppc_draws))
-  # Empirical PMF
-  emp_df <- data.frame(delay = obs_delays, weight = obs_wts) |>
-    (\(d) { tot <- sum(d$weight); aggregate(weight/tot ~ delay, data = d, FUN = sum) })()
-  names(emp_df) <- c("delay", "pmf")
-  emp_df <- emp_df[emp_df$delay <= max_d_plot, ]
 
-  delay_sum_raw <- tapply(delay_ppc_df$pmf, delay_ppc_df$delay, function(v)
-    c(lo = quantile(v, 0.05), hi = quantile(v, 0.95), med = median(v)))
-  delay_sum <- data.frame(
-    delay = as.numeric(names(delay_sum_raw)),
-    lo    = vapply(delay_sum_raw, `[`, numeric(1), "lo"),
-    hi    = vapply(delay_sum_raw, `[`, numeric(1), "hi"),
-    med   = vapply(delay_sum_raw, `[`, numeric(1), "med")
+  # Empirical (observed) delay PMF = weighted relative frequency of each delay.
+  empirical_pmf <- data.frame(delay = observed_delays, weight = observed_weights) |>
+    (\(d) { total <- sum(d$weight); aggregate(weight / total ~ delay, data = d, FUN = sum) })()
+  names(empirical_pmf) <- c("delay", "pmf")
+  empirical_pmf <- empirical_pmf[empirical_pmf$delay <= max_delay_to_plot, ]
+
+  # 5/50/95% posterior-predictive band of the delay PMF at each delay.
+  delay_band <- tapply(delay_ppc_df$pmf, delay_ppc_df$delay, function(pmf_at_delay)
+    c(lo = quantile(pmf_at_delay, 0.05), hi = quantile(pmf_at_delay, 0.95),
+      med = median(pmf_at_delay)))
+  delay_summary <- data.frame(
+    delay = as.numeric(names(delay_band)),
+    lo    = vapply(delay_band, `[`, numeric(1), "lo"),
+    hi    = vapply(delay_band, `[`, numeric(1), "hi"),
+    med   = vapply(delay_band, `[`, numeric(1), "med")
   )
 
-  p_delay <- ggplot2::ggplot() +
-    ggplot2::geom_ribbon(data = delay_sum,
+  delay_plot <- ggplot2::ggplot() +
+    ggplot2::geom_ribbon(data = delay_summary,
                          ggplot2::aes(x = delay, ymin = lo, ymax = hi), fill = "#fdae61", alpha = 0.4) +
-    ggplot2::geom_line(data = delay_sum, ggplot2::aes(x = delay, y = med), colour = "#d73027", linewidth = 1) +
-    ggplot2::geom_col(data = emp_df, ggplot2::aes(x = delay, y = pmf), fill = "grey40", alpha = 0.5, width = 0.4) +
+    ggplot2::geom_line(data = delay_summary, ggplot2::aes(x = delay, y = med), colour = "#d73027", linewidth = 1) +
+    ggplot2::geom_col(data = empirical_pmf, ggplot2::aes(x = delay, y = pmf), fill = "grey40", alpha = 0.5, width = 0.4) +
     ggplot2::labs(x = "Delay", y = "Probability", title = "Delay PPC (bars = observed; line+ribbon = posterior predictive)") +
     ggplot2::theme_minimal(base_size = 11)
 
   # -- Panel 2: Count PPC (fully-reported events) ----------------------------
-  d_star_vec  <- as.numeric(data$d_star[, 1])    # max observable delay per event-time
+  # An event-time is "fully reported" once its maximum observable delay d* is at
+  # least `max_obs_delay` (default the 90th percentile of observed delays), i.e.
+  # essentially all of its cases have had time to arrive.
+  max_observable_delay_per_event <- as.numeric(data$d_star[, 1])
   max_obs_delay <- if (is.null(min_full_report_delay))
-    as.integer(quantile(rep(obs_delays, pmax(1, round(obs_wts))), 0.90, na.rm = TRUE))
+    as.integer(quantile(rep(observed_delays, pmax(1, round(observed_weights))), 0.90, na.rm = TRUE))
   else as.integer(min_full_report_delay)
-  full_idx    <- which(d_star_vec >= max_obs_delay)   # event-times considered fully reported
+  fully_reported_events <- which(max_observable_delay_per_event >= max_obs_delay)
 
   count_ppc_df <- NULL
-  p_count      <- ggplot2::ggplot() + ggplot2::labs(title = "No fully-reported events to check") +
+  count_plot   <- ggplot2::ggplot() + ggplot2::labs(title = "No fully-reported events to check") +
                   ggplot2::theme_minimal(base_size = 11)
 
-  if (length(full_idx) > 0L) {
+  if (length(fully_reported_events) > 0L) {
     observed_total <- rowSums(if (is.matrix(data$case_counts)) data$case_counts
                                else matrix(data$case_counts, n_time, 1))
-    # Posterior predictive N_t for fully-reported events
-    ppc_rows <- lapply(seq_len(ncol(par_draws)), function(i) {
-      pl  <- .split_named_vector(setNames(par_draws[, i], par_names))
-      rc  <- tryCatch(.joint_reconstruct(data, priors, pl, fit$Bmat, fit$freq), error = function(e) NULL)
-      if (is.null(rc)) return(NULL)
-      lambda  <- rowSums(matrix(rc$lambda, n_time, data$num_strata))[full_idx]
-      Gstar   <- rowSums(matrix(rc$Gstar,  n_time, data$num_strata))[full_idx]
-      phi_nb  <- rc$phi_nb
-      pred_unreported <- .epidemic_rng(is_nb, lambda * (1 - Gstar) + 1e-8, phi_nb)
-      pred_total <- observed_total[full_idx] + pred_unreported
-      data.frame(t_idx = full_idx - 1L, pred = pred_total, draw = i)
+    # Posterior-predictive total count N_t for each fully-reported event = the
+    # cases already observed plus a draw of the (small) still-unreported remainder.
+    count_ppc_rows <- lapply(seq_len(ncol(par_draws)), function(draw_index) {
+      parlist_draw  <- .split_named_vector(setNames(par_draws[, draw_index], par_names))
+      reconstructed <- tryCatch(.joint_reconstruct(data, priors, parlist_draw, fit$Bmat, fit$freq),
+                                error = function(e) NULL)
+      if (is.null(reconstructed)) return(NULL)
+      lambda <- rowSums(matrix(reconstructed$lambda, n_time, data$num_strata))[fully_reported_events]
+      Gstar  <- rowSums(matrix(reconstructed$Gstar,  n_time, data$num_strata))[fully_reported_events]
+      predicted_unreported <- .epidemic_rng(is_nb, lambda * (1 - Gstar) + 1e-8, reconstructed$phi_nb)
+      predicted_total <- observed_total[fully_reported_events] + predicted_unreported
+      data.frame(t_idx = fully_reported_events - 1L, pred = predicted_total, draw = draw_index)
     })
-    count_ppc_df <- do.call(rbind, Filter(Negate(is.null), ppc_rows))
-    obs_full  <- data.frame(t_idx = full_idx - 1L, observed = observed_total[full_idx])
+    count_ppc_df <- do.call(rbind, Filter(Negate(is.null), count_ppc_rows))
+    observed_fully_reported <- data.frame(t_idx = fully_reported_events - 1L,
+                                          observed = observed_total[fully_reported_events])
 
-    cnt_sum_raw <- tapply(count_ppc_df$pred, count_ppc_df$t_idx, function(v)
-      c(lo = quantile(v, 0.05), hi = quantile(v, 0.95), med = median(v)))
-    cnt_sum_df <- data.frame(
-      t_idx = as.integer(names(cnt_sum_raw)),
-      lo    = vapply(cnt_sum_raw, `[`, numeric(1), "lo"),
-      hi    = vapply(cnt_sum_raw, `[`, numeric(1), "hi"),
-      med   = vapply(cnt_sum_raw, `[`, numeric(1), "med")
+    # 5/50/95% band of the predicted total at each fully-reported event-time.
+    count_band <- tapply(count_ppc_df$pred, count_ppc_df$t_idx, function(pred_at_event)
+      c(lo = quantile(pred_at_event, 0.05), hi = quantile(pred_at_event, 0.95),
+        med = median(pred_at_event)))
+    count_summary <- data.frame(
+      t_idx = as.integer(names(count_band)),
+      lo    = vapply(count_band, `[`, numeric(1), "lo"),
+      hi    = vapply(count_band, `[`, numeric(1), "hi"),
+      med   = vapply(count_band, `[`, numeric(1), "med")
     )
-    cnt_sum_df <- merge(cnt_sum_df, obs_full, by = "t_idx")
+    count_summary <- merge(count_summary, observed_fully_reported, by = "t_idx")
 
-    p_count <- ggplot2::ggplot(cnt_sum_df, ggplot2::aes(x = t_idx)) +
+    count_plot <- ggplot2::ggplot(count_summary, ggplot2::aes(x = t_idx)) +
       ggplot2::geom_ribbon(ggplot2::aes(ymin = lo, ymax = hi), fill = "#4575b4", alpha = 0.3) +
       ggplot2::geom_line(ggplot2::aes(y = med), colour = "#4575b4", linewidth = 1) +
       ggplot2::geom_point(ggplot2::aes(y = observed), colour = "black", size = 1.5) +
@@ -154,11 +182,11 @@ S7::method(ppc, nowcast_class) <- function(object, n_draws = 500L, seed = sample
       ggplot2::theme_minimal(base_size = 11)
   }
 
-  plots <- list(delay = p_delay, count = p_count)
+  plots <- list(delay = delay_plot, count = count_plot)
   combined <- if (requireNamespace("patchwork", quietly = TRUE))
     patchwork::wrap_plots(plots, ncol = 1L)
   else plots
 
   invisible(list(plot = combined, delay_ppc = delay_ppc_df, count_ppc = count_ppc_df,
-                 max_obs_delay = max_obs_delay, n_full_events = length(full_idx)))
+                 max_obs_delay = max_obs_delay, n_full_events = length(fully_reported_events)))
 }

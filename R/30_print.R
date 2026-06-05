@@ -5,12 +5,15 @@
 # and a full model_class printer that shows every component WITH its priors.
 # =============================================================================
 
-#' Format a prior_class inline: "Dist(p1, p2)"
+#' Format a prior_class inline as a coloured `"Dist(p1, p2)"` string
+#' @param prior A `prior_class` object.
+#' @returns A length-1 character string for inline cli printing.
 #' @keywords internal
 #' @noRd
-.prior_inline <- function(p) {
-  args <- if (length(p@stan_params) > 0) paste(format(p@stan_params, digits = 4), collapse = ", ") else ""
-  paste0(cli::col_blue(p@name), "(", args, ")")
+.prior_inline <- function(prior) {
+  formatted_params <- if (length(prior@stan_params) > 0)
+    paste(format(prior@stan_params, digits = 4), collapse = ", ") else ""
+  paste0(cli::col_blue(prior@name), "(", formatted_params, ")")
 }
 
 #' Format a parameter slot inline: "p ~ Dist()", "p = num", or just "p"
@@ -92,7 +95,10 @@ S7::method(print, dirichlet_delay_class) <- function(x, ..., digits = 4) {
 
 # ── Epidemic processes ────────────────────────────────────────────────────────
 
-.gp_kernel_label <- function(k) c("1" = "sq_exp", "2" = "matern32", "3" = "matern52")[[as.character(k)]]
+# Integer GP-kernel code (1/2/3) -> its human-readable name.
+.gp_kernel_label <- function(kernel_code) {
+  c("1" = "sq_exp", "2" = "matern32", "3" = "matern52")[[as.character(kernel_code)]]
+}
 
 #' @noRd
 S7::method(print, hsgp_epidemic_class) <- function(x, ..., digits = 4) {
