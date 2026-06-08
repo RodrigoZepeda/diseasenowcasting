@@ -80,7 +80,7 @@ test_that("autoplot spans the full grid when now is well past the last observati
   nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                 type = "one_stage", n_draws = 120,
                 now = as.Date("2020-01-25"), seed = 1)   # 10 days past last onset
-  p   <- autoplot(nc, seed = 2)
+  p   <- autoplot(nc, seed = 2, previous_times = NULL)    # full grid, not the last 15
   dat <- p$data
   expect_equal(nrow(dat), nc@target)              # one bar per event-time on the grid
   # the most recent rows have no observed cases yet, but the model still produces
@@ -89,6 +89,17 @@ test_that("autoplot spans the full grid when now is well past the last observati
   expect_true(all(last_rows$reported == 0))
   expect_true(any(last_rows$q_hi > 0))            # model has predictive mass
   expect_true(all(is.finite(last_rows$predicted_total)))
+})
+
+test_that("autoplot previous_times keeps only the most recent event-times", {
+  tn <- .daily_tn(Tn = 40L, seed = 7)
+  nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
+                type = "one_stage", n_draws = 120, seed = 1)
+  full <- nrow(autoplot(nc, seed = 2, previous_times = NULL)$data)
+  expect_gt(full, 15L)                                   # grid is longer than the default window
+  expect_equal(nrow(autoplot(nc, seed = 2)$data), 15L)               # default window
+  expect_equal(nrow(autoplot(nc, seed = 2, previous_times = 5L)$data), 5L)
+  expect_equal(nrow(autoplot(nc, seed = 2, previous_times = 1000L)$data), full) # caps at grid
 })
 
 test_that("stratified autoplot with a recent gap facets and spans the grid", {
