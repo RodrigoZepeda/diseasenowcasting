@@ -1,11 +1,14 @@
-pandoc: 3.1.11
-pkgdown: 2.1.2
+pandoc: 3.8.3
+pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
-  articles/Advanced-nowcast-options: Advanced-nowcast-options.html
-  articles/Comparison-to-other-methods: Comparison-to-other-methods.html
-  articles/diseasenowcasting: diseasenowcasting.html
-last_built: 2025-05-16T19:28Z
+  Benchmark: Benchmark.html
+  Handling_Outlier_Delays_with_Censoring: Handling_Outlier_Delays_with_Censoring.html
+  introduction: introduction.html
+  Mathematics: Mathematics.html
+  Nowcasting_at_the_start_of_an_Epidemic: Nowcasting_at_the_start_of_an_Epidemic.html
+  Understanding_Priors: Understanding_Priors.html
+last_built: 2026-06-08T21:52Z
 urls:
   reference: https://rodrigozepeda.github.io/diseasenowcasting/reference
   article: https://rodrigozepeda.github.io/diseasenowcasting/articles
