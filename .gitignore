@@ -7,6 +7,9 @@
 logs/
 *.log
 *.rds
+# ...but DO track the precomputed datasets the vignettes load (and download as a
+# fallback) so they ship with the package and the pkgdown website.
+!inst/extdata/*.rds
 .Rproj.user
 SKILL.md
 Dockerfile
