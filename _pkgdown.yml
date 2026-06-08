@@ -17,7 +17,7 @@ template:
 
 navbar:
   structure:
-    left:  [intro, articles, reference, news]
+    left:  [articles, reference, news]
     right: [search, github]
   bg: secondary
   components:
@@ -26,82 +26,7 @@ navbar:
       href: https://github.com/RodrigoZepeda/diseasenowcasting
       aria-label: GitHub
 
-articles:
-  - title: "Getting started"
-    navbar: ~
-    contents:
-      - introduction
-  - title: "Advanced topics"
-    contents:
-      - Nowcasting_at_the_start_of_an_Epidemic
-      - Understanding_Priors
-      - Handling_Outlier_Delays_with_Censoring
-      - Benchmark
-  - title: "Mathematical background"
-    contents:
-      - Mathematics
-
-reference:
-  - title: "Main workflow"
-    desc: "Build a model, fit it, and inspect the results."
-    contents:
-      - nowcast
-      - model
-      - tidy
-      - nowcast_diagnostic
-      - ppc
-      - surprise
-      - censor_delays_above
-      - extreme_values
-
-  - title: "Backtesting and scoring"
-    contents:
-      - backtest
-      - score
-
-  - title: "Lower-level building blocks"
-    desc: "Advanced entry points used internally by nowcast(); most users do not call these directly."
-    contents:
-      - fit
-      - nowcast_twostage
-      - sample
-      - surprise.list
-
-  - title: "Model components"
-    desc: "Likelihood, epidemic trend, and delay families."
-    contents:
-      - nb_likelihood
-      - poisson_likelihood
-      - hsgp_epidemic
-      - ar1_epidemic
-      - sir_epidemic
-      - lognormal_delay
-      - gamma_delay
-      - generalized_gamma_delay
-      - dirichlet_delay
-
-  - title: "Priors"
-    contents:
-      - starts_with("normal_prior")
-      - starts_with("cauchy_prior")
-      - starts_with("gamma_prior")
-      - starts_with("lognormal_prior")
-      - starts_with("exponential_prior")
-      - starts_with("beta_prior")
-      - flat_prior
-      - fix_param
-      - default_priors
-
-  - title: "Data preparation"
-    contents:
-      - prepare_data
-      - summarise_nowcast_matrix
-
-  - title: "Visualisation"
-    contents:
-      - dn_palette
-      - theme_diseasenowcasting
-
-  - title: "Datasets"
-    contents:
-      - covid_colombia
+# NOTE: `reference:` and `articles:` are intentionally omitted so pkgdown builds
+# them automatically from the package's exported, documented topics and the
+# vignettes in vignettes/.  This avoids the index drifting out of sync whenever
+# an export is added/removed or a vignette is renamed.
