@@ -59,6 +59,14 @@ reference:
       - backtest
       - score
 
+  - title: "Lower-level building blocks"
+    desc: "Advanced entry points used internally by nowcast(); most users do not call these directly."
+    contents:
+      - fit
+      - nowcast_twostage
+      - sample
+      - surprise.list
+
   - title: "Model components"
     desc: "Likelihood, epidemic trend, and delay families."
     contents:
