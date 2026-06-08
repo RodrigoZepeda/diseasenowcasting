@@ -33,13 +33,13 @@ articles:
       - introduction
   - title: "Advanced topics"
     contents:
-      - early_epidemic
-      - prior_sensitivity
-      - censored_delays
-      - comparison_methods
+      - Nowcasting_at_the_start_of_an_Epidemic
+      - Understanding_Priors
+      - Handling_Outlier_Delays_with_Censoring
+      - Benchmark
   - title: "Mathematical background"
     contents:
-      - model_mathematics
+      - Mathematics
 
 reference:
   - title: "Main workflow"
@@ -47,23 +47,17 @@ reference:
     contents:
       - nowcast
       - model
-      - predict.nowcast_class
-      - coef.nowcast_class
-      - summary.nowcast_class
       - tidy
-      - autoplot.nowcast_class
       - nowcast_diagnostic
       - ppc
       - surprise
       - censor_delays_above
       - extreme_values
-      - update.nowcast_class
 
   - title: "Backtesting and scoring"
     contents:
       - backtest
       - score
-      - autoplot.backtest_class
 
   - title: "Model components"
     desc: "Likelihood, epidemic trend, and delay families."
