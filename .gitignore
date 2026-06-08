@@ -8,3 +8,6 @@ logs/
 *.log
 *.rds
 .Rproj.user
+SKILL.md
+Dockerfile
+devel/paper_sim

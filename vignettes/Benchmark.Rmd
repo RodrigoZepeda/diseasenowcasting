@@ -21,6 +21,10 @@ knitr::opts_chunk$set(
 )
 ```
 
+# NOTE
+
+> The numbers here are from a previous iteration of the package we are working on updating. 
+
 ## TL; DR
 
 We compared different datasets across distinct `diseasenowcasting` models as well as
@@ -154,7 +158,7 @@ it):
 
 ```sh
 Rscript devel/benchmark_full.R                                  # all 3 diseases, 50 dates
-N_DATES=6 RUN_COVID=FALSE RUN_MPOX=FALSE Rscript devel/benchmark_full.R   # quick smoke
+N_DATES=50  Rscript devel/benchmark_full.R  
 ```
 
 It prints a ranked WIS table per disease and saves the tidy scores to

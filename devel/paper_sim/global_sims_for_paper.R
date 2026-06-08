@@ -10,14 +10,13 @@ library(future)
 library(furrr)        # parallel map over evaluation dates
 library(scoringutils)
 library(NobBS)
-
-epinowcast::enw_set_cache(tempdir(), type = c('session'))
+epinowcast::enw_set_cache(tempdir(), type = 'session')
 library(epinowcast)
 
+future::plan(multisession, 
+             workers = max(parallel::detectCores(logical = TRUE) - 1, 1))
 
-future::plan(multisession, workers = 8)
-
-N_DATES  <- 50L
+N_DATES  <- 50
 PROBS    <- c(0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975)
 QCOLS    <- c("q2.5", "q5", "q10", "q25", "q50", "q75", "q90", "q95", "q97.5")
 
@@ -124,8 +123,8 @@ build <- list(
                               verbose = FALSE, 
                               t_effects = temporal_effects(seasons = 52)),
   mpox   = function() tbl_now(mpoxdat, event_date = dx_date,
-                              report_date = dx_report_date, case_count = n,
-                              data_type = "count-incidence", verbose = FALSE,
+                              report_date = dx_report_date,
+                              data_type = "linelist", verbose = FALSE,
                               t_effects = temporal_effects(day_of_week = T)),
   covid  = function() tbl_now(covid_colombia, event_date = notification_date,
                               report_date = diagnosis_date, strata = sex, case_count = n,

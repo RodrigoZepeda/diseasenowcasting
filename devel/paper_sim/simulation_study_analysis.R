@@ -7,11 +7,15 @@
 # For each analysis day t and EVERY (epidemic x likelihood x delay) configuration
 # we fit ONE nowcast and reuse it for two things:
 #   (1) the nowcast quantiles vs the eventual truth  -> WIS + the paper figures;
-#   (2) the surprise of the reporting delays that first become observable the
-#       NEXT day (report == t + 1) under THAT fit -> a per-model anomaly score.
-#       Because every configuration is scored, we get an ROC / AUC / sensitivity
-#       / specificity for the delay-backlog detector FOR EACH MODEL, not just the
-#       recommended one.  Ground truth is the `perturbed` backlog flag.
+#   (2) a DETECTION-ONLY surprise test of the delays that first become observable
+#       the NEXT day (report == t + 1) under THAT fit -> a per-model anomaly
+#       score.  The simulated data is CLEAN (no backlog); to test detection we
+#       inflate the reported delay (delay -> round(delay * PERTURB_FACTOR)) of a
+#       designated set of 20 perturbation event-days INSIDE surprise() ONLY -- the
+#       rolling model always advances on the true, unperturbed data, so the WIS /
+#       coverage in (1) are never contaminated.  Every configuration is scored, so
+#       we get an ROC / AUC / sensitivity / specificity for the backlog detector
+#       FOR EACH MODEL.  Ground truth = the event-day was one of the 20 points.
 #
 # The surprise MUST be computed inside the worker: the RTMB fit object holds
 # external pointers that do not survive serialisation between processes, so a
@@ -49,10 +53,18 @@ K_IMPUTE       <- if (SMOKE) 10L  else 25L   # two-stage delay imputations
 SURPRISE_DRAWS <- if (SMOKE) 150L else 400L
 SURPRISE_LEVEL <- 0.99                  # flag a delay when P(D >= d) < 1 - level
 # Fit type is per delay family: TWO-STAGE everywhere (it re-injects delay
-# uncertainty -> wider, better-calibrated intervals = decent coverage), EXCEPT
-# the Dirichlet (non-parametric) delay, which uses one-stage (its two-stage
-# simplex imputation is unstable here).
+# uncertainty -> better-calibrated intervals), EXCEPT the Dirichlet
+# (non-parametric) delay, which uses one-stage (its two-stage simplex imputation
+# is unstable here).
 fit_type_for <- function(delay_label) if (delay_label == "Dirichlet") "one_stage" else "two_stage"
+# Two-stage delay-imputation spread floors.  The defaults (0.25 / 0.15) inflate
+# the imputed-delay uncertainty so much that it dominates the predictive variance
+# on this clean data -- both NB and Poisson then over-cover and the likelihood
+# stops mattering.  Tightening the floors lets the OBSERVATION overdispersion be
+# the deciding factor, so the (correct) NB beats the under-dispersed Poisson while
+# the HSGP/NB interval coverage stays decent (IC90 ~ 0.9).
+FLOOR_SIG_FRAC <- 0.08
+FLOOR_MU       <- 0.08
 MAX_LAG        <- 15L                   # nowcast horizon scored for WIS-by-lag
 TABLE_LAG      <- 7L                    # horizon averaged in the LaTeX WIS table
 
@@ -75,10 +87,16 @@ report_col <- get_report_date(tbl_full)
 truth_tbl  <- tbl_full %>% get_latest_reported_cases() %>%
   as_tibble() %>% transmute(.event_num, final = n)
 
-# Per-(event, report) perturbation truth, for labelling newly-observable delays.
+# Clean (event, report) cells -- the data carries NO backlog.  The detection
+# experiment injects the perturbation at nowcast time (see run_one_date).
 cell_truth <- cases %>%
   transmute(event_time = as.integer(floor_t), report = as.integer(report),
-            n = as.integer(n), perturbed = perturbed)
+            n = as.integer(n))
+
+# Detection-only perturbation: the 20 designated event-days (positives) and the
+# factor by which their reported delays are inflated INSIDE surprise() only.
+PERTURB_DAYS   <- as.integer(sim$perturb_days)
+PERTURB_FACTOR <- sim$params$perturb_factor
 
 # Analysis days.  The epidemic runs ~0..135; we nowcast from day 8 onward.
 LAST_DAY <- as.integer(max(cell_truth$event_time))
@@ -176,19 +194,33 @@ run_one_date <- function(date_run) {
 
   # Reports that FIRST become observable the next day -- scored for surprise by
   # every model's fit (which never saw them).  Same set for all configurations.
+  # DETECTION-ONLY perturbation: for the 20 designated event-days we inflate the
+  # delay SHOWN TO surprise() (delay_surprise = round(delay * PERTURB_FACTOR)),
+  # simulating a transient backlog.  `model_tbl` (the fit data) is untouched.
   new_cells <- cell_truth %>%
     filter(report == date_run + 1L, event_time <= date_run) %>%
-    mutate(delay = report - event_time) %>%
-    group_by(event_time, delay, perturbed) %>%
+    mutate(delay      = report - event_time,
+           perturbed  = event_time %in% PERTURB_DAYS,
+           delay_surprise = if_else(perturbed,
+                                    as.integer(round(delay * PERTURB_FACTOR)),
+                                    as.integer(delay))) %>%
+    group_by(event_time, delay, delay_surprise, perturbed) %>%
     summarise(n = sum(n), .groups = "drop")
 
   # -- fit each configuration once; reuse it for the nowcast AND the surprise ---
   per_cfg <- lapply(seq_len(nrow(CONFIGS)), function(i) {
-    cfg <- CONFIGS[i, ]
-    nc  <- tryCatch(
-      nowcast(model_tbl, model = build_model(cfg), type = fit_type_for(cfg$delay_label),
-              K = K_IMPUTE, now = now_date, n_draws = N_DRAWS, temporal_effects = "none", seed = 1),
-      error = function(e) NULL)
+    cfg     <- CONFIGS[i, ]
+    fit_typ <- fit_type_for(cfg$delay_label)
+    nc_args <- list(model_tbl, model = build_model(cfg), type = fit_typ,
+                    K = K_IMPUTE, now = now_date, n_draws = N_DRAWS,
+                    temporal_effects = "none", seed = 1)
+    # Tighten the two-stage imputation spread (the Dirichlet one-stage fit does
+    # not use these floors).
+    if (fit_typ == "two_stage") {
+      nc_args$floor_sig_frac <- FLOOR_SIG_FRAC
+      nc_args$floor_mu       <- FLOOR_MU
+    }
+    nc <- tryCatch(do.call(nowcast, nc_args), error = function(e) NULL)
     if (is.null(nc)) return(list(nowcast = NULL, surprise = NULL))
 
     nowc <- summary(predict(nc, seed = 2)) %>% as.data.frame() %>%
@@ -198,7 +230,8 @@ run_one_date <- function(date_run) {
 
     surp <- NULL
     if (nrow(new_cells) > 0) {
-      tp <- tryCatch(delay_tail_prob(nc, new_cells$delay, n_draws = SURPRISE_DRAWS),
+      # Detection-only: score the (inflated-for-perturbed) delay under this fit.
+      tp <- tryCatch(delay_tail_prob(nc, new_cells$delay_surprise, n_draws = SURPRISE_DRAWS),
                      error = function(e) NULL)
       if (!is.null(tp))
         surp <- new_cells %>%
@@ -265,19 +298,22 @@ plot_final <- all_steps %>%
   filter(lag == 0) %>%
   ggplot() +
   geom_ribbon(aes(t, ymin = q5, ymax = q95, fill = delay_label), alpha = 0.5, linewidth = 0.35) +
-  geom_line(aes(t, median, color = delay_label, linetype = "Nowcast's median")) +
+  geom_line(aes(t, wis, color = "WIS"), linewidth = 0.3, data = wis_scores) +
   geom_point(aes(t, final, shape = "Truth"), color = "gray15", fill = "white",
              stroke = 0.9, alpha = 0.5, size = 0.5) +
-  geom_line(aes(t, wis, linetype = "WIS"), linewidth = 0.25, data = wis_scores) +
+  # Nowcast median -- thick, solid, dn_palette accent so it reads clearly over
+  # the per-delay credible-interval ribbon.
+  geom_line(aes(t, median, color = "Nowcast median"), linewidth = 0.85) +
   facet_nested(cols = vars(epidemic_label), rows = vars(nb_label, delay_label),
                strip = strip_background, labeller = facet_labels) +
   scale_fill_manual("Delay model", values = delay_colors) +
-  scale_color_manual("Delay model", values = delay_colors) +
+  scale_color_manual("", values = c("Nowcast median" = dn_palette()[["accent"]],
+                                    "WIS" = "grey30")) +
   scale_shape_manual("Observations", values = c(Truth = 21)) +
-  scale_linetype_manual("Information", values = c("WIS" = "solid", "Nowcast's median" = "dashed")) +
+  guides(color = guide_legend(override.aes = list(linewidth = c(0.85, 0.3)))) +
   scale_y_continuous(labels = scales::comma_format(), limits = c(0, NA)) +
   labs(title = "Nowcasts produced at each notification time with 95% credible interval",
-       subtitle = "Simulation from a control-then-release SIR model with Weibull-distributed delays",
+       subtitle = "Two-wave SIR epidemic with heavy-tailed reporting surges and Weibull delays",
        x = "Notification time", y = "Cases",
        caption = "HSGP: Hilbert Space GP | SIR: discrete SIR | AR(1): Autoregressive of order 1") +
   theme_paper(base_size = 12)
@@ -316,6 +352,7 @@ write_csv(surprise_df, file.path(OUT_DIR, "surprise_df.csv"))
 CFG_KEYS <- c("epidemic_label", "nb_label", "delay_label")
 
 day_surprise <- surprise_df %>%
+  filter(!is.na(mean_tail_prob)) %>%                 # drop unscored cells
   group_by(across(all_of(c(CFG_KEYS, "event_time")))) %>%
   summarise(min_tail_prob = min(mean_tail_prob),     # most surprising report
             perturbed     = any(perturbed),
@@ -330,7 +367,8 @@ cat(sprintf("\nSurprise: ~%d delays scored by each of %d models over %d event-da
 # -- Per-model AUC / sensitivity / specificity + ROC curve points -------------
 roc_one <- function(df) {
   # df: one model's per-day surprise. Returns metrics + the ROC path.
-  if (dplyr::n_distinct(df$perturbed) < 2)
+  df <- df[is.finite(df$min_tail_prob), , drop = FALSE]
+  if (sum(df$perturbed) == 0L || sum(!df$perturbed) == 0L)  # need both classes
     return(list(metrics = NULL, roc = NULL))
   score   <- 1 - df$min_tail_prob                   # higher = more surprising
   roc_obj <- pROC::roc(response = df$perturbed, predictor = score,
@@ -458,10 +496,12 @@ caption_note <- sprintf(paste0(
   "control-then-release transmission rate (basic reproduction number $R_0 = %.1f$, recovery ",
   "rate $\\gamma = %.3f$; transmission reduced by %.0f\\%% over days %d--%d to induce a second ",
   "wave) in a population of $N = %s$ individuals. Daily incident cases were drawn with ",
-  "negative-binomial observation noise (size $\\phi = %g$). Delays were simulated using a ",
-  "Weibull$(%g, %g)$ distribution with an approximate mean of %.1f days."),
+  "negative-binomial observation noise (size $\\phi = %g$), except on a fraction %.0f\\%% of ",
+  "days drawn with a smaller size $\\phi = %g$ to produce heavy-tailed reporting surges. ",
+  "Reporting delays followed a Weibull$(%g, %g)$ distribution with an approximate mean of %.1f days."),
   TABLE_LAG, p$R0, p$gamma, 100 * p$control[["drop"]], p$control[["start"]], p$control[["end"]],
   formatC(p$N_pop, format = "d", big.mark = ","), p$phi,
+  100 * p$p_surge, p$phi_surge,
   p$weibull$shape, p$weibull$scale, mdelay)
 
 tex <- c(

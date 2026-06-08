@@ -8,23 +8,39 @@
 #
 # The transmission rate follows a control-then-release profile: beta is high,
 # SUPPRESSED during a control window [CTRL_START, CTRL_END] (an intervention),
-# then released -- producing a small FIRST wave and a larger SECOND wave.
+# then released -- producing a distinct FIRST wave and a larger SECOND wave.
 #
 # Why this design (it makes the model comparison in the analysis informative):
 #   * A genuine TWO-WAVE latent curve cannot be reproduced by a constant-beta
-#     mechanistic SIR (one wave only), so the flexible HSGP fits it far better;
-#     the AR(1) lags the turning points.  -> HSGP wins on WIS.
-#   * Negative-binomial observation noise (size = PHI) on LARGE counts makes the
-#     overdispersion term mu^2/PHI dominate -> a Poisson likelihood is badly
-#     under-dispersed (its intervals miss), so the NB likelihood wins on WIS.
-#   * A short epidemic (~110 days, two waves) -- no need for hundreds of days.
+#     mechanistic SIR (one wave only), so the flexible HSGP fits the LogNormal /
+#     Generalized-Gamma delay families far better than the mechanistic SIR -- and
+#     better than the AR(1), which lags the turning points.  -> HSGP is the best
+#     EPIDEMIC PROCESS for those delay families.
+#   * The counts are HEAVY-TAILED: most days are negative-binomial with size PHI,
+#     but a small fraction of days are drawn with a much smaller size PHI_SURGE
+#     (occasional reporting surges / super-spreader days).  A Poisson likelihood
+#     cannot represent these heavy-tailed spikes and is catastrophically
+#     under-dispersed on the surge days, whereas the negative-binomial absorbs
+#     them -- so NB is the best LIKELIHOOD within HSGP.  (Plain NB overdispersion
+#     alone is NOT enough: the Weighted Interval Score rewards a sharp, slightly
+#     under-covering Poisson over a wide NB unless the counts have genuine heavy
+#     tails; the surge component is what supplies them.)
+#   * A short epidemic (~110 days, two clear waves, no long flat start tail).
 #
-# The paper's reporting-delay perturbation is applied to the UPPER bound of the
-# delay only (a transient backlog): on a known set of event-days the Weibull
-# scale is multiplied by PERTURB_FACTOR so those reports arrive much later.  Each
-# case carries a `perturbed` flag = ground truth for the surprise-detection ROC.
+# REPORTING DELAYS ARE CLEAN: every case is reported with an unperturbed Weibull
+# delay.  This serves two purposes: (a) the two-stage interval coverage stays
+# decent (IC90 >= ~0.9), and (b) it keeps the backlog-DETECTION experiment clean
+# -- because ordinary delays are short, the injected backlog stands out clearly.
+# (An earlier design added a structural delay heavy-tail, but it was counter-
+# productive: the COUNT surges above already make NB beat Poisson, and a genuine
+# delay heavy-tail makes long delays "normal", flooding the surprise detector
+# with false positives.)  No detection backlog is baked into the data: the
+# experiment injects its perturbation at NOWCAST time (detection-only, never
+# committed to the rolling model) -- see simulation_study_analysis.R.  We only
+# record WHICH event-days are the designated perturbation points; the analysis
+# inflates their reported delays purely inside surprise() to test detection.
 #
-# Output: devel/paper_sim/SIR_sims.rds  -- list(cases, perturb_days, params, truth).
+# Output: devel/paper_sim/SIR_sims.rds -- list(cases, perturb_days, truth, params).
 #
 # Run from the package root:  Rscript devel/paper_sim/simulation_study.R
 # =============================================================================
@@ -36,34 +52,38 @@ suppressMessages({
 OUT_RDS <- "devel/paper_sim/SIR_sims.rds"
 
 # ── Epidemic parameters ──────────────────────────────────────────────────────
-# These were tuned so the recommended HSGP / NB model not only wins on WIS but
-# also has DECENT interval coverage (90% coverage ~0.9 over the nowcast horizon
-# with the two-stage fit): broader, slower waves reduce the censored-edge
-# underprediction that otherwise sinks coverage, while the large population keeps
-# the negative-binomial overdispersion strong enough that NB still beats Poisson.
-N_POP   <- 45000      # total population (large -> NB overdispersion bites Poisson)
+# Two distinct waves (peaks ~day 28 and ~day 73) with no long flat start tail.
+# The population is moderate so the negative-binomial overdispersion stays strong
+# relative to the (tight) two-stage delay imputation, letting NB beat Poisson.
+N_POP   <- 40000      # total population
 I0      <- 10         # initial infectious
-R0      <- 1.85       # basic reproduction number before control (gentler growth)
+R0      <- 2.4        # basic reproduction number before control
 GAMMA   <- 1 / 7      # recovery rate (mean infectious period ~ 7 days)
-TMAX    <- 135        # epidemic length in days (two broad waves)
+TMAX    <- 110        # epidemic length in days (two clear waves)
 
 # Control-then-release transmission: beta is multiplied by (1 - CTRL_DROP) during
 # the window [CTRL_START, CTRL_END], with smooth (logistic) transitions of width
-# CTRL_SW.  This suppresses the first wave then lets a larger second wave grow.
-CTRL_DROP  <- 0.55    # fractional reduction in beta during the control window
-CTRL_START <- 26      # control begins (day)
-CTRL_END   <- 62      # control ends / is released (day)
+# CTRL_SW.  This caps the first wave then lets a larger second wave grow.
+CTRL_DROP  <- 0.62    # fractional reduction in beta during the control window
+CTRL_START <- 28      # control begins (day) -- just after the first peak
+CTRL_END   <- 55      # control ends / is released (day)
 CTRL_SW    <- 3       # smoothness (days) of the on/off transition
 
-PHI <- 18             # negative-binomial size (smaller = more overdispersed)
+PHI       <- 12       # negative-binomial size on ordinary days
+P_SURGE   <- 0.10     # fraction of days that are heavy-tailed reporting surges
+PHI_SURGE <- 1.2      # NB size on surge days (small = heavy-tailed count spikes)
 
-# ── Reporting delay (Weibull) + upper-bound backlog perturbation ─────────────
-# A lighter backlog (fewer days, x2.5 not x3) keeps the surprise signal clearly
-# detectable while limiting how many event-days are intrinsically un-coverable.
-DELAY_SHAPE    <- 2
-DELAY_SCALE    <- 2.2   # mean delay ~ 2 days
-N_PERTURB      <- 8L    # number of perturbed (backlog) event-days
-PERTURB_FACTOR <- 2.5   # multiply the Weibull scale on those days (~2.5x mean delay)
+# ── Reporting delay (Weibull) -- CLEAN (no in-data backlog) ──────────────────
+DELAY_SHAPE <- 2
+DELAY_SCALE <- 2.5    # mean delay ~ 2.2 days
+
+# ── Detection experiment: designated perturbation event-days ─────────────────
+# These are NOT applied to the data.  The analysis inflates the reported delays
+# of these event-days INSIDE surprise() (delay -> round(delay * PERTURB_FACTOR))
+# to simulate a transient backlog and test per-model detection.  They are the
+# positive class for the surprise ROC; every other event-day is a negative.
+N_PERTURB      <- 20L   # number of perturbation event-days (the "20 points")
+PERTURB_FACTOR <- 2.5   # delay inflation applied at detection time (analysis)
 
 # ── 1. Latent incidence from a control-then-release SIR ODE ──────────────────
 # The control factor dips to (1 - drop) between tc1 and tc2 (smooth logistic
@@ -83,38 +103,39 @@ ode_out <- as.data.frame(ode(y0, 0:TMAX, sir_ctrl, parms))
 lambda <- diff(ode_out$C)
 cases_by_day <- tibble(floor_t = seq_along(lambda) - 1L, lambda = lambda)
 
-# ── 2. Negative-binomial observation noise ───────────────────────────────────
+# ── 2. Heavy-tailed negative-binomial observation noise ──────────────────────
+# Ordinary days use size PHI; a fraction P_SURGE of days use the much smaller
+# PHI_SURGE, producing occasional heavy-tailed count spikes that a Poisson
+# likelihood cannot represent (this is what lets NB beat Poisson on the WIS).
 set.seed(238759)
 cases_by_day <- cases_by_day %>%
-  mutate(cases = rnbinom(n(), size = PHI, mu = lambda))
+  mutate(
+    surge = runif(n()) < P_SURGE,
+    cases = rnbinom(n(), size = if_else(surge, PHI_SURGE, PHI), mu = lambda)
+  )
 
-# ── 3. Pick the perturbed (backlog) event-days ───────────────────────────────
+# ── 3. Designate the perturbation event-days (detection positives) ───────────
+# Spread across the timeline so both waves contribute; drawn from active days
+# that stay observable during the rolling analysis (reports arrive within ~a week).
 set.seed(7)
-active_days  <- cases_by_day %>% filter(cases >= 5) %>% pull(floor_t)
+active_days  <- cases_by_day %>%
+  filter(cases >= 5, floor_t >= 8L, floor_t <= TMAX - 6L) %>% pull(floor_t)
 perturb_days <- sort(sample(active_days, min(N_PERTURB, length(active_days))))
 
-# ── 4. Assign one Weibull delay per case, tagging perturbed observations ─────
+# ── 4. Assign one CLEAN Weibull delay per case (no backlog in the data) ──────
 set.seed(20240603)
 cases <- cases_by_day %>%
   filter(cases > 0) %>%
   select(floor_t, cases) %>%
-  uncount(cases) %>%                                    # one row per case
-  mutate(perturbed = floor_t %in% perturb_days) %>%
-  rowwise() %>%
+  uncount(cases) %>%                                   # one row per case
   mutate(
-    scale_i = if (perturbed) DELAY_SCALE * PERTURB_FACTOR else DELAY_SCALE,
-    delay   = floor(rweibull(1, shape = DELAY_SHAPE, scale = scale_i)),
-    report  = floor_t + delay
-  ) %>%
-  ungroup() %>%
-  select(floor_t, report, perturbed, delay)
+    delay  = floor(rweibull(n(), shape = DELAY_SHAPE, scale = DELAY_SCALE)),
+    report = floor_t + delay
+  )
 
-# Aggregate to (event, report) cells, recording how many in each cell were
-# perturbed (constant within an event-day, carried for convenience).
+# Aggregate to (event, report) cells.
 cases_agg <- cases %>%
-  group_by(floor_t, report) %>%
-  summarise(n = n(), n_perturbed = sum(perturbed), .groups = "drop") %>%
-  mutate(perturbed = n_perturbed > 0)
+  count(floor_t, report, name = "n")
 
 # Latent truth (the noiseless ODE incidence) -- handy for diagnostics/plots.
 truth <- cases_by_day %>% transmute(floor_t, lambda, cases)
@@ -126,9 +147,9 @@ cat(sprintf("SIR (N=%d, R0=%.1f, control %.0f%% over days %d-%d):\n",
 cat(sprintf("  latent peaks at days %s (lambda = %s), total = %.0f cases\n",
             paste(local_max, collapse = ", "),
             paste(round(lambda[local_max]), collapse = ", "), sum(lambda)))
-cat(sprintf("  observed peak = %d cases | %d event-report cells\n",
-            max(cases_by_day$cases), nrow(cases_agg)))
-cat(sprintf("  %d perturbed (backlog) event-days: %s\n",
+cat(sprintf("  observed peak = %d cases | %d event-report cells | %d heavy-tailed surge days | clean delays\n",
+            max(cases_by_day$cases), nrow(cases_agg), sum(cases_by_day$surge)))
+cat(sprintf("  %d perturbation event-days (detection-only, injected in analysis): %s\n",
             length(perturb_days), paste(perturb_days, collapse = ", ")))
 
 saveRDS(
@@ -138,7 +159,7 @@ saveRDS(
        params       = list(N_pop = N_POP, R0 = R0, gamma = GAMMA,
                            control = c(drop = CTRL_DROP, start = CTRL_START,
                                        end = CTRL_END, sw = CTRL_SW),
-                           phi = PHI,
+                           phi = PHI, phi_surge = PHI_SURGE, p_surge = P_SURGE,
                            weibull = list(shape = DELAY_SHAPE, scale = DELAY_SCALE),
                            perturb_factor = PERTURB_FACTOR)),
   OUT_RDS

@@ -102,6 +102,9 @@ ggplot2::autoplot
 #' @param date_breaks Passed to `scale_x_date(date_breaks = ...)`.  E.g.
 #'   `"1 month"`.  Only used when `event_dates` is supplied.
 #' @param title Optional plot title.
+#' @param previous_times Number of most recent event-times to display: only the
+#'   last `previous_times` dates (including the nowcast target) are plotted.
+#'   Default `15`.  Set to `NULL` or `Inf` to plot the full series.
 #' @param ... Unused.
 #' @returns A `ggplot` object.
 #' @noRd
@@ -109,7 +112,7 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
     object, event_dates = NULL, strata_names = NULL,
     strata_draws = NULL, observed_strata = NULL,
     quantiles = c(0.05, 0.95), color = "#5F7E62",
-    date_breaks = NULL, title = NULL, ...) {
+    date_breaks = NULL, title = NULL, previous_times = 15, ...) {
 
   draws   <- object@draws                    # [n_draws x max_time] total
   n_time  <- ncol(draws)
@@ -156,6 +159,13 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
   } else {
     plot_df$x_val <- plot_df$event_index
     use_dates <- FALSE
+  }
+
+  # ── Keep only the most recent `previous_times` event-times ──────────────────
+  # (the last `previous_times` dates, including the nowcast target).
+  if (!is.null(previous_times) && is.finite(previous_times)) {
+    keep_from <- max(0L, n_time - as.integer(previous_times))
+    plot_df   <- plot_df[plot_df$event_index >= keep_from, , drop = FALSE]
   }
 
   # ── Build plot ─────────────────────────────────────────────────────────────
@@ -273,6 +283,9 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
 #' @param color Bar fill colour (default `"#5F7E62"`).
 #' @param date_breaks Passed to `scale_x_date()`, e.g. `"1 month"`.
 #' @param title Optional title string.
+#' @param previous_times Number of most recent event-times to display: only the
+#'   last `previous_times` dates (including the nowcast target) are plotted.
+#'   Default `15`.  Set to `NULL` or `Inf` to plot the full series.
 #' @param seed RNG seed.
 #' @param ... Unused.
 #' @returns A `ggplot` object.
@@ -282,11 +295,12 @@ S7::method(autoplot, nowcast_class) <- function(object, n_draws = NULL,
                                                  color = "#5F7E62",
                                                  date_breaks = NULL,
                                                  title = NULL,
+                                                 previous_times = 15,
                                                  seed = sample.int(.Machine$integer.max, 1), ...) {
   # predict() already attaches event dates, strata draws, and observed series.
   pred <- predict(object, n_draws = n_draws %||% min(object@n_draws, 500L), seed = seed)
   autoplot(pred, quantiles = quantiles, color = color,
-           date_breaks = date_breaks, title = title)
+           date_breaks = date_breaks, title = title, previous_times = previous_times)
 }
 
 # ── autoplot(backtest_class) ─────────────────────────────────────────────────

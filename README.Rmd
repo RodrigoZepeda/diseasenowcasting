@@ -8,6 +8,8 @@ output: github_document
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
+  message = FALSE,
+  warning = FALSE,
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
@@ -22,80 +24,189 @@ knitr::opts_chunk$set(
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
+`diseasenowcasting` is an R package for **nowcasting** time series of
+epidemiological cases. Surveillance systems have a delay between the
+**true date of an event** (`event_date`, e.g. symptom onset or testing) and the
+**report date** for that event (`report_date`, e.g. when the case was entered
+into the database). Because recent event-dates are still missing reports that
+have not yet arrived, the latest case counts look artificially low. A *nowcast*
+corrects for this reporting delay and estimates the eventual, fully-observed
+totals.
 
-`diseasenowcasting` is an R package for nowcasting time series of epidemiological cases. Epidemiologic surveillance tools usually have an intrinsic delay between the **true date** of an event and the **report date** for that event. Some examples include the **true date** being symptom onset or testing time and the **report date** corresponds to when the case was registered in the system. `diseasenowcasting` uses Bayesian structural time series models (via the probabilistic programming language [Stan](https://mc-stan.org/)) to infer the cases that have not yet been reported thus providing a prediction of the final number of cases. 
+To do this `diseasenowcasting` fits **censored Bayesian
+models**: the reporting delay is modeled directly as a stochastic process,
+jointly with the epidemic dynamics, through a censored likelihood. Inference runs
+on R's Template Model Builder
+([`RTMB`](https://cran.r-project.org/package=RTMB), so no Stan/JAGS compilation is required. The
+package supports several epidemic processes (HSGP, AR(1), SIR), several delay
+families (LogNormal, Generalized-Gamma, Dirichlet), stratified data,
+extreme value detection and backtesting.
 
-> :warning: `diseasenowcasting` is currently under active development and some interface might change from the final version. 
+> :warning: `diseasenowcasting` is currently under active development and parts
+> of the interface might still change.
 
 ## Installing
 
-To install `diseasenowcasting` you can do it via `pak`:
+You can install `diseasenowcasting` (and its companion data package
+[`tbl.now`](https://github.com/RodrigoZepeda/tbl.now)) from GitHub with
+[`pak`](https://pak.r-lib.org/):
 
 ```{r, eval = FALSE}
-#install.packages("pak") # <- Uncomment if you have not installed the `pak` package
-pak::pkg_install("RodrigoZepeda/diseasenowcasting")
-```
-
-Currently you also need to install the [tbl.now](https://github.com/rodrigozepeda/tbl.now) package
-
-```{r, eval = FALSE}
+# install.packages("pak") # <- uncomment if you do not have `pak`
 pak::pkg_install("RodrigoZepeda/tbl.now")
+pak::pkg_install("RodrigoZepeda/diseasenowcasting")
 ```
 
 ## Example
 
-```{r, message = FALSE, warning = FALSE}
+`diseasenowcasting` works with data organised as a `tbl_now` object from the
+companion [`tbl.now`](https://rodrigozepeda.github.io/tbl.now/) package: a data
+frame annotated with the **roles** of its columns (event date, report date, and
+optionally the `strata` and the `now` date up to which everything is observed).
+
+```{r setup, message=FALSE}
 set.seed(6728)
 library(diseasenowcasting)
+library(tbl.now)
 library(dplyr)
-```
 
-For this example we will use the `denguedat` dataset that comes with the package. 
-
-```{r}
-#Load example dataset
+# Example surveillance data (dengue in Puerto Rico) shipped with tbl.now
 data(denguedat)
-```
 
-The [nowcast()] function performs the `nowcast`. The things required are the `true_date` and `report_date` and `strata` (if exists). 
-
-```{r}
-#Use just a subsample of the data for the example
+#Simulate a nowcast on January 1st 1991
+#Only cases and reports before that date will be used
 denguedat <- denguedat |> 
-  filter(report_week <= as.Date("1990/08/01", format = "%Y/%m/%d"))
-
-#Run the nowcast model stratified by gender. Refresh = 0 makes it quiet
-ncast <- nowcast(denguedat, true_date = "onset_week", report_date = "report_week", 
-                       strata = "gender", refresh = 0)
+  filter(onset_week <= as.Date("1991-01-01") & report_week <= as.Date("1991-01-01"))
 ```
 
-The `summary` and `plot` options allow you to use the predictions:
+We annotate the data with `tbl_now()`, pointing at the event and report dates
+(here the symptom-onset and report weeks) and the strata (`gender`):
+
+```{r tblnow}
+dengue_tbl <- tbl_now(
+  denguedat,
+  event_date  = onset_week,    # when symptoms started
+  report_date = report_week,   # when the case was registered
+  strata      = gender,
+  data_type   = "linelist",    # use "count-incidence" for pre-aggregated counts
+  now         = as.Date("1991-01-01"),
+  t_effects   = temporal_effects(seasons = 52) #Weekly seasonal effect (Fourier)  
+)
+```
+
+Once the data is a `tbl_now`, a single call to `nowcast()` does the rest (the
+nowcast is automatically stratified by the strata declared above):
+
+```{r nowcast}
+ncast <- nowcast(dengue_tbl, n_draws = 1000)
+```
+
+Results can be visualised with `autoplot()` (bars show the median, error bars the
+90% credible interval) and extracted with `predict()` / `summary()`:
+
+```{r plot, fig.cap = "_Nowcast for the dengue example, by gender._"}
+autoplot(ncast)
+```
+
+```{r predict, eval = TRUE}
+pred <- predict(ncast)   # full posterior-predictive nowcast at every event-time
+```
+
+```{r summary, eval = FALSE}
+summary(pred)
+```
+
+```{r summary2, eval = TRUE, echo = FALSE}
+summary(pred) |> dplyr::as_tibble() |> tail(6)
+```
+
+You can choose a different epidemic process, delay family or likelihood by passing a
+`model()` to `nowcast()`:
+
+```{r model, eval = TRUE}
+model_1 <- model(
+  likelihood = nb_likelihood(),          # negative binomial (recommended)
+  epidemic   = ar1_epidemic(),           # AR(1) process 
+  delay      = generalized_gamma_delay() # generalized gamma reporting delay
+)
+```
+
+```{r, eval = FALSE}
+nowcast(dengue_tbl, model = model_1)
+```
+
+And `backtest` and `score` to evaluate how different models would have performed in the past
+
+```{r backtest}
+model_2 <- model(
+  likelihood = nb_likelihood(),          # negative binomial (recommended)
+  epidemic   = hsgp_epidemic(),          # recommended for long-running epidemics
+  delay      = lognormal_delay() # generalized gamma reporting delay
+)
+
+#Set ndates to the number of dates you want for the backtest
+bt <- backtest(dengue_tbl, list(model_1, model_2), n_dates = 3)
+```
+
+And get the scores
 
 ```{r}
-#Create a nice plot for the predictions
-plot(ncast, datesbrakes = "1 month")
+score(bt)
 ```
 
-## Tutorials
+## Handling extreme delays
 
-You can read the following articles for a more in-depth introduction to the package:
+`diseasenowcasting` automatically detects extreme delays. When new data arrives, `update()`
+re-scores every incoming report against the previously fitted delay
+distribution and **warns** about anything that seems implausibly delayed. 
+The flagged reports are available via `extreme_values()`:
 
-+ [An introduction to the package:](https://rodrigozepeda.github.io/diseasenowcasting/articles/Introduction.html) provides an overview of the main functions. 
-+ [Advanced nowcast options:](https://rodrigozepeda.github.io/diseasenowcasting/articles/Advanced-nowcast-options.html) provides an in-depth look at the `nowcast()` function and its options. 
-+ [Comparison to other methods:](https://rodrigozepeda.github.io/diseasenowcasting/articles/Comparison-to-other-methods.html) provides a comparison in terms of metrics to other nowcasting packages. 
+```{r censor-detect, eval = FALSE}
+# `initial_ncast` was fit on data up to some date; new reports just arrived in
+# `new_data_tbl`. update() scores them and warns if any delay is anomalous.
+nc_updated <- update(initial_ncast, new_data_tbl, level = 0.99)
 
-## Developing
-
-If you are interested on developing the package, after downloading the repository you might need to run 
-
-```{r, eval = FALSE}
-rstantools::rstan_config()
+extreme_values(nc_updated)   # which reports were flagged, and how surprising
 ```
 
-before the 
+A complete tutorial on handling extreme delays is available at the
+[Handling Outlier Delays with Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.html) vignette.
 
-```{r, eval = FALSE}
-devtools::load_all(".")
-```
+## See also
 
-in order for the `C++` files to be generated for your specific system. 
+A good place to start is the
+**[Introduction to diseasenowcasting](https://rodrigozepeda.github.io/diseasenowcasting/articles/introduction.html)**,
+which walks through building a `tbl_now`, fitting with `nowcast()`, inspecting
+results with `predict()` / `summary()` / `autoplot()`, and comparing models with
+`backtest()` / `score()`.
+
+From there, depending on what you want to do next:
+
+- **[Nowcasting at the Start of an Epidemic](https://rodrigozepeda.github.io/diseasenowcasting/articles/Nowcasting_at_the_start_of_an_Epidemic.html)**
+  — A worked, end-to-end case study of monitoring an outbreak in real time:
+  choosing a model when data are scarce, reading the nowcast as the epidemic
+  grows, and using the prior to encode what you already believe before much data
+  has arrived.
+
+- **[Understanding Priors in diseasenowcasting](https://rodrigozepeda.github.io/diseasenowcasting/articles/Understanding_Priors.html)**
+  — *Make the model say what you mean.* The package's default priors, how to
+  tighten or loosen them, and how to *see* what a prior implies before fitting
+  (`nowcast(..., prior_only = TRUE)`).
+
+- **[Handling Outlier Delays with Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.html)**
+  — *Robustness to reporting glitches.* How the censored likelihood copes with
+  unusually long delays, and how to flag and censor extreme delays in your
+  surveillance stream.
+
+- **[Benchmark (diseasenowcasting vs NobBS and epinowcast)](https://rodrigozepeda.github.io/diseasenowcasting/articles/Benchmark.html)**
+  — *How does it compare?* A reproducible backtest comparing `diseasenowcasting`
+  against the `NobBS` and `epinowcast` packages.
+
+- **[Mathematical Foundations of diseasenowcasting](https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.html)**
+  — *Under the hood.* The censored likelihood, the epidemic processes (HSGP,
+  AR(1), SIR), the delay families, and the Laplace-approximation inference that
+  powers `RTMB`.
+
+See `?nowcast`, `?backtest`, `?score`, and `?model` for the full function
+documentation.
+
