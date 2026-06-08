@@ -1,5 +1,7 @@
 # R CMD check + test coverage on Ubuntu, macOS, and Windows.
-# tbl.now is installed from GitHub (RodrigoZepeda/tbl.now).
+# tbl.now is a GitHub-only dependency: it is installed automatically by
+# setup-r-dependencies (pak) from the `Remotes:` field in DESCRIPTION
+# (RodrigoZepeda/tbl.now).
 # The heavy RTMB / BLAS dependencies are cached between runs.
 
 on:
@@ -47,13 +49,8 @@ jobs:
         with:
           extra-packages: |
             any::rcmdcheck
-            any::remotes
             any::covr
           needs: check
-
-      - name: Install tbl.now from GitHub
-        run: remotes::install_github("RodrigoZepeda/tbl.now", upgrade = "never")
-        shell: Rscript {0}
 
       - uses: r-lib/actions/check-r-package@v2
         with:
@@ -80,12 +77,7 @@ jobs:
         with:
           extra-packages: |
             any::covr
-            any::remotes
           needs: coverage
-
-      - name: Install tbl.now from GitHub
-        run: remotes::install_github("RodrigoZepeda/tbl.now", upgrade = "never")
-        shell: Rscript {0}
 
       - name: Test coverage
         run: |

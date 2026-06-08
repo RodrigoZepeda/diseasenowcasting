@@ -57,6 +57,8 @@ Suggests:
     covr,
     patchwork,
     pkgdown
+Remotes:
+    RodrigoZepeda/tbl.now
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 LazyData: true
