@@ -72,21 +72,35 @@ You can access the results from inside the package:
 library(diseasenowcasting)
 library(dplyr)
 
-# Pre-computed benchmark results (50 evaluation dates per disease)
-scoring_file <- system.file("extdata", "comparison_scores.rds", package = "diseasenowcasting")
-scores_df    <- readRDS(scoring_file) 
+# Pre-computed benchmark results (50 evaluation dates per disease), shipped in
+# inst/extdata.  Look in the installed package first and fall back to the source
+# tree, so the vignette also knits before the package is installed (e.g. pkgdown
+# or R CMD build).
+candidates <- c(
+  system.file("extdata", "comparison_scores.rds", package = "diseasenowcasting"),
+  "../inst/extdata/comparison_scores.rds",
+  file.path("inst", "extdata", "comparison_scores.rds")
+)
+scoring_file <- candidates[nzchar(candidates) & file.exists(candidates)][1]
+have_scores  <- !is.na(scoring_file)
 
-#Rename the columns
-scores_df <- scores_df |> 
-  rename(Model = model, WIS = wis, Overprediction = over, Underprediction = under,
-         Dispersion = disp, Bias = bias, Cov50 = cov50, Cov90 = cov90, `N dates` = n_dates)
+if (have_scores) {
+  scores_df <- readRDS(scoring_file) |>
+    rename(Model = model, WIS = wis, Overprediction = over, Underprediction = under,
+           Dispersion = disp, Bias = bias, Cov50 = cov50, Cov90 = cov90, `N dates` = n_dates)
+}
+```
+
+```{r no-scores-note, eval = !have_scores, echo = FALSE, results = "asis"}
+cat("> _The pre-computed benchmark scores (`inst/extdata/comparison_scores.rds`)",
+    "were not found in this build, so the score tables below are omitted._\n")
 ```
 
 ### Dengue fever (weekly, Colombia)
 
-```{r dengue-table, echo = FALSE}
+```{r dengue-table, echo = FALSE, eval = have_scores}
 #Read the dengue tab
-dengue_tab <- scores_df |> 
+dengue_tab <- scores_df |>
   filter(disease == "dengue") |> 
   select(Model, WIS, Overprediction, Underprediction, Dispersion, Bias,
          Cov50, Cov90, `N dates`)
@@ -103,8 +117,8 @@ knitr::kable(dengue_tab, digits = 2, row.names = FALSE,
 
 ### Mpox (daily, USA)
 
-```{r mpox-table, echo = FALSE}
-mpox_tab <- scores_df |> 
+```{r mpox-table, echo = FALSE, eval = have_scores}
+mpox_tab <- scores_df |>
   filter(disease == "mpox") |> 
   select(Model, WIS, Overprediction, Underprediction, Dispersion, Bias,
          Cov50, Cov90, `N dates`)
@@ -120,8 +134,8 @@ knitr::kable(mpox_tab, digits = 2, row.names = FALSE,
 
 ### COVID-19 (daily, Colombia)
 
-```{r covid-table, echo = FALSE}
-covid_tab <- scores_df |> 
+```{r covid-table, echo = FALSE, eval = have_scores}
+covid_tab <- scores_df |>
   filter(disease == "covid") |> 
   select(Model, WIS, Overprediction, Underprediction, Dispersion, Bias,
          Cov50, Cov90, `N dates`)
