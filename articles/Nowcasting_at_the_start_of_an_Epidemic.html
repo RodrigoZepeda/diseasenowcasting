@@ -86,15 +86,15 @@ Zepeda-Tello</h4>
 <h2 id="tldr">TL;DR<a class="anchor" aria-label="anchor" href="#tldr"></a>
 </h2>
 <ol style="list-style-type: decimal">
-<li>Use SIR model with strong priors for 1-2 weeks.</li>
-</ol>
-<blockquote>
-<p>Use <code>prior_only</code> to experiment with the priors for
-plausible curves.</p>
-</blockquote>
-<ol start="2" style="list-style-type: decimal">
-<li><p>Use default AR model for 3-4 weeks.</p></li>
-<li><p>Use HGSP for anything over 1 month.</p></li>
+<li><p>Use SIR model with strong priors for 1-2 weeks (if data is daily)
+or 1-3 months (if data is weekly). Use <code>prior_only</code> to
+experiment with the priors for plausible curves.</p></li>
+<li><p>Use default AR model for 3-4 weeks (if data is daily) or 4-7
+months (if data is weekly).</p></li>
+<li><p>Use AR/HGSP for anything between 1-3 months (if data is daily) or
+7 months to 1 year (if data is weekly).</p></li>
+<li><p>Use HGSP for long epidemic measurements 3+ months (if data is
+daily) or 1 year (if data is weekly).</p></li>
 </ol>
 </div>
 <div class="section level2">
@@ -465,8 +465,14 @@ wide and need to be tightened.</p>
 <td>ar_phi, ar_sigma</td>
 </tr>
 <tr class="odd">
-<td>&gt; 1 month</td>
-<td>&gt; 8 months</td>
+<td>1-3 months</td>
+<td>7-12 months</td>
+<td>AR1 / HSGP</td>
+<td>default priors usually adequate</td>
+</tr>
+<tr class="even">
+<td>3 months or more</td>
+<td>1 year or more</td>
 <td>HSGP</td>
 <td>default priors usually adequate</td>
 </tr>
