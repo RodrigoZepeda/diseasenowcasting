@@ -33,12 +33,12 @@ a:hover {
 
 /* Color for all headings (H1, H2, H3, etc.) */
 h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
-  color: #B85348 !important;
+  color: #334335 !important;
 }
 
 /* Color for bold text */
 strong, b {
-  color: #B85348;
+  color: #334335;
 }
 
 /* Background color for inline code snippets */
