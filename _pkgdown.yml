@@ -33,3 +33,18 @@ articles:
   - title: Get started
     contents:
       - introduction
+  
+  - title: Methodology
+    contents:
+      - Mathematics
+      - Understanding_Priors
+      - Handling_Outlier_Delays_with_Censoring
+
+  - title: Applications
+    contents:
+      - Nowcasting_at_the_start_of_an_Epidemic
+      - Benchmark
+
+  - title: Miscellaneous
+    contents:
+      - LLM_Usage
