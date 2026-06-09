@@ -6,13 +6,27 @@
 }
 
 .navbar {
-  background-color: var(--sage-dark);
+  background-color: #B85348 !important;
+}
+
+[data-bs-theme="dark"] .navbar {
+  background-color: #C55F53 !important;
+}
+
+.navbar .navbar-brand,
+.navbar .nav-link {
+  color: white !important;
+}
+
+.navbar .nav-link:hover,
+.navbar .navbar-brand:hover {
+  opacity: 0.85;
 }
 
 a {
-  color: var(--sage-dark);
+  color: #5F7E62;
 }
 
 a:hover {
-  color: var(--brand-red);
+  color: #B85348;
 }
