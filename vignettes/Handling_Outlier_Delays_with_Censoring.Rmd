@@ -40,6 +40,8 @@ to true values.
 
 5. Model is re-updated using the censored data consequently improving the delay distribution.
 
+6. Backtest to verify the fit improved. 
+
 
 ## The problem: an extreme delay
 
@@ -51,11 +53,11 @@ week or two, but a handful take **more than 100 days**:
 data(covid_colombia)
 
 tbl_covid <- covid_colombia |> 
-  tbl_now(event_date = notification_date,
+  tbl_now(event_date  = notification_date,
           case_count  = n,
-              data_type   = "count-incidence",
+          data_type   = "count-incidence",
           report_date = diagnosis_date,
-          t_effects = temporal_effects(day_of_week = TRUE))
+          t_effects   = temporal_effects(day_of_week = TRUE))
 
 summary(tbl_covid$.delay)
 ```
@@ -97,16 +99,15 @@ The `diseasenowcasting` framework offers a fix. It treats such reports as
 330", it tells it only "this case arrived *by* delay 330" (_i.e._ its delay of 330 is an
 **upper bound** for the true delay). 
 
-In what follows we explain how to use the model to automatically detect abnormal
+In what follows we explain how to use the model to automatically detect extreme
 delays and how to inform the model so that predictions are improved. 
 
 ## 1) Fit a model
 
 The first step for a model to learn about *extreme delays* is to have an 
-initial model with historical data so that it learns what the usual 
-delay distribution is. In this case we'll work  with an early-pandemic window and fit a nowcast. To 
+initial model with historical data so that it learns what the usual distribution is. In this case we'll work  with an early-pandemic window and fit a `nowcast()`. To 
 play out the "new data arrives" story we first fit on the reports available
-at an early date:
+at an early date (`2020-08-31`):
 
 ```{r filter-asof}
 #Initial data
@@ -118,7 +119,7 @@ initial_tbl <- tbl_covid |>
 ```
 
 
-We then fit a nowcast to this data:
+We then fit a nowcast to this data (in this example, the next day, `2020-09-01`):
 
 ```{r fit-asof}
 initial_ncast <- nowcast(initial_tbl)
@@ -136,7 +137,7 @@ new_data_tbl <- tbl_covid |>
   change_now()
 ```
 
-and  `update()` the model. This will automatically score the new report against 
+and  `update()` the model. This will automatically score the new data against 
 the old fit and **warn** that something is amiss:
 
 ```{r surprise, warning=TRUE}
@@ -154,10 +155,10 @@ The `mean_tail_prob` expressess the probability of observing such a value, The `
 
 ## 3) Censor the outliers and re-fit
 
-We follow the warning's advice: we flag as censored every report whose delay exceeds a sensible
-bound (here 99 days as reported by `extreme_values()`). The function `censor_delays_above()` works  by setting `is_censored = TRUE` in the `tbl_now` for
+We follow the warning's advice: we **flag as censored** every report whose delay exceeds a sensible
+bound (here 99 days as reported by `extreme_values()`). The function `censor_delays_above()` works  by setting `.is_censored = TRUE` in the `tbl_now` for 
 reports greater than the `max_delay`. Extreme delays are thus turned into upper bounds. The `nowcast()` then reads
-the `is_censored` flag automatically.
+the `.is_censored` flag automatically.
 
 ```{r censor, eval = FALSE}
 new_data_tbl_censored <- censor_delays_above(new_data_tbl, max_delay = 99)
@@ -173,13 +174,13 @@ new_data_tbl_censored |> dplyr::select(.is_censored, dplyr::everything())
 ```
 
 
-We refit with the censored data:
+We refit but this time using the censored data:
 
 ```{r refit}
 nc_updated_censored <- update(initial_ncast, new_data_tbl_censored)
 ```
 
-The fitted values change once the outliers are no longer taken literally.
+The fitted values change once the outliers are no longer taken literally. 
 
 ```{r delay-compare}
 #Previous
@@ -205,25 +206,27 @@ summary(pred_censored) |> tail(6)
 
 ## 4) Does it nowcast better?  Backtest
 
-Finally we check that controlling the extreme values actually *improves accuracy*.  We
+Finally we check if controlling the extreme values actually *improves accuracy*.  We
 backtest the same model on the plain data (`new_data_tbl`) and on the censored 
 data (`new_data_tbl_censored`) across a set of dates, scoring the most recent nowcast ($d^* = 0$) against the eventual truth with the Weighted Interval Score (WIS; lower is better) and coverage (closer to the expected coverage the better).
 
 ```{r backtest-compare}
-eval_dates <- as.Date(c("2020-04-15", "2020-05-01", "2020-05-15", "2020-06-01"))
+#dates to backtest
+eval_dates <- as.Date(c("2020-04-15", "2020-05-01", 
+                        "2020-05-15", "2020-06-01"))
 
-bt_plain <- backtest(new_data_tbl, dates = eval_dates)
-bt_cens  <- backtest(new_data_tbl_censored, dates = eval_dates)
+#Backtest each model on the same dates
+bt_plain   <- backtest(new_data_tbl, dates = eval_dates)
+bt_cens    <- backtest(new_data_tbl_censored, dates = eval_dates)
 
 rbind(
-  plain    = score(bt_plain, report = FALSE)[, c("wis", "coverage_50", "coverage_90")],
-  censored = score(bt_cens,  report = FALSE)[, c("wis", "coverage_50", "coverage_90")]
+  plain    = score(bt_plain, report = FALSE)[,c("wis","coverage_50", "coverage_90")],
+  censored = score(bt_cens,  report = FALSE)[,c("wis","coverage_50", "coverage_90")]
 )
 ```
 
-Censoring the outlier delays result in a **lower (better) WIS** and a better coverage:
-the delay distribution is no longer pulled to the right by extreme values. **This
-shows that censoring the extreme values improves the models.**
+Censoring these outlier delays result in a **lower (better) WIS** and a **similar  coverage** 
+in this example. Though in a real test we would need to `backtest` through more dates to reach a conclusion. 
 
 ## Summary -- fit -> update -> identify outliers -> censor -> refit loop
 
@@ -242,4 +245,6 @@ when something flagged as noise is real.
 modify the `tbl_now` directly (column `is_censored`)
 
 5. Re-fit -> the delay distribution is no longer distorted.
+
+6. Backtest to verify the fit improved. 
 
