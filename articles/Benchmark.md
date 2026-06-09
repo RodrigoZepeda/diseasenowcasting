@@ -186,8 +186,8 @@ they are consistently the ranking among the top performers.
 ### How to reproduce
 
 The full benchmark — the **complete own-model grid** (HSGP / AR(1) / SIR
-x {LogNormal, Gamma, Generalized-Gamma, Dirichlet}) fit with
-[`nowcast_twostage()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_twostage.md)
+x {LogNormal, Generalized-Gamma, Dirichlet}) fit with
+[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
 and the seasonal / day-of-week covariates, plus **NobBS** and **three
 Epinowcast variants** (point effect / random effect, default, random
 walk), scored on a common evaluation-date set — lives in a single
