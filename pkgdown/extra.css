@@ -30,3 +30,30 @@ a {
 a:hover {
   color: #B85348;
 }
+
+/* Color for all headings (H1, H2, H3, etc.) */
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+  color: #B85348 !important;
+}
+
+/* Color for bold text */
+strong, b {
+  color: #B85348;
+}
+
+/* Background color for inline code snippets */
+code {
+  background-color: #ebefeb;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+}
+
+/* Background color for code chunks/blocks */
+pre.src, pre.r, div.sourceCode {
+  background-color: #ebefeb !important;
+}
+
+/* Ensures the internal pre block inherits the background */
+pre.src code, div.sourceCode pre {
+  background-color: transparent !important;
+}
