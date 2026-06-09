@@ -6,9 +6,27 @@
 
 on:
   push:
-    branches: [main, master]
+    branches: [master]
+    paths-ignore:      
+      - 'pkgdown/**'
+      - '_pkgdown.yml'
+      - '.github/**'
+      - 'README.md'
+      - 'README.Rmd'
+      - 'SKILL.md'
+      - '*.Rproj'
+      - 'Dockerfile'
   pull_request:
-    branches: [main, master]
+    branches: [master]
+    paths-ignore:      
+      - 'pkgdown/**'
+      - '_pkgdown.yml'
+      - '.github/**'
+      - 'README.md'
+      - 'README.Rmd'
+      - 'SKILL.md'
+      - '*.Rproj'
+      - 'Dockerfile'
 
 name: R-CMD-check
 
