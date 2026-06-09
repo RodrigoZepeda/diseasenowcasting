@@ -96,6 +96,112 @@ tn <- tn |>
   compute_temporal_effects()
 ```
 
+### tbl.now companion package — full reference
+
+`diseasenowcasting` consumes data as a `tbl_now` object from the
+companion [`tbl.now`](https://github.com/RodrigoZepeda/tbl.now) package:
+a tibble that carries **two time indices** (`event_date`, `report_date`)
+plus modelling metadata (strata, covariates, temporal effects, `now`,
+units, data type) and is fully dplyr-compatible.
+
+**Create**
+
+``` r
+
+tbl_now(data, event_date, report_date,
+        strata = NULL, covariates = NULL, case_count = NULL, is_censored = NULL,
+        now = NULL,                # Date; default max(report_date)
+        event_units = "auto",      # "days"|"weeks"|"months"|"years"|"numeric"
+        report_units = "auto",
+        data_type = "auto",        # "linelist"|"count-incidence"|"count-cumulative"
+        t_effects = character(0),  # temporal_effects() spec, stored LAZILY
+        verbose = TRUE, align_weeks = FALSE)
+```
+
+Auto-added **protected** columns: `.event_num`, `.report_num`, `.delay`
+(= `.report_num - .event_num`). Removing a protected column downgrades
+the object back to a plain tibble (with a warning).
+
+**Getters** (every attribute has one)
+
+``` r
+
+get_event_date(x) / get_report_date(x)    # column NAMES (character), not the dates
+get_event_units(x) / get_report_units(x)  # "days"|"weeks"|"months"|"years"|"numeric"
+get_now(x)                                 # Date — the as-of date
+get_strata(x) / get_num_strata(x)
+get_covariates(x) / get_num_covariates(x)
+get_case_count(x) / get_is_censored(x) / get_data_type(x)
+get_temporal_effects(x)        # list of LAZY specs (length 0 = none attached)
+get_temporal_effect_cols(x)    # computed column names (character(0) before compute)
+get_latest_reported_cases(x)   # most-recent count per event_date -> the "truth" for scoring
+get_initial_reported_cases(x)  # first-reported count per event_date
+```
+
+**Data types** — `"linelist"` (one row per case), `"count-incidence"`
+(count reported *exactly* on `report_date`), `"count-cumulative"`
+(cumulative up to `report_date`). Convert with
+`to_count(x, to = "count-incidence")`.
+
+**Temporal effects (lazy, two-step).**
+`nowcast(temporal_effects = "auto")` does this for you, but to control
+it manually:
+
+``` r
+
+spec <- temporal_effects(day_of_week = TRUE, week_of_year = TRUE,
+                         month_of_year = FALSE, seasons = integer(0))  # seasons = Fourier periods, e.g. c(7, 52)
+x <- x |> add_temporal_effects(spec, date_type = "event_date")  # attaches spec; NO columns yet
+x <- compute_temporal_effects(x)                                # materialises the columns
+get_temporal_effect_cols(x)                                     # the created column names
+```
+
+dplyr verbs (`filter`/`select`/`mutate`/`group_by`/`rename`/…)
+**preserve the spec** and never trigger computation; only
+[`compute_temporal_effects()`](https://rodrigozepeda.github.io/tbl.now/reference/compute_temporal_effects.html)
+adds columns. Pre-attach + compute on the `tbl_now` and
+[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
+will use the covariates; otherwise pass `temporal_effects = "none"` to
+disable.
+
+**Modify metadata** — changers replace, adders append, removers drop:
+
+``` r
+
+change_now(x, as.Date("2023-06-01"))           # move the as-of date (re-censors)
+change_strata(x, ...) / add_strata(x, ...) / remove_strata(x, ...)
+change_covariates(...) / add_covariates(...) / remove_covariates(...)
+add_is_censored(x, is_censored = my_logical)   # mark reports as right-censored delays
+```
+
+**Utilities**
+
+``` r
+
+complete_zeroes(x)             # fill missing event/report/strata cells with 0
+align_weeks(x, date_col)       # snap to a consistent epiweek day (integer .delay)
+week_2_date(x, week, year)     # epiweek + year -> Date
+update(x, new_data)            # bind new rows, preserving attributes
+is_tbl_now(x) / tbl_now_attributes(x)
+```
+
+**tbl.now pitfalls**
+
+- [`get_event_date()`](https://rodrigozepeda.github.io/tbl.now/reference/nowcast_data_getters.html)
+  returns the column **name**, not the dates. For the calendar grid
+  `diseasenowcasting` uses `nc@engine$min_event` +
+  `nc@engine$event_unit`.
+- Call
+  [`add_temporal_effects()`](https://rodrigozepeda.github.io/tbl.now/reference/add_temporal_effects.html)
+  **before**
+  [`compute_temporal_effects()`](https://rodrigozepeda.github.io/tbl.now/reference/compute_temporal_effects.html)
+  (else no-op).
+- `rowwise()` is **not** supported on a `tbl_now`.
+- [`get_temporal_effects()`](https://rodrigozepeda.github.io/tbl.now/reference/nowcast_data_getters.html)
+  returns specs; use
+  [`get_temporal_effect_cols()`](https://rodrigozepeda.github.io/tbl.now/reference/nowcast_data_getters.html)
+  for names.
+
 ### Missing strata
 
 `NA` or `""` strata values are silently mapped to an explicit

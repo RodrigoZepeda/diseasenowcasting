@@ -8,6 +8,8 @@
   Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.md):
 - [Introduction to diseasenowcasting: Real-Time Epidemic
   Nowcasting](https://rodrigozepeda.github.io/diseasenowcasting/articles/introduction.md):
+- [Using alongside an LLM
+  (AI)](https://rodrigozepeda.github.io/diseasenowcasting/articles/LLM_Usage.md):
 - [Mathematical Foundations of
   diseasenowcasting](https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.md):
 - [Nowcasting at the Start of an

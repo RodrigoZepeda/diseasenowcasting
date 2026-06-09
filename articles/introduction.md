@@ -314,10 +314,14 @@ coverage via
 
 # Rank by Weighted Interval Score (WIS) -- lower is better
 score(backtest_mpox, metric = "wis", report = TRUE)
-#>               model      wis coverage_50 coverage_90       ape      mse n
-#> 1  SIR/nb/LogNormal 10.52604        0.75        0.75 0.4007886 1714.750 4
-#> 2  AR1/nb/LogNormal 14.24507        0.25        1.00 6.7201065 1399.250 4
-#> 3 HSGP/nb/LogNormal 15.22941        0.50        1.00 1.4603280 1778.312 4
+#>               model      wis overprediction underprediction dispersion
+#> 1  SIR/nb/LogNormal 10.52604       0.000000        7.852778   2.673264
+#> 2  AR1/nb/LogNormal 14.24507       3.250000        2.666667   8.328403
+#> 3 HSGP/nb/LogNormal 15.22941       2.083333        4.472222   8.673854
+#>   coverage_50 coverage_90       ape      mse n
+#> 1        0.75        0.75 0.4007886 1714.750 4
+#> 2        0.25        1.00 6.7201065 1399.250 4
+#> 3        0.50        1.00 1.4603280 1778.312 4
 ```
 
 The
@@ -369,6 +373,13 @@ vignettes:
   copes with unusually long reporting delays, and how to flag extreme
   delays in your surveillance stream.
 
+- **[Using alongside an
+  LLM](https://rodrigozepeda.github.io/diseasenowcasting/articles/LLM_Usage.md)**
+  — *Use AI.* How to use the
+  [`SKILL.md`](https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/SKILL.md)
+  to teach a Large Language Model how to you develop your nowcasts with
+  `diseasenowcasting`.
+
 - **[Benchmark (diseasenowcasting vs NobBS and
   epinowcast)](https://rodrigozepeda.github.io/diseasenowcasting/articles/Benchmark.md)**
   — *How does it compare?* A reproducible backtest comparing
@@ -386,5 +397,4 @@ See
 [`?score`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md),
 and
 [`?model`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
-for full documentation, and the `SKILL.md` file in the package root for
-an AI-oriented API reference.
+for full documentation.

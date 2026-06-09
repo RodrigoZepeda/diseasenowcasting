@@ -46,6 +46,7 @@
 <li><a class="dropdown-item" href="articles/Benchmark.html">Benchmark (diseasenowcasting vs NobBS and epinowcast)</a></li>
     <li><a class="dropdown-item" href="articles/Handling_Outlier_Delays_with_Censoring.html">Handling Outlier Delays with Censoring</a></li>
     <li><a class="dropdown-item" href="articles/introduction.html">Introduction to diseasenowcasting: Real-Time Epidemic Nowcasting</a></li>
+    <li><a class="dropdown-item" href="articles/LLM_Usage.html">Using alongside an LLM (AI)</a></li>
     <li><a class="dropdown-item" href="articles/Mathematics.html">Mathematical Foundations of diseasenowcasting</a></li>
     <li><a class="dropdown-item" href="articles/Nowcasting_at_the_start_of_an_Epidemic.html">Nowcasting at the Start of an Epidemic</a></li>
     <li><a class="dropdown-item" href="articles/Understanding_Priors.html">Understanding Priors in diseasenowcasting</a></li>
@@ -73,11 +74,16 @@
 </div>
 <!-- badges: start -->
 
-<p><code>diseasenowcasting</code> is an R package for <strong>nowcasting</strong> time series of epidemiological cases. Surveillance systems have a delay between the <strong>true date of an event</strong> (<code>event_date</code>, e.g. symptom onset or testing) and the <strong>report date</strong> for that event (<code>report_date</code>, e.g. when the case was entered into the database). Because recent event-dates are still missing reports that have not yet arrived, the latest case counts look artificially low. A <em>nowcast</em> corrects for this reporting delay and estimates the eventual, fully-observed totals.</p>
-<p>To do this <code>diseasenowcasting</code> fits <strong>censored Bayesian models</strong>: the reporting delay is modeled directly as a stochastic process, jointly with the epidemic dynamics, through a censored likelihood. Inference runs on R’s Template Model Builder (<a href="https://cran.r-project.org/package=RTMB" class="external-link"><code>RTMB</code></a>, so no Stan/JAGS compilation is required. The package supports several epidemic processes (HSGP, AR(1), SIR), several delay families (LogNormal, Generalized-Gamma, Dirichlet), stratified data, extreme value detection and backtesting.</p>
+<p><code>diseasenowcasting</code> is an R package for <strong>nowcasting</strong> time series of epidemiological cases.</p>
+<div class="section level2">
+<h2 id="what-is-nowcasting">What is nowcasting?<a class="anchor" aria-label="anchor" href="#what-is-nowcasting"></a>
+</h2>
+<p>Surveillance systems have a delay between the <strong>true date of an event</strong> (<code>event_date</code>, e.g. symptom onset or testing) and the <strong>report date</strong> for that event (<code>report_date</code>, e.g. when the case was entered into the database). Because recent event-dates are still missing reports that have not yet arrived, the latest case counts look artificially low. A <em>nowcast</em> corrects for this reporting delay and estimates the eventual, fully-observed totals.</p>
+<p>To do this <code>diseasenowcasting</code> fits censored Bayesian models. The reporting delay is modeled directly as a stochastic process, jointly with the epidemic dynamics, through a censored likelihood. Inference runs on R’s Template Model Builder (<a href="https://cran.r-project.org/package=RTMB" class="external-link"><code>RTMB</code></a>), so no Stan/JAGS compilation is required. The package supports several <a href="https://rodrigozepeda.github.io/diseasenowcasting/reference/epidemic_process.html">epidemic processes</a>, <a href="https://rodrigozepeda.github.io/diseasenowcasting/reference/delay_process.html">several delay families</a>, stratified data, <a href="https://rodrigozepeda.github.io/diseasenowcasting/reference/extreme_values.html">extreme value detection</a> and <a href="https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.html">backtesting</a>.</p>
 <blockquote>
 <p><span class="emoji" data-emoji="warning">⚠️</span> <code>diseasenowcasting</code> is currently under active development and parts of the interface might still change.</p>
 </blockquote>
+</div>
 <div class="section level2">
 <h2 id="installing">Installing<a class="anchor" aria-label="anchor" href="#installing"></a>
 </h2>
@@ -102,12 +108,12 @@
 <span></span>
 <span><span class="co">#Simulate a nowcast on January 1st 1991</span></span>
 <span><span class="co">#Only cases and reports before that date will be used</span></span>
-<span><span class="va">denguedat</span> <span class="op">&lt;-</span> <span class="va">denguedat</span> <span class="op">|&gt;</span> </span>
+<span><span class="va">dengue_data</span> <span class="op">&lt;-</span> <span class="va">denguedat</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">onset_week</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1991-01-01"</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">report_week</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1991-01-01"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>We annotate the data with <code><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html" class="external-link">tbl_now()</a></code>, pointing at the event and report dates (here the symptom-onset and report weeks) and the strata (<code>gender</code>):</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dengue_tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html" class="external-link">tbl_now</a></span><span class="op">(</span></span>
-<span>  <span class="va">denguedat</span>,</span>
+<span>  <span class="va">dengue_data</span>,</span>
 <span>  event_date  <span class="op">=</span> <span class="va">onset_week</span>,    <span class="co"># when symptoms started</span></span>
 <span>  report_date <span class="op">=</span> <span class="va">report_week</span>,   <span class="co"># when the case was registered</span></span>
 <span>  strata      <span class="op">=</span> <span class="va">gender</span>,</span>
@@ -115,7 +121,7 @@
 <span>  now         <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1991-01-01"</span><span class="op">)</span>,</span>
 <span>  t_effects   <span class="op">=</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/temporal_effects.html" class="external-link">temporal_effects</a></span><span class="op">(</span>seasons <span class="op">=</span> <span class="fl">52</span><span class="op">)</span> <span class="co">#Weekly seasonal effect (Fourier)  </span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Once the data is a <code>tbl_now</code>, a single call to <code><a href="reference/nowcast.html">nowcast()</a></code> does the rest (the nowcast is automatically stratified by the strata declared above):</p>
+<p>Once the data is a <code><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html" class="external-link">tbl_now()</a></code>, a single call to <code><a href="reference/nowcast.html">nowcast()</a></code> does the rest (the nowcast is automatically stratified by the strata declared above):</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ncast</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">dengue_tbl</span>, n_draws <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span></code></pre></div>
 <p>Results can be visualised with <code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code> (bars show the median, error bars the 90% credible interval) and extracted with <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> / <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>:</p>
@@ -152,8 +158,8 @@
 <p>And <code>backtest</code> and <code>score</code> to evaluate how different models would have performed in the past</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/model.html">model</a></span><span class="op">(</span></span>
-<span>  likelihood <span class="op">=</span> <span class="fu"><a href="reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>,          <span class="co"># negative binomial (recommended)</span></span>
-<span>  epidemic   <span class="op">=</span> <span class="fu"><a href="reference/epidemic_process.html">hsgp_epidemic</a></span><span class="op">(</span><span class="op">)</span>,          <span class="co"># recommended for long-running epidemics</span></span>
+<span>  likelihood <span class="op">=</span> <span class="fu"><a href="reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>,  <span class="co"># negative binomial (recommended)</span></span>
+<span>  epidemic   <span class="op">=</span> <span class="fu"><a href="reference/epidemic_process.html">hsgp_epidemic</a></span><span class="op">(</span><span class="op">)</span>,  <span class="co"># recommended for long-running epidemics</span></span>
 <span>  delay      <span class="op">=</span> <span class="fu"><a href="reference/delay_process.html">lognormal_delay</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># generalized gamma reporting delay</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -161,21 +167,34 @@
 <span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/backtest.html">backtest</a></span><span class="op">(</span><span class="va">dengue_tbl</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">model_1</span>, <span class="va">model_2</span><span class="op">)</span>, n_dates <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
 <p>And get the scores</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-unnamed-chunk-4-1.png" alt="" width="100%"> You can access these quantities directly with <code>score</code></p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/score.html">score</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                     model      wis coverage_50 coverage_90       ape  mse n</span></span>
-<span><span class="co">#&gt; 1 AR1/nb/GeneralizedGamma 12.10694   0.0000000           1 0.7404989 1342 3</span></span>
-<span><span class="co">#&gt; 2       HSGP/nb/LogNormal 12.30653   0.3333333           1 0.7030839 1089 3</span></span></code></pre></div>
+<span><span class="co">#&gt;                     model      wis overprediction underprediction dispersion</span></span>
+<span><span class="co">#&gt; 1 AR1/nb/GeneralizedGamma 12.10694              0        8.592593   3.514352</span></span>
+<span><span class="co">#&gt; 2       HSGP/nb/LogNormal 12.30653              0        6.777778   5.528750</span></span>
+<span><span class="co">#&gt;   coverage_50 coverage_90       ape  mse n</span></span>
+<span><span class="co">#&gt; 1   0.0000000           1 0.7404989 1342 3</span></span>
+<span><span class="co">#&gt; 2   0.3333333           1 0.7030839 1089 3</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="handling-extreme-delays">Handling extreme delays<a class="anchor" aria-label="anchor" href="#handling-extreme-delays"></a>
 </h2>
-<p><code>diseasenowcasting</code> automatically detects extreme delays. When new data arrives, <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> re-scores every incoming report against the previously fitted delay distribution and <strong>warns</strong> about anything that seems implausibly delayed. The flagged reports are available via <code><a href="reference/extreme_values.html">extreme_values()</a></code>:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># `initial_ncast` was fit on data up to some date; new reports just arrived in</span></span>
-<span><span class="co"># `new_data_tbl`. update() scores them and warns if any delay is anomalous.</span></span>
-<span><span class="va">nc_updated</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">initial_ncast</span>, <span class="va">new_data_tbl</span>, level <span class="op">=</span> <span class="fl">0.99</span><span class="op">)</span></span>
+<p>When new data arrives, <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> re-scores every incoming report against the previously fitted delay distribution and <strong>warns</strong> about anything that seems implausibly delayed. The flagged reports are available via <code><a href="reference/extreme_values.html">extreme_values()</a></code>:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co">#Simulate getting new data</span></span>
+<span><span class="va">dengue_update</span> <span class="op">&lt;-</span> <span class="va">denguedat</span> <span class="op">|&gt;</span> </span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">onset_week</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1991-01-14"</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">report_week</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1991-01-14"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="reference/extreme_values.html">extreme_values</a></span><span class="op">(</span><span class="va">nc_updated</span><span class="op">)</span>   <span class="co"># which reports were flagged, and how surprising</span></span></code></pre></div>
+<span><span class="co"># level stands for when should we flag something is an extreme delay</span></span>
+<span><span class="co"># level = 0.99 means delays with probability 1  - 0.99 = 0.01 are considered extreme</span></span>
+<span><span class="va">nc_updated</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">ncast</span>, new_data <span class="op">=</span> <span class="va">dengue_update</span>, level <span class="op">=</span> <span class="fl">0.99</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># The model identified two extreme (very unlikely) delays of 9 and 10 weeks: </span></span>
+<span><span class="co"># A human should check them based on domain knowledge and decide whether to keep</span></span>
+<span><span class="co"># them or to censor them. </span></span>
+<span><span class="fu"><a href="reference/extreme_values.html">extreme_values</a></span><span class="op">(</span><span class="va">nc_updated</span><span class="op">)</span>  </span></code></pre></div>
 <p>A complete tutorial on handling extreme delays is available at the <a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.html">Handling Outlier Delays with Censoring</a> vignette.</p>
 </div>
 <div class="section level2">

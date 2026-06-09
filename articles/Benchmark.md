@@ -62,12 +62,26 @@ library(dplyr)
 # tree, so the vignette also knits before the package is installed (e.g. pkgdown
 # or R CMD build).
 candidates <- c(
-  system.file("extdata", "comparison_scores.rds", package = "diseasenowcasting"),
-  "../inst/extdata/comparison_scores.rds",
-  file.path("inst", "extdata", "comparison_scores.rds")
+  system.file("extdata", "benchmark_scores.rds", package = "diseasenowcasting"),
+  "../inst/extdata/benchmark_scores.rds",
+  file.path("inst", "extdata", "benchmark_scores.rds")
 )
 scoring_file <- candidates[nzchar(candidates) & file.exists(candidates)][1]
-have_scores  <- !is.na(scoring_file)
+
+# Not found locally (e.g. on the pkgdown website)? Download from the public repo.
+if (is.na(scoring_file)) {
+  base <- "https://raw.githubusercontent.com/RodrigoZepeda/diseasenowcasting"
+  for (ref in c("master", "main")) {                       # whichever is the default branch
+    url <- paste0(base, "/", ref, "/inst/extdata/benchmark_scores.rds")
+    tmp <- tempfile(fileext = ".rds")
+    ok  <- tryCatch({
+      utils::download.file(url, tmp, mode = "wb", quiet = TRUE)
+      file.exists(tmp) && file.size(tmp) > 0
+    }, error = function(e) FALSE)
+    if (isTRUE(ok)) { scoring_file <- tmp; break }
+  }
+}
+have_scores <- !is.na(scoring_file) && file.exists(scoring_file)
 
 if (have_scores) {
   scores_df <- readRDS(scoring_file) |>
@@ -80,22 +94,22 @@ if (have_scores) {
 
 | Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | N dates |
 |:---|---:|---:|---:|---:|---:|---:|---:|---:|
-| HSGP/GeneralizedGamma | 7.04 | 1.18 | 1.64 | 4.21 | 0.01 | 0.70 | 0.94 | 50 |
-| HSGP/LogNormal | 7.28 | 1.11 | 1.58 | 4.59 | 0.02 | 0.70 | 0.94 | 50 |
-| HSGP/Dirichlet | 7.40 | 1.71 | 1.60 | 4.10 | 0.04 | 0.68 | 0.90 | 50 |
-| HSGP/Gamma | 7.41 | 0.91 | 2.04 | 4.45 | -0.12 | 0.70 | 0.93 | 50 |
-| NobBS | 8.13 | 1.39 | 3.09 | 3.66 | 0.03 | 0.58 | 0.92 | 50 |
-| AR1/LogNormal | 11.32 | 1.19 | 4.20 | 5.93 | 0.04 | 0.66 | 0.98 | 50 |
-| AR1/GeneralizedGamma | 12.53 | 0.83 | 6.88 | 4.82 | -0.13 | 0.60 | 0.96 | 50 |
-| AR1/Dirichlet | 13.65 | 1.53 | 6.41 | 5.70 | 0.08 | 0.70 | 0.96 | 50 |
-| SIR/Dirichlet | 14.61 | 0.78 | 9.29 | 4.53 | -0.30 | 0.48 | 0.86 | 50 |
-| AR1/Gamma | 15.48 | 0.96 | 8.98 | 5.54 | -0.02 | 0.67 | 0.91 | 50 |
-| SIR/LogNormal | 16.81 | 0.63 | 11.91 | 4.27 | -0.48 | 0.40 | 0.80 | 50 |
-| SIR/GeneralizedGamma | 17.40 | 0.62 | 13.34 | 3.44 | -0.54 | 0.34 | 0.66 | 50 |
-| SIR/Gamma | 18.18 | 0.14 | 14.05 | 3.99 | -0.67 | 0.30 | 0.70 | 50 |
-| Epinowcast (rw) | 22.13 | 12.75 | 8.00 | 1.38 | -0.05 | 0.15 | 0.24 | 50 |
-| Epinowcast (default) | 24.47 | 9.05 | 14.85 | 0.57 | -0.20 | 0.06 | 0.14 | 50 |
-| Epinowcast (weekly RE) | 25.91 | 8.82 | 16.68 | 0.41 | -0.38 | 0.05 | 0.11 | 50 |
+| own HSGP/nb/GeneralizedGamma | 7.5 | 1.5 | 1.7 | 4.3 | -0.11 | 0.65 | 0.91 | 43 |
+| own HSGP/nb/LogNormal | 7.5 | 1.1 | 1.6 | 4.8 | -0.03 | 0.65 | 0.98 | 43 |
+| own HSGP/nb/Dirichlet | 7.8 | 2.0 | 1.6 | 4.1 | -0.01 | 0.58 | 0.93 | 43 |
+| own HSGP/nb/Gamma | 7.8 | 1.1 | 2.0 | 4.8 | -0.11 | 0.63 | 0.98 | 43 |
+| NobBS | 8.3 | 1.2 | 3.5 | 3.5 | -0.03 | 0.60 | 0.91 | 43 |
+| own AR1/nb/GeneralizedGamma | 13.7 | 1.1 | 6.5 | 6.1 | -0.06 | 0.74 | 0.95 | 43 |
+| own AR1/nb/Dirichlet | 13.8 | 2.0 | 5.3 | 6.5 | 0.13 | 0.67 | 0.95 | 43 |
+| own AR1/nb/LogNormal | 13.8 | 1.4 | 6.3 | 6.1 | 0.04 | 0.74 | 0.95 | 43 |
+| own AR1/nb/Gamma | 15.3 | 1.2 | 8.0 | 6.1 | -0.02 | 0.67 | 0.93 | 43 |
+| own SIR/nb/Dirichlet | 15.7 | 1.6 | 10.3 | 3.8 | -0.32 | 0.37 | 0.84 | 43 |
+| own SIR/nb/GeneralizedGamma | 16.7 | 0.7 | 12.0 | 4.0 | -0.54 | 0.35 | 0.70 | 43 |
+| own SIR/nb/LogNormal | 17.0 | 0.7 | 11.5 | 4.8 | -0.45 | 0.37 | 0.86 | 43 |
+| Epinowcast (default) | 18.6 | 3.8 | 14.4 | 0.4 | -0.29 | 0.07 | 0.12 | 43 |
+| own SIR/nb/Gamma | 19.4 | 0.1 | 15.1 | 4.2 | -0.65 | 0.33 | 0.72 | 43 |
+| Epinowcast (weekly RE) | 22.0 | 3.5 | 17.9 | 0.6 | -0.41 | 0.10 | 0.20 | 43 |
+| Epinowcast (rw) | 22.9 | 10.2 | 11.9 | 0.8 | -0.13 | 0.12 | 0.19 | 43 |
 
 Dengue nowcast scores at d\*=0 (50 common evaluation dates, weekly).
 {.table}
@@ -111,25 +125,25 @@ Dengue nowcast scores at d\*=0 (50 common evaluation dates, weekly).
 
 | Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | N dates |
 |:---|---:|---:|---:|---:|---:|---:|---:|---:|
-| AR1/Gamma | 4.13 | 0.91 | 0.58 | 2.65 | 0.23 | 0.53 | 0.94 | 49 |
-| AR1/GeneralizedGamma | 4.23 | 1.02 | 0.56 | 2.65 | 0.24 | 0.49 | 0.94 | 49 |
-| AR1/LogNormal | 4.29 | 1.00 | 0.54 | 2.74 | 0.25 | 0.49 | 0.94 | 49 |
-| HSGP/GeneralizedGamma | 4.87 | 0.73 | 0.51 | 3.63 | 0.26 | 0.53 | 1.00 | 49 |
-| HSGP/Gamma | 5.33 | 0.67 | 0.52 | 4.14 | 0.22 | 0.67 | 1.00 | 49 |
-| HSGP/LogNormal | 5.78 | 0.83 | 0.48 | 4.48 | 0.29 | 0.57 | 1.00 | 49 |
-| SIR/GeneralizedGamma | 6.56 | 0.37 | 0.25 | 5.94 | 0.04 | 0.96 | 1.00 | 49 |
-| SIR/Gamma | 6.84 | 0.33 | 0.26 | 6.26 | 0.05 | 0.96 | 1.00 | 49 |
-| SIR/LogNormal | 7.29 | 0.39 | 0.23 | 6.67 | 0.08 | 0.94 | 1.00 | 49 |
-| AR1/Dirichlet | 9.86 | 1.72 | 0.46 | 7.69 | 0.30 | 0.51 | 0.94 | 49 |
-| HSGP/Dirichlet | 12.22 | 2.44 | 0.41 | 9.37 | 0.42 | 0.33 | 0.92 | 49 |
-| Epinowcast (point effect) | 17.34 | 11.93 | 0.61 | 4.80 | 0.69 | 0.15 | 0.52 | 49 |
-| SIR/Dirichlet | 20.00 | 1.90 | 0.12 | 17.98 | 0.42 | 0.82 | 1.00 | 49 |
-| NobBS | 27.66 | 1.06 | 25.21 | 1.40 | -0.18 | 0.18 | 0.45 | 49 |
-| Epinowcast (default) | 30.67 | 22.69 | 3.82 | 4.15 | 0.37 | 0.17 | 0.38 | 49 |
-| Epinowcast (rw) | 35.56 | 21.38 | 2.65 | 11.53 | 0.45 | 0.25 | 0.38 | 49 |
+| own AR1/nb/GeneralizedGamma | 16.1 | 1.4 | 2.8 | 11.8 | 0.03 | 0.64 | 1.00 | 28 |
+| own AR1/nb/Gamma | 16.2 | 1.4 | 2.9 | 11.8 | 0.01 | 0.68 | 1.00 | 28 |
+| own AR1/nb/LogNormal | 16.5 | 1.4 | 2.7 | 12.4 | 0.07 | 0.68 | 1.00 | 28 |
+| Epinowcast (point effect) | 18.0 | 10.6 | 1.3 | 6.0 | 0.45 | 0.25 | 0.64 | 28 |
+| own HSGP/nb/Gamma | 19.8 | 1.5 | 3.4 | 14.9 | -0.02 | 0.68 | 1.00 | 28 |
+| own AR1/nb/Dirichlet | 20.2 | 2.1 | 2.6 | 15.5 | 0.07 | 0.61 | 1.00 | 28 |
+| own HSGP/nb/GeneralizedGamma | 20.2 | 1.9 | 3.2 | 15.1 | -0.04 | 0.68 | 1.00 | 28 |
+| own HSGP/nb/Dirichlet | 21.0 | 2.5 | 3.1 | 15.4 | 0.03 | 0.57 | 1.00 | 28 |
+| own HSGP/nb/LogNormal | 23.9 | 2.2 | 2.9 | 18.7 | -0.06 | 0.68 | 1.00 | 28 |
+| own SIR/nb/GeneralizedGamma | 24.9 | 2.2 | 1.4 | 21.4 | 0.11 | 0.79 | 1.00 | 28 |
+| own SIR/nb/Gamma | 25.1 | 2.1 | 1.5 | 21.5 | 0.15 | 0.79 | 1.00 | 28 |
+| own SIR/nb/LogNormal | 27.1 | 2.1 | 1.4 | 23.6 | 0.13 | 0.79 | 1.00 | 28 |
+| Epinowcast (rw) | 29.3 | 15.9 | 5.6 | 7.7 | 0.16 | 0.25 | 0.61 | 28 |
+| own SIR/nb/Dirichlet | 30.8 | 3.2 | 1.1 | 26.5 | 0.20 | 0.82 | 1.00 | 28 |
+| NobBS | 45.0 | 0.2 | 44.1 | 0.7 | -0.81 | 0.11 | 0.14 | 28 |
+| Epinowcast (default) | 46.2 | 28.8 | 5.5 | 11.9 | 0.47 | 0.18 | 0.32 | 28 |
 
 Mpox nowcast scores at d\*=0 (49 common evaluation dates, daily).
-{.table style="width:100%;"}
+{.table}
 
 **Key findings (mpox):**
 
@@ -141,22 +155,22 @@ Mpox nowcast scores at d\*=0 (49 common evaluation dates, daily).
 
 | Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | N dates |
 |:---|---:|---:|---:|---:|---:|---:|---:|---:|
-| HSGP/GeneralizedGamma | 675.17 | 194.66 | 148.23 | 332.28 | 0.07 | 0.38 | 0.88 | 50 |
-| HSGP/LogNormal | 771.91 | 208.55 | 114.67 | 448.69 | 0.02 | 0.44 | 0.92 | 50 |
-| NobBS | 952.04 | 382.26 | 50.54 | 519.24 | 0.24 | 0.58 | 0.84 | 50 |
-| SIR/GeneralizedGamma | 1043.75 | 487.97 | 229.12 | 326.66 | 0.10 | 0.46 | 0.76 | 50 |
-| SIR/Dirichlet | 1051.04 | 511.65 | 221.79 | 317.59 | 0.24 | 0.40 | 0.74 | 50 |
-| HSGP/Dirichlet | 1119.08 | 744.91 | 96.93 | 277.24 | 0.52 | 0.14 | 0.40 | 50 |
-| SIR/LogNormal | 1495.60 | 849.20 | 210.75 | 435.65 | 0.25 | 0.34 | 0.72 | 50 |
-| AR1/GeneralizedGamma | 1605.05 | 75.54 | 756.19 | 773.32 | -0.32 | 0.38 | 0.98 | 50 |
-| AR1/LogNormal | 1615.45 | 80.90 | 659.69 | 874.86 | -0.28 | 0.48 | 1.00 | 50 |
-| AR1/Dirichlet | 1656.90 | 101.19 | 698.94 | 856.77 | -0.26 | 0.32 | 0.98 | 50 |
-| Epinowcast (rw) | 8886.32 | 8201.68 | 177.22 | 507.42 | 0.62 | 0.04 | 0.09 | 50 |
-| Epinowcast (point effect) | 18666.43 | 13143.37 | 1.05 | 5522.01 | 0.92 | 0.09 | 0.11 | 50 |
-| Epinowcast (default) | 45515.66 | 41745.39 | 549.03 | 3221.25 | 0.41 | 0.06 | 0.14 | 50 |
+| own HSGP/nb/GeneralizedGamma | 715.9 | 170.7 | 169.9 | 375.2 | 0.01 | 0.34 | 0.86 | 50 |
+| own HSGP/nb/LogNormal | 852.6 | 194.7 | 144.0 | 513.9 | -0.03 | 0.52 | 0.94 | 50 |
+| own SIR/nb/Dirichlet | 899.7 | 409.3 | 211.6 | 278.8 | 0.19 | 0.36 | 0.74 | 50 |
+| NobBS | 952.0 | 382.3 | 50.5 | 519.2 | 0.24 | 0.58 | 0.84 | 50 |
+| own HSGP/nb/Dirichlet | 981.0 | 537.0 | 98.6 | 345.4 | 0.43 | 0.16 | 0.62 | 50 |
+| own SIR/nb/GeneralizedGamma | 1017.8 | 418.3 | 263.2 | 336.2 | 0.08 | 0.42 | 0.74 | 50 |
+| own SIR/nb/LogNormal | 1416.1 | 765.8 | 217.0 | 433.2 | 0.22 | 0.40 | 0.74 | 50 |
+| own AR1/nb/LogNormal | 1736.8 | 79.9 | 807.7 | 849.1 | -0.31 | 0.36 | 0.98 | 50 |
+| own AR1/nb/Dirichlet | 1738.4 | 103.0 | 771.2 | 864.3 | -0.32 | 0.32 | 1.00 | 50 |
+| own AR1/nb/GeneralizedGamma | 1747.1 | 76.4 | 897.1 | 773.6 | -0.33 | 0.32 | 0.96 | 50 |
+| Epinowcast (default) | 24184.6 | 22202.3 | 548.6 | 1433.7 | 0.52 | 0.10 | 0.16 | 50 |
+| Epinowcast (point effect) | 43789.0 | 23295.3 | 0.0 | 20493.7 | 0.97 | 0.00 | 0.16 | 50 |
+| Epinowcast (rw) | 44079.0 | 40659.0 | 94.8 | 3325.2 | 0.66 | 0.09 | 0.13 | 50 |
 
 COVID-19 nowcast scores at d\*=0 (50 common evaluation dates, daily).
-{.table style="width:100%;"}
+{.table}
 
 **Key findings (COVID-19):**
 

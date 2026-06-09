@@ -1,23 +1,31 @@
 # diseasenowcasting
 
 `diseasenowcasting` is an R package for **nowcasting** time series of
-epidemiological cases. Surveillance systems have a delay between the
-**true date of an event** (`event_date`, e.g. symptom onset or testing)
-and the **report date** for that event (`report_date`, e.g. when the
-case was entered into the database). Because recent event-dates are
-still missing reports that have not yet arrived, the latest case counts
-look artificially low. A *nowcast* corrects for this reporting delay and
-estimates the eventual, fully-observed totals.
+epidemiological cases.
 
-To do this `diseasenowcasting` fits **censored Bayesian models**: the
+## What is nowcasting?
+
+Surveillance systems have a delay between the **true date of an event**
+(`event_date`, e.g. symptom onset or testing) and the **report date**
+for that event (`report_date`, e.g. when the case was entered into the
+database). Because recent event-dates are still missing reports that
+have not yet arrived, the latest case counts look artificially low. A
+*nowcast* corrects for this reporting delay and estimates the eventual,
+fully-observed totals.
+
+To do this `diseasenowcasting` fits censored Bayesian models. The
 reporting delay is modeled directly as a stochastic process, jointly
 with the epidemic dynamics, through a censored likelihood. Inference
 runs on R’s Template Model Builder
-([`RTMB`](https://cran.r-project.org/package=RTMB), so no Stan/JAGS
-compilation is required. The package supports several epidemic processes
-(HSGP, AR(1), SIR), several delay families (LogNormal,
-Generalized-Gamma, Dirichlet), stratified data, extreme value detection
-and backtesting.
+([`RTMB`](https://cran.r-project.org/package=RTMB)), so no Stan/JAGS
+compilation is required. The package supports several [epidemic
+processes](https://rodrigozepeda.github.io/diseasenowcasting/reference/epidemic_process.html),
+[several delay
+families](https://rodrigozepeda.github.io/diseasenowcasting/reference/delay_process.html),
+stratified data, [extreme value
+detection](https://rodrigozepeda.github.io/diseasenowcasting/reference/extreme_values.html)
+and
+[backtesting](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.html).
 
 > ⚠️ `diseasenowcasting` is currently under active development and parts
 > of the interface might still change.
@@ -55,7 +63,7 @@ data(denguedat)
 
 #Simulate a nowcast on January 1st 1991
 #Only cases and reports before that date will be used
-denguedat <- denguedat |> 
+dengue_data <- denguedat |> 
   filter(onset_week <= as.Date("1991-01-01") & report_week <= as.Date("1991-01-01"))
 ```
 
@@ -67,7 +75,7 @@ report weeks) and the strata (`gender`):
 ``` r
 
 dengue_tbl <- tbl_now(
-  denguedat,
+  dengue_data,
   event_date  = onset_week,    # when symptoms started
   report_date = report_week,   # when the case was registered
   strata      = gender,
@@ -77,7 +85,9 @@ dengue_tbl <- tbl_now(
 )
 ```
 
-Once the data is a `tbl_now`, a single call to
+Once the data is a
+[`tbl_now()`](https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html),
+a single call to
 [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
 does the rest (the nowcast is automatically stratified by the strata
 declared above):
@@ -152,8 +162,8 @@ performed in the past
 ``` r
 
 model_2 <- model(
-  likelihood = nb_likelihood(),          # negative binomial (recommended)
-  epidemic   = hsgp_epidemic(),          # recommended for long-running epidemics
+  likelihood = nb_likelihood(),  # negative binomial (recommended)
+  epidemic   = hsgp_epidemic(),  # recommended for long-running epidemics
   delay      = lognormal_delay() # generalized gamma reporting delay
 )
 
@@ -165,28 +175,45 @@ And get the scores
 
 ``` r
 
+autoplot(bt)
+```
+
+![](reference/figures/README-unnamed-chunk-4-1.png) You can access these
+quantities directly with `score`
+
+``` r
+
 score(bt)
-#>                     model      wis coverage_50 coverage_90       ape  mse n
-#> 1 AR1/nb/GeneralizedGamma 12.10694   0.0000000           1 0.7404989 1342 3
-#> 2       HSGP/nb/LogNormal 12.30653   0.3333333           1 0.7030839 1089 3
+#>                     model      wis overprediction underprediction dispersion
+#> 1 AR1/nb/GeneralizedGamma 12.10694              0        8.592593   3.514352
+#> 2       HSGP/nb/LogNormal 12.30653              0        6.777778   5.528750
+#>   coverage_50 coverage_90       ape  mse n
+#> 1   0.0000000           1 0.7404989 1342 3
+#> 2   0.3333333           1 0.7030839 1089 3
 ```
 
 ## Handling extreme delays
 
-`diseasenowcasting` automatically detects extreme delays. When new data
-arrives, [`update()`](https://rdrr.io/r/stats/update.html) re-scores
-every incoming report against the previously fitted delay distribution
-and **warns** about anything that seems implausibly delayed. The flagged
-reports are available via
+When new data arrives, [`update()`](https://rdrr.io/r/stats/update.html)
+re-scores every incoming report against the previously fitted delay
+distribution and **warns** about anything that seems implausibly
+delayed. The flagged reports are available via
 [`extreme_values()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/extreme_values.md):
 
 ``` r
 
-# `initial_ncast` was fit on data up to some date; new reports just arrived in
-# `new_data_tbl`. update() scores them and warns if any delay is anomalous.
-nc_updated <- update(initial_ncast, new_data_tbl, level = 0.99)
+#Simulate getting new data
+dengue_update <- denguedat |> 
+  filter(onset_week <= as.Date("1991-01-14") & report_week <= as.Date("1991-01-14"))
 
-extreme_values(nc_updated)   # which reports were flagged, and how surprising
+# level stands for when should we flag something is an extreme delay
+# level = 0.99 means delays with probability 1  - 0.99 = 0.01 are considered extreme
+nc_updated <- update(ncast, new_data = dengue_update, level = 0.99)
+
+# The model identified two extreme (very unlikely) delays of 9 and 10 weeks: 
+# A human should check them based on domain knowledge and decide whether to keep
+# them or to censor them. 
+extreme_values(nc_updated)  
 ```
 
 A complete tutorial on handling extreme delays is available at the

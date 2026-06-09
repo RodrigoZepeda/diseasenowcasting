@@ -25,5 +25,6 @@ score(object, metric = c("wis", "ape", "mse"), report = TRUE)
 
 ## Value
 
-A data.frame, one row per model, with `wis`, `ape`, `mse`,
-`coverage_50`, `coverage_90`, sorted best-first by `metric`.
+A data.frame, one row per model, with `wis`, its decomposition
+(`overprediction`, `underprediction`, `dispersion`), `ape`, `mse`,
+`coverage_50`, and `coverage_90`, sorted best-first by `metric`.
