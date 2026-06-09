@@ -258,7 +258,7 @@ From there, depending on what you want to do next:
   delays in your surveillance stream.
 
 - **[Using alongside an
-  LLM](https://rodrigozepeda.github.io/diseasenowcasting/LLM_Usage.md)**
+  LLM](https://rodrigozepeda.github.io/diseasenowcasting/articles/LLM_Usage.html)**
   — *Use AI.* How to use the
   [`SKILL.md`](https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/SKILL.md)
   to teach a Large Language Model how to you develop your nowcasts with
