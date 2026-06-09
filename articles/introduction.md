@@ -316,11 +316,11 @@ coverage via
 score(backtest_mpox, metric = "wis", report = TRUE)
 #>               model      wis overprediction underprediction dispersion
 #> 1  SIR/nb/LogNormal 10.52604       0.000000        7.852778   2.673264
-#> 2  AR1/nb/LogNormal 14.22583       3.277778        2.666667   8.281389
+#> 2  AR1/nb/LogNormal 14.24507       3.250000        2.666667   8.328403
 #> 3 HSGP/nb/LogNormal 15.22941       2.083333        4.472222   8.673854
 #>   coverage_50 coverage_90       ape      mse n
 #> 1        0.75        0.75 0.4007886 1714.750 4
-#> 2        0.25        1.00 6.7268632 1408.500 4
+#> 2        0.25        1.00 6.7201065 1399.250 4
 #> 3        0.50        1.00 1.4603280 1778.312 4
 ```
 
