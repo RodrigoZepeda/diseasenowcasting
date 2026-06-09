@@ -4,7 +4,7 @@ home:
   title: diseasenowcasting — Bayesian Epidemic Nowcasting
   description: >
     Nowcast time series of epidemiological cases using a censored-regression
-    approach with RTMB (no Stan required).
+    approach with RTMB (no compilation required).
 
 template:
   bootstrap: 5
@@ -22,13 +22,14 @@ navbar:
   structure:
     left:  [articles, reference, news]
     right: [search, github]
-  articles:
-  - title: Get started
-    contents:
-      - introduction
+
   components:
     github:
       icon: fab fa-github
       href: https://github.com/RodrigoZepeda/diseasenowcasting
       aria-label: GitHub
 
+articles:
+  - title: Get started
+    contents:
+      - introduction
