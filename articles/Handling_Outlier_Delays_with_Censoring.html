@@ -103,6 +103,7 @@ outliers and which correspond to true values.</p></li>
 delays into upper bounds.</p></li>
 <li><p>Model is re-updated using the censored data consequently
 improving the delay distribution.</p></li>
+<li><p>Backtest to verify the fit improved.</p></li>
 </ol>
 </div>
 <div class="section level2">
@@ -118,11 +119,11 @@ than 100 days</strong>:</p>
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">covid_colombia</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">tbl_covid</span> <span class="op">&lt;-</span> <span class="va">covid_colombia</span> <span class="op">|&gt;</span> </span>
-<span>  <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html" class="external-link">tbl_now</a></span><span class="op">(</span>event_date <span class="op">=</span> <span class="va">notification_date</span>,</span>
+<span>  <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html" class="external-link">tbl_now</a></span><span class="op">(</span>event_date  <span class="op">=</span> <span class="va">notification_date</span>,</span>
 <span>          case_count  <span class="op">=</span> <span class="va">n</span>,</span>
-<span>              data_type   <span class="op">=</span> <span class="st">"count-incidence"</span>,</span>
+<span>          data_type   <span class="op">=</span> <span class="st">"count-incidence"</span>,</span>
 <span>          report_date <span class="op">=</span> <span class="va">diagnosis_date</span>,</span>
-<span>          t_effects <span class="op">=</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/temporal_effects.html" class="external-link">temporal_effects</a></span><span class="op">(</span>day_of_week <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<span>          t_effects   <span class="op">=</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/temporal_effects.html" class="external-link">temporal_effects</a></span><span class="op">(</span>day_of_week <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">tbl_covid</span><span class="op">$</span><span class="va">.delay</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. </span></span>
@@ -145,7 +146,7 @@ model “this case had delay exactly 330”, it tells it only “this case
 arrived <em>by</em> delay 330” (<em>i.e.</em> its delay of 330 is an
 <strong>upper bound</strong> for the true delay).</p>
 <p>In what follows we explain how to use the model to automatically
-detect abnormal delays and how to inform the model so that predictions
+detect extreme delays and how to inform the model so that predictions
 are improved.</p>
 </div>
 <div class="section level2">
@@ -153,10 +154,10 @@ are improved.</p>
 </h2>
 <p>The first step for a model to learn about <em>extreme delays</em> is
 to have an initial model with historical data so that it learns what the
-usual delay distribution is. In this case we’ll work with an
-early-pandemic window and fit a nowcast. To play out the “new data
-arrives” story we first fit on the reports available at an early
-date:</p>
+usual distribution is. In this case we’ll work with an early-pandemic
+window and fit a <code><a href="../reference/nowcast.html">nowcast()</a></code>. To play out the “new data
+arrives” story we first fit on the reports available at an early date
+(<code>2020-08-31</code>):</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#Initial data</span></span>
 <span><span class="va">initial_tbl</span> <span class="op">&lt;-</span> <span class="va">tbl_covid</span> <span class="op">|&gt;</span> </span>
@@ -164,7 +165,8 @@ date:</p>
 <span>    <span class="va">notification_date</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2020-08-31"</span><span class="op">)</span> <span class="op">&amp;</span> </span>
 <span>    <span class="va">diagnosis_date</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2020-08-31"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/change.html" class="external-link">change_now</a></span><span class="op">(</span><span class="op">)</span> <span class="co">#Update the "now" of the nowcast to the latest date</span></span></code></pre></div>
-<p>We then fit a nowcast to this data:</p>
+<p>We then fit a nowcast to this data (in this example, the next day,
+<code>2020-09-01</code>):</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">initial_ncast</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">initial_tbl</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -179,7 +181,7 @@ date:</p>
 <span>    <span class="va">diagnosis_date</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2020-09-01"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/change.html" class="external-link">change_now</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>and <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> the model. This will automatically score
-the new report against the old fit and <strong>warn</strong> that
+the new data against the old fit and <strong>warn</strong> that
 something is amiss:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nc_updated</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">initial_ncast</span>, <span class="va">new_data_tbl</span><span class="op">)</span></span>
@@ -218,14 +220,14 @@ log pointwise predictive density value.</p>
 <div class="section level2">
 <h2 id="censor-the-outliers-and-re-fit">3) Censor the outliers and re-fit<a class="anchor" aria-label="anchor" href="#censor-the-outliers-and-re-fit"></a>
 </h2>
-<p>We follow the warning’s advice: we flag as censored every report
-whose delay exceeds a sensible bound (here 99 days as reported by
-<code><a href="../reference/extreme_values.html">extreme_values()</a></code>). The function
+<p>We follow the warning’s advice: we <strong>flag as censored</strong>
+every report whose delay exceeds a sensible bound (here 99 days as
+reported by <code><a href="../reference/extreme_values.html">extreme_values()</a></code>). The function
 <code><a href="../reference/censor_delays_above.html">censor_delays_above()</a></code> works by setting
-<code>is_censored = TRUE</code> in the <code>tbl_now</code> for reports
+<code>.is_censored = TRUE</code> in the <code>tbl_now</code> for reports
 greater than the <code>max_delay</code>. Extreme delays are thus turned
 into upper bounds. The <code><a href="../reference/nowcast.html">nowcast()</a></code> then reads the
-<code>is_censored</code> flag automatically.</p>
+<code>.is_censored</code> flag automatically.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">new_data_tbl_censored</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/censor_delays_above.html">censor_delays_above</a></span><span class="op">(</span><span class="va">new_data_tbl</span>, max_delay <span class="op">=</span> <span class="fl">99</span><span class="op">)</span></span>
 <span></span>
@@ -255,7 +257,7 @@ into upper bounds. The <code><a href="../reference/nowcast.html">nowcast()</a></
 <span><span class="co">#&gt; # ────────────────────────────────────────────────────────────────────────────────</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 7,788 more rows</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 more variables: .report_num &lt;dbl&gt;, .delay &lt;dbl&gt;</span></span></span></code></pre>
-<p>We refit with the censored data:</p>
+<p>We refit but this time using the censored data:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nc_updated_censored</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">initial_ncast</span>, <span class="va">new_data_tbl_censored</span><span class="op">)</span></span></code></pre></div>
 <p>The fitted values change once the outliers are no longer taken
@@ -311,7 +313,7 @@ literally.</p>
 <div class="section level2">
 <h2 id="does-it-nowcast-better-backtest">4) Does it nowcast better? Backtest<a class="anchor" aria-label="anchor" href="#does-it-nowcast-better-backtest"></a>
 </h2>
-<p>Finally we check that controlling the extreme values actually
+<p>Finally we check if controlling the extreme values actually
 <em>improves accuracy</em>. We backtest the same model on the plain data
 (<code>new_data_tbl</code>) and on the censored data
 (<code>new_data_tbl_censored</code>) across a set of dates, scoring the
@@ -319,22 +321,25 @@ most recent nowcast (<span class="math inline">d^* = 0</span>) against
 the eventual truth with the Weighted Interval Score (WIS; lower is
 better) and coverage (closer to the expected coverage the better).</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">eval_dates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2020-04-15"</span>, <span class="st">"2020-05-01"</span>, <span class="st">"2020-05-15"</span>, <span class="st">"2020-06-01"</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co">#dates to backtest</span></span>
+<span><span class="va">eval_dates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2020-04-15"</span>, <span class="st">"2020-05-01"</span>, </span>
+<span>                        <span class="st">"2020-05-15"</span>, <span class="st">"2020-06-01"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">bt_plain</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/backtest.html">backtest</a></span><span class="op">(</span><span class="va">new_data_tbl</span>, dates <span class="op">=</span> <span class="va">eval_dates</span><span class="op">)</span></span>
-<span><span class="va">bt_cens</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/backtest.html">backtest</a></span><span class="op">(</span><span class="va">new_data_tbl_censored</span>, dates <span class="op">=</span> <span class="va">eval_dates</span><span class="op">)</span></span>
+<span><span class="co">#Backtest each model on the same dates</span></span>
+<span><span class="va">bt_plain</span>   <span class="op">&lt;-</span> <span class="fu"><a href="../reference/backtest.html">backtest</a></span><span class="op">(</span><span class="va">new_data_tbl</span>, dates <span class="op">=</span> <span class="va">eval_dates</span><span class="op">)</span></span>
+<span><span class="va">bt_cens</span>    <span class="op">&lt;-</span> <span class="fu"><a href="../reference/backtest.html">backtest</a></span><span class="op">(</span><span class="va">new_data_tbl_censored</span>, dates <span class="op">=</span> <span class="va">eval_dates</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
-<span>  plain    <span class="op">=</span> <span class="fu"><a href="../reference/score.html">score</a></span><span class="op">(</span><span class="va">bt_plain</span>, report <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wis"</span>, <span class="st">"coverage_50"</span>, <span class="st">"coverage_90"</span><span class="op">)</span><span class="op">]</span>,</span>
-<span>  censored <span class="op">=</span> <span class="fu"><a href="../reference/score.html">score</a></span><span class="op">(</span><span class="va">bt_cens</span>,  report <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wis"</span>, <span class="st">"coverage_50"</span>, <span class="st">"coverage_90"</span><span class="op">)</span><span class="op">]</span></span>
+<span>  plain    <span class="op">=</span> <span class="fu"><a href="../reference/score.html">score</a></span><span class="op">(</span><span class="va">bt_plain</span>, report <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">[</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wis"</span>,<span class="st">"coverage_50"</span>, <span class="st">"coverage_90"</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>  censored <span class="op">=</span> <span class="fu"><a href="../reference/score.html">score</a></span><span class="op">(</span><span class="va">bt_cens</span>,  report <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">[</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wis"</span>,<span class="st">"coverage_50"</span>, <span class="st">"coverage_90"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;               wis coverage_50 coverage_90</span></span>
 <span><span class="co">#&gt; plain    214.1542         0.5         0.5</span></span>
 <span><span class="co">#&gt; censored 179.9184         0.5         0.5</span></span></code></pre></div>
-<p>Censoring the outlier delays result in a <strong>lower (better)
-WIS</strong> and a better coverage: the delay distribution is no longer
-pulled to the right by extreme values. <strong>This shows that censoring
-the extreme values improves the models.</strong></p>
+<p>Censoring these outlier delays result in a <strong>lower (better)
+WIS</strong> and a <strong>similar coverage</strong> in this example.
+Though in a real test we would need to <code>backtest</code> through
+more dates to reach a conclusion.</p>
 </div>
 <div class="section level2">
 <h2 id="summary-fit---update---identify-outliers---censor---refit-loop">Summary – fit -&gt; update -&gt; identify outliers -&gt; censor
@@ -354,6 +359,7 @@ delays into an upper bound. Or modify the <code>tbl_now</code> directly
 (column <code>is_censored</code>)</p></li>
 <li><p>Re-fit -&gt; the delay distribution is no longer
 distorted.</p></li>
+<li><p>Backtest to verify the fit improved.</p></li>
 </ol>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
