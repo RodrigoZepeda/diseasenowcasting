@@ -244,6 +244,12 @@ From there, depending on what you want to do next:
   copes with unusually long delays, and how to flag and censor extreme
   delays in your surveillance stream.
 
+- **[Using alongside an LLM](LLM_Usage.html)** — *Use AI.* How to use
+  the
+  [`SKILL.md`](https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/SKILL.md)
+  to teach a Large Language Model how to you develop your nowcasts with
+  `diseasenowcasting`.
+
 - **[Benchmark (diseasenowcasting vs NobBS and
   epinowcast)](https://rodrigozepeda.github.io/diseasenowcasting/articles/Benchmark.html)**
   — *How does it compare?* A reproducible backtest comparing
