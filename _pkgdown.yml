@@ -12,9 +12,7 @@ template:
     in_header: pkgdown/extra.css
   math-rendering: katex
   bslib:
-    bootswatch:
-      light: flatly
-      dark: darkly
+    bootswatch: flatly
     primary: "#5F7E62"      # dark sage green
     secondary: "#A8BFA9"    # light sage
     success: "#5F7E62"
@@ -23,10 +21,13 @@ template:
 
 navbar:
   structure:
-    left:  [articles, reference, news]
+    left:  [get_started, reference, articles, news]
     right: [search, github]
 
   components:
+    get_started:
+      text: Get started
+      href: articles/introduction.html
     github:
       icon: fab fa-github
       href: https://github.com/RodrigoZepeda/diseasenowcasting
