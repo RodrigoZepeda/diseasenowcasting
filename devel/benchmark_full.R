@@ -91,10 +91,7 @@ to_long_quantile <- function(df) {
 # =============================================================================
 own_model_list <- function(disease, N_pop) {
   delays <- if (MODELS_SET == "fast") list(lognormal_delay(), dirichlet_delay())
-            else if (disease == "covid")
-              list(lognormal_delay(), generalized_gamma_delay(), dirichlet_delay())
-            else list(lognormal_delay(), gamma_delay(),
-                      generalized_gamma_delay(), dirichlet_delay())
+            else list(lognormal_delay(), generalized_gamma_delay(), dirichlet_delay())
   epidemics <- list(hsgp_epidemic(), ar1_epidemic(), sir_epidemic(N_pop = N_pop))
   models <- list()
   for (epidemic in epidemics) for (delay in delays)
@@ -177,20 +174,30 @@ enw_d0_long <- function(tbl, date_run, event_col, report_col, truth, timestep, v
 # =============================================================================
 # SCORING  -- d*=0, COMMON date set, WIS via scoringutils
 # =============================================================================
-score_long <- function(long) {
+score_long <- function(long, common_only = TRUE) {
   # Common date set: keep dates where every RELIABLE model (the own models +
   # NobBS) produced a nowcast.  Epinowcast's pathfinder fits fail occasionally;
   # requiring them too can silently collapse the common set to a handful of
   # unrepresentative dates (which is what made NobBS spuriously "win" before).
   # Epinowcast is still scored, but only on the dates where it succeeded.
+  #
+  # With `common_only = FALSE` the common-date filter is NOT applied: every model
+  # is scored on ALL the dates IT produced (pre-filter).  The per-model `n_dates`
+  # column then reveals coverage gaps -- a model with n_dates < N_DATES failed on
+  # the missing ones (this is what shrinks the common set).
   reliable     <- long %>% filter(!grepl("Epinowcast", model))
   n_reliable   <- dplyr::n_distinct(reliable$model)
   common_dates <- reliable %>% distinct(model, date_run) %>% count(date_run) %>%
     filter(n == n_reliable) %>% pull(date_run)
-  long <- long %>% filter(date_run %in% common_dates)
+  if (common_only) {
+    long <- long %>% filter(date_run %in% common_dates)
+    cli::cli_alert_info("post-filter: scoring on {length(common_dates)} common date(s)")
+  } else {
+    cli::cli_alert_info("pre-filter: scoring each model on ALL its available dates")
+  }
   if (nrow(long) == 0) return(NULL)
-  cli::cli_alert_info("scoring on {length(common_dates)} common date(s)")
 
+  per_model_n <- long %>% distinct(model, date_run) %>% count(model, name = "n_dates")
   long %>%
     as_forecast_quantile(observed = "observed", predicted = "predicted",
       quantile_level = "quantile", forecast_unit = c("model", "date_run")) %>%
@@ -199,7 +206,8 @@ score_long <- function(long) {
     transmute(model, wis = round(wis, 1), over = round(overprediction, 1),
               under = round(underprediction, 1), disp = round(dispersion, 1),
               bias = round(bias, 2), cov50 = round(interval_coverage_50, 2),
-              cov90 = round(interval_coverage_90, 2), n_dates = length(common_dates)) %>%
+              cov90 = round(interval_coverage_90, 2)) %>%
+    left_join(per_model_n, by = "model") %>%
     arrange(wis)
 }
 
@@ -224,23 +232,33 @@ run_disease <- function(disease, tbl, N_pop, unit, timestep, nobbs_units,
       enw_d0_long(tbl, dates[k], event_col, report_col, truth, timestep, enw_variants)))
   }
 
-  long <- bind_rows(own_long, comp_long)
-  tab  <- score_long(long)
-  if (is.null(tab)) { cli::cli_warn("{disease}: no common d*=0 targets."); return(NULL) }
+  long        <- bind_rows(own_long, comp_long)
+  long_tagged <- long %>% mutate(disease = disease)          # raw, pre-filter
+  tab         <- score_long(long, common_only = TRUE)        # post-filter (common set)
+  tab_all     <- score_long(long, common_only = FALSE)       # pre-filter (per-model dates)
+  tag <- function(x) if (is.null(x)) NULL else x %>% mutate(disease = disease)
+
+  if (is.null(tab)) {
+    cli::cli_warn("{disease}: no common d*=0 targets.")
+    return(list(long = long_tagged, scores = NULL, scores_prefilter = tag(tab_all)))
+  }
+  cli::cli_h3("{disease}: post-filter (common date set)")
   print(as.data.frame(tab), row.names = FALSE)
+  cli::cli_h3("{disease}: pre-filter (each model on all its dates; n_dates shows coverage)")
+  print(as.data.frame(tab_all), row.names = FALSE)
 
   best_own <- tab %>% filter(grepl("^own ", model)) %>% slice(1)
   nobbs_wis <- tab %>% filter(model == "NobBS") %>% pull(wis)
   cli::cli_alert_success(
     "{disease}: best own = {best_own$model} (WIS {best_own$wis}); ",
     "beats NobBS ({nobbs_wis %||% NA}) = {isTRUE(best_own$wis <= (nobbs_wis %||% Inf))}")
-  tab %>% mutate(disease = disease)
+  list(long = long_tagged, scores = tag(tab), scores_prefilter = tag(tab_all))
 }
 
 # =============================================================================
 # RUN
 # =============================================================================
-all_scores <- list()
+all_results <- list()   # per disease: list(long, scores, scores_prefilter)
 
 if (RUN_DENGUE) {
   data(denguedat)
@@ -249,7 +267,7 @@ if (RUN_DENGUE) {
     to_count("count-incidence") %>%
     add_temporal_effects(temporal_effects(seasons = 52)) %>% compute_temporal_effects()
   d0 <- min(as_tibble(tbl)[[get_event_date(tbl)]]); d1 <- max(as_tibble(tbl)[[get_event_date(tbl)]])
-  all_scores[["dengue"]] <- run_disease(
+  all_results[["dengue"]] <- run_disease(
     "dengue", tbl, N_pop = 5e6, unit = "week", timestep = "week", nobbs_units = "1 week",
     enw_variants = list("Epinowcast (weekly RE)" = ~ 1 + (1 | week),
                         "Epinowcast (default)"   = NULL,
@@ -263,7 +281,7 @@ if (RUN_COVID) {
     tbl_now(event_date = notification_date, report_date = diagnosis_date, case_count = n,
             data_type = "count-incidence") %>%
     add_temporal_effects(temporal_effects(day_of_week = TRUE)) %>% compute_temporal_effects()
-  all_scores[["covid"]] <- run_disease(
+  all_results[["covid"]] <- run_disease(
     "covid", tbl, N_pop = 5e6, unit = "day", timestep = "day", nobbs_units = "1 day",
     enw_variants = list("Epinowcast (point effect)" = ~ 1 + day_of_week,
                         "Epinowcast (default)"      = NULL,
@@ -277,7 +295,7 @@ if (RUN_MPOX) {
     tbl_now(event_date = dx_date, report_date = dx_report_date, data_type = "linelist") %>%
     to_count("count-incidence") %>%
     add_temporal_effects(temporal_effects(day_of_week = TRUE)) %>% compute_temporal_effects()
-  all_scores[["mpox"]] <- run_disease(
+  all_results[["mpox"]] <- run_disease(
     "mpox", tbl, N_pop = 5e6, unit = "day", timestep = "day", nobbs_units = "1 day",
     enw_variants = list("Epinowcast (point effect)" = ~ 1 + day_of_week,
                         "Epinowcast (default)"      = NULL,
@@ -286,6 +304,22 @@ if (RUN_MPOX) {
 }
 
 plan(sequential)
-scores_df <- bind_rows(all_scores)
+
+# Post-filter (common date set) scores -- the headline table.
+scores_df <- bind_rows(lapply(all_results, `[[`, "scores"))
 write_rds(scores_df, file.path(OUT, "benchmark_scores.rds"))
-cli::cli_alert_success("Saved {file.path(OUT, 'benchmark_scores.rds')} ({nrow(scores_df)} model x disease rows).")
+
+# Pre-filter scores -- every model scored on ALL the dates it produced; the
+# per-model `n_dates` column shows which models dropped dates (n_dates < N_DATES).
+scores_prefilter_df <- bind_rows(lapply(all_results, `[[`, "scores_prefilter"))
+write_rds(scores_prefilter_df, file.path(OUT, "benchmark_scores_prefilter.rds"))
+
+# Raw pre-filter predictions (one row per model x date x quantile), unfiltered --
+# everything needed to re-score or audit which model produced which date.
+long_df <- bind_rows(lapply(all_results, `[[`, "long"))
+write_rds(long_df, file.path(OUT, "benchmark_long.rds"))
+
+cli::cli_alert_success(
+  "Saved to {OUT}/: benchmark_scores.rds ({nrow(scores_df)} rows, common set), ",
+  "benchmark_scores_prefilter.rds ({nrow(scores_prefilter_df)} rows, all dates), ",
+  "benchmark_long.rds ({nrow(long_df)} raw prediction rows).")
