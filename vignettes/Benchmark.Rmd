@@ -77,12 +77,26 @@ library(dplyr)
 # tree, so the vignette also knits before the package is installed (e.g. pkgdown
 # or R CMD build).
 candidates <- c(
-  system.file("extdata", "comparison_scores.rds", package = "diseasenowcasting"),
-  "../inst/extdata/comparison_scores.rds",
-  file.path("inst", "extdata", "comparison_scores.rds")
+  system.file("extdata", "benchmark_scores.rds", package = "diseasenowcasting"),
+  "../inst/extdata/benchmark_scores.rds",
+  file.path("inst", "extdata", "benchmark_scores.rds")
 )
 scoring_file <- candidates[nzchar(candidates) & file.exists(candidates)][1]
-have_scores  <- !is.na(scoring_file)
+
+# Not found locally (e.g. on the pkgdown website)? Download from the public repo.
+if (is.na(scoring_file)) {
+  base <- "https://raw.githubusercontent.com/RodrigoZepeda/diseasenowcasting"
+  for (ref in c("master", "main")) {                       # whichever is the default branch
+    url <- paste0(base, "/", ref, "/inst/extdata/benchmark_scores.rds")
+    tmp <- tempfile(fileext = ".rds")
+    ok  <- tryCatch({
+      utils::download.file(url, tmp, mode = "wb", quiet = TRUE)
+      file.exists(tmp) && file.size(tmp) > 0
+    }, error = function(e) FALSE)
+    if (isTRUE(ok)) { scoring_file <- tmp; break }
+  }
+}
+have_scores <- !is.na(scoring_file) && file.exists(scoring_file)
 
 if (have_scores) {
   scores_df <- readRDS(scoring_file) |>
@@ -92,7 +106,7 @@ if (have_scores) {
 ```
 
 ```{r no-scores-note, eval = !have_scores, echo = FALSE, results = "asis"}
-cat("> _The pre-computed benchmark scores (`inst/extdata/comparison_scores.rds`)",
+cat("> _The pre-computed benchmark scores (`inst/extdata/benchmark_scores.rds`)",
     "were not found in this build, so the score tables below are omitted._\n")
 ```
 

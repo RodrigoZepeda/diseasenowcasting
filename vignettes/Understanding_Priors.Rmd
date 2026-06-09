@@ -40,13 +40,31 @@ library(ggplot2)
 # vignettes/, so ../inst/extdata/ reaches the source-tree copy -- which is
 # always up-to-date after running devel/precompute_prior_sensitivity.R.
 # When the package is installed and built, system.file() is the fallback.
-local_file <- file.path("..", "inst", "extdata", "prior_sensitivity.rds")
-if (file.exists(local_file)){
-  ps_file <- local_file
-}  else {
-  ps_file <- system.file("extdata", "prior_sensitivity.rds", package = "diseasenowcasting")
+# Look for the precomputed file locally first (source tree, then installed
+# package).  If neither is present -- e.g. on the pkgdown website, where the
+# *.rds is not bundled -- download it from the public GitHub repository.
+read_prior_sensitivity <- function() {
+  local <- c(file.path("..", "inst", "extdata", "prior_sensitivity.rds"),
+             system.file("extdata", "prior_sensitivity.rds", package = "diseasenowcasting"))
+  hit   <- local[nzchar(local) & file.exists(local)]
+  if (length(hit)) return(readRDS(hit[[1]]))
+
+  base <- "https://raw.githubusercontent.com/RodrigoZepeda/diseasenowcasting"
+  for (ref in c("master", "main")) {                      # whichever the default branch is
+    url <- paste0(base, "/", ref, "/inst/extdata/prior_sensitivity.rds")
+    tmp <- tempfile(fileext = ".rds")
+    ok  <- tryCatch({
+      utils::download.file(url, tmp, mode = "wb", quiet = TRUE)
+      file.exists(tmp) && file.size(tmp) > 0
+    }, error = function(e) FALSE)
+    if (isTRUE(ok)) {
+      ps <- tryCatch(readRDS(tmp), error = function(e) NULL)
+      if (!is.null(ps)) return(ps)
+    }
+  }
+  NULL
 }
-ps      <- if (file.exists(ps_file)) readRDS(ps_file) else NULL
+ps <- read_prior_sensitivity()
 ps_data <- ps$data
 ps_obs  <- ps$observed
 ps_spec <- ps$specs

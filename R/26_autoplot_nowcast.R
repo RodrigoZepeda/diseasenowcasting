@@ -31,6 +31,19 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
   observed_total <- rowSums(if (is.matrix(data$case_counts)) data$case_counts
                              else matrix(data$case_counts, n_time, 1))
 
+  # Map each event-index to a calendar event-date (same grid predict() uses), and
+  # read the time unit (e.g. "days"/"weeks") from the tbl_now for the axis labels.
+  event_dates <- tryCatch({
+    min_ev <- object@engine$min_event
+    eu     <- object@engine$event_unit
+    if (!is.null(min_ev))
+      seq(as.Date(min_ev), by = as.character(eu), length.out = n_time) else NULL
+  }, error = function(e) NULL)
+  use_dates  <- !is.null(event_dates) && length(event_dates) == n_time
+  time_unit  <- tryCatch(tbl.now::get_event_units(object@data), error = function(e) NULL) %||%
+    "days/weeks"
+  event_axis <- if (use_dates) "Event date" else "Event index"
+
   # -- PANEL 1: Delay distribution ------------------------------------------
   # Observed delays (column 3) and their case weights (column 2), trimmed to a
   # high quantile so the long tail does not stretch the axis (cap at 60).
@@ -73,7 +86,7 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
     ggplot2::geom_bar(data = hist_df,
                       ggplot2::aes(x = delay, weight = weight / sum(weight)),
                       fill = pal["predicted"], colour = "white", alpha = 0.8, width = 0.8) +
-    ggplot2::labs(x = "Reporting delay (days/weeks)", y = "Density",
+    ggplot2::labs(x = paste0("Reporting delay (", time_unit, ")"), y = "Density",
                   title = "Reporting-delay distribution")
   if (!is.null(delay_density_df))
     p1 <- p1 + ggplot2::geom_line(data = delay_density_df,
@@ -91,14 +104,15 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
     q75    = apply(lambda_draws, 2, stats::quantile, probs = 0.75,  na.rm = TRUE),
     q95    = apply(lambda_draws, 2, stats::quantile, probs = 0.95,  na.rm = TRUE)
   )
-  p2 <- ggplot2::ggplot(lambda_sum, ggplot2::aes(x = t)) +
+  lambda_sum$x <- if (use_dates) event_dates else lambda_sum$t
+  p2 <- ggplot2::ggplot(lambda_sum, ggplot2::aes(x = x)) +
     ggplot2::geom_ribbon(ggplot2::aes(ymin = q5,  ymax = q95),
                          fill = pal["reported"], alpha = 0.15) +
     ggplot2::geom_ribbon(ggplot2::aes(ymin = q25, ymax = q75),
                          fill = pal["reported"], alpha = 0.30) +
     ggplot2::geom_line(ggplot2::aes(y = median),
                        colour = pal["reported"], linewidth = 1) +
-    ggplot2::labs(x = "Event index", y = expression(lambda[t]),
+    ggplot2::labs(x = event_axis, y = expression(lambda[t]),
                   title = "Smoothed epidemic process (lambda)") +
     theme_diseasenowcasting()
 
@@ -106,17 +120,24 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
   draw_result <- .nowcast_draws(fit, target = n_time, n_draws = n_draws, seed = seed)
   nc_sum <- draw_result$nowcast
   obs_df <- data.frame(t = seq_len(n_time) - 1L, observed = observed_total)
+  if (use_dates) {
+    nc_sum$x <- event_dates[nc_sum$.event_num + 1L]
+    obs_df$x <- event_dates[obs_df$t + 1L]
+  } else {
+    nc_sum$x <- nc_sum$.event_num
+    obs_df$x <- obs_df$t
+  }
 
-  p3 <- ggplot2::ggplot(nc_sum, ggplot2::aes(x = .event_num)) +
+  p3 <- ggplot2::ggplot(nc_sum, ggplot2::aes(x = x)) +
     ggplot2::geom_ribbon(ggplot2::aes(ymin = q2.5, ymax = q97.5),
                          fill = pal["reported"], alpha = 0.15) +
     ggplot2::geom_ribbon(ggplot2::aes(ymin = q25,  ymax = q75),
                          fill = pal["reported"], alpha = 0.30) +
     ggplot2::geom_line(ggplot2::aes(y = median),
                        colour = pal["reported"], linewidth = 1) +
-    ggplot2::geom_point(data = obs_df, ggplot2::aes(x = t, y = observed),
+    ggplot2::geom_point(data = obs_df, ggplot2::aes(x = x, y = observed),
                         colour = pal["dark"], size = 1.2) +
-    ggplot2::labs(x = "Event index", y = "Cases",
+    ggplot2::labs(x = event_axis, y = "Cases",
                   title = "Nowcast (black = observed)") +
     theme_diseasenowcasting()
 

@@ -304,50 +304,71 @@ S7::method(autoplot, nowcast_class) <- function(object, n_draws = NULL,
 }
 
 # ── autoplot(backtest_class) ─────────────────────────────────────────────────
-#' Plot a backtest: nowcast vs eventual truth across as-of dates, by model.
+#' Plot backtest scores by model: WIS decomposition and interval coverage.
+#'
+#' Summarises the backtest with [score()] and shows three panels: the
+#' Weighted Interval Score broken into its overprediction / dispersion /
+#' underprediction components (stacked, so the bar length is the total WIS),
+#' and the empirical 50% and 90% interval coverage (with a dashed line at the
+#' nominal level).  Models are ordered best-first (lowest WIS at the top).
 #'
 #' @param object A `backtest_class`.
-#' @param color_palette Named or unnamed character vector of hex colors.  If
-#'   `NULL`, `dn_palette()` is used.
 #' @param ... Unused.
-#' @returns A `ggplot` object.
+#' @returns A `patchwork` of three panels (or, if `patchwork` is not installed,
+#'   a named list of three `ggplot` objects).
 #' @noRd
-S7::method(autoplot, backtest_class) <- function(object,
-                                                  color_palette = NULL, ...) {
-  results <- object@results
-  if (is.null(results) || nrow(results) == 0)
-    cli::cli_abort("Backtest has no results to plot.")
-  results <- results[is.finite(results$final), , drop = FALSE]
+S7::method(autoplot, backtest_class) <- function(object, ...) {
+  sc <- score(object, report = FALSE)
+  if (is.null(sc) || nrow(sc) == 0)
+    cli::cli_abort("Backtest has no results to score.")
 
-  # d*=0 row (newest event) per (model, date_run)
-  newest <- do.call(rbind, by(results, list(results$model, results$date_run), function(block) {
-    block[which.max(block$.event_num), , drop = FALSE]
-  }))
-  newest$date_run <- as.Date(newest$date_run)
+  pal <- dn_palette()
+  # Best (lowest WIS) at the TOP: ggplot draws the first factor level at the
+  # bottom, so order levels worst-first.
+  model_levels <- sc$model[order(sc$wis, decreasing = TRUE)]
+  sc$model <- factor(sc$model, levels = model_levels)
 
-  models <- unique(newest$model)
-  n_mod  <- length(models)
-  if (is.null(color_palette)) {
-    pal <- unname(dn_palette(n_mod))
-  } else {
-    pal <- rep_len(color_palette, n_mod)
-  }
-  color_map <- stats::setNames(pal, models)
+  # -- WIS decomposition (stacked: over + dispersion + under = total WIS) ------
+  comp <- do.call(rbind, lapply(
+    c("overprediction", "dispersion", "underprediction"),
+    function(component)
+      data.frame(model = sc$model, component = component, value = sc[[component]])))
+  comp$component <- factor(comp$component,
+                           levels = c("overprediction", "dispersion", "underprediction"))
+  comp_cols <- c(overprediction  = unname(pal["accent"]),    # too high  -- orange
+                 dispersion      = unname(pal["mid"]),       # interval width
+                 underprediction = unname(pal["heading"]))   # too low   -- dark green
 
-  ggplot2::ggplot(newest, ggplot2::aes(x = .data$date_run)) +
-    ggplot2::geom_ribbon(ggplot2::aes(ymin = .data$q2.5, ymax = .data$q97.5,
-                                      fill = .data$model), alpha = 0.15) +
-    ggplot2::geom_ribbon(ggplot2::aes(ymin = .data$q25,  ymax = .data$q75,
-                                      fill = .data$model), alpha = 0.30) +
-    ggplot2::geom_line(ggplot2::aes(y = .data$q50, colour = .data$model),
-                       linewidth = 0.9) +
-    ggplot2::geom_point(ggplot2::aes(y = .data$final), colour = "#262626",
-                        size = 1.5, shape = 16) +
-    ggplot2::scale_colour_manual(values = color_map) +
-    ggplot2::scale_fill_manual(values = color_map) +
-    ggplot2::labs(x = "as-of date",
-                  y = "Nowcast (d* = 0)",
-                  colour = "Model", fill = "Model",
-                  title = "Backtest: nowcast vs eventual truth (black points)") +
+  p_wis <- ggplot2::ggplot(comp, ggplot2::aes(x = .data$value, y = .data$model,
+                                              fill = .data$component)) +
+    ggplot2::geom_col(width = 0.7) +
+    ggplot2::scale_fill_manual(values = comp_cols, name = NULL) +
+    ggplot2::labs(x = "WIS (lower is better)", y = NULL,
+                  title = "Weighted Interval Score") +
     theme_diseasenowcasting()
+
+  # -- coverage panels: bar + dashed line at the nominal level -----------------
+  coverage_panel <- function(col, nominal, title) {
+    ggplot2::ggplot(sc, ggplot2::aes(x = .data[[col]], y = .data$model)) +
+      ggplot2::geom_col(width = 0.7, fill = unname(pal["reported"])) +
+      ggplot2::geom_vline(xintercept = nominal, linetype = "dashed",
+                          colour = unname(pal["accent"]), linewidth = 0.7) +
+      ggplot2::scale_x_continuous(limits = c(0, 1)) +
+      ggplot2::labs(x = "Empirical coverage", y = NULL, title = title) +
+      theme_diseasenowcasting() +
+      ggplot2::theme(axis.text.y = ggplot2::element_blank(),
+                     axis.ticks.y = ggplot2::element_blank())
+  }
+  p_c50 <- coverage_panel("coverage_50", 0.5, "50% coverage")
+  p_c90 <- coverage_panel("coverage_90", 0.9, "90% coverage")
+
+  panels <- list(WIS = p_wis, coverage_50 = p_c50, coverage_90 = p_c90)
+  if (requireNamespace("patchwork", quietly = TRUE)) {
+    patchwork::wrap_plots(panels, nrow = 1L, widths = c(2, 1, 1)) +
+      patchwork::plot_annotation(title = "Backtest scores by model (d* = 0)")
+  } else {
+    cli::cli_inform(c("i" = "Install {.pkg patchwork} for a combined plot.",
+                      "i" = "Returning a named list of three ggplot objects instead."))
+    panels
+  }
 }

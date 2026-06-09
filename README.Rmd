@@ -25,7 +25,11 @@ knitr::opts_chunk$set(
 <!-- badges: end -->
 
 `diseasenowcasting` is an R package for **nowcasting** time series of
-epidemiological cases. Surveillance systems have a delay between the
+epidemiological cases. 
+
+## What is nowcasting?
+
+Surveillance systems have a delay between the
 **true date of an event** (`event_date`, e.g. symptom onset or testing) and the
 **report date** for that event (`report_date`, e.g. when the case was entered
 into the database). Because recent event-dates are still missing reports that
@@ -33,14 +37,14 @@ have not yet arrived, the latest case counts look artificially low. A *nowcast*
 corrects for this reporting delay and estimates the eventual, fully-observed
 totals.
 
-To do this `diseasenowcasting` fits **censored Bayesian
-models**: the reporting delay is modeled directly as a stochastic process,
+To do this `diseasenowcasting` fits censored Bayesian
+models. The reporting delay is modeled directly as a stochastic process,
 jointly with the epidemic dynamics, through a censored likelihood. Inference runs
 on R's Template Model Builder
-([`RTMB`](https://cran.r-project.org/package=RTMB), so no Stan/JAGS compilation is required. The
-package supports several epidemic processes (HSGP, AR(1), SIR), several delay
-families (LogNormal, Generalized-Gamma, Dirichlet), stratified data,
-extreme value detection and backtesting.
+([`RTMB`](https://cran.r-project.org/package=RTMB)), so no Stan/JAGS compilation is required. The
+package supports several [epidemic processes](https://rodrigozepeda.github.io/diseasenowcasting/reference/epidemic_process.html), [several delay
+families](https://rodrigozepeda.github.io/diseasenowcasting/reference/delay_process.html), stratified data,
+[extreme value detection](https://rodrigozepeda.github.io/diseasenowcasting/reference/extreme_values.html) and [backtesting](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.html).
 
 > :warning: `diseasenowcasting` is currently under active development and parts
 > of the interface might still change.
@@ -75,7 +79,7 @@ data(denguedat)
 
 #Simulate a nowcast on January 1st 1991
 #Only cases and reports before that date will be used
-denguedat <- denguedat |> 
+dengue_data <- denguedat |> 
   filter(onset_week <= as.Date("1991-01-01") & report_week <= as.Date("1991-01-01"))
 ```
 
@@ -84,7 +88,7 @@ We annotate the data with `tbl_now()`, pointing at the event and report dates
 
 ```{r tblnow}
 dengue_tbl <- tbl_now(
-  denguedat,
+  dengue_data,
   event_date  = onset_week,    # when symptoms started
   report_date = report_week,   # when the case was registered
   strata      = gender,
@@ -94,7 +98,7 @@ dengue_tbl <- tbl_now(
 )
 ```
 
-Once the data is a `tbl_now`, a single call to `nowcast()` does the rest (the
+Once the data is a `tbl_now()`, a single call to `nowcast()` does the rest (the
 nowcast is automatically stratified by the strata declared above):
 
 ```{r nowcast}
@@ -139,8 +143,8 @@ And `backtest` and `score` to evaluate how different models would have performed
 
 ```{r backtest}
 model_2 <- model(
-  likelihood = nb_likelihood(),          # negative binomial (recommended)
-  epidemic   = hsgp_epidemic(),          # recommended for long-running epidemics
+  likelihood = nb_likelihood(),  # negative binomial (recommended)
+  epidemic   = hsgp_epidemic(),  # recommended for long-running epidemics
   delay      = lognormal_delay() # generalized gamma reporting delay
 )
 
@@ -151,22 +155,34 @@ bt <- backtest(dengue_tbl, list(model_1, model_2), n_dates = 3)
 And get the scores
 
 ```{r}
+autoplot(bt)
+```
+You can access these quantities directly with `score`
+
+```{r}
 score(bt)
 ```
 
 ## Handling extreme delays
 
-`diseasenowcasting` automatically detects extreme delays. When new data arrives, `update()`
-re-scores every incoming report against the previously fitted delay
-distribution and **warns** about anything that seems implausibly delayed. 
+When new data arrives, `update()` re-scores every incoming report against 
+the previously fitted delay distribution and **warns** about anything that 
+seems implausibly delayed. 
 The flagged reports are available via `extreme_values()`:
 
-```{r censor-detect, eval = FALSE}
-# `initial_ncast` was fit on data up to some date; new reports just arrived in
-# `new_data_tbl`. update() scores them and warns if any delay is anomalous.
-nc_updated <- update(initial_ncast, new_data_tbl, level = 0.99)
+```{r censor-detect, eval = FALSE, warning=FALSE}
+#Simulate getting new data
+dengue_update <- denguedat |> 
+  filter(onset_week <= as.Date("1991-01-14") & report_week <= as.Date("1991-01-14"))
 
-extreme_values(nc_updated)   # which reports were flagged, and how surprising
+# level stands for when should we flag something is an extreme delay
+# level = 0.99 means delays with probability 1  - 0.99 = 0.01 are considered extreme
+nc_updated <- update(ncast, new_data = dengue_update, level = 0.99)
+
+# The model identified two extreme (very unlikely) delays of 9 and 10 weeks: 
+# A human should check them based on domain knowledge and decide whether to keep
+# them or to censor them. 
+extreme_values(nc_updated)  
 ```
 
 A complete tutorial on handling extreme delays is available at the
