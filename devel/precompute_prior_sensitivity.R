@@ -117,7 +117,7 @@ scenarios <- list(
   scn("gp_alpha (prior)", "HSGP",
       hs(alpha = half_normal_prior(0, 0.1)), hs(), hs(alpha = half_normal_prior(0, 8)),
       "half_normal_prior(0, 0.1)  (rigid)", , "half_normal_prior(0, 8)  (very flexible)",
-      window_weeks = 16L),
+      window_weeks = 80L),
 
   nums("gp_ell (numbers)", "HSGP", function(v) mk_epi(hsgp_epidemic, "ell", v),
        2, 60, "ell = 2  (short, wiggly)", "ell = 60  (long, smooth)", 80L),
