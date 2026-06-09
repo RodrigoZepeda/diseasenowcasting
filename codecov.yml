@@ -1,0 +1,36 @@
+# Codecov configuration for diseasenowcasting.
+# Coverage is measured by covr on the package's R/ sources only (see the
+# `coverage` job in .github/workflows/R-CMD-check.yaml).
+
+coverage:
+  # Don't let a coverage dip fail CI; report it but keep it informational.
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        informational: true
+    patch:
+      default:
+        informational: true
+
+# covr never instruments anything outside R/, but list the rest explicitly so
+# Codecov never counts vignettes, dev scripts, generated docs, etc.
+ignore:
+  - "devel"
+  - "vignettes"
+  - "data-raw"
+  - "inst"
+  - "man"
+  - "tests"
+  - "pkgdown"
+
+# Do NOT carry coverage forward from older commits — carry-forward is what keeps
+# renamed/deleted files showing up in the report after a refactor.
+flag_management:
+  default_rules:
+    carryforward: false
+
+comment:
+  layout: "reach, diff, files"
+  require_changes: false
