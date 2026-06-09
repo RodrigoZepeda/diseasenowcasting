@@ -15,8 +15,9 @@ All three are always reported; \code{metric} only chooses the ranking.}
 \item{report}{If TRUE (default), print the ranked comparison via cli.}
 }
 \value{
-A data.frame, one row per model, with \code{wis}, \code{ape}, \code{mse},
-\code{coverage_50}, \code{coverage_90}, sorted best-first by \code{metric}.
+A data.frame, one row per model, with \code{wis}, its decomposition
+(\code{overprediction}, \code{underprediction}, \code{dispersion}), \code{ape}, \code{mse},
+\code{coverage_50}, and \code{coverage_90}, sorted best-first by \code{metric}.
 }
 \description{
 Score a backtest: WIS, APE, MSE per model (and rank them)

@@ -13,8 +13,9 @@
 #' @param metric Metric to RANK models by: `"wis"` (default), `"ape"`, or `"mse"`.
 #'   All three are always reported; `metric` only chooses the ranking.
 #' @param report If TRUE (default), print the ranked comparison via cli.
-#' @returns A data.frame, one row per model, with `wis`, `ape`, `mse`,
-#'   `coverage_50`, `coverage_90`, sorted best-first by `metric`.
+#' @returns A data.frame, one row per model, with `wis`, its decomposition
+#'   (`overprediction`, `underprediction`, `dispersion`), `ape`, `mse`,
+#'   `coverage_50`, and `coverage_90`, sorted best-first by `metric`.
 #' @export
 score <- function(object, metric = c("wis", "ape", "mse"), report = TRUE) {
   stopifnot(S7::S7_inherits(object, backtest_class))
@@ -49,11 +50,16 @@ score <- function(object, metric = c("wis", "ape", "mse"), report = TRUE) {
     scored_per_date  <- scoringutils::score(forecast)
     scored_per_model <- scoringutils::summarise_scores(scored_per_date, by = "model")
     data.frame(model = scored_per_model$model, wis = scored_per_model$wis,
+               overprediction  = scored_per_model$overprediction,
+               underprediction = scored_per_model$underprediction,
+               dispersion      = scored_per_model$dispersion,
                coverage_50 = scored_per_model$interval_coverage_50,
                coverage_90 = scored_per_model$interval_coverage_90)
   }, error = function(e) {
     cli::cli_warn("scoringutils WIS failed: {conditionMessage(e)}")
-    data.frame(model = unique(newest$model), wis = NA_real_, coverage_50 = NA_real_, coverage_90 = NA_real_)
+    data.frame(model = unique(newest$model), wis = NA_real_,
+               overprediction = NA_real_, underprediction = NA_real_, dispersion = NA_real_,
+               coverage_50 = NA_real_, coverage_90 = NA_real_)
   })
 
   # -- APE (mean absolute % error) and MSE of the median point forecast --------
