@@ -12,6 +12,9 @@ template:
     in_header: pkgdown/extra.css
   math-rendering: katex
   bslib:
+    bootswatch:
+      light: flatly
+      dark: darkly
     primary: "#5F7E62"      # dark sage green
     secondary: "#A8BFA9"    # light sage
     success: "#5F7E62"
