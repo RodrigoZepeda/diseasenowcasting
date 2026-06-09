@@ -4,29 +4,32 @@ home:
   title: diseasenowcasting — Bayesian Epidemic Nowcasting
   description: >
     Nowcast time series of epidemiological cases using a censored-regression
-    approach with RTMB (no Stan required).
+    approach with RTMB (no compilation required).
 
 template:
   bootstrap: 5
+  includes:
+    in_header: pkgdown/extra.css
   math-rendering: katex
   bslib:
-    primary: "#5F7E62"       # sage green  -- reported bars / main model
-    secondary: "#262626"     # charcoal    -- navbar background
-    success: "#DA6529"       # burnt orange -- accent / SIR
-    headings-color: "#334335"  # deep green -- headings
+    primary: "#5F7E62"      # dark sage green
+    secondary: "#A8BFA9"    # light sage
+    success: "#5F7E62"
+    danger: "#B85348"       # desaturated red
+    dark: "#262626"         # charcoal
 
 navbar:
   structure:
     left:  [articles, reference, news]
     right: [search, github]
-  bg: secondary
+
   components:
     github:
       icon: fab fa-github
       href: https://github.com/RodrigoZepeda/diseasenowcasting
       aria-label: GitHub
 
-# NOTE: `reference:` and `articles:` are intentionally omitted so pkgdown builds
-# them automatically from the package's exported, documented topics and the
-# vignettes in vignettes/.  This avoids the index drifting out of sync whenever
-# an export is added/removed or a vignette is renamed.
+articles:
+  - title: Get started
+    contents:
+      - introduction

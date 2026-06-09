@@ -1,0 +1,18 @@
+:root {
+  --sage-dark: #5F7E62;
+  --sage-light: #A8BFA9;
+  --brand-red: #B85348;
+  --charcoal: #262626;
+}
+
+.navbar {
+  background-color: var(--sage-dark);
+}
+
+a {
+  color: var(--sage-dark);
+}
+
+a:hover {
+  color: var(--brand-red);
+}
