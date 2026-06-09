@@ -57,3 +57,13 @@ pre.src, pre.r, div.sourceCode {
 pre.src code, div.sourceCode pre {
   background-color: transparent !important;
 }
+
+/* Target evaluated output blocks and standard preformatted text */
+pre, .markdown-body pre, pre code, .output pre {
+  background-color: #ebefeb !important;
+}
+
+/* Ensure the container background matches seamlessly */
+div.pre {
+  background-color: #ebefeb !important;
+}
