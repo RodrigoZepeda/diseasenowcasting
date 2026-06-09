@@ -30,16 +30,16 @@ dn_palette <- function(n = NULL) {
   pal <- c(
     reported       = "#5F7E62",   # dark sage green  -- reported bars / main model
     predicted      = "#A8BFA9",   # light sage        -- predicted/unreported bars
-    accent         = "#DA6529",   # burnt orange      -- SIR, surprise, accent
+    accent         = "#B85348",   # burnt orange      -- SIR, surprise, accent
     dark           = "#262626",   # charcoal          -- backgrounds, text
     heading        = "#334335",   # deep green        -- headings, axes
     mid            = "#7A9E7E",   # mid sage          -- AR1 / second model
-    pale_accent    = "#E8956A",   # pale orange       -- third model / highlight
+    pale_accent    = "#e78b7f",   # pale orange       -- third model / highlight
     slate          = "#607060"    # slate grey-green  -- fourth model
   )
   if (is.null(n)) return(pal)
   if (n > length(pal)) {
-    extra <- grDevices::colorRampPalette(c("#5F7E62", "#DA6529", "#262626"))(n - length(pal))
+    extra <- grDevices::colorRampPalette(c("#5F7E62", "#B85348", "#262626"))(n - length(pal))
     return(c(pal, stats::setNames(extra, paste0("extra", seq_along(extra)))))
   }
   pal[seq_len(n)]
