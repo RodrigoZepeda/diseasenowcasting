@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Understanding Priors in diseasenowcasting • diseasenowcasting</title>
+<title>Understanding Priors and Hyperparameters in diseasenowcasting • diseasenowcasting</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
-<meta property="og:title" content="Understanding Priors in diseasenowcasting">
+<meta property="og:title" content="Understanding Priors and Hyperparameters in diseasenowcasting">
 </head>
 <body>
 <p>
@@ -72,7 +72,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Understanding Priors in diseasenowcasting</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Understanding Priors and Hyperparameters in diseasenowcasting</h1>
                         <h4 data-toc-skip class="author">Rodrigo
 Zepeda-Tello</h4>
             
@@ -84,15 +84,16 @@ Zepeda-Tello</h4>
     
     
 <p>A <strong>prior</strong> is a probability distribution that encodes
-your beliefs about a parameter before seeing the data. When the data is
-informative (many cases, long reporting history), the prior has little
-impact and the data overwhelms it. When the data is sparse or noisy
-(early epidemic, small populations), the prior can substantially shape
-the estimates.</p>
+the beliefs about a parameter <em>before seeing the data</em>. When data
+is informative (<em>i.e.</em> many cases, long reporting history), the
+prior has little impact and the data overwhelms it. When the data is
+sparse or noisy (early epidemic, small populations), the prior
+substantially shapes the estimates.</p>
 <div class="section level3">
 <h3 id="quick-reference">Quick reference<a class="anchor" aria-label="anchor" href="#quick-reference"></a>
 </h3>
-<p>Here we show what to change depending on your situation:</p>
+<p>Here we show what to change depending on your situation. Examples are
+below.</p>
 <table class="table">
 <colgroup>
 <col width="17%">
@@ -109,20 +110,25 @@ the estimates.</p>
 <tbody>
 <tr class="odd">
 <td>1</td>
-<td><code>phi</code></td>
+<td>
+<code>phi</code> in <code><a href="../reference/likelihood.html">nb_likelihood()</a></code> (or change to
+<code><a href="../reference/likelihood.html">poisson_likelihood()</a></code>)</td>
 <td>Interval width (i.e. coverage)</td>
 <td>Start here if coverage is off.</td>
 </tr>
 <tr class="even">
 <td>2</td>
-<td>Delay’s <code>mu</code>, <code>sigma</code> and <code>Q</code> if
-applicable</td>
+<td>
+<a href="https://rodrigozepeda.github.io/diseasenowcasting/reference/delay_process.html">Delay’s
+parameters</a> <code>mu</code>, <code>sigma</code> and (if applicable)
+<code>Q</code>
+</td>
 <td>How much the most-recent past is inflated.</td>
 <td>Change here if nowcasting for previous dates (backcasting) has too
 wide or too short intervals.</td>
 </tr>
 <tr class="odd">
-<td>3</td>
+<td>3.a</td>
 <td>
 <code>ell</code> (HSGP), <code>sigma</code> (AR1)</td>
 <td>Trend flexibility near turning points</td>
@@ -130,31 +136,32 @@ wide or too short intervals.</td>
 points.</td>
 </tr>
 <tr class="even">
-<td>4</td>
+<td>3.b</td>
 <td>
-<code>R0</code>, <code>gamma</code>, <code>N_eff</code> (SIR
-only)</td>
+<code>R0</code>, <code>gamma</code>, <code>N_eff</code> (SIR)</td>
 <td>Mechanistic epidemic shape</td>
-<td>Keep these loose unless you have strong epidemiological
-knowledge.</td>
+<td>Keep these loose unless you have epidemiological knowledge.</td>
 </tr>
 <tr class="odd">
-<td>5</td>
+<td>4</td>
 <td>
 <code>N_pop</code> (SIR only)</td>
 <td>Population at risk</td>
-<td>Set to the actual population at risk.</td>
+<td>Changing the definition of the population at risk might change the
+behavior (<em>e.g.</em> for STIs maybe the population at risk is
+<em>technically</em> the whole population but using a subset, such as
+the sexually-active individuals might yield better results).</td>
 </tr>
 <tr class="even">
-<td>6</td>
+<td>5</td>
 <td>
 <code>num_basis</code> (HSGP)</td>
-<td>Trend smoothness/complexity</td>
+<td>Trend smoothness/complexity (this is not technically a prior).</td>
 <td>Increase if the trend looks too smooth; decrease if it looks too
 noisy.</td>
 </tr>
 <tr class="odd">
-<td>7</td>
+<td>6</td>
 <td><code>covariate_prior</code></td>
 <td>Strength of covariate effects</td>
 <td>Mainly matters when additional covariates are included and have
@@ -166,37 +173,53 @@ strong effects.</td>
 <div class="section level3">
 <h3 id="what-the-rest-of-the-vignette-shows">What the rest of the vignette shows:<a class="anchor" aria-label="anchor" href="#what-the-rest-of-the-vignette-shows"></a>
 </h3>
-<p>This vignette teaches the impact of the prior. It does it by showing
-how two priors (a <em>tight</em> distribution vs a <em>loose</em>
-diffuse one) result in different values. When data are abundant the
-prior barely matters; when they are sparse or censored (exactly the
-situation a nowcast faces at the most recent times) the setting shapes
-the answer.</p>
-<p>Each figure has the same three panels, because a parameter can move
-three different things:</p>
-<pre><code> 1. Reporting delay            2. Smoothed epidemic               3. Nowcast
- (fitted delay distribution)   (latent unobserved incidence)   (predicted nowcast)</code></pre>
+<p>This vignette teaches the impact of the main priors and
+hyperparameters of our models. It uses a <em>tight</em> prior
+distribution vs a <em>loose</em> diffuse one and shows how their usage
+results in different values.</p>
+<p>Each figure shows the same three panels, because a parameter can move
+one (or more!) of three different things:</p>
+<table class="table">
+<colgroup>
+<col width="31%">
+<col width="46%">
+<col width="22%">
+</colgroup>
+<thead><tr class="header">
+<th>Reporting delay</th>
+<th>Smoothed epidemic</th>
+<th>Nowcast</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td>Fitted delay distribution</td>
+<td>Modelled epidemic process (unobserved)</td>
+<td>Predicted nowcast</td>
+</tr></tbody>
+</table>
 <p>In the nowcast panel, solid grey points are the counts
 <strong>reported so far</strong> and hollow points are the
 <strong>eventually-observed truth</strong>.</p>
-<p>For this simulation we use the <code>denguedat</code> dataset (weekly
-dengue cases from Puerto Rico). However the qualitative impact of the
-priors can be translated to any other disease.</p>
+<p>For this simulation we use the <a href="https://rodrigozepeda.github.io/tbl.now/reference/denguedat.html" class="external-link"><code>denguedat</code></a>
+dataset (weekly dengue cases from Puerto Rico). However the qualitative
+impact of the priors can be translated to any other disease.</p>
 </div>
 <div class="section level2">
 <h2 id="likelihood-prior-nb-precision-phi">1. Likelihood prior: NB precision (<code>phi</code>)<a class="anchor" aria-label="anchor" href="#likelihood-prior-nb-precision-phi"></a>
 </h2>
 <p>The negative-binomial precision <code>phi</code> controls how much
 count variability is <em>not</em> explained by the trend. It is the
-single biggest driver of <strong>interval width</strong>. As a number,
-small precision <code>phi</code> is very overdispersed (wide intervals);
-large <code>phi</code> is very precise.</p>
+single biggest driver of <strong>interval width</strong>. Small
+precision <code>phi</code> results in a very overdispersed process (wide
+intervals); a large <code>phi</code> is very precise (tight
+intervals).</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-phi-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
+<blockquote>
 <p><strong>What to watch:</strong> <code>phi</code>’s main job is the
 <strong>width</strong> of the epidemic process (both nowcast and
 smoothed epidemic); it barely moves the delay (panel 1). If your 90%
 intervals routinely miss the truth, use a smaller <code>phi</code> (more
-overdispersion); if they are needlessly wide, use a larger one.</p>
+overdispersion); if they are too wide, use a larger one.</p>
+</blockquote>
 </div>
 <div class="section level2">
 <h2 id="reporting-delay-parameters">2. Reporting-delay parameters<a class="anchor" aria-label="anchor" href="#reporting-delay-parameters"></a>
@@ -213,26 +236,34 @@ past as cases have more time to arrive.</p>
 <h4 id="location-mu">2.1.1 Location (<code>mu</code>)<a class="anchor" aria-label="anchor" href="#location-mu"></a>
 </h4>
 <p><code>mu</code> is the (log) typical delay in the delay units
-(i.e. if a delay usually takes 2 weeks then <span class="math inline">\mu \approx log(2)</span> if units are weeks or
-<span class="math inline">\mu \approx log(2 * 7)</span> if units are
-days ). Small = reports arrive fast; large = a long mean delay.</p>
+(i.e. if a delay usually takes 2 weeks then <span class="math inline">\mu \approx log(14)</span> if the units are days and
+<span class="math inline">\mu \approx log(2)</span> if units are weeks).
+A small <code>mu</code> implies reports arrive fast; a large one, a long
+delay (on average).</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-ln-mu-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
+<blockquote>
 <p><strong>What to watch:</strong> panel 1 slides left/right with
 <code>mu</code>. If the fitted delay is too short the nowcast
 under-inflates recent weeks (panel 3 sits too low); too long and it
 over-inflates.</p>
+</blockquote>
 </div>
 <div class="section level4">
 <h4 id="scale-sigma">2.1.2 Scale (<code>sigma</code>)<a class="anchor" aria-label="anchor" href="#scale-sigma"></a>
 </h4>
-<p><code>sigma</code> (&gt; 0) is the spread of the log-normal (i.e. how
-concentrated the delays are). Small = a sharp spike at the typical
-delay; large = a long, heavy tail.</p>
+<p><code>sigma</code> (&gt; 0) is the spread of the log-normal
+(<em>i.e.</em> how concentrated the delays are). A small sigma implies a
+sharp spike at the typical delay; a large value, a heavy tail
+(_i.e. more extreme values).</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-ln-sigma-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
+<blockquote>
 <p><strong>What to watch:</strong> <code>sigma</code> changes the
 <em>shape</em> of panel 1 without moving its centre. A heavier tail
-means more cases are still expected to arrive, so the nowcast inflates
-the recent past more.</p>
+means more cases are still expected to arrive, so the nowcast propagates
+its uncertainty throughout the recent past. A shorter tail (smaller
+<code>sigma</code>) implies all the uncertainty concentrates very close
+to the <code>now</code> of the <code>nowcast</code>.</p>
+</blockquote>
 <!-- FIXME Gamma-->
 <!--
 ## 2.3 Gamma delay: shape (`shape`)
@@ -263,13 +294,13 @@ rate spreads the delay distribution out to longer values, inflating the nowcast.
 <div class="section level4">
 <h4 id="location-mu-1">2.2.1 Location (<code>mu</code>)<a class="anchor" aria-label="anchor" href="#location-mu-1"></a>
 </h4>
-<p>The Generalized-Gamma adds a tail-shape parameter <code>Q</code> to a
-log-location <code>mu</code> and scale <code>sigma</code>.
-<code>mu</code> behaves like the Log-Normal location.</p>
+<p><code>mu</code> behaves similar to the Log-Normal location.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-gg-mu-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
+<blockquote>
 <p><strong>What to watch:</strong> as for the Log-Normal,
 <code>mu</code> slides the whole delay distribution (panel 1) to shorter
 or longer delays.</p>
+</blockquote>
 </div>
 <div class="section level4">
 <h4 id="scale-sigma-1">2.2.2 Scale (<code>sigma</code>)<a class="anchor" aria-label="anchor" href="#scale-sigma-1"></a>
@@ -277,19 +308,23 @@ or longer delays.</p>
 <p><code>sigma</code> (&gt; 0) controls the spread around the
 location.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-gg-sigma-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
+<blockquote>
 <p><strong>What to watch:</strong> small <code>sigma</code> concentrates
 the delay; large <code>sigma</code> disperses it, widening the right
-tail the nowcast must account for.</p>
+tail.</p>
+</blockquote>
 </div>
 <div class="section level4">
 <h4 id="tail-shape-q">2.2.3 Tail shape (<code>Q</code>)<a class="anchor" aria-label="anchor" href="#tail-shape-q"></a>
 </h4>
-<p><code>Q</code> interpolates the tail. Small (negative) = a light
-tail; large (positive) = a heavy tail.</p>
+<p><code>Q</code> interpolates the tail. A small value implies a light
+tail; a large value, a heavy one.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-gg-q-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
+<blockquote>
 <p><strong>What to watch:</strong> <code>Q</code> reshapes the
 <em>tail</em> of panel 1 while leaving the bulk roughly fixed. A heavier
 tail makes more late reports possible.</p>
+</blockquote>
 </div>
 </div>
 <div class="section level3">
@@ -298,15 +333,16 @@ tail makes more late reports possible.</p>
 <div class="section level4">
 <h4 id="concentration-alpha">2.3.1 Concentration (<code>alpha</code>)<a class="anchor" aria-label="anchor" href="#concentration-alpha"></a>
 </h4>
-<p>The Dirichlet delay learns a free histogram. Its concentration
-<code>alpha</code> controls how that histogram is regularised: small
-(&lt; 1) lets it spike on only a few delays, large pushes it towards
+<p>The Dirichlet delay learns a free histogram. A small value (&lt; 1)
+lets it spike on only a few delays; a large one pushes it towards
 assigning positive probability to more values.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-dirichlet-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
-<p><strong>What to watch:</strong> panel 1 shows the effect most
-directly – a small <code>alpha</code> lets the delay pmf spike on the
-observed delays, a large <code>alpha</code> flattens it letting more
-delays be possible.</p>
+<blockquote>
+<p><strong>What to watch:</strong> panel 1 shows the effect. A small
+<code>alpha</code> lets the delay spike on a handful of observed delays;
+a large <code>alpha</code> lets more delays be possible. A large value
+will always be more susceptible to noise.</p>
+</blockquote>
 </div>
 </div>
 </div>
@@ -323,39 +359,44 @@ mechanistic <strong>SIR</strong>.</p>
 <div class="section level4">
 <h4 id="amplitude-alpha">3.1.1 Amplitude (<code>alpha</code>)<a class="anchor" aria-label="anchor" href="#amplitude-alpha"></a>
 </h4>
-<p><code>alpha</code> as the GP amplitude dictates how far the latent
-trend may swing. Small means a near-flat trend; large lets it reach
-high.</p>
+<p><code>alpha</code> as the Gaussian Process amplitude dictates how far
+the latent trend may swing. Small values imply a flatter trend; larger
+lets it squiggle more.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-gp-alpha-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
+<blockquote>
 <p><strong>What to watch:</strong> the amplitude controls the height of
-the latent trend (panel 2) and the width of the nowcast (panel 3); the
-delay (panel 1) is untouched. (As a <em>number</em>, fixing the
-amplitude is subtle because the basis coefficients adapt – the prior row
-makes the effect clearer.)</p>
+the latent trend (panel 2) and therefore the width of the nowcast (panel
+3); the delay (panel 1) is untouched.</p>
+</blockquote>
 </div>
 <div class="section level4">
 <h4 id="length-scale-ell">3.1.2 Length-scale (<code>ell</code>)<a class="anchor" aria-label="anchor" href="#length-scale-ell"></a>
 </h4>
-<p><code>ell</code> is the GP length-scale – the horizontal “wavelength”
-of the trend. Small = wiggly and quick to bend; large = long and
-smooth.</p>
+<p><code>ell</code> is the GP length-scale (i.e. the horizontal
+“wavelength” of the trend). Small values imply a wiggly and quick to
+bend epidemic process; large ones long and smooth catching less
+variation.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-gp-ell-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
-<p><strong>What to watch:</strong> a short length-scale lets the trend
-bend sharply through the peak (panel 2) at the cost of wiggle; a long
-one forces a smoother curve that can lag turning points.</p>
+<blockquote>
+<p><strong>What to watch:</strong> a short value lets the trend bend
+sharply through the peak (panel 2) at the cost of wiggle; a long one
+forces a smoother curve that can lag turning points.</p>
+</blockquote>
 </div>
 <div class="section level4">
 <h4 id="hsgp-number-of-basis-functions-num_basis">3.1.4 HSGP: number of basis functions (<code>num_basis</code>)<a class="anchor" aria-label="anchor" href="#hsgp-number-of-basis-functions-num_basis"></a>
 </h4>
 <p><code>num_basis</code> is the <strong>resolution</strong> of the GP.
-It is inherently a number, so it only has a numbers row. The default is
-automatic (~<span class="math inline">1.5\sqrt{T}</span>) with <span class="math inline">T</span> being the maximum time planned to be
+It is a hyperparameter (a number). The default is automatic set by
+(~<span class="math inline">1.5\sqrt{T}</span>) with <span class="math inline">T</span> being the maximum time planned to be
 observed.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-num-basis-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
+<blockquote>
 <p><strong>What to watch:</strong> few basis functions force an
 over-smooth trend that can lag the peak (panel 2); many let the model
 track rapid change but risk over-fitting noise near the end. The delay
 (panel 1) is unaffected.</p>
+</blockquote>
 </div>
 </div>
 <div class="section level3">
@@ -364,23 +405,29 @@ track rapid change but risk over-fitting noise near the end. The delay
 <div class="section level4">
 <h4 id="autocorrelation-phi">3.2.1 Autocorrelation (<code>phi</code>)<a class="anchor" aria-label="anchor" href="#autocorrelation-phi"></a>
 </h4>
-<p><code>phi</code> in (-1, 1) is the persistence of the autoregressive
-trend. Near 0 it forgets the past immediately; near 1 it behaves like a
-random walk.</p>
+<p><code>phi</code> represents the persistence of the autoregressive
+trend. Near 0 it forgets the past immediately and goes back to the (log)
+mean of the epidemic; near 1 it completely depends on the previous
+value.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-ar-phi-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
-<p><strong>What to watch:</strong> high <code>phi</code> makes recent
-moves persist into the nowcast (panel 2-3); low <code>phi</code>
-mean-reverts quickly.</p>
+<blockquote>
+<p><strong>What to watch:</strong> A loose <code>phi</code> makes recent
+moves persist into the nowcast (panel 2-3); a tight <code>phi</code>
+reverts to the mean quickly.</p>
+</blockquote>
 </div>
 <div class="section level4">
 <h4 id="innovation-sd-sigma">3.2.2 Innovation SD (<code>sigma</code>)<a class="anchor" aria-label="anchor" href="#innovation-sd-sigma"></a>
 </h4>
 <p><code>sigma</code> (&gt; 0) is the size of the random step the trend
-takes each week. Small = smooth and stable; large = jumpy.</p>
+takes each week. A small value results in a smooth process while a large
+value is jumpy.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-ar-sigma-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
-<p><strong>What to watch:</strong> small <code>sigma</code> keeps the
-trend smooth with narrow intervals; large <code>sigma</code> lets it
-jump, widening the nowcast.</p>
+<blockquote>
+<p><strong>What to watch:</strong> A small <code>sigma</code> keeps the
+trend smooth with narrow intervals; a large <code>sigma</code> lets it
+wiggle, widening the nowcast.</p>
+</blockquote>
 </div>
 </div>
 <div class="section level3">
@@ -390,44 +437,54 @@ jump, widening the nowcast.</p>
 <h4 id="basic-reproduction-number-r0">3.3.1 Basic reproduction number (<code>R0</code>)<a class="anchor" aria-label="anchor" href="#basic-reproduction-number-r0"></a>
 </h4>
 <p><code>R0</code> (&gt; 0) sets how fast a mechanistic SIR epidemic
-grows. Below ~1 it fizzles; large values grow explosively.</p>
+grows. Below 1 it extinguisges; large values grow extremely fast.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-r0-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
+<blockquote>
 <p><strong>What to watch:</strong> <code>R0</code> acts through the
-<em>shape</em> of the epidemic curve (panel 2) – how steeply it climbs.
-A confident, mis-specified <code>R0</code> can pull the nowcast away
-from the data.</p>
+<em>shape</em> of the epidemic curve (panel 2) representing how steeply
+it climbs as well as the final size of the epidemic.</p>
+</blockquote>
 </div>
 <div class="section level4">
 <h4 id="recovery-rate-gamma">3.3.2 Recovery rate (<code>gamma</code>)<a class="anchor" aria-label="anchor" href="#recovery-rate-gamma"></a>
 </h4>
 <p><code>gamma</code> in (0, 1) is the rate people leave the infectious
-pool (1/<code>gamma</code> is the mean infectious period). Small = slow
-recovery, long epidemic; large = fast.</p>
+pool (1/<code>gamma</code> represents the mean infectious period). A
+tight small value implies a slow recovery, hence a long epidemic as
+individuals have more chance to transmit. A large loose value allows
+individuals to recover very fast and hence reduce the final-size of the
+epidemic.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-gamma-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
+<blockquote>
 <p><strong>What to watch:</strong> <code>gamma</code> sets the
 epidemic’s <em>duration</em> and the speed of its decline (panel 2), so
 it is shown a few weeks past the peak.</p>
+</blockquote>
 </div>
 <div class="section level4">
 <h4 id="susceptible-fraction-n_eff">3.3.3 Susceptible fraction (<code>N_eff</code>)<a class="anchor" aria-label="anchor" href="#susceptible-fraction-n_eff"></a>
 </h4>
-<p><code>N_eff</code> in (0, 1) is the fraction of the population
-actually at risk. Small = tiny pool, the epidemic saturates fast and
-low; large = almost everyone.</p>
+<p><code>N_eff</code> in (0, 1) is the fraction of the population that
+is actually at risk. A small value is a tiny pool. The epidemic
+saturates fast and at a lower peak. A large value implies a longer
+epidemic with more individuals getting infected.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-neff-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
-<p><strong>What to watch:</strong> <code>N_eff</code> (together with
-<code>N_pop</code>) sets the size of the susceptible pool and hence the
-peak height (panel 2).</p>
+<blockquote>
+<p><strong>What to watch:</strong> <code>N_eff</code> sets the size of
+the susceptible pool and hence the peak’s height (panel 2).</p>
+</blockquote>
 </div>
 <div class="section level4">
 <h4 id="total-population-n_pop">3.3.4 Total population (<code>N_pop</code>)<a class="anchor" aria-label="anchor" href="#total-population-n_pop"></a>
 </h4>
-<p><code>N_pop</code> is the assumed total population – a fixed scalar,
-shown as numbers only.</p>
+<p><code>N_pop</code> is the assumed total population. This is a
+hyperparameter hence a number.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-npop-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
+<blockquote>
 <p><strong>What to watch:</strong> a small <code>N_pop</code> saturates
-the susceptible pool quickly (short, sharp peak); a large one lets the
-epidemic grow slowly over more time.</p>
+the susceptible pool quickly (short, smaller peak); a large one lets the
+epidemic grow slowly over more time (longer, larger peak).</p>
+</blockquote>
 </div>
 </div>
 </div>
@@ -440,18 +497,24 @@ epidemic grow slowly over more time.</p>
 covariate coefficient. The fits below use weekly dengue data with
 52-period seasonality attached.</p>
 <p><img src="Understanding_Priors_files/figure-html/fig-cov-1.png" class="r-plt" alt="" width="960" style="display: block; margin: auto;"></p>
+<blockquote>
 <p><strong>What to watch:</strong> a tight prior (near-zero
-coefficients) forces the HSGP to explain all variation alone, smoothing
-out the seasonal pattern; a loose prior lets the seasonal covariate pull
-the curve up or down strongly.</p>
+coefficients) forces the epidemic process to explain all variation
+alone. A loose prior lets the<br>
+covariates pull the curve up or down strongly.</p>
+</blockquote>
 </div>
 <div class="section level2">
-<h2 id="practical-guidance">5. Practical guidance<a class="anchor" aria-label="anchor" href="#practical-guidance"></a>
+<h2 id="practical-guide">5. Practical guide<a class="anchor" aria-label="anchor" href="#practical-guide"></a>
 </h2>
-<p>Set any parameter the same way – pass a <strong>number</strong> to
-fix it, or a <code>*_prior()</code> object to give it a prior – then
-call <code><a href="../reference/nowcast.html">nowcast()</a></code>:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<p>To set any parameter in a <code><a href="../reference/model.html">model()</a></code> you can do either of
+two things:</p>
+<ol style="list-style-type: decimal">
+<li><p>Pass a <strong>number</strong> to fix it (constant prior),
+or</p></li>
+<li><p>Pass a <code>*_prior()</code> object to give it a prior.</p></li>
+</ol>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Fix values you know (numbers):</span></span>
 <span><span class="va">mdl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/model.html">model</a></span><span class="op">(</span><span class="fu"><a href="../reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="../reference/epidemic_process.html">hsgp_epidemic</a></span><span class="op">(</span>num_basis <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>,</span>
 <span>             <span class="fu"><a href="../reference/delay_process.html">lognormal_delay</a></span><span class="op">(</span>mu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>

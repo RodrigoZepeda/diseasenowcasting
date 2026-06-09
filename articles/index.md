@@ -9,7 +9,7 @@
 
 - [Mathematical Foundations of
   diseasenowcasting](https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.md):
-- [Understanding Priors in
+- [Understanding Priors and Hyperparameters in
   diseasenowcasting](https://rodrigozepeda.github.io/diseasenowcasting/articles/Understanding_Priors.md):
 - [Handling Outlier Delays with
   Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.md):
