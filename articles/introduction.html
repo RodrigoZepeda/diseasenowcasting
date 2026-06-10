@@ -237,13 +237,13 @@ the errorbar has the 90 % credible intervals.</em>
 <span></span>
 <span><span class="co">#This creates a summary of mean and quantiles</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">pred_dengue</span><span class="op">)</span> </span></code></pre></div>
-<pre><code><span><span class="co">#&gt;         mean median        sd     mad q2.5  q5 q10 q25 q50 q75 q90    q95</span></span>
-<span><span class="co">#&gt; 154 108.7795    108  1.966167  1.4826  107 107 107 107 108 110 111 112.00</span></span>
-<span><span class="co">#&gt; 155  89.2495     89  2.941356  2.9652   86  86  86  87  89  91  93  95.00</span></span>
-<span><span class="co">#&gt; 156  68.6660     68  5.163892  4.4478   62  63  64  65  68  71  75  78.00</span></span>
-<span><span class="co">#&gt; 157  47.2860     45 12.477341  7.4130   36  37  38  41  45  51  59  65.05</span></span>
-<span><span class="co">#&gt; 158  44.6465     41 20.218134 14.8260   23  24  27  32  41  52  66  81.05</span></span>
-<span><span class="co">#&gt; 159  39.8955     35 23.713261 17.7912   11  13  17  25  35  50  69  84.05</span></span>
+<pre><code><span><span class="co">#&gt;         mean median        sd     mad q2.5  q5 q10    q25 q50 q75 q90    q95</span></span>
+<span><span class="co">#&gt; 154 108.7795    108  1.966167  1.4826  107 107 107 107.00 108 110 111 112.00</span></span>
+<span><span class="co">#&gt; 155  89.2505     89  2.942291  2.9652   86  86  86  87.00  89  91  93  95.00</span></span>
+<span><span class="co">#&gt; 156  68.6660     68  5.163504  4.4478   62  63  64  65.00  68  71  75  78.00</span></span>
+<span><span class="co">#&gt; 157  47.2860     45 12.477341  7.4130   36  37  38  41.00  45  51  59  65.05</span></span>
+<span><span class="co">#&gt; 158  44.6450     41 20.220891 14.8260   23  24  27  32.00  41  52  66  81.05</span></span>
+<span><span class="co">#&gt; 159  39.8925     35 23.713121 17.7912   11  13  17  24.75  35  50  69  84.05</span></span>
 <span><span class="co">#&gt;       q97.5 .event_num stratum event_date</span></span>
 <span><span class="co">#&gt; 154 113.025         47   Total 1990-11-26</span></span>
 <span><span class="co">#&gt; 155  97.000         48   Total 1990-12-03</span></span>
@@ -314,7 +314,7 @@ we use a Susceptible-Infected-Recovered model (SIR) with a delay that
 follows a lognormal distribution:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#Models can be modified via the model() </span></span>
-<span><span class="va">mpox_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/model.html">model</a></span><span class="op">(</span>likelihood <span class="op">=</span> <span class="fu"><a href="../reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>,   <span class="co">#Negative binomial (recommended)</span></span>
+<span><span class="va">mpox_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/model.html">model</a></span><span class="op">(</span>likelihood <span class="op">=</span> <span class="fu"><a href="../reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>,   <span class="co">#Negative binomial</span></span>
 <span>                    epidemic   <span class="op">=</span> <span class="fu"><a href="../reference/epidemic_process.html">sir_epidemic</a></span><span class="op">(</span><span class="op">)</span>,    <span class="co">#SIR model</span></span>
 <span>                    delay      <span class="op">=</span> <span class="fu"><a href="../reference/delay_process.html">lognormal_delay</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="co">#Delay distribution</span></span>
 <span></span>
@@ -378,13 +378,13 @@ coverage:</p>
 <code class="sourceCode R"><span><span class="co"># Rank by Weighted Interval Score (WIS) -- lower is better</span></span>
 <span><span class="fu"><a href="../reference/score.html">score</a></span><span class="op">(</span><span class="va">backtest_mpox</span><span class="op">)</span></span>
 <span><span class="co">#&gt;               model       wis overprediction underprediction dispersion</span></span>
-<span><span class="co">#&gt; 1  SIR/nb/LogNormal  9.980729       0.000000        7.111111   2.869618</span></span>
-<span><span class="co">#&gt; 2  AR1/nb/LogNormal 13.258611       3.055556        2.250000   7.953056</span></span>
-<span><span class="co">#&gt; 3 HSGP/nb/LogNormal 17.036597       2.055556        4.527778  10.453264</span></span>
-<span><span class="co">#&gt;   coverage_50 coverage_90       ape     mse n</span></span>
-<span><span class="co">#&gt; 1        0.75           1 0.4181395 1636.50 4</span></span>
-<span><span class="co">#&gt; 2        0.25           1 6.6225133 1203.75 4</span></span>
-<span><span class="co">#&gt; 3        0.50           1 1.4416330 1823.25 4</span></span></code></pre></div>
+<span><span class="co">#&gt; 1  SIR/nb/LogNormal  9.811354       0.000000        6.855556   2.955799</span></span>
+<span><span class="co">#&gt; 2  AR1/nb/LogNormal 13.368333       3.166667        2.500000   7.701667</span></span>
+<span><span class="co">#&gt; 3 HSGP/nb/LogNormal 17.360035       2.708333        4.402778  10.248924</span></span>
+<span><span class="co">#&gt;   coverage_50 coverage_90       ape      mse n</span></span>
+<span><span class="co">#&gt; 1        0.75           1 0.4073142 1660.250 4</span></span>
+<span><span class="co">#&gt; 2        0.25           1 7.1411720 1260.500 4</span></span>
+<span><span class="co">#&gt; 3        0.50           1 1.6262153 2064.062 4</span></span></code></pre></div>
 <p>The <code><a href="../reference/score.html">score()</a></code> output shows WIS, absolute percentage error
 (APE), and empirical coverage at 50 % and 90 %. A well-calibrated
 nowcast should have the lowest WIS and coverage close to these
