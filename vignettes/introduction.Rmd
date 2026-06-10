@@ -192,7 +192,7 @@ a delay that follows a lognormal distribution:
 
 ```{r mpox-fit}
 #Models can be modified via the model() 
-mpox_model <- model(likelihood = nb_likelihood(),   #Negative binomial (recommended)
+mpox_model <- model(likelihood = nb_likelihood(),   #Negative binomial
                     epidemic   = sir_epidemic(),    #SIR model
                     delay      = lognormal_delay()) #Delay distribution
 

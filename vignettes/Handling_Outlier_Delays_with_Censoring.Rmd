@@ -220,8 +220,8 @@ bt_plain   <- backtest(new_data_tbl, dates = eval_dates)
 bt_cens    <- backtest(new_data_tbl_censored, dates = eval_dates)
 
 rbind(
-  plain    = score(bt_plain, report = FALSE)[,c("wis","coverage_50", "coverage_90")],
-  censored = score(bt_cens,  report = FALSE)[,c("wis","coverage_50", "coverage_90")]
+  plain    = score(bt_plain, report = F)[,c("wis","coverage_50","coverage_90")],
+  censored = score(bt_cens,  report = F)[,c("wis","coverage_50","coverage_90")]
 )
 ```
 
