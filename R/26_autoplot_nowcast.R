@@ -113,7 +113,7 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
     ggplot2::geom_line(ggplot2::aes(y = median),
                        colour = pal["reported"], linewidth = 1) +
     ggplot2::labs(x = event_axis, y = expression(lambda[t]),
-                  title = "Smoothed epidemic process (lambda)") +
+                  title = "Smoothed epidemic process") +
     theme_diseasenowcasting()
 
   # -- PANEL 3: Posterior-predictive nowcast ---------------------------------
