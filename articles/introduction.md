@@ -66,10 +66,54 @@ dengue_tbl <- tbl_now(
   denguedat,
   event_date  = onset_week,    # symptom onset date
   report_date = report_week,   # when the record was reported
-  strata      = gender,        # remove if no strata or add as vector all strata (e.g. strata = c(gender, age, region))
   data_type   = "linelist",    # another option is "count-incidence"  if data is aggregated
-  now         =  as.Date("1991-01-01")
+  now         =  as.Date("1991-01-01") #When is the now of the nowcast
 )
+dengue_tbl
+#> # A tibble:  52,987 × 6
+#> # Data type: "linelist"
+#> # Frequency: Event: `weeks` | Report: `weeks`
+#>    onset_week   report_week   gender .event_num .report_num .delay
+#>    <date>       <date>        <chr>       <dbl>       <dbl>  <dbl>
+#>    [event_date] [report_date] [...]       [...]       [...]  [...]
+#>  1 1990-01-01   1990-01-01    Male            0           0      0
+#>  2 1990-01-01   1990-01-01    Female          0           0      0
+#>  3 1990-01-01   1990-01-01    Female          0           0      0
+#>  4 1990-01-01   1990-01-08    Female          0           1      1
+#>  5 1990-01-01   1990-01-08    Male            0           1      1
+#>  6 1990-01-01   1990-01-15    Female          0           2      2
+#>  7 1990-01-01   1990-01-15    Female          0           2      2
+#>  8 1990-01-01   1990-01-15    Female          0           2      2
+#>  9 1990-01-01   1990-01-22    Female          0           3      3
+#> 10 1990-01-01   1990-01-08    Female          0           1      1
+#> # ────────────────────────────────────────────────────────────────────────────────
+#> # Now: 1991-01-01 | Event date: "onset_week" | Report date: "report_week"
+#> # ────────────────────────────────────────────────────────────────────────────────
+#> # ℹ 52,977 more rows
+```
+
+Once your data is a `tbl_now`, a single call to
+[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
+does the rest.
+
+> For more information about `tbl_now` check [the package’s
+> website](https://rodrigozepeda.github.io/tbl.now/index.html).
+
+## Example 1 – Dengue fever (setting up a stratified nowcast)
+
+We fit a nowcast stratified by gender to illustrate the basic workflow.
+First we add the column `gender` as strata to the `tbl_now`:
+
+``` r
+
+dengue_tbl <-  dengue_tbl |>  add_strata(gender)
+```
+
+Notice that the `tbl_now` automatically prints the `strata`
+specification below:
+
+``` r
+
 dengue_tbl
 #> # A tibble:  52,987 × 6
 #> # Data type: "linelist"
@@ -94,21 +138,26 @@ dengue_tbl
 #> # ℹ 52,977 more rows
 ```
 
-Once your data is a `tbl_now`, a single call to
-[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
-does the rest.
-
-> For more information about `tbl_now` check [the package’s
-> website](https://rodrigozepeda.github.io/tbl.now/index.html).
-
-## Example 1 – Dengue fever (setting up a stratified nowcast)
-
-We fit a nowcast stratified by gender to illustrate the basic workflow.
+We can also add temporal effects for example a weekly seasonality (52
+seasons) as well as a holiday effect using the `almanac` package:
 
 ``` r
 
-nc_dengue <- nowcast(dengue_tbl, n_draws = 1000)
-nc_dengue
+library(almanac)
+
+#Specify 52 seasons (weekly) and holidays from the US
+t_effects  <- temporal_effects(seasons = 52, holidays = cal_us_federal())
+
+#Add the temporal effects
+dengue_tbl <- dengue_tbl |> 
+  add_temporal_effects(t_effects)
+```
+
+Finally we fit the model:
+
+``` r
+
+nc_dengue <- nowcast(dengue_tbl)
 ```
 
 The fitted model can be visualized with
@@ -141,16 +190,20 @@ pred_dengue <- predict(nc_dengue)
 summary(pred_dengue) 
 ```
 
-    #> # A tibble: 6 × 16
-    #>    mean median    sd   mad  q2.5    q5   q10   q25   q50   q75   q90   q95 q97.5
-    #>   <dbl>  <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
-    #> 1 109.     108  1.85  1.48   107 107     107   107   108   110 111     113 114  
-    #> 2  89.3     89  2.73  2.97    86  86      86    87    89    91  93      94  96  
-    #> 3  68.8     68  4.90  4.45    63  63      64    65    68    71  75      78  81  
-    #> 4  47.3     45 10.2   7.41    36  37      38    40    45    51  59      67  73.0
-    #> 5  44.6     40 19.1  13.3     23  25      27    32    40    51  66.1    81  96  
-    #> 6  40.6     35 23.4  17.8     11  14.0    17    25    35    50  69      87 101  
-    #> # ℹ 3 more variables: .event_num <int>, stratum <chr>, event_date <date>
+    #>         mean median        sd     mad q2.5  q5 q10 q25 q50 q75 q90    q95
+    #> 154 108.7795    108  1.966167  1.4826  107 107 107 107 108 110 111 112.00
+    #> 155  89.2495     89  2.941356  2.9652   86  86  86  87  89  91  93  95.00
+    #> 156  68.6660     68  5.163892  4.4478   62  63  64  65  68  71  75  78.00
+    #> 157  47.2860     45 12.477341  7.4130   36  37  38  41  45  51  59  65.05
+    #> 158  44.6465     41 20.218134 14.8260   23  24  27  32  41  52  66  81.05
+    #> 159  39.8955     35 23.713261 17.7912   11  13  17  25  35  50  69  84.05
+    #>       q97.5 .event_num stratum event_date
+    #> 154 113.025         47   Total 1990-11-26
+    #> 155  97.000         48   Total 1990-12-03
+    #> 156  81.025         49   Total 1990-12-10
+    #> 157  72.000         50   Total 1990-12-17
+    #> 158  94.000         51   Total 1990-12-24
+    #> 159  97.000         52   Total 1990-12-31
 
 Additionally the
 [`nowcast_diagnostic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_diagnostic.md)
@@ -188,20 +241,12 @@ day-of-the-week effects:
 
 ``` r
 
-ggplot(mpox_tbl) +
-  geom_col(aes(x = dx_date, y = n), fill = "#5F7E62") +
-  labs(x = "Event date", y = "Case count") +
-  theme_diseasenowcasting() +
-  labs(
-    x = "Event date",
-    title = "Mpox cases in NYC (2022)"
-  )
+autoplot(mpox_tbl)
 ```
 
 ![](introduction_files/figure-html/mpoxplot-1.png)
 
-The model will automatically attempt to do it, but we can also set it
-with
+We can also set it again with
 [`add_temporal_effects()`](https://rodrigozepeda.github.io/tbl.now/reference/add_temporal_effects.html):
 
 ``` r
@@ -306,22 +351,32 @@ backtest_mpox <- backtest(
 #plan(sequential)   
 ```
 
-We can then calculate the Weighted Interval Score (WIS) and interval
-coverage via
+We can then plot the Weighted Interval Score (WIS) and interval
+coverage:
+
+``` r
+
+# Plot scoring metrics
+autoplot(backtest_mpox)
+```
+
+![](introduction_files/figure-html/scoreplot-1.png)
+
+Or obtain it via
 [`score()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md):
 
 ``` r
 
 # Rank by Weighted Interval Score (WIS) -- lower is better
-score(backtest_mpox, metric = "wis", report = TRUE)
-#>               model      wis overprediction underprediction dispersion
-#> 1  SIR/nb/LogNormal 10.52604       0.000000        7.852778   2.673264
-#> 2  AR1/nb/LogNormal 14.24507       3.250000        2.666667   8.328403
-#> 3 HSGP/nb/LogNormal 15.22941       2.083333        4.472222   8.673854
-#>   coverage_50 coverage_90       ape      mse n
-#> 1        0.75        0.75 0.4007886 1714.750 4
-#> 2        0.25        1.00 6.7201065 1399.250 4
-#> 3        0.50        1.00 1.4603280 1778.312 4
+score(backtest_mpox)
+#>               model       wis overprediction underprediction dispersion
+#> 1  SIR/nb/LogNormal  9.980729       0.000000        7.111111   2.869618
+#> 2  AR1/nb/LogNormal 13.258611       3.055556        2.250000   7.953056
+#> 3 HSGP/nb/LogNormal 17.036597       2.055556        4.527778  10.453264
+#>   coverage_50 coverage_90       ape     mse n
+#> 1        0.75           1 0.4181395 1636.50 4
+#> 2        0.25           1 6.6225133 1203.75 4
+#> 3        0.50           1 1.4416330 1823.25 4
 ```
 
 The

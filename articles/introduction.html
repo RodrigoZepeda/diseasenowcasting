@@ -139,11 +139,49 @@ as the <code>data_type</code> and the strata (in this case,
 <span>  <span class="va">denguedat</span>,</span>
 <span>  event_date  <span class="op">=</span> <span class="va">onset_week</span>,    <span class="co"># symptom onset date</span></span>
 <span>  report_date <span class="op">=</span> <span class="va">report_week</span>,   <span class="co"># when the record was reported</span></span>
-<span>  strata      <span class="op">=</span> <span class="va">gender</span>,        <span class="co"># remove if no strata or add as vector all strata (e.g. strata = c(gender, age, region))</span></span>
 <span>  data_type   <span class="op">=</span> <span class="st">"linelist"</span>,    <span class="co"># another option is "count-incidence"  if data is aggregated</span></span>
-<span>  now         <span class="op">=</span>  <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1991-01-01"</span><span class="op">)</span></span>
+<span>  now         <span class="op">=</span>  <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1991-01-01"</span><span class="op">)</span> <span class="co">#When is the now of the nowcast</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">dengue_tbl</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble:  52,987 × 6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># Data type: </span><span style="color: #0000BB;">"linelist"</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># Frequency: Event: `weeks` | Report: `weeks`</span></span></span>
+<span><span class="co">#&gt;    onset_week   report_week   gender .event_num .report_num .delay</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt;    <span style="color: #949494;">[event_date]</span> <span style="color: #949494;">[report_date]</span> <span style="color: #949494;">[...]</span>       <span style="color: #949494;">[...]</span>       <span style="color: #949494;">[...]</span>  <span style="color: #949494;">[...]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> 1990-01-01   1990-01-01    Male            0           0      0</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> 1990-01-01   1990-01-01    Female          0           0      0</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> 1990-01-01   1990-01-01    Female          0           0      0</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> 1990-01-01   1990-01-08    Female          0           1      1</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> 1990-01-01   1990-01-08    Male            0           1      1</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> 1990-01-01   1990-01-15    Female          0           2      2</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> 1990-01-01   1990-01-15    Female          0           2      2</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> 1990-01-01   1990-01-15    Female          0           2      2</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> 1990-01-01   1990-01-22    Female          0           3      3</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> 1990-01-01   1990-01-08    Female          0           1      1</span></span>
+<span><span class="co">#&gt; # ────────────────────────────────────────────────────────────────────────────────</span></span>
+<span><span class="co">#&gt; # Now: <span style="color: #0000BB;">1991-01-01</span> | Event date: <span style="color: #0000BB;">"onset_week"</span> | Report date: <span style="color: #0000BB;">"report_week"</span></span></span>
+<span><span class="co">#&gt; # ────────────────────────────────────────────────────────────────────────────────</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 52,977 more rows</span></span></span></code></pre></div>
+<p>Once your data is a <code>tbl_now</code>, a single call to
+<code><a href="../reference/nowcast.html">nowcast()</a></code> does the rest.</p>
+<blockquote>
+<p>For more information about <code>tbl_now</code> check <a href="https://rodrigozepeda.github.io/tbl.now/index.html" class="external-link">the package’s
+website</a>.</p>
+</blockquote>
+</div>
+<div class="section level2">
+<h2 id="example-1-dengue-fever-setting-up-a-stratified-nowcast">Example 1 – Dengue fever (setting up a stratified nowcast)<a class="anchor" aria-label="anchor" href="#example-1-dengue-fever-setting-up-a-stratified-nowcast"></a>
+</h2>
+<p>We fit a nowcast stratified by gender to illustrate the basic
+workflow. First we add the column <code>gender</code> as strata to the
+<code>tbl_now</code>:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dengue_tbl</span> <span class="op">&lt;-</span>  <span class="va">dengue_tbl</span> <span class="op">|&gt;</span>  <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/add.html" class="external-link">add_strata</a></span><span class="op">(</span><span class="va">gender</span><span class="op">)</span></span></code></pre></div>
+<p>Notice that the <code>tbl_now</code> automatically prints the
+<code>strata</code> specification below:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dengue_tbl</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble:  52,987 × 6</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># Data type: </span><span style="color: #0000BB;">"linelist"</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># Frequency: Event: `weeks` | Report: `weeks`</span></span></span>
@@ -165,25 +203,25 @@ as the <code>data_type</code> and the strata (in this case,
 <span><span class="co">#&gt; # Strata: <span style="color: #0000BB;">"gender"</span></span></span>
 <span><span class="co">#&gt; # ────────────────────────────────────────────────────────────────────────────────</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 52,977 more rows</span></span></span></code></pre></div>
-<p>Once your data is a <code>tbl_now</code>, a single call to
-<code><a href="../reference/nowcast.html">nowcast()</a></code> does the rest.</p>
-<blockquote>
-<p>For more information about <code>tbl_now</code> check <a href="https://rodrigozepeda.github.io/tbl.now/index.html" class="external-link">the package’s
-website</a>.</p>
-</blockquote>
-</div>
-<div class="section level2">
-<h2 id="example-1-dengue-fever-setting-up-a-stratified-nowcast">Example 1 – Dengue fever (setting up a stratified nowcast)<a class="anchor" aria-label="anchor" href="#example-1-dengue-fever-setting-up-a-stratified-nowcast"></a>
-</h2>
-<p>We fit a nowcast stratified by gender to illustrate the basic
-workflow.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">nc_dengue</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">dengue_tbl</span>, n_draws <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
-<span><span class="va">nc_dengue</span></span></code></pre></div>
+<p>We can also add temporal effects for example a weekly seasonality (52
+seasons) as well as a holiday effect using the <code>almanac</code>
+package:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/DavisVaughan/almanac" class="external-link">almanac</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co">#Specify 52 seasons (weekly) and holidays from the US</span></span>
+<span><span class="va">t_effects</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/temporal_effects.html" class="external-link">temporal_effects</a></span><span class="op">(</span>seasons <span class="op">=</span> <span class="fl">52</span>, holidays <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/almanac/man/cal_us_federal.html" class="external-link">cal_us_federal</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co">#Add the temporal effects</span></span>
+<span><span class="va">dengue_tbl</span> <span class="op">&lt;-</span> <span class="va">dengue_tbl</span> <span class="op">|&gt;</span> </span>
+<span>  <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/add_temporal_effects.html" class="external-link">add_temporal_effects</a></span><span class="op">(</span><span class="va">t_effects</span><span class="op">)</span></span></code></pre></div>
+<p>Finally we fit the model:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">nc_dengue</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">dengue_tbl</span><span class="op">)</span></span></code></pre></div>
 <p>The fitted model can be visualized with <code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code>. Note
 that the nowcast was already stratified by the strata specified in the
 <code>tbl_now</code>:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">nc_dengue</span><span class="op">)</span> </span></code></pre></div>
 <div class="figure" style="text-align: center">
 <img src="introduction_files/figure-html/dengue-plot-1.png" class="r-plt" alt="_Nowcast for dengue example. The shaded bars show the median while the errorbar has the 90 % credible intervals._" width="672"><p class="caption">
@@ -193,26 +231,30 @@ the errorbar has the 90 % credible intervals.</em>
 </div>
 <p>Values can be obtained via <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> and
 <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Full posterior-predictive nowcast at every event-time</span></span>
 <span><span class="va">pred_dengue</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nc_dengue</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">#This creates a summary of mean and quantiles</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">pred_dengue</span><span class="op">)</span> </span></code></pre></div>
-<pre><code><span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 16</span></span></span>
-<span><span class="co">#&gt;    mean median    sd   mad  q2.5    q5   q10   q25   q50   q75   q90   q95 q97.5</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> 109.     108  1.85  1.48   107 107     107   107   108   110 111     113 114  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>  89.3     89  2.73  2.97    86  86      86    87    89    91  93      94  96  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>  68.8     68  4.90  4.45    63  63      64    65    68    71  75      78  81  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>  47.3     45 10.2   7.41    36  37      38    40    45    51  59      67  73.0</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span>  44.6     40 19.1  13.3     23  25      27    32    40    51  66.1    81  96  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span>  40.6     35 23.4  17.8     11  14.0    17    25    35    50  69      87 101  </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 3 more variables: .event_num &lt;int&gt;, stratum &lt;chr&gt;, event_date &lt;date&gt;</span></span></span></code></pre>
+<pre><code><span><span class="co">#&gt;         mean median        sd     mad q2.5  q5 q10 q25 q50 q75 q90    q95</span></span>
+<span><span class="co">#&gt; 154 108.7795    108  1.966167  1.4826  107 107 107 107 108 110 111 112.00</span></span>
+<span><span class="co">#&gt; 155  89.2495     89  2.941356  2.9652   86  86  86  87  89  91  93  95.00</span></span>
+<span><span class="co">#&gt; 156  68.6660     68  5.163892  4.4478   62  63  64  65  68  71  75  78.00</span></span>
+<span><span class="co">#&gt; 157  47.2860     45 12.477341  7.4130   36  37  38  41  45  51  59  65.05</span></span>
+<span><span class="co">#&gt; 158  44.6465     41 20.218134 14.8260   23  24  27  32  41  52  66  81.05</span></span>
+<span><span class="co">#&gt; 159  39.8955     35 23.713261 17.7912   11  13  17  25  35  50  69  84.05</span></span>
+<span><span class="co">#&gt;       q97.5 .event_num stratum event_date</span></span>
+<span><span class="co">#&gt; 154 113.025         47   Total 1990-11-26</span></span>
+<span><span class="co">#&gt; 155  97.000         48   Total 1990-12-03</span></span>
+<span><span class="co">#&gt; 156  81.025         49   Total 1990-12-10</span></span>
+<span><span class="co">#&gt; 157  72.000         50   Total 1990-12-17</span></span>
+<span><span class="co">#&gt; 158  94.000         51   Total 1990-12-24</span></span>
+<span><span class="co">#&gt; 159  97.000         52   Total 1990-12-31</span></span></code></pre>
 <p>Additionally the <code><a href="../reference/nowcast_diagnostic.html">nowcast_diagnostic()</a></code> shows the fitted
 distribution for the delay, the smoothed epidemic process as well as the
 aggregated nowcast (for the sum of all strata):</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/nowcast_diagnostic.html">nowcast_diagnostic</a></span><span class="op">(</span><span class="va">nc_dengue</span><span class="op">)</span> </span></code></pre></div>
 <p><img src="introduction_files/figure-html/dengue-diagnostic-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
 </div>
@@ -222,7 +264,7 @@ aggregated nowcast (for the sum of all strata):</p>
 <p>The <code>mpoxdat</code> dataset (also in <code>tbl.now</code>)
 covers the 2022 mpox outbreak in New York City with daily case counts
 stratified by race.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">mpoxdat</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">mpox_tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html" class="external-link">tbl_now</a></span><span class="op">(</span></span>
@@ -235,19 +277,12 @@ stratified by race.</p>
 <span><span class="op">)</span> </span></code></pre></div>
 <p>A simple plot of the data shows that we should be taking into account
 day-of-the-week effects:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">mpox_tbl</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_bar.html" class="external-link">geom_col</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">dx_date</span>, y <span class="op">=</span> <span class="va">n</span><span class="op">)</span>, fill <span class="op">=</span> <span class="st">"#5F7E62"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Event date"</span>, y <span class="op">=</span> <span class="st">"Case count"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="../reference/theme_diseasenowcasting.html">theme_diseasenowcasting</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
-<span>    x <span class="op">=</span> <span class="st">"Event date"</span>,</span>
-<span>    title <span class="op">=</span> <span class="st">"Mpox cases in NYC (2022)"</span></span>
-<span>  <span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">mpox_tbl</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/mpoxplot-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
-<p>The model will automatically attempt to do it, but we can also set it
-with <code><a href="https://rodrigozepeda.github.io/tbl.now/reference/add_temporal_effects.html" class="external-link">add_temporal_effects()</a></code>:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<p>We can also set it again with
+<code><a href="https://rodrigozepeda.github.io/tbl.now/reference/add_temporal_effects.html" class="external-link">add_temporal_effects()</a></code>:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mpox_tbl</span> <span class="op">&lt;-</span> <span class="va">mpox_tbl</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/add_temporal_effects.html" class="external-link">add_temporal_effects</a></span><span class="op">(</span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/temporal_effects.html" class="external-link">temporal_effects</a></span><span class="op">(</span>day_of_week <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>You can see that the <code>tbl_now</code> indicates its
@@ -277,7 +312,7 @@ computation:</p>
 and delay distributions and feed it into the <code><a href="../reference/model.html">model()</a></code>. Here
 we use a Susceptible-Infected-Recovered model (SIR) with a delay that
 follows a lognormal distribution:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#Models can be modified via the model() </span></span>
 <span><span class="va">mpox_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/model.html">model</a></span><span class="op">(</span>likelihood <span class="op">=</span> <span class="fu"><a href="../reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>,   <span class="co">#Negative binomial (recommended)</span></span>
 <span>                    epidemic   <span class="op">=</span> <span class="fu"><a href="../reference/epidemic_process.html">sir_epidemic</a></span><span class="op">(</span><span class="op">)</span>,    <span class="co">#SIR model</span></span>
@@ -304,7 +339,7 @@ parallel through the <a href="https://future.futureverse.org/" class="external-l
 By default they run sequentially; to use several CPU cores, set a <a href="https://future.futureverse.org/reference/plan.html" class="external-link">parallel
 plan</a> <em>before</em> calling <code><a href="../reference/backtest.html">backtest()</a></code>:</p>
 </blockquote>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://future.futureverse.org" class="external-link">future</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://future.futureverse.org/reference/plan.html" class="external-link">plan</a></span><span class="op">(</span><span class="va">multisession</span>, workers <span class="op">=</span> <span class="fl">4</span><span class="op">)</span>   <span class="co"># 4 parallel R sessions</span></span>
 <span><span class="co"># ... run backtest() ...</span></span>
@@ -312,7 +347,7 @@ plan</a> <em>before</em> calling <code><a href="../reference/backtest.html">back
 <p>In what follows we run a backtest in sequential mode however we
 strongly recommend using as many workers in a multisession plan as
 possible:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Compare HSGP (flexible GP trend) vs AR1 (autoregressive trend) </span></span>
 <span><span class="co"># and SIR (susceptible, infected, recovered) on mpox</span></span>
 <span><span class="va">models_to_compare</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -332,19 +367,24 @@ possible:</p>
 <span></span>
 <span><span class="co">#This closes the plan multisession opened above</span></span>
 <span><span class="co">#plan(sequential)   </span></span></code></pre></div>
-<p>We can then calculate the Weighted Interval Score (WIS) and interval
-coverage via <code><a href="../reference/score.html">score()</a></code>:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<p>We can then plot the Weighted Interval Score (WIS) and interval
+coverage:</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Plot scoring metrics</span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">backtest_mpox</span><span class="op">)</span></span></code></pre></div>
+<p><img src="introduction_files/figure-html/scoreplot-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
+<p>Or obtain it via <code><a href="../reference/score.html">score()</a></code>:</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Rank by Weighted Interval Score (WIS) -- lower is better</span></span>
-<span><span class="fu"><a href="../reference/score.html">score</a></span><span class="op">(</span><span class="va">backtest_mpox</span>, metric <span class="op">=</span> <span class="st">"wis"</span>, report <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="co">#&gt;               model      wis overprediction underprediction dispersion</span></span>
-<span><span class="co">#&gt; 1  SIR/nb/LogNormal 10.52604       0.000000        7.852778   2.673264</span></span>
-<span><span class="co">#&gt; 2  AR1/nb/LogNormal 14.24507       3.250000        2.666667   8.328403</span></span>
-<span><span class="co">#&gt; 3 HSGP/nb/LogNormal 15.22941       2.083333        4.472222   8.673854</span></span>
-<span><span class="co">#&gt;   coverage_50 coverage_90       ape      mse n</span></span>
-<span><span class="co">#&gt; 1        0.75        0.75 0.4007886 1714.750 4</span></span>
-<span><span class="co">#&gt; 2        0.25        1.00 6.7201065 1399.250 4</span></span>
-<span><span class="co">#&gt; 3        0.50        1.00 1.4603280 1778.312 4</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/score.html">score</a></span><span class="op">(</span><span class="va">backtest_mpox</span><span class="op">)</span></span>
+<span><span class="co">#&gt;               model       wis overprediction underprediction dispersion</span></span>
+<span><span class="co">#&gt; 1  SIR/nb/LogNormal  9.980729       0.000000        7.111111   2.869618</span></span>
+<span><span class="co">#&gt; 2  AR1/nb/LogNormal 13.258611       3.055556        2.250000   7.953056</span></span>
+<span><span class="co">#&gt; 3 HSGP/nb/LogNormal 17.036597       2.055556        4.527778  10.453264</span></span>
+<span><span class="co">#&gt;   coverage_50 coverage_90       ape     mse n</span></span>
+<span><span class="co">#&gt; 1        0.75           1 0.4181395 1636.50 4</span></span>
+<span><span class="co">#&gt; 2        0.25           1 6.6225133 1203.75 4</span></span>
+<span><span class="co">#&gt; 3        0.50           1 1.4416330 1823.25 4</span></span></code></pre></div>
 <p>The <code><a href="../reference/score.html">score()</a></code> output shows WIS, absolute percentage error
 (APE), and empirical coverage at 50 % and 90 %. A well-calibrated
 nowcast should have the lowest WIS and coverage close to these
