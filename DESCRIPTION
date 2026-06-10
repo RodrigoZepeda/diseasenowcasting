@@ -33,7 +33,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Depends:
     R (>= 4.2.0),
-    tbl.now (>= 0.6.4)
+    tbl.now (>= 0.7.2)
 Imports:
     cli,
     doFuture,

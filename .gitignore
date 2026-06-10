@@ -12,5 +12,6 @@ logs/
 !inst/extdata/*.rds
 .Rproj.user
 SKILL.md
+CUSTOM_COMPONENTS_PLAN.md
 Dockerfile
 devel/paper_sim

@@ -100,7 +100,7 @@ sir_model <- model(
   likelihood = nb_likelihood(),
   epidemic   = sir_epidemic(
     R0    = lognormal_prior(log(2.5),  0.1), # R0 ~ 2.5. Sd very tight. 
-    gamma = lognormal_prior(log(1/14), 0.1), # infectious period ~ 14 days. Sd very tight. 
+    gamma = lognormal_prior(log(1/14), 0.1), # infectious ~ 14 days / tight sd
     N_eff = beta_prior(5, 2),                # ~70% susceptible initially
     N_pop = 50000000                         # ~population of Colombia
   ),
@@ -201,7 +201,7 @@ for (R0val in c(1.5, 2.5, 4.0)){
   ncast <- nowcast(data  = tn_covid, 
                    model = model(
                      epidemic = sir_epidemic(
-                       R0    = lognormal_prior(log(R0val), 0.05), #<- This changes
+                       R0    = lognormal_prior(log(R0val), 0.05), #<- Change
                        gamma = lognormal_prior(log(1/14), 0.1), 
                        N_eff = beta_prior(5, 2),                
                        N_pop = 50000000 
@@ -305,9 +305,10 @@ plot_data <- all_results |>
   mutate(days_to_nowcast = event_date - now)
 
 ggplot(plot_data, aes(x = days_to_nowcast)) +
-  geom_ribbon(aes(ymin = q2.5, ymax = q97.5, colour = epidemic, fill = epidemic), 
-              alpha = 0.25, colour = NA) +
-  geom_line(aes(y = median, colour = epidemic, fill = epidemic), linewidth = 0.9) +
+  geom_ribbon(aes(ymin = q2.5, ymax = q97.5, colour = epidemic, 
+                  fill = epidemic),  alpha = 0.25, colour = NA) +
+  geom_line(aes(y = median, colour = epidemic, fill = epidemic), 
+            linewidth = 0.9) +
   geom_point(aes(y = n, colour = "Truth"), linewidth = 0.9, shape = 17) +
   scale_colour_manual(
     values = c(SIR="#262626", AR1="#E8956A", HSGP="#A8BFA9", Truth = "#DA6529")
