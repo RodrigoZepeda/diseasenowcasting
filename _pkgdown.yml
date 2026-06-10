@@ -4,7 +4,7 @@ home:
   title: diseasenowcasting — Bayesian Epidemic Nowcasting
   description: >
     Nowcast time series of epidemiological cases using a censored-regression
-    approach with RTMB (no compilation required).
+    approach with RTMB.
 
 template:
   bootstrap: 5

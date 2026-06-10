@@ -67,9 +67,8 @@ dengue_tbl <- tbl_now(
   denguedat,
   event_date  = onset_week,    # symptom onset date
   report_date = report_week,   # when the record was reported
-  strata      = gender,        # remove if no strata or add as vector all strata (e.g. strata = c(gender, age, region))
   data_type   = "linelist",    # another option is "count-incidence"  if data is aggregated
-  now         =  as.Date("1991-01-01")
+  now         =  as.Date("1991-01-01") #When is the now of the nowcast
 )
 dengue_tbl
 ```
@@ -80,11 +79,39 @@ Once your data is a `tbl_now`, a single call to `nowcast()` does the rest.
 
 ## Example 1 -- Dengue fever (setting up a stratified nowcast)
 
-We fit a nowcast stratified by gender to illustrate the basic workflow. 
+We fit a nowcast stratified by gender to illustrate the basic workflow. First we add
+the column `gender` as strata to the `tbl_now`:
+
+```{r denguestrata}
+dengue_tbl <-  dengue_tbl |>  add_strata(gender)
+```
+
+Notice that the `tbl_now` automatically prints the `strata` specification below:
+
+```{r}
+dengue_tbl
+```
+
+We can also add temporal effects for example a weekly seasonality (52 seasons) as well
+as a holiday effect using the `almanac` package:
+
+```{r, eval=requireNamespace("almanac", quietly = TRUE)}
+library(almanac)
+
+#Specify 52 seasons (weekly) and holidays from the US
+t_effects  <- temporal_effects(seasons = 52, holidays = cal_us_federal())
+
+#Add the temporal effects
+dengue_tbl <- dengue_tbl |> 
+  add_temporal_effects(t_effects)
+
+```
+
+
+Finally we fit the model:
 
 ```{r dengue-fit}
-nc_dengue <- nowcast(dengue_tbl, n_draws = 1000)
-nc_dengue
+nc_dengue <- nowcast(dengue_tbl)
 ```
 
 The fitted model can be visualized with `autoplot()`. Note that the nowcast was already stratified by the strata specified in the `tbl_now`:
@@ -103,12 +130,14 @@ pred_dengue <- predict(nc_dengue)
 summary(pred_dengue) 
 ```
 
-```{r dengue-results2, echo = FALSE}
+
+
+```{r dengue-results3, echo = FALSE}
 # Full posterior-predictive nowcast at every event-time
 pred_dengue <- predict(nc_dengue)
 
 #This creates a summary of mean and quantiles
-summary(pred_dengue) |> dplyr::as_tibble() |> tail(6)
+summary(pred_dengue) |> tail(6)
 ```
 
 
@@ -140,18 +169,11 @@ mpox_tbl <- tbl_now(
 A simple plot of the data shows that we should be taking into account day-of-the-week effects:
 
 ```{r mpoxplot}
-ggplot(mpox_tbl) +
-  geom_col(aes(x = dx_date, y = n), fill = "#5F7E62") +
-  labs(x = "Event date", y = "Case count") +
-  theme_diseasenowcasting() +
-  labs(
-    x = "Event date",
-    title = "Mpox cases in NYC (2022)"
-  )
+autoplot(mpox_tbl)
 ```
 
 
-The model will automatically attempt to do it, but we can also set it with `add_temporal_effects()`:
+We can also set it again with `add_temporal_effects()`:
 
 ```{r}
 mpox_tbl <- mpox_tbl |> 
@@ -168,7 +190,7 @@ One can also choose between several likelihoods, epidemic processess and delay d
 and feed it into the `model()`. Here we use a Susceptible-Infected-Recovered model (SIR) with
 a delay that follows a lognormal distribution:
 
-```{r mpox-fit}
+```{r mpox-fit, fig.height=8}
 #Models can be modified via the model() 
 mpox_model <- model(likelihood = nb_likelihood(),   #Negative binomial (recommended)
                     epidemic   = sir_epidemic(),    #SIR model
@@ -226,12 +248,20 @@ backtest_mpox <- backtest(
 #plan(sequential)   
 ```
 
-We can then calculate the Weighted Interval Score (WIS) and interval coverage via `score()`:
+We can then plot the Weighted Interval Score (WIS) and interval coverage:
+
+```{r scoreplot}
+# Plot scoring metrics
+autoplot(backtest_mpox)
+```
+
+Or obtain it via `score()`:
 
 ```{r score}
 # Rank by Weighted Interval Score (WIS) -- lower is better
-score(backtest_mpox, metric = "wis", report = TRUE)
+score(backtest_mpox)
 ```
+
 
 The `score()` output shows WIS, absolute percentage error (APE), and empirical
 coverage at 50 % and 90 %.  A well-calibrated nowcast should have the lowest
