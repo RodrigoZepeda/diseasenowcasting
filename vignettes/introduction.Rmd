@@ -168,7 +168,7 @@ mpox_tbl <- tbl_now(
 
 A simple plot of the data shows that we should be taking into account day-of-the-week effects:
 
-```{r mpoxplot}
+```{r mpoxplot, fig.height=8}
 autoplot(mpox_tbl)
 ```
 
