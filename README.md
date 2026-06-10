@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# diseasenowcasting
+# diseasenowcasting <a href="https://rodrigozepeda.github.io/diseasenowcasting/"><img src="man/figures/logo.png" align="right" height="139" alt="diseasenowcasting website" /></a>
 
 <!-- badges: start -->
 

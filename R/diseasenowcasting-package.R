@@ -3,18 +3,19 @@
 
 ## usethis namespace: start
 # AD-aware density/CDF functions MUST come from RTMB (not stats) so that, inside
-# the objective closure defined in this package's namespace, they dispatch on
 # advector arguments. stats provides only the (numeric) optimisers, summaries,
 # and RNG samplers.
+# the objective closure defined in this package's namespace, they dispatch on
+#'   rnorm rcauchy rt runif rgamma rweibull rlnorm rchisq rexp rlogis rbeta rpois rnbinom
+#' @import tbl.now
+#' @importFrom doFuture %dofuture%
+#' @importFrom foreach foreach %dopar%
+#' @importFrom ggplot2 autoplot
+#' @importFrom lifecycle deprecated
+#' @importFrom methods as
 #' @importFrom RTMB pnorm dnorm dgamma pgamma dbeta dexp dweibull dchisq dnbinom plogis
 #' @importFrom stats nlminb optim median sd quantile approx setNames coef predict
-#'   rnorm rcauchy rt runif rgamma rweibull rlnorm rchisq rexp rlogis rbeta rpois rnbinom
 #' @importFrom utils head tail
-#' @importFrom methods as
-#' @importFrom foreach foreach %dopar%
-#' @importFrom doFuture %dofuture%
-#' @importFrom ggplot2 autoplot
-#' @import tbl.now
 ## usethis namespace: end
 NULL
 
