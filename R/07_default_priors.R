@@ -114,6 +114,39 @@ default_priors <- function(mod, data = NULL, ...) {
     pr$ar_phi    <- .res(numeric(0), std_normal_prior(),     key = "ar_phi")
     pr$ar_sigma  <- .res(numeric(0), exponential_prior(100), key = "ar_sigma")
     pr$N_eff     <- .res(epi@N_eff, beta_prior(2, 5),        key = "N_eff")
+  } else if (S7::S7_inherits(epi, custom_process_class)) {
+    n_custom_proc    <- as.integer(epi@n_params)
+    proc_dists       <- integer(n_custom_proc)
+    proc_params_mat  <- matrix(0.0, n_custom_proc, 3L)
+    proc_is_free     <- integer(n_custom_proc)
+    proc_fixed_vals  <- numeric(n_custom_proc)
+    for (i in seq_len(n_custom_proc)) {
+      p <- epi@priors[[i]]
+      if (S7::S7_inherits(p, prior_class)) {
+        proc_dists[i]        <- p@num_id
+        proc_params_mat[i, ] <- .pad3(p@stan_params)
+        proc_is_free[i]      <- 1L
+        proc_fixed_vals[i]   <- 0.0
+      } else if (is.numeric(p) && length(p) == 1L) {
+        proc_dists[i]        <- 0L
+        proc_params_mat[i, ] <- c(0.0, 0.0, 0.0)
+        proc_is_free[i]      <- 0L
+        proc_fixed_vals[i]   <- as.numeric(p)
+      } else {
+        default_p             <- std_normal_prior()
+        proc_dists[i]        <- default_p@num_id
+        proc_params_mat[i, ] <- .pad3(default_p@stan_params)
+        proc_is_free[i]      <- 1L
+        proc_fixed_vals[i]   <- 0.0
+      }
+    }
+    pr$intensity_fn                     <- epi@intensity_fn
+    pr$custom_process_n_params          <- n_custom_proc
+    pr$custom_process_prior_dists       <- proc_dists
+    pr$custom_process_prior_params_mat  <- proc_params_mat
+    pr$custom_process_is_free           <- proc_is_free
+    pr$custom_process_fixed_vals        <- proc_fixed_vals
+    pr$custom_process_inits             <- epi@inits
   }
 
   # -- Delay process priors ----------------------------------------------------

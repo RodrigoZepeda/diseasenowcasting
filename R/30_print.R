@@ -128,6 +128,17 @@ S7::method(print, sir_epidemic_class) <- function(x, ..., digits = 4) {
   invisible(x)
 }
 
+#' @noRd
+S7::method(print, custom_process_class) <- function(x, ..., digits = 4) {
+  n_free  <- sum(vapply(x@priors, function(p) S7::S7_inherits(p, prior_class), logical(1)))
+  n_fixed <- x@n_params - n_free
+  cli::cli_text(paste0(cli::col_magenta("Custom("), "{.field ", x@name, "}",
+                       " ; {.emph n_params} = {.val ", x@n_params,
+                       "}, {.emph free} = {.val ", n_free,
+                       "}, {.emph fixed} = {.val ", n_fixed, "})"))
+  invisible(x)
+}
+
 # ── Model ─────────────────────────────────────────────────────────────────────
 
 #' Print a Bayesian nowcast model specification

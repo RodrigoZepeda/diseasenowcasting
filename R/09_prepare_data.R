@@ -156,6 +156,8 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     # SIR
     N_pop = if (S7::S7_inherits(epi, sir_epidemic_class)) epi@N_pop else 1e6,
     use_beta_rw_trend = if (S7::S7_inherits(epi, sir_epidemic_class)) as.integer(epi@use_beta_rw_trend) else 1L,
+    # Custom process
+    custom_process_n_params = if (S7::S7_inherits(epi, custom_process_class)) as.integer(epi@n_params) else 0L,
     # bounds
     mu_log_upper_bound = min(max(6, log1p(casemax)), 16),
     ar_sigma_max = ar_sigma_max

@@ -2,11 +2,6 @@
 "_PACKAGE"
 
 ## usethis namespace: start
-# AD-aware density/CDF functions MUST come from RTMB (not stats) so that, inside
-# advector arguments. stats provides only the (numeric) optimisers, summaries,
-# and RNG samplers.
-# the objective closure defined in this package's namespace, they dispatch on
-#'   rnorm rcauchy rt runif rgamma rweibull rlnorm rchisq rexp rlogis rbeta rpois rnbinom
 #' @import tbl.now
 #' @importFrom doFuture %dofuture%
 #' @importFrom foreach foreach %dopar%
@@ -15,6 +10,7 @@
 #' @importFrom methods as
 #' @importFrom RTMB pnorm dnorm dgamma pgamma dbeta dexp dweibull dchisq dnbinom plogis
 #' @importFrom stats nlminb optim median sd quantile approx setNames coef predict
+#' @importFrom stats rnbinom rpois rnorm rcauchy rt runif rgamma rweibull rlnorm rchisq rexp rlogis rbeta
 #' @importFrom utils head tail
 ## usethis namespace: end
 NULL
@@ -75,8 +71,11 @@ utils::globalVariables(c(
   "custom_prior_dists", "custom_prior_params", "custom_is_free",
   # validate_custom_delay() RTMB tape parameter
   "cdf_validate_theta",
+  # RTMB getAll() closure variables (custom process, epidemic_model 4)
+  "custom_process_params", "is_custom_process", "n_params_custom_proc",
+  "proc_prior_dists", "proc_prior_params", "proc_is_free",
+  # validate_custom_process() RTMB tape parameter
+  "custom_validate_theta_proc",
   # surprise() internal variable
-  "parlist",
-  # base functions flagged in isolated namespace check
-  "rpois", "rnbinom", "as"
+  "parlist"
 ))
