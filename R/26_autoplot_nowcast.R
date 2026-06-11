@@ -69,6 +69,8 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
         c(exp_logits, 1) / (sum(exp_logits) + 1)
       }
       .nonparametric_delay_functions(simplex, n_bins)
+    } else if (family == 5L) {
+      priors$cdf_factory(as.numeric(fit$parList$custom_delay_params))
     } else if (family == 3L) {
       .delay_distribution_functions(3L, reconstructed$delay_mu,
         .gengamma_shape_transform(fit$parList$delay_Q %||% -2)$shape_Q, reconstructed$delay_sigma)

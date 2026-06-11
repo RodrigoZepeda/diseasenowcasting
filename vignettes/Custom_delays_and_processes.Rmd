@@ -1,0 +1,264 @@
+---
+title: "Custom Delay Distributions"
+author: "Rodrigo Zepeda-Tello"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Custom Delay Distributions}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  message  = FALSE,
+  warning  = FALSE,
+  fig.width  = 7,
+  fig.align  = "center",
+  fig.height = 4,
+  collapse   = TRUE,
+  comment    = "#>"
+)
+```
+
+`diseasenowcasting` ships four built-in reporting-delay families (LogNormal, Gamma, Generalized Gamma, Dirichlet). With `custom_delay()` you can plug in **any** parametric distribution whose CDF you can write in RTMB-traceable R.
+
+## Requirements: RTMB-traceable CDF factories
+
+The only constraint comes from RTMB's automatic differentiation (AD) tape: every arithmetic operation inside `cdf_factory` must be AD-safe.
+
+**Allowed:** `+ - * /`, `exp`, `log`, `sqrt`, `pnorm`, `pgamma`, `lgamma`, `abs`, `sum`, scalar multiplication, fixed-length `for` loops (length must not depend on parameter values).
+
+**Not allowed inside the tape:** `if`/`ifelse` on parameter values, `pmax`/`pmin` on AD types (replace `pmax(x, 0)` with `(x + abs(x)) / 2`), external ODE solvers, any non-differentiable function.
+
+## Setup
+
+```{r load}
+library(diseasenowcasting)
+library(ggplot2)
+set.seed(2025)
+```
+
+## Example 1 — Weibull delay via `custom_delay()`
+
+The Weibull CDF is $F(d) = 1 - \exp(-(d/\lambda)^k)$.  We parameterise on the log scale so both parameters are unconstrained:
+
+```{r weibull-factory}
+weibull_cdf_factory <- function(theta) {
+  shape <- exp(theta[1])   # k > 0
+  scale <- exp(theta[2])   # lambda > 0
+  list(
+    cdf          = function(d) 1 - exp(-(d / scale)^shape),
+    log_cdf      = function(d) log(1 - exp(-(d / scale)^shape) + 1e-300),
+    log_survival = function(d) -(d / scale)^shape
+  )
+}
+```
+
+We then wrap it in `custom_delay()`:
+
+```{r weibull-delay}
+weibull_delay_spec <- custom_delay(
+  cdf_factory = weibull_cdf_factory,
+  n_params    = 2L,
+  priors      = list(
+    normal_prior(0, 1),          # log_shape ~ N(0,1)
+    normal_prior(log(7), 1)      # log_scale ~ N(log 7, 1)
+  ),
+  name        = "Weibull",
+  param_names = c("log_shape", "log_scale"),
+  inits       = c(0, log(7))
+)
+```
+
+Use `validate_custom_delay()` to confirm the factory is RTMB-traceable before fitting:
+
+```{r validate}
+validate_custom_delay(weibull_delay_spec)
+```
+
+## Preparing the data
+
+We generate synthetic case data with a known Weibull(shape = 2, scale = 7) delay so
+the fitted parameters are verifiable:
+
+```{r data-prep}
+n_times     <- 40L
+true_shape  <- 2.0
+true_scale  <- 7.0
+true_lambda <- 80 * exp(0.04 * seq_len(n_times))  # growing epidemic
+
+rows <- list()
+for (t in seq_len(n_times)) {
+  n_cases <- rpois(1, true_lambda[t])
+  if (n_cases == 0L) next
+  delays      <- pmin(ceiling(rweibull(n_cases, shape = true_shape, scale = true_scale)), 21L)
+  report_t    <- t + delays
+  keep        <- report_t <= n_times
+  if (!any(keep)) next
+  delays_kept <- delays[keep]
+  agg <- tapply(rep(1L, sum(keep)), delays_kept, sum)
+  for (d in names(agg)) {
+    rows[[length(rows) + 1L]] <- c(event_time = t, count = agg[[d]], delay = as.integer(d))
+  }
+}
+m_mat <- do.call(rbind, rows)  # columns: event_time, count, delay
+```
+
+## Fitting with the custom Weibull delay
+
+We build a model, pass `weibull_delay_spec` as the delay, and call `fit()` directly
+on the prepared data (no `tbl_now` required for the low-level API):
+
+```{r fit-weibull}
+mod_weibull <- model(
+  likelihood = nb_likelihood(),
+  epidemic   = ar1_epidemic(),
+  delay      = weibull_delay_spec
+)
+
+data_weibull  <- prepare_data(mod_weibull, m = m_mat, max_time = n_times)
+priors_weibull <- default_priors(mod_weibull, data_weibull)
+fit_w <- fit(mod_weibull, data_weibull, priors_weibull)
+```
+
+The custom parameters live in `fit$parList$custom_delay_params`:
+
+```{r weibull-params}
+theta_w <- as.numeric(fit_w$parList$custom_delay_params)
+
+cat("Fitted Weibull (true: shape = 2, scale = 7):\n")
+cat("  shape =", round(exp(theta_w[1]), 3), "\n")
+cat("  scale =", round(exp(theta_w[2]), 3), "days\n")
+```
+
+## Example 2 — Generalized Gamma with Q fixed to 1
+
+The Generalized Gamma family (built-in family 3) reduces to **Weibull** exactly when its
+shape parameter $Q = 1$.  Fixing $Q = 1$ via `generalized_gamma_delay(Q = 1)` therefore
+fits the same distribution — a useful sanity check for the custom implementation.
+
+```{r fit-gengamma}
+mod_gengamma <- model(
+  likelihood = nb_likelihood(),
+  epidemic   = ar1_epidemic(),
+  delay      = generalized_gamma_delay(Q = 1)   # Q = 1 => Weibull
+)
+
+data_gengamma   <- prepare_data(mod_gengamma, m = m_mat, max_time = n_times)
+priors_gengamma <- default_priors(mod_gengamma, data_gengamma)
+fit_g <- fit(mod_gengamma, data_gengamma, priors_gengamma)
+```
+
+In the GenGamma (flexsurv) parametrisation with $Q = 1$:
+
+$$F(d) = \mathrm{pgamma}\!\left(\exp\!\left(\frac{\log d - \mu}{\sigma}\right),\; 1,\; 1\right)
+       = 1 - \exp\!\left(-e^{(\log d - \mu)/\sigma}\right)$$
+
+Matching to the Weibull $1 - \exp(-(d/\lambda)^k)$ gives $\mu = \log\lambda$ and
+$\sigma = 1/k$.
+
+```{r gengamma-params}
+mu_g   <- fit_g$reconstruct$delay_mu
+sig_g  <- fit_g$reconstruct$delay_sigma
+
+cat("Fitted GenGamma (Q=1), converted to Weibull (true: shape = 2, scale = 7):\n")
+cat("  shape =", round(1 / sig_g, 3), "\n")
+cat("  scale =", round(exp(mu_g), 3), "days\n")
+```
+
+## Comparing the two fits
+
+Both approaches model the same distribution.  Their delay densities should overlap closely:
+
+```{r compare-plot, fig.cap="Fitted delay distributions: custom Weibull vs. built-in GenGamma(Q=1). Because Q=1 is exactly the Weibull distribution, the two curves should nearly coincide."}
+delay_grid <- seq(0.5, 30, by = 0.5)
+
+# Custom Weibull PMF via pweibull (base R)
+shape_w <- exp(theta_w[1])
+scale_w <- exp(theta_w[2])
+pmf_w <- stats::pweibull(delay_grid + 0.5, shape = shape_w, scale = scale_w) -
+         stats::pweibull(pmax(0, delay_grid - 0.5), shape = shape_w, scale = scale_w)
+
+# GenGamma(Q=1) is Weibull with shape = 1/sigma, scale = exp(mu)
+shape_g <- 1 / sig_g
+scale_g <- exp(mu_g)
+pmf_g <- stats::pweibull(delay_grid + 0.5, shape = shape_g, scale = scale_g) -
+         stats::pweibull(pmax(0, delay_grid - 0.5), shape = shape_g, scale = scale_g)
+
+compare_df <- data.frame(
+  delay   = rep(delay_grid, 2),
+  density = c(pmf_w, pmf_g),
+  model   = rep(c("Custom Weibull", "GenGamma (Q=1)"), each = length(delay_grid))
+)
+
+ggplot(compare_df, aes(x = delay, y = density, colour = model, linetype = model)) +
+  geom_line(linewidth = 1.1) +
+  scale_colour_manual(values = c("Custom Weibull" = "#2166AC", "GenGamma (Q=1)" = "#D6604D")) +
+  labs(x = "Reporting delay (days)", y = "Probability mass",
+       title = "Custom Weibull vs. built-in GenGamma (Q = 1)",
+       colour = NULL, linetype = NULL) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+```
+
+The two curves overlap because $Q = 1$ in the GenGamma parametrisation is algebraically identical to the Weibull.  Any small difference reflects numerical precision and the different prior specifications.
+
+## Delay distribution comparison
+
+The two fitted delay densities should nearly coincide because they model the
+same distribution:
+
+```{r nowcast-compare, fig.height = 4, fig.cap="Fitted delay distributions: custom Weibull vs. built-in GenGamma(Q=1). The two curves overlap because Q=1 is exactly the Weibull distribution."}
+delay_grid <- seq(0.5, 25, by = 0.5)
+
+# Custom Weibull PMF
+shape_w <- exp(theta_w[1])
+scale_w <- exp(theta_w[2])
+pmf_w2  <- stats::pweibull(delay_grid + 0.5, shape = shape_w, scale = scale_w) -
+            stats::pweibull(pmax(0, delay_grid - 0.5), shape = shape_w, scale = scale_w)
+
+# GenGamma(Q=1) converts to Weibull: shape = 1/sigma, scale = exp(mu)
+pmf_g2  <- stats::pweibull(delay_grid + 0.5, shape = 1/sig_g, scale = exp(mu_g)) -
+            stats::pweibull(pmax(0, delay_grid - 0.5), shape = 1/sig_g, scale = exp(mu_g))
+
+# True distribution
+pmf_true <- stats::pweibull(delay_grid + 0.5, shape = true_shape, scale = true_scale) -
+             stats::pweibull(pmax(0, delay_grid - 0.5), shape = true_shape, scale = true_scale)
+
+compare_df2 <- data.frame(
+  delay   = rep(delay_grid, 3),
+  density = c(pmf_w2, pmf_g2, pmf_true),
+  model   = rep(c("Custom Weibull", "GenGamma (Q=1)", "True Weibull(2,7)"), each = length(delay_grid))
+)
+
+ggplot(compare_df2, aes(x = delay, y = density, colour = model, linetype = model)) +
+  geom_line(linewidth = 1.1) +
+  scale_colour_manual(
+    values = c("Custom Weibull" = "#2166AC", "GenGamma (Q=1)" = "#D6604D",
+               "True Weibull(2,7)" = "black")) +
+  scale_linetype_manual(
+    values = c("Custom Weibull" = "solid", "GenGamma (Q=1)" = "dashed",
+               "True Weibull(2,7)" = "dotted")) +
+  labs(x = "Reporting delay (days)", y = "Probability mass",
+       title = "Custom Weibull vs. GenGamma (Q=1) vs. truth",
+       colour = NULL, linetype = NULL) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+```
+
+## Tips for writing your own factory
+
+1. **Parameterise on the unconstrained scale.** Use `exp(theta[i])` for strictly positive parameters, `plogis(theta[i])` for bounded-[0,1] parameters.  The `inits` argument should be on the same unconstrained scale.
+
+2. **Guard against `log(0)`.** Add a small epsilon: `log(cdf_value + 1e-300)`.  Likewise for `log_survival`.
+
+3. **`log_survival` for large delays.** The discretised delay log-likelihood uses `log_survival` for observations beyond the empirical median, where `1 - F` is close to zero and numerically stable.  For the Weibull, `log(1 - F(d)) = -(d/lambda)^k` is available in closed form.
+
+4. **Validate before fitting.** `validate_custom_delay()` test-tapes the factory and checks that both `fn()` and `gr()` are finite at the init values.
+
+5. **Fix parameters.** Pass a length-1 numeric in `priors` to fix that parameter:
+   ```r
+   custom_delay(factory, n_params = 2L,
+                priors = list(normal_prior(0, 1), 2.0),  # scale fixed at 2
+                ...)
+   ```

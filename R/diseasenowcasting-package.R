@@ -70,6 +70,11 @@ utils::globalVariables(c(
   "prior_R0_dist", "prior_R0_params", "prior_gamma_sir_dist", "prior_gamma_sir_params",
   "prior_n_eff_dist", "prior_n_eff_params",
   "delay_mu_is_fixed", "delay_sigma_is_fixed", "shape_Q_is_fixed",
+  # RTMB getAll() closure variables (custom delay, family 5)
+  "custom_delay_params", "is_custom_delay", "n_params_custom",
+  "custom_prior_dists", "custom_prior_params", "custom_is_free",
+  # validate_custom_delay() RTMB tape parameter
+  "cdf_validate_theta",
   # surprise() internal variable
   "parlist",
   # base functions flagged in isolated namespace check

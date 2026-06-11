@@ -105,7 +105,7 @@ surprise.list <- function(object, new_data, type = c("both","count","delay"),
 #' @param parlist A named parameter list for one draw (from `.split_named_vector`).
 #' @param data,priors,fit The prepared engine, prior bundle, and fit object.
 #' @param family Integer delay-family code (1 LogNormal, 2 Gamma, 3 GenGamma,
-#'   4 Dirichlet).
+#'   4 Dirichlet, 5 Custom).
 #' @returns A delay-distribution function list, or throws (callers wrap in tryCatch).
 #' @keywords internal
 #' @noRd
@@ -121,6 +121,9 @@ surprise.list <- function(object, new_data, type = c("both","count","delay"),
       c(exp_logits, 1) / (sum(exp_logits) + 1)
     }
     .nonparametric_delay_functions(simplex, n_bins)
+  } else if (family == 5L) {
+    theta <- as.numeric(parlist$custom_delay_params)
+    priors$cdf_factory(theta)
   } else {
     reconstructed <- .joint_reconstruct(data, priors, parlist, fit$Bmat, fit$freq)
     if (family == 3L) {  # Generalised-Gamma needs the transformed shape Q

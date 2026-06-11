@@ -146,6 +146,39 @@ default_priors <- function(mod, data = NULL, ...) {
       alpha_vec <- rep(1, bins + 1)
     }
     pr$delay_probs <- list(dist = 4L, params = alpha_vec, is_constant = 0L, fixed = numeric(0), bins = bins)
+  } else if (S7::S7_inherits(dly, custom_delay_class)) {
+    n_custom           <- as.integer(dly@n_params)
+    custom_dists       <- integer(n_custom)
+    custom_params_mat  <- matrix(0.0, n_custom, 3)
+    custom_is_free     <- integer(n_custom)
+    custom_fixed_vals  <- numeric(n_custom)
+    for (i in seq_len(n_custom)) {
+      p <- dly@priors[[i]]
+      if (S7::S7_inherits(p, prior_class)) {
+        custom_dists[i]           <- p@num_id
+        custom_params_mat[i, ]    <- .pad3(p@stan_params)
+        custom_is_free[i]         <- 1L
+        custom_fixed_vals[i]      <- 0.0
+      } else if (is.numeric(p) && length(p) == 1) {
+        custom_dists[i]           <- 0L
+        custom_params_mat[i, ]    <- c(0.0, 0.0, 0.0)
+        custom_is_free[i]         <- 0L
+        custom_fixed_vals[i]      <- as.numeric(p)
+      } else {
+        default_p                  <- std_normal_prior()
+        custom_dists[i]           <- default_p@num_id
+        custom_params_mat[i, ]    <- .pad3(default_p@stan_params)
+        custom_is_free[i]         <- 1L
+        custom_fixed_vals[i]      <- 0.0
+      }
+    }
+    pr$cdf_factory                   <- dly@cdf_factory
+    pr$custom_delay_n_params         <- n_custom
+    pr$custom_delay_prior_dists      <- custom_dists
+    pr$custom_delay_prior_params_mat <- custom_params_mat
+    pr$custom_delay_is_free          <- custom_is_free
+    pr$custom_delay_fixed_vals       <- custom_fixed_vals
+    pr$custom_delay_inits            <- dly@inits
   }
 
   pr
