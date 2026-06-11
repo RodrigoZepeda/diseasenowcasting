@@ -62,7 +62,7 @@ tbl_covid <- covid_colombia |>
 summary(tbl_covid$.delay)
 ```
 
-```{r delay-hist2, echo=FALSE, fig.cap="_Reporting-delay distribution of COVID-19 Colombia (extremes exagerated for illustration purposes). A few reports arrive hundreds of days late._"}
+```{r delay-hist2, echo=FALSE, fig.cap="*Reporting-delay distribution of COVID-19 Colombia (extremes exagerated for illustration purposes). A few reports arrive hundreds of days late.*"}
 tbl_covid |> 
   filter(n > 0) |> 
   ggplot() +

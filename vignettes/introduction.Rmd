@@ -116,7 +116,7 @@ nc_dengue <- nowcast(dengue_tbl)
 
 The fitted model can be visualized with `autoplot()`. Note that the nowcast was already stratified by the strata specified in the `tbl_now`:
 
-```{r dengue-plot, fig.cap="_Nowcast for dengue example. The shaded bars show the median while the errorbar has the 90 % credible intervals._"}
+```{r dengue-plot, fig.cap="*Nowcast for dengue example. The shaded bars show the median while the errorbar has the 90% credible intervals.*"}
 autoplot(nc_dengue) 
 ```
 
