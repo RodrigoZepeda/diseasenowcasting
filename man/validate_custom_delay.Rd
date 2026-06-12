@@ -23,6 +23,9 @@ checking that \code{obj$fn()} and \code{obj$gr()} are finite.  Emits a clear err
 (including common causes) on failure.
 }
 \examples{
+# Custom components tape USER functions, so RTMB must be attached
+# (it is kept in Imports, not Depends, so attach it yourself):
+library(RTMB)
 weibull_cdf_factory <- function(theta) {
   shape <- exp(theta[1]); scale <- exp(theta[2])
   list(cdf          = function(d) 1 - exp(-(d / scale)^shape),

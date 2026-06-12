@@ -32,6 +32,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     cli::cli_abort("build_joint_obj supports HSGP (1), AR1 (2), SIR (3), Custom (4) epidemic.")
   is_sir            <- epidemic_model == 3L
   is_custom_process <- epidemic_model == 4L
+  # User-supplied functions need RTMB's AD methods on the search path (see helper).
+  if (is_custom_delay || is_custom_process) .assert_rtmb_attached()
   is_negbin <- data$is_negative_binomial == 1L
   n_covariates <- data$P
   n_time       <- data$max_time
@@ -319,6 +321,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
             log(1.998) + log(plogis(ar_phi_unc)) + log(1 - plogis(ar_phi_unc)) +
             log(ar_sigma_max) + log(plogis(log_ar_sigma_unc)) + log(1 - plogis(log_ar_sigma_unc)))
     } else if (is_custom_process == 1L) {
+      # The user's intensity_fn returns the full log_mean[T x S] directly; no
+      # intercept or trend is added on top (it owns the whole trajectory).
       log_mean_matrix <- intensity_fn(custom_process_params)
     } else if (epidemic_model == 1L) {
       gp_alpha <- exp(log_gp_alpha); gp_ell <- exp(log_gp_ell)

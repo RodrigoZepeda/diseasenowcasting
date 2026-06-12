@@ -191,6 +191,7 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
 #' @keywords internal
 #' @noRd
 .build_delay_only_custom <- function(data, priors, init = NULL) {
+  .assert_rtmb_attached("custom delay distributions")
   cdf_factory      <- priors$cdf_factory
   n_params_custom  <- as.integer(priors$custom_delay_n_params)
   custom_is_free   <- priors$custom_delay_is_free

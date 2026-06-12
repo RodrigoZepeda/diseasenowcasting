@@ -20,27 +20,48 @@ knitr::opts_chunk$set(
 )
 ```
 
-`diseasenowcasting` ships four built-in reporting-delay families (LogNormal, Gamma, Generalized Gamma, Dirichlet). With `custom_delay()` you can plug in **any** parametric distribution whose CDF you can write in RTMB-traceable R.
+`diseasenowcasting` ships four built-in reporting-delay families (LogNormal, Gamma, Generalized Gamma, Dirichlet) and three epidemic processes (HSGP, AR(1), SIR). This vignette shows how to go beyond the menu and supply **your own** delay distribution or **your own** epidemic model, by writing a short R function. No knowledge of the package internals is needed — only basic R and the model you have in mind.
 
-## Requirements: RTMB-traceable CDF factories
+## How custom components work (and the one rule you must follow)
 
-The only constraint comes from RTMB's automatic differentiation (AD) tape: every arithmetic operation inside `cdf_factory` must be AD-safe.
+To fit a model, the package needs the *gradient* (the vector of partial derivatives) of the likelihood with respect to your parameters. It obtains this gradient **automatically** from your function — a technique called *automatic differentiation*, provided by the [RTMB](https://github.com/kaskr/RTMB) package. You never compute a derivative yourself.
 
-**Allowed:** `+ - * /`, `exp`, `log`, `sqrt`, `pnorm`, `pgamma`, `lgamma`, `abs`, `sum`, scalar multiplication, fixed-length `for` loops (length must not depend on parameter values).
+The price for this convenience is a single rule:
 
-**Not allowed inside the tape:** `if`/`ifelse` on parameter values, `pmax`/`pmin` on AD types (replace `pmax(x, 0)` with `(x + abs(x)) / 2`), external ODE solvers, any non-differentiable function.
+> **Your function must be written so RTMB can differentiate it.** In practice this means using only ordinary arithmetic and a short list of math functions, and avoiding anything that "branches" on the value of a parameter.
+
+Concretely:
+
+**Allowed:** `+`, `-`, `*`, `/`, `exp`, `log`, `sqrt`, `abs`, `sum`, `cumsum`, `pnorm`, `pgamma`, `lgamma`, matrix arithmetic, and `for` loops whose **length is fixed** (does not depend on a parameter).
+
+**Not allowed:** `if` / `ifelse` that test the *value* of a parameter, `pmax` / `pmin` on parameters (use the identity `pmax(x, 0) = (x + abs(x)) / 2` instead), random number draws, calls to external solvers (`deSolve`, optimisers), or any non-smooth function.
+
+Each constructor comes with a **validator** (`validate_custom_delay()`, `validate_custom_process()`) that checks this rule for you *before* you fit — always run it first; it turns a cryptic failure deep in the optimiser into a clear message.
 
 ## Setup
 
 ```{r load}
 library(diseasenowcasting)
+library(RTMB)        # REQUIRED for custom components — see note below
 library(ggplot2)
 set.seed(2025)
 ```
 
+> **Why `library(RTMB)`?** The built-in models work with just `library(diseasenowcasting)`. But a *custom* function you write lives in your own workspace, and its arithmetic (`+`, `exp`, `cumsum`, …) only connects to RTMB's auto-differentiation machinery when RTMB is attached to your session. The package keeps RTMB out of the way by default (so it does not silently replace functions like `dnorm`), so **you must run `library(RTMB)` yourself whenever you use `custom_delay()` or `custom_process()`.** If you forget, the validator will remind you.
+
 ## Example 1 — Weibull delay via `custom_delay()`
 
-The Weibull CDF is $F(d) = 1 - \exp(-(d/\lambda)^k)$.  We parameterise on the log scale so both parameters are unconstrained:
+**What you must provide.** A *CDF factory*: a function of a parameter vector `theta` that returns a list of three functions of a delay `d`:
+
+| Element | Meaning | Formula for the Weibull |
+|---|---|---|
+| `cdf(d)` | $F(d) = \Pr(\text{delay} \le d)$ | $1 - \exp(-(d/\lambda)^k)$ |
+| `log_cdf(d)` | $\log F(d)$ | $\log\!\left(1 - \exp(-(d/\lambda)^k)\right)$ |
+| `log_survival(d)` | $\log(1 - F(d))$ | $-(d/\lambda)^k$ |
+
+The package supplies `log_cdf` and `log_survival` separately (rather than just `cdf`) because each is numerically stable in a different regime — `log_survival` stays accurate far out in the tail where `1 - F(d)` underflows to zero.
+
+The Weibull CDF is $F(d) = 1 - \exp(-(d/\lambda)^k)$ with shape $k$ and scale $\lambda$. We work on the **log scale** (`theta[1] = log k`, `theta[2] = log \lambda`) so the parameters are unconstrained — RTMB optimises over the whole real line, and `exp()` maps back to positive values:
 
 ```{r weibull-factory}
 weibull_cdf_factory <- function(theta) {
@@ -54,7 +75,13 @@ weibull_cdf_factory <- function(theta) {
 }
 ```
 
-We then wrap it in `custom_delay()`:
+We then wrap it in `custom_delay()`. Each argument:
+
+- **`cdf_factory`** — the function above.
+- **`n_params`** — how many entries `theta` has (here 2: log-shape and log-scale).
+- **`priors`** — a list of length `n_params`. Each entry is **either** a prior (e.g. `normal_prior(0, 1)`) for a parameter to be *estimated*, **or** a single number to *fix* that parameter at a constant. The order must match `theta`.
+- **`name`**, **`param_names`** — labels used in printing and diagnostics.
+- **`inits`** — starting values for the optimiser, on the same (unconstrained) scale as `theta`.
 
 ```{r weibull-delay}
 weibull_delay_spec <- custom_delay(
@@ -70,11 +97,9 @@ weibull_delay_spec <- custom_delay(
 )
 ```
 
-Use `validate_custom_delay()` to confirm the factory is RTMB-traceable before fitting:
+Use `validate_custom_delay()` to confirm the factory is differentiable before fitting. It test-runs your factory through RTMB and checks the result and its gradient are finite, reporting a clear message on success or failure:
 
-> **Note** This validator is experimental and some functions that
-are AD-safe will not validate. If you know what you are doing 
-you can skip this step.
+> **Note.** The check is deliberately conservative: a few genuinely AD-safe functions may not pass. If you are confident your factory follows the rule above, a failed check is not necessarily fatal — but for most users it catches real mistakes early.
 
 ```{r validate}
 validate_custom_delay(weibull_delay_spec)
@@ -83,7 +108,7 @@ validate_custom_delay(weibull_delay_spec)
 ## Preparing the data
 
 We generate synthetic case data with a known Weibull(shape = 2, scale = 7) delay so
-the fitted parameters are verifiable:
+the fitted parameters are verifiable. For these low-level examples we feed the model a plain matrix `m` with **three columns** — `(event_time, count, delay)` — one row per (event-time, delay) cell: how many cases occurred at `event_time` and were reported `delay` time-units later. (In normal use you would instead build a `tbl_now` from a line-list and call `nowcast()`; here we use the matrix API to keep the example self-contained.)
 
 ```{r data-prep}
 n_times     <- 40L
@@ -277,16 +302,24 @@ The framework is **epidemic-process agnostic**: the reporting-delay model only e
 
 ## The interface: `intensity_fn(theta) → log_mean[T × S]`
 
-You write a function that:
+**What you must provide.** A single function — call it `intensity_fn` — that:
 
 1. Takes a numeric parameter vector `theta`.
-2. Returns a numeric **matrix** with `n_time` rows and `n_strata` columns containing `log` expected incidence (already on the natural log scale — the framework applies its own soft-cap and links to the likelihood on top).
+2. Returns a numeric **matrix** with one row per event-time (`n_time` rows) and one column per stratum (`n_strata` columns). Each entry is the **log of the expected number of cases** at that time and stratum, i.e. $\log \lambda_{t,s}$.
 
-The function must be written in RTMB-traceable arithmetic (same rules as for delay factories, plus one additional note about index assignment):
+That is the *whole* contract. Everything downstream — the reporting-delay model, censoring, the count likelihood — is shared and handled for you. You only describe how the expected case curve is generated. (If you have a single, unstratified series, the matrix has one column: `matrix(log_lambda, n_time, 1L)`.)
+
+Note: return the **entire** log-mean, including any baseline level — unlike the built-in HSGP/AR(1), which add a trend on top of a separate intercept, a custom process owns the full curve.
+
+The function must follow the same AD rule as a delay factory, with one extra wrinkle about filling a vector inside a loop:
 
 **AD-safe operations:** `+`, `-`, `*`, `/`, `exp`, `log`, `sqrt`, `abs`, `sum`, `cumsum`, scalar/matrix arithmetic, fixed-length `for` loops.
 
-**Index assignment in loops:** if you assign into a pre-allocated vector inside a `for` loop (`lm[t] <- ...`), you must put `'[<-' <- RTMB::ADoverload('[<-')` at the very start of `intensity_fn`.  Alternatively, prefer **`cumsum()`** or `Reduce()` for accumulation — these avoid the issue entirely.
+**Filling a vector inside a `for` loop.** If you build a result by assigning into a pre-allocated vector (`lambda[t] <- ...`), add this one line at the **top** of `intensity_fn`:
+```r
+`[<-` <- RTMB::ADoverload("[<-")
+```
+This makes index-assignment differentiable. If you can avoid the loop with **`cumsum()`** (as in the random walk below) you don't need it at all — prefer that when you can.
 
 ## Example 1 — Pure random walk
 
@@ -344,7 +377,23 @@ rw_proc <- custom_process(
 validate_custom_process(rw_proc)
 ```
 
-The `n_params` must be set before fitting.  A natural way to find `n_times` without re-running the model: call `prepare_data()` once with a placeholder process and read `max_time` from the result.
+The `custom_process()` arguments mirror `custom_delay()`:
+
+- **`intensity_fn`** — the function above.
+- **`n_params`** — the length of `theta`. Here it is `2 + n_times`: two structural parameters (`log_mu0`, `log_sigma`) **plus one innovation $\varepsilon_t$ per time point**. The random-walk path *is* its innovations, so the model estimates `n_time` of them.
+- **`priors`** — a list of length `n_params`, in the same order as `theta`; each entry is a prior (to estimate) or a number (to fix). Here the two structural parameters get informative priors and every innovation gets `std_normal_prior()` (the standard random-walk assumption $\varepsilon_t \sim \mathcal N(0,1)$).
+- **`name`**, **`param_names`**, **`inits`** — labels and optimiser starting values, as before.
+
+> **Getting `n_times` right.** Because the innovation count depends on the length of your series, you need `n_time` *before* building the process. The simplest way is to let `prepare_data()` tell you, using any built-in process as a placeholder:
+>
+> ```r
+> n_times <- prepare_data(
+>   model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
+>   m = your_data
+> )$max_time
+> ```
+>
+> Then build `custom_process()` with `n_params = 2L + n_times` and fit on the same data.
 
 ### Fitting
 
@@ -510,7 +559,7 @@ gamma_builtin <- stats::plogis(as.numeric(fit_sir_builtin$parList$u_gamma))
 cat("  gamma =", round(gamma_builtin, 3), "(true:", gamma_sir, ")\n")
 ```
 
-Both should recover the true parameters; any small discrepancy comes from the AR(1) trend in the built-in version (which we disabled with `use_beta_rw_trend = FALSE`).
+Both fits land near the truth, but notice that $R_0$ and $\gamma$ individually are only *weakly* identified from a single growing epidemic: what the early curve really pins down is their **product** $\beta = R_0\,\gamma$ (the transmission rate that sets the growth speed). So you may see, say, $R_0$ a little high and $\gamma$ a little low while $\beta = R_0\gamma$ stays close to the true $`r round(R0_sir * gamma_sir, 3)`$. This is a property of the SIR model and the data, not of the custom-process machinery — the built-in `sir_epidemic()` shows the same behaviour. The fitted **incidence curves**, which are what the data actually constrain, match closely:
 
 ```{r sir-compare-plot, fig.height=4, fig.cap="Custom SIR ODE vs. built-in sir_epidemic() on identical data. Both recover the epidemic curve; the custom process gives identical fits with only three lines of ODE code."}
 lm_sir_custom  <- fit_sir_custom$reconstruct$mu_safe

@@ -135,6 +135,35 @@ valid_positive_prior <- function(object) {
   padded[1:3]
 }
 
+#' Require RTMB to be on the search path before taping user-supplied functions
+#'
+#' A user's `intensity_fn` / `cdf_factory` lives in the global environment, so
+#' its arithmetic (`+`, `*`, `exp`, `abs`, `cumsum`, …) only dispatches to
+#' RTMB's automatic-differentiation methods when the RTMB package is *attached*
+#' (on the search path), not merely loaded.  The built-in delay / epidemic
+#' models work without this because their math lives inside this package's
+#' namespace (which imports RTMB); only user-supplied functions need RTMB
+#' attached.  `diseasenowcasting` keeps RTMB in `Imports` (not `Depends`) to
+#' avoid masking base functions like `dnorm`/`pnorm` for users who never write a
+#' custom component, so those users must run `library(RTMB)` themselves.  This
+#' guard turns the otherwise-cryptic "unimplemented complex function" /
+#' "lost class attribute" error into an actionable message.
+#'
+#' @param what Short label for the feature needing RTMB (used in the message).
+#' @returns `TRUE` invisibly if RTMB is attached; otherwise aborts.
+#' @noRd
+#' @keywords internal
+.assert_rtmb_attached <- function(what = "custom delays / processes") {
+  if (!"RTMB" %in% .packages()) {
+    cli::cli_abort(c(
+      "RTMB must be attached to use {what}.",
+      "i" = "Run {.code library(RTMB)} first (it is needed only for user-written functions).",
+      "x" = "Without it, the arithmetic inside your function cannot be auto-differentiated."
+    ))
+  }
+  invisible(TRUE)
+}
+
 #' Class union for parameter slots (a number or a prior)
 #' @noRd
 #' @keywords internal

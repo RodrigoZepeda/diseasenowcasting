@@ -338,6 +338,9 @@ custom_delay <- function(cdf_factory, n_params, priors = list(),
 #' @param test_delays Integer vector of delay values to evaluate (default 1:14).
 #' @returns Invisibly returns `TRUE` on success.
 #' @examples
+#' # Custom components tape USER functions, so RTMB must be attached
+#' # (it is kept in Imports, not Depends, so attach it yourself):
+#' library(RTMB)
 #' weibull_cdf_factory <- function(theta) {
 #'   shape <- exp(theta[1]); scale <- exp(theta[2])
 #'   list(cdf          = function(d) 1 - exp(-(d / scale)^shape),
@@ -352,6 +355,7 @@ custom_delay <- function(cdf_factory, n_params, priors = list(),
 validate_custom_delay <- function(delay, test_theta = NULL, test_delays = 1:14) {
   if (!S7::S7_inherits(delay, custom_delay_class))
     cli::cli_abort("`delay` must be a `custom_delay_class` object from `custom_delay()`.")
+  .assert_rtmb_attached("custom delay distributions")
   n <- delay@n_params
   theta_test <- test_theta %||% delay@inits
   if (length(theta_test) != n)

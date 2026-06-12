@@ -49,6 +49,7 @@ model(likelihood, epidemic, delay)   # combine three components
 | `hsgp_epidemic(num_basis, gp_kernel=2, gp_basis=1, tmax_model=0, gp_boundary_frac=0.62)` | `num_basis` (int, 0=auto) | Hilbert-space GP; flexible smooth trend. Shared kernel (alpha, ell) across strata. |
 | `ar1_epidemic()` | — | AR(1) trend; fast, per-stratum phi/sigma. |
 | `sir_epidemic(N_pop=1e6, use_beta_rw_trend=TRUE)` | `N_pop` | Discrete-time SIR; coupled force of infection across strata. |
+| `custom_process(intensity_fn, n_params, priors, ...)` | `intensity_fn`, `n_params` | **User-defined** `f(t)`. Any RTMB-traceable generator of `log_mean[T×S]`. See §2b. |
 
 ### Delay families
 
@@ -58,12 +59,99 @@ model(likelihood, epidemic, delay)   # combine three components
 | `gamma_delay()` | Gamma (mean/SD) | Good for dengue/mpox. |
 | `generalized_gamma_delay()` | Generalised Gamma | Most flexible; Q ∈ (0.05, 3) bounded. |
 | `dirichlet_delay(bins=NA)` | Non-parametric simplex | Dirichlet prior + geometric tail; two-stage only. |
+| `custom_delay(cdf_factory, n_params, priors, ...)` | **User-defined** | Any RTMB-traceable CDF. See §2b. |
 
 ### Combining
 
 ```r
 mdl <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
 ```
+
+---
+
+## 2b. Custom components (user-defined delays & epidemic processes)
+
+Users can supply their **own** delay distribution or epidemic process as an
+R function, instead of choosing from the built-in menu.  Both go into the
+`model()` exactly like a built-in component.
+
+**⚠️ `library(RTMB)` is REQUIRED.** RTMB is in `Imports` (not `Depends`), so
+`library(diseasenowcasting)` does NOT attach it.  Built-in models work anyway
+(their math lives in the package namespace), but a *user-written* function lives
+in the global env and its arithmetic only dispatches to RTMB's autodiff methods
+when RTMB is **attached**.  The fit/validate path calls `.assert_rtmb_attached()`
+and aborts with a clear "Run `library(RTMB)`" message if it is missing.  This is
+also why the `test-custom-components.R` tests `library(RTMB)` at the top and the
+vignette does so in its setup chunk.
+
+**The one rule (AD-traceability).** Every op inside the user function must be
+RTMB-differentiable:
+- ✅ `+ - * /`, `exp`, `log`, `sqrt`, `abs`, `sum`, `cumsum`, `pnorm`, `pgamma`,
+  `lgamma`, matrix arithmetic, **fixed-length** `for` loops.
+- ❌ `if`/`ifelse` on a *parameter value*, `pmax`/`pmin` on AD types
+  (use `(x + abs(x))/2` for `pmax(x,0)`), RNG, external solvers (`deSolve`).
+- **Index assignment in a loop** (`v[t] <- ...`) needs ```` `[<-` <- RTMB::ADoverload("[<-") ```` as the FIRST line of the function. Prefer `cumsum()` to avoid it.
+
+Always run the **validator** first — it test-tapes the function and reports
+finite `fn()`/`gr()`, turning a cryptic optimiser failure into a clear message.
+
+### custom_delay() — num_id 5
+
+```r
+# cdf_factory(theta) -> list(cdf, log_cdf, log_survival), each a function of delay d.
+# log_cdf/log_survival are separate for tail numerical stability.
+weibull_factory <- function(theta) {
+  shape <- exp(theta[1]); scale <- exp(theta[2])     # log scale => unconstrained
+  list(cdf          = function(d) 1 - exp(-(d/scale)^shape),
+       log_cdf      = function(d) log(1 - exp(-(d/scale)^shape) + 1e-300),
+       log_survival = function(d) -(d/scale)^shape)
+}
+dly <- custom_delay(
+  cdf_factory = weibull_factory,
+  n_params    = 2L,
+  priors      = list(normal_prior(0,1), normal_prior(log(7),1)),  # per-param: prior=free, number=fixed
+  name        = "Weibull", param_names = c("log_shape","log_scale"), inits = c(0, log(7))
+)
+validate_custom_delay(dly)             # REQUIRES library(RTMB)
+model(nb_likelihood(), ar1_epidemic(), dly)
+```
+Works in BOTH the joint and the two-stage Stage-1 delay-only fit.  Fitted
+params land in `fit$parList$custom_delay_params`.  `priors$cdf_factory` carries
+the function downstream (reconstruct / surprise / diagnostics).
+
+### custom_process() — num_id 4 (epidemic_model)
+
+```r
+# intensity_fn(theta) -> numeric matrix log_mean[n_time x n_strata] (the FULL log f(t),
+# including any intercept; NOT just a trend). One column => unstratified.
+rw_fn <- function(theta) {                       # pure random walk on log-incidence
+  log_mu0 <- theta[1]; sigma <- exp(theta[2]); eps <- theta[3:(2L + n_time)]
+  matrix(log_mu0 + cumsum(sigma * eps), n_time, 1L)
+}
+proc <- custom_process(
+  intensity_fn = rw_fn,
+  n_params     = 2L + n_time,            # structural + n_time innovations (see note)
+  priors       = c(list(normal_prior(3,1), normal_prior(-2,0.5)),
+                   rep(list(std_normal_prior()), n_time)),
+  inits        = c(3, -2, rep(0, n_time))
+)
+validate_custom_process(proc)            # REQUIRES library(RTMB)
+model(nb_likelihood(), proc, lognormal_delay())
+```
+- **`n_params` is fixed at construction.** For time-varying dims (e.g. a RW with
+  one innovation per step), get `n_time` first:
+  `n_time <- prepare_data(model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()), m = your_m)$max_time`.
+- v1 is **fixed-effects only** (no `random=` Laplace over custom latents); fine
+  for short/medium series.  Custom processes are joint-fit only (not the
+  two-stage Stage-1, which is delay-specific — unaffected).
+- ODE example: write the RHS + a fixed-step RK4/Euler loop inside `intensity_fn`
+  (with the `[<-` overload).  For stiff/adaptive needs, `RTMBode` is the
+  production path (add to Suggests; not used by the package itself).
+- Fitted params in `fit$parList$custom_process_params`; `priors$intensity_fn`
+  carries the function to `.joint_reconstruct()` / prior-only / diagnostics.
+
+See `vignette("Custom_delays_and_processes")` for worked Weibull-delay,
+random-walk, and SIR-ODE examples with built-in comparisons.
 
 ---
 
@@ -445,6 +533,13 @@ built <- build_joint_obj(data, priors, init = NULL, use_random = FALSE)
 | `log_phi_nb` | scalar | Yes |
 | `delay_mu`, `log_delay_sigma_excess`, `delay_Q` | scalar | Yes |
 | `delay_logits` (Dirichlet) | `[n_bins]` | Yes |
+| `custom_delay_params` (custom delay, family 5) | `[n_params]` | Yes |
+| `custom_process_params` (custom process, epidemic_model 4) | `[n_params]` | n/a (user owns full `log_mean[T×S]`) |
+
+**Component dispatch codes.** `delay_family`: 1=LogNormal, 2=Gamma,
+3=GenGamma, 4=Dirichlet, **5=Custom**.  `epidemic_model`: 1=HSGP, 2=AR1,
+3=SIR, **4=Custom**.  Custom params are fixed via the per-element `priors` API
+(a number fixes, a prior frees) → an RTMB `map` with `factor(NA)` entries.
 
 **Smooth cap on log_mean** (prevents exp() overflow):
 ```r

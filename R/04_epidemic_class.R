@@ -288,10 +288,25 @@ custom_process <- function(intensity_fn, n_params, priors = list(), name = "Cust
 #' @param test_theta Optional numeric vector of length `n_params` to use as the
 #'   test point.  Defaults to `process@inits`.
 #' @returns `process`, invisibly.  Emits a success message if the check passes.
+#' @examples
+#' # Custom components tape USER functions, so RTMB must be attached
+#' # (it is kept in Imports, not Depends, so attach it yourself):
+#' library(RTMB)
+#' n_times <- 15L
+#' rw_fn <- function(theta)
+#'   matrix(theta[1] + cumsum(exp(theta[2]) * theta[3:(2L + n_times)]), n_times, 1L)
+#' proc <- custom_process(
+#'   rw_fn, n_params = 2L + n_times,
+#'   priors = c(list(normal_prior(2, 1), normal_prior(-2, 0.5)),
+#'              rep(list(std_normal_prior()), n_times)),
+#'   inits  = c(2, -2, rep(0, n_times))
+#' )
+#' validate_custom_process(proc)
 #' @export
 validate_custom_process <- function(process, test_theta = NULL) {
   if (!S7::S7_inherits(process, custom_process_class))
     cli::cli_abort("`process` must be a {.cls custom_process_class} object.")
+  .assert_rtmb_attached("custom epidemic processes")
   n_p    <- as.integer(process@n_params)
   theta0 <- if (!is.null(test_theta)) as.numeric(test_theta) else process@inits
   if (length(theta0) != n_p) theta0 <- rep(0.0, n_p)
