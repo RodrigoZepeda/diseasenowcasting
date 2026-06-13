@@ -16,7 +16,7 @@
 
 #' Resolve a per-parameter prior list for a custom component (delay or process)
 #'
-#' Both `custom_delay()` and `custom_process()` accept a `priors` list whose
+#' Both `custom_delay()` and `custom_epidemic()` accept a `priors` list whose
 #' elements are each *either* a `prior_class` object (a free parameter to be
 #' estimated) *or* a single numeric (a fixed parameter held constant).  This
 #' helper flattens that list into the four parallel vectors the RTMB objective
@@ -157,16 +157,16 @@ default_priors <- function(mod, data = NULL, ...) {
     pr$ar_phi    <- .res(numeric(0), std_normal_prior(),     key = "ar_phi")
     pr$ar_sigma  <- .res(numeric(0), exponential_prior(100), key = "ar_sigma")
     pr$N_eff     <- .res(epi@N_eff, beta_prior(2, 5),        key = "N_eff")
-  } else if (S7::S7_inherits(epi, custom_process_class)) {
-    n_custom_proc <- as.integer(epi@n_params)
-    resolved      <- .resolve_custom_param_priors(epi@priors, n_custom_proc)
+  } else if (S7::S7_inherits(epi, custom_epidemic_class)) {
+    n_custom_epi <- as.integer(epi@n_params)
+    resolved      <- .resolve_custom_param_priors(epi@priors, n_custom_epi)
     pr$intensity_fn                     <- epi@intensity_fn
-    pr$custom_process_n_params          <- n_custom_proc
-    pr$custom_process_prior_dists       <- resolved$dists
-    pr$custom_process_prior_params_mat  <- resolved$params_mat
-    pr$custom_process_is_free           <- resolved$is_free
-    pr$custom_process_fixed_vals        <- resolved$fixed_vals
-    pr$custom_process_inits             <- epi@inits
+    pr$custom_epidemic_n_params          <- n_custom_epi
+    pr$custom_epidemic_prior_dists       <- resolved$dists
+    pr$custom_epidemic_prior_params_mat  <- resolved$params_mat
+    pr$custom_epidemic_is_free           <- resolved$is_free
+    pr$custom_epidemic_fixed_vals        <- resolved$fixed_vals
+    pr$custom_epidemic_inits             <- epi@inits
   }
 
   # -- Delay process priors ----------------------------------------------------

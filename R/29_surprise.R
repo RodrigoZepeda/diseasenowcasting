@@ -209,13 +209,13 @@ surprise.list <- function(object, new_data, type = c("both","count","delay"),
       relative <- exp(lpd - log(pmf_at_mode))
 
       data.frame(
-        event_index      = new_data$event_index[row_index],
-        observed         = observed_count,
-        posterior_mean   = round(mean(predicted_totals), 1),
-        posterior_median = round(stats::median(predicted_totals), 1),
-        lpd              = round(lpd, 4),
-        ppp_right        = round(mean(predicted_totals >= observed_count), 4),
-        ppp_left         = round(mean(predicted_totals <= observed_count), 4),
+        event_index       = new_data$event_index[row_index],
+        observed          = observed_count,
+        posterior_mean    = round(mean(predicted_totals), 1),
+        posterior_median  = round(stats::median(predicted_totals), 1),
+        lpd               = round(lpd, 4),
+        ppp_right         = round(mean(predicted_totals >= observed_count), 4),
+        ppp_left          = round(mean(predicted_totals <= observed_count), 4),
         relative_surprise = round(pmax(0, pmin(1, relative)), 4)
       )
     })

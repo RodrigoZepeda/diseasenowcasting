@@ -3,8 +3,8 @@
 # =============================================================================
 # For each (as-of date, model) the model is fit as of that date, the
 # posterior-predictive nowcast drawn, and the newest-event (d*=0) summary kept
-# alongside the eventual truth.  Parallelised over (date x model) with doFuture
-# (register a plan(); requires diseasenowcasting installed for multisession workers).
+# alongside the eventual truth.  Parallelised over (date x model) with
+# future.apply (register a plan(); requires diseasenowcasting installed for multisession workers).
 # =============================================================================
 
 #' Fitted backtest object
@@ -48,7 +48,7 @@ backtest_class <- S7::new_class(
 #' @details
 #' `backtest()` evaluates one nowcast per (as-of date x model) cell and these
 #' cells are **embarrassingly parallel**.  The work is dispatched with
-#' \pkg{foreach} + \pkg{doFuture}, so parallelism is controlled by the
+#' \pkg{future.apply}, so parallelism is controlled by the
 #' \pkg{future} plan you set *before* calling `backtest()`:
 #'
 #' ```r
@@ -147,8 +147,10 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
   # One worker per (date, model) cell.  Each fits a nowcast as of that date and
   # records its per-event summary joined to the eventual truth.  The fit happens
   # inside the worker because the RTMB object cannot cross processes.
-  results_list <- foreach::foreach(cell_row = seq_len(nrow(grid)),
-                                   .options.future = list(seed = TRUE)) %dofuture% {
+  # `cell_row` is a genuine function argument (not a `foreach` NSE iterator), so
+  # it needs no globalVariables() declaration.  `future_lapply` parallelises over
+  # the registered `future::plan()` with reproducible per-cell RNG.
+  results_list <- future.apply::future_lapply(seq_len(nrow(grid)), function(cell_row) {
     date_index  <- grid$date_idx[cell_row]
     model_index <- grid$model_idx[cell_row]
     as_of       <- dates[date_index]
@@ -163,7 +165,7 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
       list(summary = pred_summary,
            sims = if (return_simulations) predict(nc, n_draws = n_draws)@draws else NULL)
     }, error = function(e) NULL)   # a failed cell contributes nothing
-  }
+  }, future.seed = TRUE)
 
   # Drop failed cells (NULL) and stack the per-cell summaries / simulation draws.
   summaries <- do.call(rbind, lapply(results_list,

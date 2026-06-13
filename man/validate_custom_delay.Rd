@@ -32,7 +32,7 @@ weibull_cdf_factory <- function(theta) {
        log_cdf      = function(d) log(1 - exp(-(d / scale)^shape) + 1e-300),
        log_survival = function(d) -(d / scale)^shape)
 }
-dly <- custom_delay(weibull_cdf_factory, 2L,
+dly <- custom_delay(weibull_cdf_factory,
                     priors = list(normal_prior(0, 1), normal_prior(log(7), 1)),
                     name = "Weibull", inits = c(0, log(7)))
 validate_custom_delay(dly)

@@ -1,5 +1,5 @@
 # Tests for user-defined delay distributions (custom_delay) and epidemic
-# processes (custom_process).  Both feed user-written, RTMB-traceable functions
+# processes (custom_epidemic).  Both feed user-written, RTMB-traceable functions
 # into the autodiff objective.
 #
 # These tests tape user functions through RTMB, which requires RTMB to be on the
@@ -19,9 +19,9 @@ library(RTMB)
 # exercised under R CMD check.
 .process_taping_ok <- isTRUE(tryCatch({
   probe_fn   <- function(theta) matrix(theta[1] + cumsum(exp(theta[2]) * theta[3:4]), 2L, 1L)
-  probe_proc <- custom_process(probe_fn, 4L, priors = rep(list(normal_prior(0, 1)), 4L),
+  probe_proc <- custom_epidemic(probe_fn, priors = rep(list(normal_prior(0, 1)), 4L),
                                inits = rep(0.1, 4L))
-  validate_custom_process(probe_proc)
+  validate_custom_epidemic(probe_proc)
   TRUE
 }, error = function(e) FALSE))
 
@@ -36,7 +36,8 @@ test_that("custom_delay() builds a valid object with the expected slots", {
       log_survival = function(d) -(d / scale)^shape
     )
   }
-  dly <- custom_delay(weibull_factory, n_params = 2L,
+  # n_params is inferred (here 2) from priors / param_names / inits
+  dly <- custom_delay(weibull_factory,
                       priors = list(normal_prior(0, 1), normal_prior(log(7), 1)),
                       name = "Weibull", param_names = c("log_shape", "log_scale"),
                       inits = c(0, log(7)))
@@ -46,24 +47,29 @@ test_that("custom_delay() builds a valid object with the expected slots", {
   expect_equal(dly@param_names, c("log_shape", "log_scale"))
 })
 
-test_that("custom_process() builds a valid object with num_id 4", {
+test_that("custom_epidemic() builds a valid object with num_id 4", {
   n_t <- 12L
   rw_fn <- function(theta) matrix(theta[1] + cumsum(exp(theta[2]) * theta[3:(2L + n_t)]), n_t, 1L)
-  proc <- custom_process(rw_fn, n_params = 2L + n_t,
+  proc <- custom_epidemic(rw_fn,
                          priors = c(list(normal_prior(2, 1), normal_prior(-2, 0.5)),
                                     rep(list(std_normal_prior()), n_t)),
                          name = "RandomWalk", inits = c(2, -2, rep(0, n_t)))
-  expect_true(S7::S7_inherits(proc, diseasenowcasting:::custom_process_class))
+  expect_true(S7::S7_inherits(proc, diseasenowcasting:::custom_epidemic_class))
   expect_true(S7::S7_inherits(proc, diseasenowcasting:::epidemic_process_class))
   expect_equal(proc@num_id, 4L)
   expect_equal(proc@n_params, 2L + n_t)
 })
 
-test_that("constructors reject mismatched inits / priors / param_names lengths", {
+test_that("n_params is inferred and disagreements are rejected", {
   fn <- function(theta) matrix(theta[1], 1L, 1L)
-  expect_error(custom_process(fn, n_params = 2L, inits = c(1)),        "inits")
-  expect_error(custom_process(fn, n_params = 2L, param_names = "a"),   "param_names")
-  expect_error(custom_process(fn, n_params = 2L, priors = list(normal_prior(0, 1))), "priors")
+  # inferred from whichever argument is supplied:
+  expect_equal(custom_epidemic(fn, inits = c(1, 2))@n_params, 2L)
+  expect_equal(custom_epidemic(fn, param_names = c("a", "b", "c"))@n_params, 3L)
+  expect_equal(custom_delay(fn, priors = list(normal_prior(0, 1)))@n_params, 1L)
+  # disagreeing lengths are an error; supplying none is an error:
+  expect_error(custom_epidemic(fn, priors = list(normal_prior(0, 1)), inits = c(1, 2)), "different")
+  expect_error(custom_epidemic(fn, param_names = c("a", "b"), inits = 1), "different")
+  expect_error(custom_epidemic(fn), "infer")
 })
 
 test_that("validate_custom_delay accepts an AD-safe factory", {
@@ -73,31 +79,31 @@ test_that("validate_custom_delay accepts an AD-safe factory", {
          log_cdf = function(d) log(1 - exp(-rate * d) + 1e-300),
          log_survival = function(d) -rate * d)
   }
-  dly <- custom_delay(exp_factory, 1L, priors = list(normal_prior(-2, 1)),
+  dly <- custom_delay(exp_factory, priors = list(normal_prior(-2, 1)),
                       name = "Exp", inits = -2)
   expect_invisible(validate_custom_delay(dly))
 })
 
-test_that("validate_custom_process accepts an AD-safe intensity_fn", {
+test_that("validate_custom_epidemic accepts an AD-safe intensity_fn", {
   skip_if_not(.process_taping_ok, "RTMB user-function dispatch inactive (load_all); runs under R CMD check")
   n_t <- 10L
   rw_fn <- function(theta) matrix(theta[1] + cumsum(exp(theta[2]) * theta[3:(2L + n_t)]), n_t, 1L)
-  proc <- custom_process(rw_fn, 2L + n_t,
+  proc <- custom_epidemic(rw_fn,
                          priors = c(list(normal_prior(2, 1), normal_prior(-2, 0.5)),
                                     rep(list(std_normal_prior()), n_t)),
                          inits = c(2, -2, rep(0, n_t)))
-  expect_invisible(validate_custom_process(proc))
+  expect_invisible(validate_custom_epidemic(proc))
 })
 
-test_that("validate_custom_process rejects a non-AD-safe intensity_fn", {
+test_that("validate_custom_epidemic rejects a non-AD-safe intensity_fn", {
   skip_if_not(.process_taping_ok, "RTMB user-function dispatch inactive (load_all); runs under R CMD check")
   # branching on the parameter value is not traceable
   bad_fn <- function(theta) {
     val <- if (theta[1] > 0) exp(theta[1]) else 0   # if() on a parameter value
     matrix(rep(val, 5L), 5L, 1L)
   }
-  proc <- custom_process(bad_fn, 1L, priors = list(normal_prior(0, 1)), inits = 0.5)
-  expect_error(validate_custom_process(proc))
+  proc <- custom_epidemic(bad_fn, priors = list(normal_prior(0, 1)), inits = 0.5)
+  expect_error(validate_custom_epidemic(proc))
 })
 
 # ── Fixed vs free parameters (the priors list dual API) ───────────────────────
@@ -106,20 +112,20 @@ test_that("a numeric entry in priors fixes that parameter", {
   n_t <- 8L
   rw_fn <- function(theta) matrix(theta[1] + cumsum(exp(theta[2]) * theta[3:(2L + n_t)]), n_t, 1L)
   # log_mu0 fixed at 3, log_sigma free, innovations free
-  proc <- custom_process(rw_fn, 2L + n_t,
+  proc <- custom_epidemic(rw_fn,
                          priors = c(list(3.0, normal_prior(-2, 0.5)),
                                     rep(list(std_normal_prior()), n_t)),
                          inits = c(3, -2, rep(0, n_t)))
   mod <- model(nb_likelihood(), proc, lognormal_delay())
   pr  <- default_priors(mod)
-  expect_equal(pr$custom_process_is_free[1], 0L)       # first param fixed
-  expect_equal(pr$custom_process_is_free[2], 1L)       # second free
-  expect_equal(pr$custom_process_fixed_vals[1], 3.0)
+  expect_equal(pr$custom_epidemic_is_free[1], 0L)       # first param fixed
+  expect_equal(pr$custom_epidemic_is_free[2], 1L)       # second free
+  expect_equal(pr$custom_epidemic_fixed_vals[1], 3.0)
 })
 
 # ── End-to-end fit: a custom random walk recovers a known trajectory ──────────
 
-test_that("custom_process random walk fits and tracks a clear epidemic signal", {
+test_that("custom_epidemic random walk fits and tracks a clear epidemic signal", {
   skip_if_not(.process_taping_ok, "RTMB user-function dispatch inactive (load_all); runs under R CMD check")
   set.seed(11)
   n_t <- 40L
@@ -132,7 +138,7 @@ test_that("custom_process random walk fits and tracks a clear epidemic signal", 
   m <- cbind(event_idx, 1L, delays)
 
   rw_fn <- function(theta) matrix(theta[1] + cumsum(exp(theta[2]) * theta[3:(2L + n_t)]), n_t, 1L)
-  proc <- custom_process(rw_fn, 2L + n_t,
+  proc <- custom_epidemic(rw_fn,
                          priors = c(list(normal_prior(log(20), 1), normal_prior(-1, 0.5)),
                                     rep(list(std_normal_prior()), n_t)),
                          inits = c(log(20), -1, rep(0, n_t)))
@@ -151,7 +157,7 @@ test_that("custom_process random walk fits and tracks a clear epidemic signal", 
 
 # ── End-to-end fit: a custom SIR ODE recovers the growth rate ─────────────────
 
-test_that("custom_process SIR ODE fits and recovers beta = R0 * gamma", {
+test_that("custom_epidemic SIR ODE fits and recovers beta = R0 * gamma", {
   skip_if_not(.process_taping_ok, "RTMB user-function dispatch inactive (load_all); runs under R CMD check")
   set.seed(21)
   n_t <- 55L; N_pop <- 10000; R0_true <- 2.4; gamma_true <- 0.1; I0 <- 5
@@ -176,13 +182,13 @@ test_that("custom_process SIR ODE fits and recovers beta = R0 * gamma", {
     }
     matrix(log((inc + abs(inc)) * 0.5 + 1e-8), n_t, 1L)
   }
-  proc <- custom_process(sir_fn, 3L,
+  proc <- custom_epidemic(sir_fn,
                          priors = list(normal_prior(log(2.5), 0.5),
                                        normal_prior(log(0.1), 0.3),
                                        normal_prior(log(5), 1)),
                          param_names = c("log_R0", "log_gamma", "log_I0"),
                          inits = c(log(2), log(0.1), log(5)))
-  expect_invisible(validate_custom_process(proc))
+  expect_invisible(validate_custom_epidemic(proc))
 
   mod <- model(nb_likelihood(), proc, lognormal_delay())
   dat <- prepare_data(mod, m = m, max_time = n_t)
@@ -190,7 +196,7 @@ test_that("custom_process SIR ODE fits and recovers beta = R0 * gamma", {
   fit <- fit(mod, dat, pr)
 
   expect_equal(fit$opt$convergence, 0L)
-  cp <- as.numeric(fit$parList$custom_process_params)
+  cp <- as.numeric(fit$parList$custom_epidemic_params)
   # R0 and gamma are individually weakly identified, but their product (the
   # epidemic growth rate beta) is — check that against the truth within 35%.
   beta_fit  <- exp(cp[1]) * exp(cp[2])
@@ -221,7 +227,7 @@ test_that("custom_delay Weibull fits and recovers shape/scale", {
          log_cdf = function(d) log(1 - exp(-(d / scale)^shape) + 1e-300),
          log_survival = function(d) -(d / scale)^shape)
   }
-  dly <- custom_delay(weibull_factory, 2L,
+  dly <- custom_delay(weibull_factory,
                       priors = list(normal_prior(0, 1), normal_prior(log(7), 1)),
                       name = "Weibull", inits = c(0, log(7)))
   mod <- model(nb_likelihood(), ar1_epidemic(), dly)

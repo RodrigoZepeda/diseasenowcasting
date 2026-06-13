@@ -49,7 +49,7 @@ model(likelihood, epidemic, delay)   # combine three components
 | `hsgp_epidemic(num_basis, gp_kernel=2, gp_basis=1, tmax_model=0, gp_boundary_frac=0.62)` | `num_basis` (int, 0=auto) | Hilbert-space GP; flexible smooth trend. Shared kernel (alpha, ell) across strata. |
 | `ar1_epidemic()` | — | AR(1) trend; fast, per-stratum phi/sigma. |
 | `sir_epidemic(N_pop=1e6, use_beta_rw_trend=TRUE)` | `N_pop` | Discrete-time SIR; coupled force of infection across strata. |
-| `custom_process(intensity_fn, n_params, priors, ...)` | `intensity_fn`, `n_params` | **User-defined** `f(t)`. Any RTMB-traceable generator of `log_mean[T×S]`. See §2b. |
+| `custom_epidemic(intensity_fn, priors, ...)` | `intensity_fn`, `priors` | **User-defined** `f(t)`. Any RTMB-traceable generator of `log_mean[T×S]`. See §2b. |
 
 ### Delay families
 
@@ -59,7 +59,7 @@ model(likelihood, epidemic, delay)   # combine three components
 | `gamma_delay()` | Gamma (mean/SD) | Good for dengue/mpox. |
 | `generalized_gamma_delay()` | Generalised Gamma | Most flexible; Q ∈ (0.05, 3) bounded. |
 | `dirichlet_delay(bins=NA)` | Non-parametric simplex | Dirichlet prior + geometric tail; two-stage only. |
-| `custom_delay(cdf_factory, n_params, priors, ...)` | **User-defined** | Any RTMB-traceable CDF. See §2b. |
+| `custom_delay(cdf_factory, priors, ...)` | **User-defined** | Any RTMB-traceable CDF. See §2b. |
 
 ### Combining
 
@@ -108,10 +108,10 @@ weibull_factory <- function(theta) {
 }
 dly <- custom_delay(
   cdf_factory = weibull_factory,
-  n_params    = 2L,
   priors      = list(normal_prior(0,1), normal_prior(log(7),1)),  # per-param: prior=free, number=fixed
   name        = "Weibull", param_names = c("log_shape","log_scale"), inits = c(0, log(7))
 )
+# No n_params argument: it is inferred from priors / param_names / inits (must agree).
 validate_custom_delay(dly)             # REQUIRES library(RTMB)
 model(nb_likelihood(), ar1_epidemic(), dly)
 ```
@@ -119,35 +119,36 @@ Works in BOTH the joint and the two-stage Stage-1 delay-only fit.  Fitted
 params land in `fit$parList$custom_delay_params`.  `priors$cdf_factory` carries
 the function downstream (reconstruct / surprise / diagnostics).
 
-### custom_process() — num_id 4 (epidemic_model)
+### custom_epidemic() — num_id 4 (epidemic_model)
 
 ```r
-# intensity_fn(theta) -> numeric matrix log_mean[n_time x n_strata] (the FULL log f(t),
+# intensity_fn(theta) -> numeric matrix log_mean[max_time x n_strata] (the FULL log f(t),
 # including any intercept; NOT just a trend). One column => unstratified.
+max_time <- infer_max_time(tn)                   # event-times the model spans (see note)
 rw_fn <- function(theta) {                       # pure random walk on log-incidence
-  log_mu0 <- theta[1]; sigma <- exp(theta[2]); eps <- theta[3:(2L + n_time)]
-  matrix(log_mu0 + cumsum(sigma * eps), n_time, 1L)
+  log_mu0 <- theta[1]; sigma <- exp(theta[2]); eps <- theta[3:(2L + max_time)]
+  matrix(log_mu0 + cumsum(sigma * eps), max_time, 1L)
 }
-proc <- custom_process(
+custom_epi <- custom_epidemic(
   intensity_fn = rw_fn,
-  n_params     = 2L + n_time,            # structural + n_time innovations (see note)
-  priors       = c(list(normal_prior(3,1), normal_prior(-2,0.5)),
-                   rep(list(std_normal_prior()), n_time)),
-  inits        = c(3, -2, rep(0, n_time))
+  priors       = c(list(normal_prior(3,1), normal_prior(-2,0.5)),  # n_params inferred (2 + max_time)
+                   rep(list(std_normal_prior()), max_time)),
+  inits        = c(3, -2, rep(0, max_time))
 )
-validate_custom_process(proc)            # REQUIRES library(RTMB)
-model(nb_likelihood(), proc, lognormal_delay())
+validate_custom_epidemic(custom_epi)            # REQUIRES library(RTMB)
+model(nb_likelihood(), custom_epi, lognormal_delay())
 ```
-- **`n_params` is fixed at construction.** For time-varying dims (e.g. a RW with
-  one innovation per step), get `n_time` first:
-  `n_time <- prepare_data(model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()), m = your_m)$max_time`.
+- **No `n_params` argument** — it is inferred from `priors` / `param_names` /
+  `inits` (whichever are supplied must agree on the count).
+- **For time-varying dims** (e.g. a RW with one innovation per event-time), get
+  `max_time` first with `infer_max_time(tn)` (= `prepare_from_tbl_now(tn, model)$max_time`).
 - v1 is **fixed-effects only** (no `random=` Laplace over custom latents); fine
   for short/medium series.  Custom processes are joint-fit only (not the
   two-stage Stage-1, which is delay-specific — unaffected).
 - ODE example: write the RHS + a fixed-step RK4/Euler loop inside `intensity_fn`
   (with the `[<-` overload).  For stiff/adaptive needs, `RTMBode` is the
   production path (add to Suggests; not used by the package itself).
-- Fitted params in `fit$parList$custom_process_params`; `priors$intensity_fn`
+- Fitted params in `fit$parList$custom_epidemic_params`; `priors$intensity_fn`
   carries the function to `.joint_reconstruct()` / prior-only / diagnostics.
 
 See `vignette("Custom_delays_and_processes")` for worked Weibull-delay,
@@ -277,6 +278,14 @@ with its own intercept + trend, sharing the delay/phi/kernel.
 prep <- prepare_from_tbl_now(tn, model, now = as.Date("2023-01-01"))
 # Returns list(data=engine, now, event_col, min_event, event_unit,
 #              max_time, strata_cols, strata_levels)
+```
+
+### infer_max_time()
+
+```r
+# Exported convenience: the number of event-times the model spans (t = 0..max_time-1).
+# Use it to size a custom_epidemic() intensity_fn whose loop runs over time.
+max_time <- infer_max_time(tn)                  # = prepare_from_tbl_now(tn, model())$max_time
 ```
 
 ### prepare_data() — lower-level
@@ -420,7 +429,7 @@ bt <- backtest(
   seed = NULL,
   ...
 )
-# Returns backtest_class; parallelised via doFuture (%dofuture%)
+# Returns backtest_class; parallelised via future.apply::future_lapply()
 # Set future::plan(multisession, workers=8) before calling for parallel execution
 ```
 
@@ -534,7 +543,7 @@ built <- build_joint_obj(data, priors, init = NULL, use_random = FALSE)
 | `delay_mu`, `log_delay_sigma_excess`, `delay_Q` | scalar | Yes |
 | `delay_logits` (Dirichlet) | `[n_bins]` | Yes |
 | `custom_delay_params` (custom delay, family 5) | `[n_params]` | Yes |
-| `custom_process_params` (custom process, epidemic_model 4) | `[n_params]` | n/a (user owns full `log_mean[T×S]`) |
+| `custom_epidemic_params` (custom epidemic, epidemic_model 4) | `[n_params]` | n/a (user owns full `log_mean[T×S]`) |
 
 **Component dispatch codes.** `delay_family`: 1=LogNormal, 2=Gamma,
 3=GenGamma, 4=Dirichlet, **5=Custom**.  `epidemic_model`: 1=HSGP, 2=AR1,

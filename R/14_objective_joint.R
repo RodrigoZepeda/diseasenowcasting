@@ -31,9 +31,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   if (!epidemic_model %in% c(1L, 2L, 3L, 4L))
     cli::cli_abort("build_joint_obj supports HSGP (1), AR1 (2), SIR (3), Custom (4) epidemic.")
   is_sir            <- epidemic_model == 3L
-  is_custom_process <- epidemic_model == 4L
+  is_custom_epidemic <- epidemic_model == 4L
   # User-supplied functions need RTMB's AD methods on the search path (see helper).
-  if (is_custom_delay || is_custom_process) .assert_rtmb_attached()
+  if (is_custom_delay || is_custom_epidemic) .assert_rtmb_attached()
   is_negbin <- data$is_negative_binomial == 1L
   n_covariates <- data$P
   n_time       <- data$max_time
@@ -61,13 +61,13 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   custom_fixed_vals     <- if (is_custom_delay) priors$custom_delay_fixed_vals   else numeric(0)
   custom_fully_fixed    <- is_custom_delay && n_params_custom > 0L && all(custom_is_free == 0L)
 
-  # Custom process (epidemic_model 4) data extracted from priors
-  intensity_fn              <- if (is_custom_process) priors$intensity_fn else NULL
-  n_params_custom_proc      <- if (is_custom_process) as.integer(priors$custom_process_n_params) else 0L
-  proc_prior_dists          <- if (is_custom_process) priors$custom_process_prior_dists else integer(0)
-  proc_prior_params         <- if (is_custom_process) priors$custom_process_prior_params_mat else matrix(0.0, 0L, 3L)
-  proc_is_free              <- if (is_custom_process) priors$custom_process_is_free else integer(0)
-  proc_fixed_vals           <- if (is_custom_process) priors$custom_process_fixed_vals else numeric(0)
+  # Custom epidemic (epidemic_model 4) data extracted from priors
+  intensity_fn              <- if (is_custom_epidemic) priors$intensity_fn else NULL
+  n_params_custom_epi      <- if (is_custom_epidemic) as.integer(priors$custom_epidemic_n_params) else 0L
+  epi_prior_dists          <- if (is_custom_epidemic) priors$custom_epidemic_prior_dists else integer(0)
+  epi_prior_params         <- if (is_custom_epidemic) priors$custom_epidemic_prior_params_mat else matrix(0.0, 0L, 3L)
+  epi_is_free              <- if (is_custom_epidemic) priors$custom_epidemic_is_free else integer(0)
+  epi_fixed_vals           <- if (is_custom_epidemic) priors$custom_epidemic_fixed_vals else numeric(0)
 
   # Precompute the shared-delay Gstar [n_time x n_strata] when the delay is fully
   # fixed (multisample Stage-2): the CDF is then data, not re-taped per step.
@@ -107,10 +107,10 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     X = data$X, hsgp_basis_matrix = hsgp_basis_matrix, hsgp_frequencies = hsgp_frequencies,
     gp_kernel = data$gp_kernel,
     epidemic_model = epidemic_model, is_negbin = as.integer(is_negbin), n_covariates = n_covariates,
-    is_custom_process = as.integer(is_custom_process),
-    n_params_custom_proc = n_params_custom_proc,
-    proc_prior_dists = proc_prior_dists, proc_prior_params = proc_prior_params,
-    proc_is_free = proc_is_free,
+    is_custom_epidemic = as.integer(is_custom_epidemic),
+    n_params_custom_epi = n_params_custom_epi,
+    epi_prior_dists = epi_prior_dists, epi_prior_params = epi_prior_params,
+    epi_is_free = epi_is_free,
     mu_log_upper_bound = data$mu_log_upper_bound, ar_sigma_max = data$ar_sigma_max,
     prior_mu_dist     = priors$delay_mu$dist,    prior_mu_params     = .pad3(priors$delay_mu$params),
     prior_sigma_dist  = priors$delay_sigma$dist, prior_sigma_params  = .pad3(priors$delay_sigma$params),
@@ -152,7 +152,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     if (is_gengamma) 0.6 else { empirical_sd <- sqrt(.wtd_var(data$m[, 3], data$m[, 2]))
       if (is.finite(empirical_sd) && empirical_sd > 0) max(2, min(empirical_sd, 60)) else 5 } }
 
-  parameters <- if (is_sir || is_custom_process) list()
+  parameters <- if (is_sir || is_custom_epidemic) list()
                 else if (is_hierarchical) list(
                   # Non-centred hierarchical intercept: mu[s] = mu_global + tau * delta[s]
                   mu_global          = init$mu_global %||% mean(intercept_init),
@@ -198,14 +198,14 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     parameters$log_ar_sigma_unc <- init$log_ar_sigma_unc %||% rep(-2, n_strata)
     parameters$ar_innov         <- init$ar_innov %||% matrix(0, n_time, n_strata)
     random <- "ar_innov"
-  } else if (is_custom_process) {
-    custom_proc_inits <- priors$custom_process_inits %||% rep(0.0, n_params_custom_proc)
-    init_vals <- numeric(n_params_custom_proc)
-    for (i in seq_len(n_params_custom_proc)) {
-      init_vals[i] <- if (proc_is_free[i] == 0L) proc_fixed_vals[i]
-                      else (init$custom_process_params[[i]] %||% custom_proc_inits[i])
+  } else if (is_custom_epidemic) {
+    custom_epi_inits <- priors$custom_epidemic_inits %||% rep(0.0, n_params_custom_epi)
+    init_vals <- numeric(n_params_custom_epi)
+    for (i in seq_len(n_params_custom_epi)) {
+      init_vals[i] <- if (epi_is_free[i] == 0L) epi_fixed_vals[i]
+                      else (init$custom_epidemic_params[[i]] %||% custom_epi_inits[i])
     }
-    parameters$custom_process_params <- init_vals
+    parameters$custom_epidemic_params <- init_vals
     random <- character(0)
   } else {  # epidemic_model == 3L: SIR (coupled) — per-stratum R0/gamma/N_eff + AR(1) beta walk
     parameters$log_R0  <- init$log_R0  %||% rep(log(2), n_strata)
@@ -239,16 +239,16 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     }
     map$custom_delay_params <- factor(map_vals)
   }
-  if (is_custom_process && n_params_custom_proc > 0L && any(proc_is_free == 0L)) {
-    proc_map_vals <- rep(NA_integer_, n_params_custom_proc)
-    free_proc_idx <- 0L
-    for (i in seq_len(n_params_custom_proc)) {
-      if (proc_is_free[i] == 1L) {
-        free_proc_idx <- free_proc_idx + 1L
-        proc_map_vals[i] <- free_proc_idx
+  if (is_custom_epidemic && n_params_custom_epi > 0L && any(epi_is_free == 0L)) {
+    epi_map_vals <- rep(NA_integer_, n_params_custom_epi)
+    free_epi_idx <- 0L
+    for (i in seq_len(n_params_custom_epi)) {
+      if (epi_is_free[i] == 1L) {
+        free_epi_idx <- free_epi_idx + 1L
+        epi_map_vals[i] <- free_epi_idx
       }
     }
-    map$custom_process_params <- factor(proc_map_vals)
+    map$custom_epidemic_params <- factor(epi_map_vals)
   }
 
   negative_log_posterior <- function(params) {
@@ -285,7 +285,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
 
     # -- per-stratum epidemic mean + S_k accumulation -----------------------
     # Accumulate the count log-likelihood cell-by-cell.  For HSGP/AR1 each
-    # stratum is independent (column loop); SIR and custom process produce the
+    # stratum is independent (column loop); SIR and custom epidemic produce the
     # full log_mean[T×S] matrix directly.
     log_mean_matrix <- NULL
     if (is_sir == 1L) {
@@ -320,10 +320,10 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         sum(log_R0 + log(recovery_rate) + log(1 - recovery_rate) + log(susceptible_frac) + log(1 - susceptible_frac) +
             log(1.998) + log(plogis(ar_phi_unc)) + log(1 - plogis(ar_phi_unc)) +
             log(ar_sigma_max) + log(plogis(log_ar_sigma_unc)) + log(1 - plogis(log_ar_sigma_unc)))
-    } else if (is_custom_process == 1L) {
+    } else if (is_custom_epidemic == 1L) {
       # The user's intensity_fn returns the full log_mean[T x S] directly; no
       # intercept or trend is added on top (it owns the whole trajectory).
-      log_mean_matrix <- intensity_fn(custom_process_params)
+      log_mean_matrix <- intensity_fn(custom_epidemic_params)
     } else if (epidemic_model == 1L) {
       gp_alpha <- exp(log_gp_alpha); gp_ell <- exp(log_gp_ell)
       spectral_weights <- hsgp_spectral_weights(hsgp_frequencies, gp_alpha, gp_ell, gp_kernel)
@@ -337,7 +337,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     }
 
     # -- hierarchical intercept reconstruction ---------------------------------
-    if (is_hierarchical == 1L && is_sir == 0L && is_custom_process == 0L) {
+    if (is_hierarchical == 1L && is_sir == 0L && is_custom_epidemic == 0L) {
       tau_int <- exp(log_tau_intercept)
       mu_intercept_hier <- mu_global + tau_int * delta_intercept
       log_jacobian <- log_jacobian + log_tau_intercept   # Jacobian for tau = exp(log_tau)
@@ -345,7 +345,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
 
     loglik_counts <- 0
     for (s in seq_len(n_strata)) {
-      if (is_sir == 1L || is_custom_process == 1L) {
+      if (is_sir == 1L || is_custom_epidemic == 1L) {
         log_mean_col <- log_mean_matrix[, s]
       } else {
         intercept_s  <- if (is_hierarchical == 1L) mu_intercept_hier[s] else mu_intercept[s]
@@ -407,7 +407,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
           log_prior <- log_prior + prior_lpdf(shape_Q, prior_shape_dist, prior_shape_params)
       }
     }
-    if (is_sir == 0L && is_custom_process == 0L) {
+    if (is_sir == 0L && is_custom_epidemic == 0L) {
       if (is_hierarchical == 1L) {
         # Hierarchical intercept prior: mu_global ~ intercept_prior; delta ~ N(0,1); tau ~ HalfNormal(0,1)
         log_prior <- log_prior + prior_lpdf(mu_global, prior_intercept_dist, prior_intercept_params)
@@ -417,7 +417,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         log_prior <- log_prior + prior_lpdf(mu_intercept, prior_intercept_dist, prior_intercept_params)
       }
     }
-    if (is_sir == 0L && is_custom_process == 0L && n_covariates > 0)
+    if (is_sir == 0L && is_custom_epidemic == 0L && n_covariates > 0)
       log_prior <- log_prior + prior_lpdf(as.vector(gamma), prior_gamma_dist, prior_gamma_params)
     if (is_negbin == 1L) log_prior <- log_prior + prior_lpdf(1.0 / nb_size, prior_phi_dist, prior_phi_params)
     if (epidemic_model == 1L) {
@@ -428,11 +428,11 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       log_prior <- log_prior + prior_lpdf(ar_phi,   prior_ar_phi_dist,   prior_ar_phi_params)
       log_prior <- log_prior + prior_lpdf(ar_sigma, prior_ar_sigma_dist, prior_ar_sigma_params)
       log_prior <- log_prior + sum(dnorm(ar_innov, 0, 1, log = TRUE))
-    } else if (is_custom_process == 1L) {
-      for (i in seq_len(n_params_custom_proc)) {
-        if (proc_is_free[i] == 1L)
+    } else if (is_custom_epidemic == 1L) {
+      for (i in seq_len(n_params_custom_epi)) {
+        if (epi_is_free[i] == 1L)
           log_prior <- log_prior +
-            prior_lpdf(custom_process_params[i], proc_prior_dists[i], proc_prior_params[i, ])
+            prior_lpdf(custom_epidemic_params[i], epi_prior_dists[i], epi_prior_params[i, ])
       }
     } else {  # epidemic_model == 3L: SIR
       log_prior <- log_prior + prior_lpdf(R0, prior_R0_dist, prior_R0_params)
@@ -490,9 +490,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
 
   # -- per-(time, stratum) log-mean -------------------------------------------
   log_mean <- matrix(0.0, n_time, n_strata)
-  if (data$epidemic_model == 4L) {                              # custom process
-    theta_proc <- as.numeric(parlist$custom_process_params)
-    log_mean   <- matrix(as.numeric(priors$intensity_fn(theta_proc)), n_time, n_strata)
+  if (data$epidemic_model == 4L) {                              # custom epidemic
+    theta_epi <- as.numeric(parlist$custom_epidemic_params)
+    log_mean   <- matrix(as.numeric(priors$intensity_fn(theta_epi)), n_time, n_strata)
   } else if (data$epidemic_model == 3L) {                       # coupled SIR
     R0 <- exp(parlist$log_R0); recovery_rate <- stats::plogis(parlist$u_gamma)
     susceptible_frac <- stats::plogis(parlist$u_neff); effective_pop <- susceptible_frac * data$N_pop

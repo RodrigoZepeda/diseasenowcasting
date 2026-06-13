@@ -179,8 +179,8 @@ sir_epidemic <- function(R0 = numeric(0), gamma = numeric(0), N_eff = numeric(0)
 
 #' @keywords internal
 #' @noRd
-custom_process_class <- S7::new_class(
-  "custom_process_class",
+custom_epidemic_class <- S7::new_class(
+  "custom_epidemic_class",
   parent = epidemic_process_class,
   properties = list(
     intensity_fn  = S7::class_function,
@@ -227,53 +227,52 @@ custom_process_class <- S7::new_class(
 #'   Must use only RTMB-traceable operations: `+`, `-`, `*`, `/`, `exp`, `log`,
 #'   `sqrt`, `abs`, `sum`, `for` loops of *fixed* length (not data-dependent).
 #'   Never use `if`/`ifelse` on parameter values, `pmax`/`pmin` on AD types, or
-#'   external solvers.  Call [validate_custom_process()] to check traceability
+#'   external solvers.  Call [validate_custom_epidemic()] to check traceability
 #'   before fitting.
-#' @param n_params Integer.  Total number of parameters in `theta`.  Must be
-#'   known at construction time; for time-varying processes (e.g. a random walk
-#'   with `n_time` innovations), inspect `prepare_data()$max_time` first to get
-#'   the correct count.
-#' @param priors A list of length `n_params`.  Each element is either a
-#'   `prior_class` object such as [normal_prior()] (free parameter, estimated)
-#'   or a single numeric
-#'   scalar (fixed parameter, held constant during optimisation).
-#'   An empty list defaults all parameters to `std_normal_prior()`.
+#' @param priors A list with one element per parameter in `theta`.  Each element
+#'   is either a `prior_class` object such as [normal_prior()] (free parameter,
+#'   estimated) or a single numeric scalar (fixed parameter, held constant
+#'   during optimisation).  The number of parameters is inferred from the length
+#'   of this list (or from `param_names` / `inits` if `priors` is omitted).  For
+#'   time-varying processes (e.g. a random walk with one innovation per
+#'   event-time), get the number of event-times with [infer_max_time()] first.
 #' @param name Character label shown in print and diagnostic output.
-#' @param param_names Character vector of length `n_params` with human-readable
-#'   names for the parameters.  Defaults to `"theta1"`, `"theta2"`, …
-#' @param inits Numeric vector of length `n_params` with starting values.
-#'   Defaults to zero for every parameter.
+#' @param param_names Character vector naming the parameters; its length sets the
+#'   number of parameters if `priors` is empty.  Defaults to `"theta1"`, …
+#' @param inits Numeric vector of starting values; its length sets the number of
+#'   parameters if `priors` and `param_names` are empty.  Defaults to zeros.
 #'
-#' @returns A `custom_process_class` object (subclass of
+#' @returns A `custom_epidemic_class` object (subclass of
 #'   `epidemic_process_class`).
 #'
-#' @seealso [validate_custom_process()], [epidemic_process]
+#' @seealso [validate_custom_epidemic()], [epidemic_process]
 #'
 #' @examples
-#' # Pure random walk on log-incidence (n_time = 20)
+#' # Pure random walk on log-incidence (max_time = 20)
 #' # Uses cumsum() — no [<- assignment needed, so fully AD-safe.
-#' n_times <- 20L
+#' max_time <- 20L
 #' rw_fn <- function(theta) {
 #'   log_mu0  <- theta[1]
 #'   sigma_rw <- exp(theta[2])
-#'   eps      <- theta[3:(2L + n_times)]
+#'   eps      <- theta[3:(2L + max_time)]
 #'   lm       <- log_mu0 + cumsum(sigma_rw * eps)
-#'   matrix(lm, n_times, 1L)
+#'   matrix(lm, max_time, 1L)
 #' }
-#' proc <- custom_process(
+#' # n_params is inferred (here 2 + max_time) from the priors list:
+#' custom_epi <- custom_epidemic(
 #'   rw_fn,
-#'   n_params = 2L + n_times,
 #'   priors   = c(list(normal_prior(2, 1), normal_prior(-2, 0.5)),
-#'                rep(list(std_normal_prior()), n_times)),
+#'                rep(list(std_normal_prior()), max_time)),
 #'   name     = "RandomWalk",
-#'   param_names = c("log_mu0", "log_sigma", paste0("eps_", seq_len(n_times))),
-#'   inits    = c(2, -2, rep(0, n_times))
+#'   param_names = c("log_mu0", "log_sigma", paste0("eps_", seq_len(max_time))),
+#'   inits    = c(2, -2, rep(0, max_time))
 #' )
-#' @name custom_process
+#' @name custom_epidemic
 #' @export
-custom_process <- function(intensity_fn, n_params, priors = list(), name = "Custom",
+custom_epidemic <- function(intensity_fn, priors = list(), name = "Custom",
                            param_names = character(0), inits = numeric(0)) {
-  custom_process_class(intensity_fn = intensity_fn, n_params = as.integer(n_params),
+  n_params <- .infer_n_params(priors, param_names, inits)
+  custom_epidemic_class(intensity_fn = intensity_fn, n_params = n_params,
                        priors = priors, name = name,
                        param_names = param_names, inits = inits)
 }
@@ -284,47 +283,47 @@ custom_process <- function(intensity_fn, n_params, priors = list(), name = "Cust
 #' initial values and confirms that the objective value and gradient are both
 #' finite.  Emits an informative error if the function is not AD-safe.
 #'
-#' @param process A `custom_process_class` object from [custom_process()].
+#' @param epidemic A `custom_epidemic_class` object from [custom_epidemic()].
 #' @param test_theta Optional numeric vector of length `n_params` to use as the
-#'   test point.  Defaults to `process@inits`.
-#' @returns `process`, invisibly.  Emits a success message if the check passes.
+#'   test point.  Defaults to `epidemic@inits`.
+#' @returns `epidemic`, invisibly.  Emits a success message if the check passes.
 #' @examples
 #' # Custom components tape USER functions, so RTMB must be attached
 #' # (it is kept in Imports, not Depends, so attach it yourself):
 #' library(RTMB)
-#' n_times <- 15L
+#' max_time <- 15L
 #' rw_fn <- function(theta)
-#'   matrix(theta[1] + cumsum(exp(theta[2]) * theta[3:(2L + n_times)]), n_times, 1L)
-#' proc <- custom_process(
-#'   rw_fn, n_params = 2L + n_times,
+#'   matrix(theta[1] + cumsum(exp(theta[2]) * theta[3:(2L + max_time)]), max_time, 1L)
+#' custom_epi <- custom_epidemic(
+#'   rw_fn,
 #'   priors = c(list(normal_prior(2, 1), normal_prior(-2, 0.5)),
-#'              rep(list(std_normal_prior()), n_times)),
-#'   inits  = c(2, -2, rep(0, n_times))
+#'              rep(list(std_normal_prior()), max_time)),
+#'   inits  = c(2, -2, rep(0, max_time))
 #' )
-#' validate_custom_process(proc)
+#' validate_custom_epidemic(custom_epi)
 #' @export
-validate_custom_process <- function(process, test_theta = NULL) {
-  if (!S7::S7_inherits(process, custom_process_class))
-    cli::cli_abort("`process` must be a {.cls custom_process_class} object.")
+validate_custom_epidemic <- function(epidemic, test_theta = NULL) {
+  if (!S7::S7_inherits(epidemic, custom_epidemic_class))
+    cli::cli_abort("`epidemic` must be a {.cls custom_epidemic_class} object.")
   .assert_rtmb_attached("custom epidemic processes")
-  n_p    <- as.integer(process@n_params)
-  theta0 <- if (!is.null(test_theta)) as.numeric(test_theta) else process@inits
+  n_p    <- as.integer(epidemic@n_params)
+  theta0 <- if (!is.null(test_theta)) as.numeric(test_theta) else epidemic@inits
   if (length(theta0) != n_p) theta0 <- rep(0.0, n_p)
 
-  fn_to_tape <- process@intensity_fn
+  fn_to_tape <- epidemic@intensity_fn
 
   obj <- tryCatch(
     RTMB::MakeADFun(
       function(params) {
         RTMB::getAll(params)
-        log_mean_mat <- fn_to_tape(custom_validate_theta_proc)
+        log_mean_mat <- fn_to_tape(custom_validate_theta_epi)
         -sum(log_mean_mat)
       },
-      list(custom_validate_theta_proc = theta0),
+      list(custom_validate_theta_epi = theta0),
       silent = TRUE
     ),
     error = function(e)
-      cli::cli_abort(c("RTMB tape construction failed for custom process `{process@name}`.",
+      cli::cli_abort(c("RTMB tape construction failed for custom epidemic `{epidemic@name}`.",
                        "i" = "Error: {e$message}",
                        "i" = "Use vector ops ({.code cumsum}, {.code +}, {.code *}, {.code exp}) instead of index assignment.",
                        "i" = "For loops with index assignment: add \"'[<-' <- RTMB::ADoverload('[<-')\" at the top of {.fn intensity_fn}."))
@@ -333,12 +332,12 @@ validate_custom_process <- function(process, test_theta = NULL) {
   fn_val <- obj$fn()
   gr_val <- obj$gr()
   if (!is.finite(fn_val))
-    cli::cli_abort(c("Custom process `{process@name}` objective is not finite at test_theta.",
+    cli::cli_abort(c("Custom epidemic `{epidemic@name}` objective is not finite at test_theta.",
                      "i" = "Check for log(0), division by zero, or NaN in {.fn intensity_fn}."))
   if (!all(is.finite(gr_val)))
-    cli::cli_abort(c("Custom process `{process@name}` gradient contains non-finite values.",
+    cli::cli_abort(c("Custom epidemic `{epidemic@name}` gradient contains non-finite values.",
                      "i" = "Avoid {.code if}/branching on parameter values and {.code pmax}/{.code pmin} on AD types."))
 
-  cli::cli_alert_success("Custom process `{process@name}` passes RTMB traceability check.")
-  invisible(process)
+  cli::cli_alert_success("Custom epidemic `{epidemic@name}` passes RTMB traceability check.")
+  invisible(epidemic)
 }

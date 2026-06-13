@@ -6,7 +6,6 @@
 \usage{
 custom_delay(
   cdf_factory,
-  n_params,
   priors = list(),
   name = "Custom",
   param_names = NULL,
@@ -27,20 +26,20 @@ All three functions must be written using RTMB-traceable operations
 (\code{+}, \code{-}, \code{*}, \code{/}, \code{exp}, \code{log}, \code{pnorm}, \code{pgamma}, etc.) — no
 \code{if}/\code{ifelse} on parameter values, no \code{pmax}/\code{pmin} on AD types.}
 
-\item{n_params}{Integer number of parameters that \code{cdf_factory} expects.}
-
-\item{priors}{A list of length \code{n_params}.  Each element is either a
-\code{prior_class} object (free parameter, assigned that prior) or a length-1
-numeric (parameter is fixed to that value and not estimated).}
+\item{priors}{A list with one element per parameter \code{cdf_factory} expects.
+Each element is either a \code{prior_class} object (free parameter, assigned that
+prior) or a length-1 numeric (parameter is fixed to that value and not
+estimated).  The number of parameters is inferred from the length of this
+list (or from \code{param_names} / \code{inits} if \code{priors} is omitted).}
 
 \item{name}{A display name for the distribution (used in print output).}
 
-\item{param_names}{Optional character vector of length \code{n_params} naming each
-parameter (used in diagnostics).}
+\item{param_names}{Optional character vector naming each parameter (used in
+diagnostics); its length sets the number of parameters if \code{priors} is empty.}
 
-\item{inits}{Numeric vector of length \code{n_params} with initial values for the
-\strong{free} parameters (on the unconstrained scale passed to \code{cdf_factory}).
-Defaults to zeros.}
+\item{inits}{Numeric vector of initial values for the parameters (on the
+unconstrained scale passed to \code{cdf_factory}); its length sets the number of
+parameters if \code{priors} and \code{param_names} are empty.  Defaults to zeros.}
 
 \item{num_delay_seasons}{Number of periodic delay seasons.  Default 1.}
 
@@ -84,7 +83,6 @@ weibull_cdf_factory <- function(theta) {
 }
 custom_delay(
   cdf_factory  = weibull_cdf_factory,
-  n_params     = 2L,
   priors       = list(normal_prior(0, 1), normal_prior(log(7), 1)),
   name         = "Weibull",
   param_names  = c("log_shape", "log_scale"),

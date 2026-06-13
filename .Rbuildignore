@@ -18,3 +18,4 @@
 ^docs$
 ^codecov\.yml$
 ^CUSTOM_COMPONENTS_PLAN\.md$
+^REVISION_CONFIRMATION_MODEL\.md$

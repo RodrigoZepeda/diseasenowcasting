@@ -259,16 +259,17 @@ custom_delay_class <- S7::new_class(
 #'   All three functions must be written using RTMB-traceable operations
 #'   (`+`, `-`, `*`, `/`, `exp`, `log`, `pnorm`, `pgamma`, etc.) — no
 #'   `if`/`ifelse` on parameter values, no `pmax`/`pmin` on AD types.
-#' @param n_params Integer number of parameters that `cdf_factory` expects.
-#' @param priors A list of length `n_params`.  Each element is either a
-#'   `prior_class` object (free parameter, assigned that prior) or a length-1
-#'   numeric (parameter is fixed to that value and not estimated).
+#' @param priors A list with one element per parameter `cdf_factory` expects.
+#'   Each element is either a `prior_class` object (free parameter, assigned that
+#'   prior) or a length-1 numeric (parameter is fixed to that value and not
+#'   estimated).  The number of parameters is inferred from the length of this
+#'   list (or from `param_names` / `inits` if `priors` is omitted).
 #' @param name A display name for the distribution (used in print output).
-#' @param param_names Optional character vector of length `n_params` naming each
-#'   parameter (used in diagnostics).
-#' @param inits Numeric vector of length `n_params` with initial values for the
-#'   **free** parameters (on the unconstrained scale passed to `cdf_factory`).
-#'   Defaults to zeros.
+#' @param param_names Optional character vector naming each parameter (used in
+#'   diagnostics); its length sets the number of parameters if `priors` is empty.
+#' @param inits Numeric vector of initial values for the parameters (on the
+#'   unconstrained scale passed to `cdf_factory`); its length sets the number of
+#'   parameters if `priors` and `param_names` are empty.  Defaults to zeros.
 #' @param num_delay_seasons Number of periodic delay seasons.  Default 1.
 #' @param season_distribution Prior for the delay-season effects.
 #'
@@ -300,7 +301,6 @@ custom_delay_class <- S7::new_class(
 #' }
 #' custom_delay(
 #'   cdf_factory  = weibull_cdf_factory,
-#'   n_params     = 2L,
 #'   priors       = list(normal_prior(0, 1), normal_prior(log(7), 1)),
 #'   name         = "Weibull",
 #'   param_names  = c("log_shape", "log_scale"),
@@ -309,18 +309,20 @@ custom_delay_class <- S7::new_class(
 #'
 #' @seealso [validate_custom_delay()], [delay_process]
 #' @export
-custom_delay <- function(cdf_factory, n_params, priors = list(),
+custom_delay <- function(cdf_factory, priors = list(),
                          name = "Custom", param_names = NULL,
                          inits = NULL,
                          num_delay_seasons = 1L,
                          season_distribution = std_normal_prior()) {
+  n_params <- .infer_n_params(priors, param_names, inits)
+  # The class constructor fills any empty argument to length `n_params`.
   custom_delay_class(
     cdf_factory         = cdf_factory,
-    n_params            = as.integer(n_params),
-    priors              = if (length(priors) == 0) vector("list", n_params) else priors,
+    n_params            = n_params,
+    priors              = priors,
     name                = name,
-    param_names         = param_names %||% paste0("param_", seq_len(n_params)),
-    inits               = inits %||% rep(0.0, n_params),
+    param_names         = param_names %||% character(0),
+    inits               = inits %||% numeric(0),
     num_delay_seasons   = num_delay_seasons,
     season_distribution = season_distribution
   )
@@ -347,7 +349,7 @@ custom_delay <- function(cdf_factory, n_params, priors = list(),
 #'        log_cdf      = function(d) log(1 - exp(-(d / scale)^shape) + 1e-300),
 #'        log_survival = function(d) -(d / scale)^shape)
 #' }
-#' dly <- custom_delay(weibull_cdf_factory, 2L,
+#' dly <- custom_delay(weibull_cdf_factory,
 #'                     priors = list(normal_prior(0, 1), normal_prior(log(7), 1)),
 #'                     name = "Weibull", inits = c(0, log(7)))
 #' validate_custom_delay(dly)

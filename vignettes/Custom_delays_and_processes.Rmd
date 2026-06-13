@@ -1,11 +1,12 @@
 ---
 title: "Custom Delays and Epidemic Processes"
 author: "Rodrigo Zepeda-Tello"
-output: rmarkdown::html_vignette
+output: 
+  rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Custom Delays and Epidemic Processes}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
 ---
 
 ```{r setup, include=FALSE}
@@ -18,50 +19,80 @@ knitr::opts_chunk$set(
   collapse   = TRUE,
   comment    = "#>"
 )
+# Code-folding for plotting chunks (chunks tagged `fold = TRUE`):
+#   * HTML  -> the source is wrapped in a collapsed <details> block (closed by
+#     default), so readers compare the plots without wading through ggplot code;
+#   * PDF    -> the plotting source is omitted entirely (only the figure shows).
+# The CUSTOM code (factories / intensity functions) is never folded — that is
+# the part that matters.
+local({
+  default_source <- knitr::knit_hooks$get("source")
+  knitr::knit_hooks$set(source = function(x, options) {
+    out <- default_source(x, options)
+    if (!isTRUE(options$fold)) return(out)
+    if (knitr::is_html_output())
+      paste0("<details><summary>Show plotting code</summary>\n\n", out, "\n\n</details>")
+    else ""
+  })
+})
 ```
 
-`diseasenowcasting` ships four built-in reporting-delay families (LogNormal, Gamma, Generalized Gamma, Dirichlet) and three epidemic processes (HSGP, AR(1), SIR). This vignette shows how to go beyond the menu and supply **your own** delay distribution or **your own** epidemic model, by writing a short R function. No knowledge of the package internals is needed — only basic R and the model you have in mind.
+`diseasenowcasting` is a **model-agnostic nowcasting framework**. A nowcast here is built from three interchangeable pieces — a **likelihood**, an **epidemic process**, and a **reporting-delay distribution** — and you can either pick a built-in for each or **supply your own**. Most tools (e.g. `epinowcast`, `baselinenowcast`) give you a fixed model; here the model is yours to assemble or extend.
 
-## How custom components work (and the one rule you must follow)
+This vignette shows the two extension points, each on a **real dataset**:
 
-To fit a model, the package needs the *gradient* (the vector of partial derivatives) of the likelihood with respect to your parameters. It obtains this gradient **automatically** from your function — a technique called *automatic differentiation*, provided by the [RTMB](https://github.com/kaskr/RTMB) package. You never compute a derivative yourself.
+- a **custom delay distribution** (a Weibull), fit to weekly **dengue** surveillance (`tbl.now::denguedat`); and
+- a **custom epidemic process** (a hand-written SIR model), fit to the 2022 **mpox** outbreak (`tbl.now::mpoxdat`).
 
-The price for this convenience is a single rule:
+In both cases the only code that really matters is the short function *you* write; everything else (delay censoring, the count likelihood, strata, drawing the nowcast) is shared machinery you get for free.
 
-> **Your function must be written so RTMB can differentiate it.** In practice this means using only ordinary arithmetic and a short list of math functions, and avoiding anything that "branches" on the value of a parameter.
+## The one rule, and why `library(RTMB)` is needed
 
-Concretely:
+To fit, the package needs the gradient of the likelihood with respect to your parameters. It gets this **automatically** (automatic differentiation, via [RTMB](https://github.com/kaskr/RTMB)) — you never differentiate anything by hand. The price is a single rule:
 
-**Allowed:** `+`, `-`, `*`, `/`, `exp`, `log`, `sqrt`, `abs`, `sum`, `cumsum`, `pnorm`, `pgamma`, `lgamma`, matrix arithmetic, and `for` loops whose **length is fixed** (does not depend on a parameter).
+> **Write your function in plain arithmetic that RTMB can differentiate.** Use `+`, `-`, `*`, `/`, `exp`, `log`, `sqrt`, `abs`, `sum`, `cumsum`, `pnorm`, `pgamma`, and fixed-length `for` loops. Avoid `if`/`ifelse` on a *parameter value*, `pmax`/`pmin` on parameters (use `(x + abs(x))/2` for `pmax(x, 0)`), random draws, and external solvers.
 
-**Not allowed:** `if` / `ifelse` that test the *value* of a parameter, `pmax` / `pmin` on parameters (use the identity `pmax(x, 0) = (x + abs(x)) / 2` instead), random number draws, calls to external solvers (`deSolve`, optimisers), or any non-smooth function.
-
-Each constructor comes with a **validator** (`validate_custom_delay()`, `validate_custom_process()`) that checks this rule for you *before* you fit — always run it first; it turns a cryptic failure deep in the optimiser into a clear message.
-
-## Setup
+Each extension point ships a **validator** (`validate_custom_delay()`, `validate_custom_epidemic()`) — run it first; it tapes your function and reports a clear message instead of a cryptic failure inside the optimiser.
 
 ```{r load}
 library(diseasenowcasting)
-library(RTMB)        # REQUIRED for custom components — see note below
+library(tbl.now)
+library(RTMB)        # REQUIRED for custom components (see note below)
 library(ggplot2)
-set.seed(2025)
 ```
 
-> **Why `library(RTMB)`?** The built-in models work with just `library(diseasenowcasting)`. But a *custom* function you write lives in your own workspace, and its arithmetic (`+`, `exp`, `cumsum`, …) only connects to RTMB's auto-differentiation machinery when RTMB is attached to your session. The package keeps RTMB out of the way by default (so it does not silently replace functions like `dnorm`), so **you must run `library(RTMB)` yourself whenever you use `custom_delay()` or `custom_process()`.** If you forget, the validator will remind you.
+> **Why `library(RTMB)`?** Built-in models work with just `library(diseasenowcasting)`. A *custom* function you write lives in your own workspace, and its arithmetic only connects to RTMB's machinery when RTMB is attached. The package keeps RTMB out of the way by default, so **attach it yourself whenever you use `custom_delay()` or `custom_epidemic()`.** If you forget, the validator reminds you.
 
-## Example 1 — Weibull delay via `custom_delay()`
+---
 
-**What you must provide.** A *CDF factory*: a function of a parameter vector `theta` that returns a list of three functions of a delay `d`:
+# Part 1 — A custom delay: Weibull, on dengue
 
-| Element | Meaning | Formula for the Weibull |
+## The data
+
+`denguedat` is a weekly dengue line-list from Colombia (`onset_week`, `report_week`). We take one season and build a `tbl_now`, which carries the two time indices the nowcast needs:
+
+```{r dengue-data}
+dengue_season <- subset(denguedat,
+                        onset_week >= as.Date("1990-06-01") &
+                        onset_week <= as.Date("1991-06-01"))
+dengue_tn <- tbl_now(dengue_season,
+                     event_date  = onset_week,
+                     report_date = report_week,
+                     data_type   = "linelist",
+                     verbose     = FALSE)
+```
+
+## The custom part — a Weibull CDF factory
+
+**This is the only code that matters here.** A custom delay is a *factory*: a function of a parameter vector `theta` returning three functions of a delay `d`.
+
+| Element | Meaning | Weibull form |
 |---|---|---|
 | `cdf(d)` | $F(d) = \Pr(\text{delay} \le d)$ | $1 - \exp(-(d/\lambda)^k)$ |
-| `log_cdf(d)` | $\log F(d)$ | $\log\!\left(1 - \exp(-(d/\lambda)^k)\right)$ |
+| `log_cdf(d)` | $\log F(d)$ | $\log\!\big(1 - \exp(-(d/\lambda)^k)\big)$ |
 | `log_survival(d)` | $\log(1 - F(d))$ | $-(d/\lambda)^k$ |
 
-The package supplies `log_cdf` and `log_survival` separately (rather than just `cdf`) because each is numerically stable in a different regime — `log_survival` stays accurate far out in the tail where `1 - F(d)` underflows to zero.
-
-The Weibull CDF is $F(d) = 1 - \exp(-(d/\lambda)^k)$ with shape $k$ and scale $\lambda$. We work on the **log scale** (`theta[1] = log k`, `theta[2] = log \lambda`) so the parameters are unconstrained — RTMB optimises over the whole real line, and `exp()` maps back to positive values:
+`log_cdf` and `log_survival` are supplied separately because each stays numerically stable in a different regime (`log_survival` keeps its accuracy far out in the tail). We work on the **log scale** (`theta[1] = log k`, `theta[2] = log λ`) so the optimiser is unconstrained.
 
 ```{r weibull-factory}
 weibull_cdf_factory <- function(theta) {
@@ -69,543 +100,264 @@ weibull_cdf_factory <- function(theta) {
   scale <- exp(theta[2])   # lambda > 0
   list(
     cdf          = function(d) 1 - exp(-(d / scale)^shape),
-    log_cdf      = function(d) log(1 - exp(-(d / scale)^shape)),
+    log_cdf      = function(d) log(1 - exp(-(d / scale)^shape) + 1e-300),
     log_survival = function(d) -(d / scale)^shape
   )
 }
 ```
 
-We then wrap it in `custom_delay()`. Each argument:
+Wrap it in `custom_delay()`. The arguments:
 
 - **`cdf_factory`** — the function above.
-- **`n_params`** — how many entries `theta` has (here 2: log-shape and log-scale).
-- **`priors`** — a list of length `n_params`. Each entry is **either** a prior (e.g. `normal_prior(0, 1)`) for a parameter to be *estimated*, **or** a single number to *fix* that parameter at a constant. The order must match `theta`.
-- **`name`**, **`param_names`** — labels used in printing and diagnostics.
-- **`inits`** — starting values for the optimiser, on the same (unconstrained) scale as `theta`.
+- **`priors`** — a list with one entry per parameter, in `theta` order. Each entry is **either** a prior (a free parameter, estimated) **or** a single number (fixed). The number of parameters is read off this list, so there is no `n_params` argument.
+- **`name`**, **`param_names`**, **`inits`** — labels and (unconstrained-scale) starting values.
 
 ```{r weibull-delay}
-weibull_delay_spec <- custom_delay(
+weibull_delay <- custom_delay(
   cdf_factory = weibull_cdf_factory,
-  n_params    = 2L,
-  priors      = list(
-    normal_prior(0, 1),          # log_shape ~ N(0,1)
-    normal_prior(log(7), 1)      # log_scale ~ N(log 7, 1)
-  ),
+  priors      = list(normal_prior(0, 1), normal_prior(log(3), 1)),
   name        = "Weibull",
   param_names = c("log_shape", "log_scale"),
-  inits       = c(0, log(7))
+  inits       = c(0, log(3))
 )
+validate_custom_delay(weibull_delay)
 ```
 
-Use `validate_custom_delay()` to confirm the factory is differentiable before fitting. It test-runs your factory through RTMB and checks the result and its gradient are finite, reporting a clear message on success or failure:
+## Fit it (and a built-in to compare against)
 
-> **Note.** The check is deliberately conservative: a few genuinely AD-safe functions may not pass. If you are confident your factory follows the rule above, a failed check is not necessarily fatal — but for most users it catches real mistakes early.
+The Generalized Gamma reduces **exactly** to a Weibull when its shape parameter `Q = 1`, so `generalized_gamma_delay(Q = 1)` is a perfect built-in cross-check for our custom factory:
 
-```{r validate}
-validate_custom_delay(weibull_delay_spec)
+```{r dengue-fit}
+nc_weibull  <- nowcast(dengue_tn,
+                       model(nb_likelihood(), ar1_epidemic(), weibull_delay),
+                       type = "one_stage", temporal_effects = "none", n_draws = 300)
+
+nc_gengamma <- nowcast(dengue_tn,
+                       model(nb_likelihood(), ar1_epidemic(), generalized_gamma_delay(Q = 1)),
+                       type = "one_stage", temporal_effects = "none", n_draws = 300)
 ```
 
-## Preparing the data
+The fitted custom parameters live in `fit$parList$custom_delay_params`:
 
-We generate synthetic case data with a known Weibull(shape = 2, scale = 7) delay so
-the fitted parameters are verifiable. For these low-level examples we feed the model a plain matrix `m` with **three columns** — `(event_time, count, delay)` — one row per (event-time, delay) cell: how many cases occurred at `event_time` and were reported `delay` time-units later. (In normal use you would instead build a `tbl_now` from a line-list and call `nowcast()`; here we use the matrix API to keep the example self-contained.)
-
-```{r data-prep}
-n_times     <- 40L
-true_shape  <- 2.0
-true_scale  <- 7.0
-true_lambda <- 80 * exp(0.04 * seq_len(n_times))  # growing epidemic
-
-rows <- list()
-for (t in seq_len(n_times)) {
-  n_cases <- rpois(1, true_lambda[t])
-  if (n_cases == 0L) next
-  delays      <- pmin(ceiling(rweibull(n_cases, shape = true_shape, scale = true_scale)), 21L)
-  report_t    <- t + delays
-  keep        <- report_t <= n_times
-  if (!any(keep)) next
-  delays_kept <- delays[keep]
-  agg <- tapply(rep(1L, sum(keep)), delays_kept, sum)
-  for (d in names(agg)) {
-    rows[[length(rows) + 1L]] <- c(event_time = t, count = agg[[d]], delay = as.integer(d))
-  }
-}
-m_mat <- do.call(rbind, rows)  # columns: event_time, count, delay
+```{r dengue-params}
+theta_w <- as.numeric(nc_weibull@fits[[1]]$parList$custom_delay_params)
+cat("Custom Weibull delay:  shape =", round(exp(theta_w[1]), 2),
+    " scale =", round(exp(theta_w[2]), 2), "weeks\n")
+# GenGamma(Q=1) is a Weibull with shape = 1/sigma, scale = exp(mu):
+mu_g  <- nc_gengamma@fits[[1]]$reconstruct$delay_mu
+sig_g <- nc_gengamma@fits[[1]]$reconstruct$delay_sigma
+cat("Built-in GenGamma(Q=1): shape =", round(1 / sig_g, 2),
+    " scale =", round(exp(mu_g), 2), "weeks\n")
 ```
 
-## Fitting with the custom Weibull delay
+The two should nearly coincide — confirming the custom factory matches a known distribution:
 
-We build a model, pass `weibull_delay_spec` as the delay, and call `fit()` directly
-on the prepared data (no `tbl_now` required for the low-level API):
+```{r dengue-compare-plot, fig.cap="Fitted reporting-delay distribution: custom Weibull vs. the built-in GenGamma(Q=1), which is algebraically the same Weibull.", fold=TRUE}
+delay_grid <- seq(0.5, 20, by = 0.5)
+pmf <- function(shape, scale)
+  stats::pweibull(delay_grid + 0.5, shape, scale) -
+  stats::pweibull(pmax(0, delay_grid - 0.5), shape, scale)
 
-```{r fit-weibull}
-mod_weibull <- model(
-  likelihood = nb_likelihood(),
-  epidemic   = ar1_epidemic(),
-  delay      = weibull_delay_spec
+compare_df <- rbind(
+  data.frame(delay = delay_grid, p = pmf(exp(theta_w[1]), exp(theta_w[2])), model = "Custom Weibull"),
+  data.frame(delay = delay_grid, p = pmf(1 / sig_g, exp(mu_g)),            model = "GenGamma (Q=1)")
 )
-
-data_weibull  <- prepare_data(mod_weibull, m = m_mat, max_time = n_times)
-priors_weibull <- default_priors(mod_weibull, data_weibull)
-fit_w <- fit(mod_weibull, data_weibull, priors_weibull)
-```
-
-The custom parameters live in `fit$parList$custom_delay_params`:
-
-```{r weibull-params}
-theta_w <- as.numeric(fit_w$parList$custom_delay_params)
-
-cat("Fitted Weibull (true: shape = 2, scale = 7):\n")
-cat("  shape =", round(exp(theta_w[1]), 3), "\n")
-cat("  scale =", round(exp(theta_w[2]), 3), "days\n")
-```
-
-## Example 2 — Generalized Gamma with Q fixed to 1
-
-The Generalized Gamma family (built-in family 3) reduces to **Weibull** exactly when its
-shape parameter $Q = 1$.  Fixing $Q = 1$ via `generalized_gamma_delay(Q = 1)` therefore
-fits the same distribution — a useful sanity check for the custom implementation.
-
-```{r fit-gengamma}
-mod_gengamma <- model(
-  likelihood = nb_likelihood(),
-  epidemic   = ar1_epidemic(),
-  delay      = generalized_gamma_delay(Q = 1)   # Q = 1 => Weibull
-)
-
-data_gengamma   <- prepare_data(mod_gengamma, m = m_mat, max_time = n_times)
-priors_gengamma <- default_priors(mod_gengamma, data_gengamma)
-fit_g <- fit(mod_gengamma, data_gengamma, priors_gengamma)
-```
-
-In the GenGamma (flexsurv) parametrisation with $Q = 1$:
-
-$$F(d) = \mathrm{pgamma}\!\left(\exp\!\left(\frac{\log d - \mu}{\sigma}\right),\; 1,\; 1\right)
-       = 1 - \exp\!\left(-e^{(\log d - \mu)/\sigma}\right)$$
-
-Matching to the Weibull $1 - \exp(-(d/\lambda)^k)$ gives $\mu = \log\lambda$ and
-$\sigma = 1/k$.
-
-```{r gengamma-params}
-mu_g   <- fit_g$reconstruct$delay_mu
-sig_g  <- fit_g$reconstruct$delay_sigma
-
-cat("Fitted GenGamma (Q=1), converted to Weibull (true: shape = 2, scale = 7):\n")
-cat("  shape =", round(1 / sig_g, 3), "\n")
-cat("  scale =", round(exp(mu_g), 3), "days\n")
-```
-
-## Comparing the two fits
-
-Both approaches model the same distribution.  Their delay densities should overlap closely:
-
-```{r compare-plot, fig.cap="Fitted delay distributions: custom Weibull vs. built-in GenGamma(Q=1). Because Q=1 is exactly the Weibull distribution, the two curves should nearly coincide."}
-delay_grid <- seq(0.5, 30, by = 0.5)
-
-# Custom Weibull PMF via pweibull (base R)
-shape_w <- exp(theta_w[1])
-scale_w <- exp(theta_w[2])
-pmf_w <- stats::pweibull(delay_grid + 0.5, shape = shape_w, scale = scale_w) -
-         stats::pweibull(pmax(0, delay_grid - 0.5), shape = shape_w, scale = scale_w)
-
-# GenGamma(Q=1) is Weibull with shape = 1/sigma, scale = exp(mu)
-shape_g <- 1 / sig_g
-scale_g <- exp(mu_g)
-pmf_g <- stats::pweibull(delay_grid + 0.5, shape = shape_g, scale = scale_g) -
-         stats::pweibull(pmax(0, delay_grid - 0.5), shape = shape_g, scale = scale_g)
-
-compare_df <- data.frame(
-  delay   = rep(delay_grid, 2),
-  density = c(pmf_w, pmf_g),
-  model   = rep(c("Custom Weibull", "GenGamma (Q=1)"), each = length(delay_grid))
-)
-
-ggplot(compare_df, aes(x = delay, y = density, colour = model, linetype = model)) +
+ggplot(compare_df, aes(delay, p, colour = model, linetype = model)) +
   geom_line(linewidth = 1.1) +
   scale_colour_manual(values = c("Custom Weibull" = "#2166AC", "GenGamma (Q=1)" = "#D6604D")) +
-  labs(x = "Reporting delay (days)", y = "Probability mass",
-       title = "Custom Weibull vs. built-in GenGamma (Q = 1)",
-       colour = NULL, linetype = NULL) +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "bottom")
+  labs(x = "Reporting delay (weeks)", y = "Probability mass",
+       title = "Custom Weibull vs. built-in GenGamma(Q = 1)", colour = NULL, linetype = NULL) +
+  theme_minimal(base_size = 13) + theme(legend.position = "bottom")
 ```
 
-The two curves overlap because $Q = 1$ in the GenGamma parametrisation is algebraically identical to the Weibull.  Any small difference reflects numerical precision and the different prior specifications.
+And the nowcast itself, using the custom delay:
 
-## Delay distribution comparison
-
-The two fitted delay densities should nearly coincide because they model the
-same distribution:
-
-```{r nowcast-compare, fig.height = 4, fig.cap="Fitted delay distributions: custom Weibull vs. built-in GenGamma(Q=1). The two curves overlap because Q=1 is exactly the Weibull distribution."}
-delay_grid <- seq(0.5, 25, by = 0.5)
-
-# Custom Weibull PMF
-shape_w <- exp(theta_w[1])
-scale_w <- exp(theta_w[2])
-pmf_w2  <- stats::pweibull(delay_grid + 0.5, shape = shape_w, scale = scale_w) -
-            stats::pweibull(pmax(0, delay_grid - 0.5), shape = shape_w, scale = scale_w)
-
-# GenGamma(Q=1) converts to Weibull: shape = 1/sigma, scale = exp(mu)
-pmf_g2  <- stats::pweibull(delay_grid + 0.5, shape = 1/sig_g, scale = exp(mu_g)) -
-            stats::pweibull(pmax(0, delay_grid - 0.5), shape = 1/sig_g, scale = exp(mu_g))
-
-# True distribution
-pmf_true <- stats::pweibull(delay_grid + 0.5, shape = true_shape, scale = true_scale) -
-             stats::pweibull(pmax(0, delay_grid - 0.5), shape = true_shape, scale = true_scale)
-
-compare_df2 <- data.frame(
-  delay   = rep(delay_grid, 3),
-  density = c(pmf_w2, pmf_g2, pmf_true),
-  model   = rep(c("Custom Weibull", "GenGamma (Q=1)", "True Weibull(2,7)"), each = length(delay_grid))
-)
-
-ggplot(compare_df2, aes(x = delay, y = density, colour = model, linetype = model)) +
-  geom_line(linewidth = 1.1) +
-  scale_colour_manual(
-    values = c("Custom Weibull" = "#2166AC", "GenGamma (Q=1)" = "#D6604D",
-               "True Weibull(2,7)" = "black")) +
-  scale_linetype_manual(
-    values = c("Custom Weibull" = "solid", "GenGamma (Q=1)" = "dashed",
-               "True Weibull(2,7)" = "dotted")) +
-  labs(x = "Reporting delay (days)", y = "Probability mass",
-       title = "Custom Weibull vs. GenGamma (Q=1) vs. truth",
-       colour = NULL, linetype = NULL) +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "bottom")
-```
-
-## Tips for writing your own delay factory
-
-1. **Parameterise on the unconstrained scale.** Use `exp(theta[i])` for strictly positive parameters, `plogis(theta[i])` for bounded-[0,1] parameters.  The `inits` argument should be on the same unconstrained scale.
-
-2. **Guard against `log(0)`.** Add a small epsilon: `log(cdf_value + 1e-300)`.  Likewise for `log_survival`.
-
-3. **`log_survival` for large delays.** The discretised delay log-likelihood uses `log_survival` for observations beyond the empirical median, where `1 - F` is close to zero and numerically stable.  For the Weibull, `log(1 - F(d)) = -(d/lambda)^k` is available in closed form.
-
-4. **Validate before fitting.** `validate_custom_delay()` test-tapes the factory and checks that both `fn()` and `gr()` are finite at the init values.
-
-5. **Fix parameters.** Pass a length-1 numeric in `priors` to fix that parameter:
-   ```r
-   custom_delay(factory, n_params = 2L,
-                priors = list(normal_prior(0, 1), 2.0),  # scale fixed at 2
-                ...)
-   ```
-
----
-
-# Custom Epidemic Processes
-
-The framework is **epidemic-process agnostic**: the reporting-delay model only ever needs one thing from the epidemic side — the log expected-incidence trajectory `log_mean[t, s]` for each event-time `t` and stratum `s`.  How that trajectory is generated does not matter: it can come from a regression, a discrete recursion, an ODE model, or anything else.
-
-`custom_process()` gives you a single seam to plug in any such generator.
-
-## The interface: `intensity_fn(theta) → log_mean[T × S]`
-
-**What you must provide.** A single function — call it `intensity_fn` — that:
-
-1. Takes a numeric parameter vector `theta`.
-2. Returns a numeric **matrix** with one row per event-time (`n_time` rows) and one column per stratum (`n_strata` columns). Each entry is the **log of the expected number of cases** at that time and stratum, i.e. $\log \lambda_{t,s}$.
-
-That is the *whole* contract. Everything downstream — the reporting-delay model, censoring, the count likelihood — is shared and handled for you. You only describe how the expected case curve is generated. (If you have a single, unstratified series, the matrix has one column: `matrix(log_lambda, n_time, 1L)`.)
-
-Note: return the **entire** log-mean, including any baseline level — unlike the built-in HSGP/AR(1), which add a trend on top of a separate intercept, a custom process owns the full curve.
-
-The function must follow the same AD rule as a delay factory, with one extra wrinkle about filling a vector inside a loop:
-
-**AD-safe operations:** `+`, `-`, `*`, `/`, `exp`, `log`, `sqrt`, `abs`, `sum`, `cumsum`, scalar/matrix arithmetic, fixed-length `for` loops.
-
-**Filling a vector inside a `for` loop.** If you build a result by assigning into a pre-allocated vector (`lambda[t] <- ...`), add this one line at the **top** of `intensity_fn`:
-```r
-`[<-` <- RTMB::ADoverload("[<-")
-```
-This makes index-assignment differentiable. If you can avoid the loop with **`cumsum()`** (as in the random walk below) you don't need it at all — prefer that when you can.
-
-## Example 1 — Pure random walk
-
-A pure random walk on log-incidence:
-
-$$\log \lambda_t = \log \lambda_{t-1} + \sigma \cdot \varepsilon_t, \quad \varepsilon_t \sim \mathcal{N}(0,1)$$
-
-This differs structurally from the built-in AR(1): there is no mean-reversion parameter $\phi$ — the trajectory drifts freely.  The parameter vector is `(log_mu0, log_sigma, eps_1, …, eps_T)`.
-
-The key: we use `cumsum()` so no index assignment is needed.
-
-```{r rw-setup}
-# Simulate a random-walk epidemic
-set.seed(2024)
-n_times     <- 40L
-true_mu0    <- 3.0    # log initial incidence
-true_sigma  <- 0.15   # step size on log scale
-log_lambda_true <- true_mu0 + cumsum(c(0, rnorm(n_times - 1L, 0, true_sigma)))
-lambda_true <- exp(log_lambda_true)
-
-# Generate observations with a LogNormal(log 5, 0.7) reporting delay
-event_idx <- rep(seq_len(n_times), rpois(n_times, lambda_true))
-delays_rw <- pmax(1L, round(rlnorm(length(event_idx), meanlog = log(5), sdlog = 0.7)))
-m_rw <- cbind(event_idx, 1L, delays_rw)
-
-cat("RW epidemic: mean incidence", round(mean(lambda_true), 1),
-    "| range", paste(round(range(lambda_true), 1), collapse = "–"), "\n")
-```
-
-Now define `intensity_fn` using `cumsum()`:
-
-```{r rw-process}
-# n_times is captured from the environment above — no need to pass it
-rw_intensity_fn <- function(theta) {
-  log_mu0  <- theta[1]
-  sigma_rw <- exp(theta[2])
-  eps      <- theta[3:(2L + n_times)]          # n_times innovations
-  log_mean <- log_mu0 + cumsum(sigma_rw * eps) # cumsum: no [<- needed
-  matrix(log_mean, n_times, 1L)
-}
-
-# n_params = 2 structural + n_times innovations
-rw_proc <- custom_process(
-  intensity_fn = rw_intensity_fn,
-  n_params     = 2L + n_times,
-  priors       = c(
-    list(normal_prior(3, 1)),          # log_mu0
-    list(normal_prior(-2, 0.5)),       # log_sigma_rw (log scale)
-    rep(list(std_normal_prior()), n_times)   # innovations eps_1 ... eps_T
-  ),
-  name        = "RandomWalk",
-  param_names = c("log_mu0", "log_sigma", paste0("eps_", seq_len(n_times))),
-  inits       = c(3, log(0.15), rep(0, n_times))
-)
-validate_custom_process(rw_proc)
-```
-
-The `custom_process()` arguments mirror `custom_delay()`:
-
-- **`intensity_fn`** — the function above.
-- **`n_params`** — the length of `theta`. Here it is `2 + n_times`: two structural parameters (`log_mu0`, `log_sigma`) **plus one innovation $\varepsilon_t$ per time point**. The random-walk path *is* its innovations, so the model estimates `n_time` of them.
-- **`priors`** — a list of length `n_params`, in the same order as `theta`; each entry is a prior (to estimate) or a number (to fix). Here the two structural parameters get informative priors and every innovation gets `std_normal_prior()` (the standard random-walk assumption $\varepsilon_t \sim \mathcal N(0,1)$).
-- **`name`**, **`param_names`**, **`inits`** — labels and optimiser starting values, as before.
-
-> **Getting `n_times` right.** Because the innovation count depends on the length of your series, you need `n_time` *before* building the process. The simplest way is to let `prepare_data()` tell you, using any built-in process as a placeholder:
->
-> ```r
-> n_times <- prepare_data(
->   model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
->   m = your_data
-> )$max_time
-> ```
->
-> Then build `custom_process()` with `n_params = 2L + n_times` and fit on the same data.
-
-### Fitting
-
-```{r rw-fit}
-mod_rw <- model(nb_likelihood(), rw_proc, lognormal_delay())
-dat_rw <- prepare_data(mod_rw, m = m_rw, max_time = n_times)
-pr_rw  <- default_priors(mod_rw, dat_rw)
-fit_rw <- fit(mod_rw, dat_rw, pr_rw)
-```
-
-Compare against the HSGP (built-in flexible smoother) on the same data:
-
-```{r hsgp-fit-rw}
-mod_hsgp  <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
-dat_hsgp  <- prepare_data(mod_hsgp, m = m_rw, max_time = n_times)
-pr_hsgp   <- default_priors(mod_hsgp, dat_hsgp)
-fit_hsgp  <- fit(mod_hsgp, dat_hsgp, pr_hsgp)
-```
-
-### Comparing the fits
-
-```{r rw-compare-plot, fig.height=4, fig.cap="Random walk vs. HSGP on the same data. Both recover the underlying trend; the custom random walk uses a simpler structural assumption."}
-# Reconstruct log_mean for both fits
-lm_rw   <- fit_rw$reconstruct$mu_safe
-lm_hsgp <- fit_hsgp$reconstruct$mu_safe
-
-plot_df <- data.frame(
-  t         = rep(seq_len(n_times), 3),
-  log_mean  = c(log_lambda_true, lm_rw[, 1], lm_hsgp[, 1]),
-  model     = rep(c("True RW", "Custom RW", "Built-in HSGP"), each = n_times)
-)
-
-ggplot(plot_df, aes(x = t, y = exp(log_mean), colour = model, linetype = model)) +
-  geom_line(linewidth = 1) +
-  scale_colour_manual(values = c("True RW" = "black",
-                                  "Custom RW" = "#2166AC",
-                                  "Built-in HSGP" = "#D6604D")) +
-  scale_linetype_manual(values = c("True RW" = "dotted",
-                                    "Custom RW" = "solid",
-                                    "Built-in HSGP" = "dashed")) +
-  labs(x = "Event time", y = "Expected incidence (lambda)",
-       title = "Custom random walk vs. built-in HSGP",
-       colour = NULL, linetype = NULL) +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "bottom")
+```{r dengue-nowcast-plot, fig.cap="Dengue nowcast with the custom Weibull delay (median + 50/90% intervals).", fold=TRUE}
+autoplot(predict(nc_weibull, seed = 1))
 ```
 
 ---
 
-## Example 2 — SIR ODE (hand-rolled Euler integration)
+# Part 2 — A custom epidemic: an SIR model, on mpox
 
-A compartmental SIR model:
+The epidemic side is just as pluggable. A custom epidemic is **one function** `intensity_fn(theta)` returning the log expected-incidence matrix `log_mean[n_time × n_strata]` — the *entire* curve, baseline included. How you generate it (regression, random walk, ODE, …) is up to you.
 
-$$\frac{dS}{dt} = -\beta S I / N, \quad \frac{dI}{dt} = \beta S I / N - \gamma I$$
+## The data
 
-with observed incidence $\lambda_t = \Delta S_t = \beta S_t I_t / N$ at each step.
+`mpoxdat` is daily count data from the 2022 US mpox outbreak. We pool the race strata into one series and build a `tbl_now`:
 
-We implement this as a **discrete-time Euler scheme** inside `intensity_fn`.  Because the loop uses index assignment, we add `'[<-' <- RTMB::ADoverload('[<-')` at the top of the function.
-
-Parameters: `(log_R0, log_gamma, log_I0)` — all on the log scale so they remain positive.
-
-```{r sir-data}
-# Simulate SIR epidemic
-set.seed(2024)
-N_pop <- 10000L; R0_sir <- 2.5; gamma_sir <- 0.1; I0_sir <- 5L
-S <- N_pop - I0_sir; I <- I0_sir
-n_sir <- 60L
-sir_incidence <- numeric(n_sir)
-for (t in seq_len(n_sir)) {
-  beta_val <- R0_sir * gamma_sir / N_pop
-  new_inf  <- beta_val * S * I
-  sir_incidence[t] <- max(new_inf, 0)
-  S <- S - new_inf; I <- I + new_inf - gamma_sir * I
-}
-# Observed counts
-sir_counts <- rpois(n_sir, sir_incidence)
-
-# Build m matrix (Poisson delay)
-event_idx_sir <- rep(seq_len(n_sir), sir_counts)
-delays_sir <- pmax(1L, rpois(length(event_idx_sir), lambda = 4))
-m_sir <- cbind(event_idx_sir, 1L, delays_sir)
-cat("SIR peak at t =", which.max(sir_counts), "| max counts =", max(sir_counts), "\n")
+```{r mpox-data}
+mpox_tn <- tbl_now(mpoxdat,
+                   event_date  = dx_date,
+                   report_date = dx_report_date,
+                   case_count  = n,
+                   data_type   = "count-incidence",
+                   verbose     = FALSE,
+                   now         = as.Date("2022/09/01"))
 ```
 
-```{r sir-process}
+The SIR loop runs over every event-time, so we need `max_time` (the number of event-times the model spans) **before** writing the function. `infer_max_time()` reads it off the data:
+
+```{r mpox-ntime}
+max_time <- infer_max_time(mpox_tn)
+```
+
+## The custom part — a hand-written SIR
+
+**This is the code that matters.** A discrete-time SIR: susceptibles `S` and infectious `I` evolve day by day, and the modelled incidence is the new infections `β·S·I/N`. The parameters `(R0, γ, I0)` are on the log scale. Because we fill `incidence` inside a `for` loop, we add the one-line `[<-` overload at the top so RTMB can differentiate the assignment.
+
+```{r sir-fn}
 sir_intensity_fn <- function(theta) {
-  # Must declare [<- overload at the top to enable loop-based vector building
-  '[<-' <- RTMB::ADoverload('[<-')
+  #Assigning in a for loop a vector requires this:
+  `[<-`     <- RTMB::ADoverload("[<-")         
+  
+  #We define R0, gamma and I0 as the parameters we are adjusting:
+  R0        <- exp(theta[1]); gamma <- exp(theta[2]); I0 <- exp(theta[3])
+  
+  #The total size of the epidemic is constant:
+  N         <- 1e5
+  
+  #And we define the initial values for S and I
+  S         <- N - I0; I <- I0
+  
+  #We define beta (for force of infection)
+  beta      <- R0 * gamma / N
+  
+  #Empty vector. Has to be instantiated in RTMB
+  incidence <- numeric(max_time)
 
-  R0_val  <- exp(theta[1])
-  gamma_r <- exp(theta[2])
-  I0_val  <- exp(theta[3])
-  N       <- 10000
+  #Only loops that don't depend on parameters are allowed.
+  #Here we loop through a constant (time) which is valid
+  for (t in seq_len(max_time)) {
 
-  S_t <- N - I0_val; I_t <- I0_val
-  incidence <- numeric(n_sir)   # pre-allocate; filled via [<- inside loop
-
-  for (t in seq_len(n_sir)) {
-    beta_t  <- R0_val * gamma_r / N
-    new_inf <- beta_t * S_t * I_t
+    new_inf      <-  beta * S * I
     incidence[t] <- new_inf
-    S_t <- S_t - new_inf
-    I_t <- I_t + new_inf - gamma_r * I_t
+
+    #Rest of the model
+    S <- S - new_inf
+    I <- I + new_inf - gamma * I
   }
-
-  # pmax-safe guard: (x + |x|)/2 replaces pmax(x, 0) for AD types
-  log_mean <- log((incidence + abs(incidence)) * 0.5 + 1e-8)
-  matrix(log_mean, n_sir, 1L)
+  # log of pmax(incidence, 0), AD-safe, guarding log(0):
+  matrix(log((incidence + abs(incidence)) * 0.5 + 1e-8), max_time, 1L)
 }
+```
 
-sir_proc <- custom_process(
+Wrap it in `custom_epidemic()` (same argument shape as `custom_delay()`; the three parameters are read off the `priors` list, so there is no `n_params` argument):
+
+```{r sir-epi}
+custom_sir_epidemic <- custom_epidemic(
   intensity_fn = sir_intensity_fn,
-  n_params     = 3L,
-  priors       = list(
-    normal_prior(log(2.5), 0.5),   # log_R0
-    normal_prior(log(0.1), 0.3),   # log_gamma
-    normal_prior(log(5),   1.0)    # log_I0
-  ),
-  name        = "SIR_ODE",
-  param_names = c("log_R0", "log_gamma", "log_I0"),
-  inits       = c(log(2), log(0.1), log(5))
+  priors       = list(normal_prior(log(1.5), 0.4),   # log R0
+                      normal_prior(log(0.1), 0.3),   # log gamma
+                      normal_prior(log(5),   1.0)),  # log I0
+  name         = "SIR",
+  param_names  = c("log_R0", "log_gamma", "log_I0"),
+  inits        = c(log(1.5), log(0.1), log(5))
 )
-validate_custom_process(sir_proc)
+validate_custom_epidemic(custom_sir_epidemic)
 ```
 
-### Fitting and comparison with the built-in SIR
+## Fit it
 
-```{r sir-fit}
-mod_sir_custom <- model(nb_likelihood(), sir_proc, lognormal_delay())
-dat_sir_custom <- prepare_data(mod_sir_custom, m = m_sir, max_time = n_sir)
-pr_sir_custom  <- default_priors(mod_sir_custom, dat_sir_custom)
-fit_sir_custom <- fit(mod_sir_custom, dat_sir_custom, pr_sir_custom)
+```{r mpox-fit}
+nc_sir_custom  <- nowcast(mpox_tn,
+                          model(nb_likelihood(), custom_sir_epidemic, lognormal_delay()),
+                          temporal_effects = "none", n_draws = 300)
 ```
 
-The built-in `sir_epidemic()` uses a mathematically equivalent discrete-time SIR with an additional AR(1) trend on $\beta(t)$:
+And observe the results:
 
-```{r sir-builtin-fit}
-mod_sir_builtin <- model(
-  nb_likelihood(),
-  sir_epidemic(R0 = numeric(0), gamma = numeric(0),
-               N_pop = 10000, use_beta_rw_trend = FALSE),
-  lognormal_delay()
+```{r mpox-nowcast-plot, fig.cap="mpox nowcast with the custom SIR epidemic (median + 50/90% intervals).", fold=TRUE}
+autoplot(nc_sir_custom)
+```
+
+
+---
+
+# Part 3 (advanced) — An SIR with a proper ODE
+
+> **Advanced.** Part 2 stepped the SIR forward **one Euler step per day** — simple, but a coarse approximation of the underlying differential equations. Here we integrate the *continuous* SIR ODE properly, with a **4th-order Runge–Kutta (RK4)** scheme and several sub-steps per day. The whole integrator is ordinary arithmetic, so it tapes and differentiates exactly like everything else — there is no special "ODE mode", you just write the solver.
+
+The SIR system is
+
+$$\frac{dS}{dt} = -\beta\,S\,I, \qquad \frac{dI}{dt} = \beta\,S\,I - \gamma\,I, \qquad \beta = \frac{R_0\,\gamma}{N},$$
+
+and the daily incidence is the number of new infections on that day — i.e. the drop in `S`. We advance the state with `substeps` RK4 steps of size `dt = 1/substeps` per day and accumulate the new infections. Defining the right-hand sides `rhs_S` / `rhs_I` as small helper functions keeps the RK4 stage readable; RTMB traces straight through them.
+
+```{r sir-ode-fn}
+sir_ode_fn <- function(theta) {
+  `[<-` <- RTMB::ADoverload("[<-")            # needed for `incidence[t] <- ...`
+  R0 <- exp(theta[1]); gamma <- exp(theta[2]); I0 <- exp(theta[3])
+  N  <- 1e5; beta <- R0 * gamma / N
+
+  rhs_S <- function(S, I) -beta * S * I            # dS/dt
+  rhs_I <- function(S, I)  beta * S * I - gamma * I # dI/dt
+
+  substeps <- 4L; dt <- 1 / substeps               # 4 RK4 steps per day
+  S <- N - I0; I <- I0
+  incidence <- numeric(max_time)
+  for (t in seq_len(max_time)) {
+    new_today <- 0
+    for (k in seq_len(substeps)) {                 # RK4 integration within the day
+      k1S <- rhs_S(S, I);                       k1I <- rhs_I(S, I)
+      k2S <- rhs_S(S + dt/2*k1S, I + dt/2*k1I); k2I <- rhs_I(S + dt/2*k1S, I + dt/2*k1I)
+      k3S <- rhs_S(S + dt/2*k2S, I + dt/2*k2I); k3I <- rhs_I(S + dt/2*k2S, I + dt/2*k2I)
+      k4S <- rhs_S(S + dt*k3S, I + dt*k3I);     k4I <- rhs_I(S + dt*k3S, I + dt*k3I)
+      S_next <- S + dt/6 * (k1S + 2*k2S + 2*k3S + k4S)
+      I_next <- I + dt/6 * (k1I + 2*k2I + 2*k3I + k4I)
+      new_today <- new_today + (S - S_next)        # new infections this sub-step
+      S <- S_next; I <- I_next
+    }
+    incidence[t] <- new_today
+  }
+  matrix(log((incidence + abs(incidence)) * 0.5 + 1e-8), max_time, 1L)
+}
+```
+
+The wrapping and fitting are exactly as before:
+
+```{r sir-ode-fit}
+sir_ode_epidemic <- custom_epidemic(
+  intensity_fn = sir_ode_fn,
+  priors       = list(normal_prior(log(1.5), 0.4),
+                      normal_prior(log(0.1), 0.3),
+                      normal_prior(log(5),   1.0)),
+  name         = "SIR-ODE",
+  param_names  = c("log_R0", "log_gamma", "log_I0"),
+  inits        = c(log(1.5), log(0.1), log(5))
 )
-dat_sir_builtin <- prepare_data(mod_sir_builtin, m = m_sir, max_time = n_sir)
-pr_sir_builtin  <- default_priors(mod_sir_builtin, dat_sir_builtin)
-fit_sir_builtin <- fit(mod_sir_builtin, dat_sir_builtin, pr_sir_builtin)
+validate_custom_epidemic(sir_ode_epidemic)
+
+nc_sir_ode <- nowcast(mpox_tn,
+                      model(nb_likelihood(), sir_ode_epidemic, lognormal_delay()),
+                      temporal_effects = "none", n_draws = 300)
 ```
 
-Extract and compare the fitted SIR parameters:
+The RK4 ODE and the one-step Euler version give very similar fitted curves here (the mpox epidemic is slow enough that a daily step is already accurate), but the RK4 integrator is the one you would trust for fast or stiff dynamics:
 
-```{r sir-params}
-# Custom SIR
-cp <- as.numeric(fit_sir_custom$parList$custom_process_params)
-cat("Custom SIR:\n")
-cat("  R0    =", round(exp(cp[1]), 3), "(true:", R0_sir, ")\n")
-cat("  gamma =", round(exp(cp[2]), 3), "(true:", gamma_sir, ")\n")
-cat("  I0    =", round(exp(cp[3]), 1), "(true:", I0_sir, ")\n\n")
-
-# Built-in SIR
-cat("Built-in SIR:\n")
-cat("  R0    =", round(exp(fit_sir_builtin$parList$log_R0), 3), "(true:", R0_sir, ")\n")
-gamma_builtin <- stats::plogis(as.numeric(fit_sir_builtin$parList$u_gamma))
-cat("  gamma =", round(gamma_builtin, 3), "(true:", gamma_sir, ")\n")
-```
-
-Both fits land near the truth, but notice that $R_0$ and $\gamma$ individually are only *weakly* identified from a single growing epidemic: what the early curve really pins down is their **product** $\beta = R_0\,\gamma$ (the transmission rate that sets the growth speed). So you may see, say, $R_0$ a little high and $\gamma$ a little low while $\beta = R_0\gamma$ stays close to the true $`r round(R0_sir * gamma_sir, 3)`$. This is a property of the SIR model and the data, not of the custom-process machinery — the built-in `sir_epidemic()` shows the same behaviour. The fitted **incidence curves**, which are what the data actually constrain, match closely:
-
-```{r sir-compare-plot, fig.height=4, fig.cap="Custom SIR ODE vs. built-in sir_epidemic() on identical data. Both recover the epidemic curve; the custom process gives identical fits with only three lines of ODE code."}
-lm_sir_custom  <- fit_sir_custom$reconstruct$mu_safe
-lm_sir_builtin <- fit_sir_builtin$reconstruct$mu_safe
-
-sir_plot_df <- data.frame(
-  t        = rep(seq_len(n_sir), 3),
-  lambda   = c(sir_incidence, exp(lm_sir_custom[, 1]), exp(lm_sir_builtin[, 1])),
-  model    = rep(c("True SIR", "Custom SIR ODE", "Built-in sir_epidemic()"), each = n_sir)
+```{r sir-ode-compare-plot, fig.cap="Fitted mpox incidence: the one-step Euler SIR (Part 2) vs. the RK4-integrated ODE (Part 3).", fold=TRUE}
+curve_df <- rbind(
+  data.frame(t = seq_len(max_time), y = exp(nc_sir_custom@fits[[1]]$reconstruct$mu_safe[, 1]),
+             model = "Euler (1 step/day)"),
+  data.frame(t = seq_len(max_time), y = exp(nc_sir_ode@fits[[1]]$reconstruct$mu_safe[, 1]),
+             model = "RK4 ODE (4 steps/day)")
 )
-
-ggplot(sir_plot_df, aes(x = t, y = lambda, colour = model, linetype = model)) +
+ggplot(curve_df, aes(t, y, colour = model, linetype = model)) +
   geom_line(linewidth = 1) +
-  scale_colour_manual(values = c("True SIR" = "black",
-                                  "Custom SIR ODE" = "#2166AC",
-                                  "Built-in sir_epidemic()" = "#D6604D")) +
-  scale_linetype_manual(values = c("True SIR" = "dotted",
-                                    "Custom SIR ODE" = "solid",
-                                    "Built-in sir_epidemic()" = "dashed")) +
-  labs(x = "Event time", y = "Expected incidence",
-       title = "Custom SIR ODE vs. built-in sir_epidemic()",
-       colour = NULL, linetype = NULL) +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "bottom")
+  scale_colour_manual(values = c("Euler (1 step/day)" = "#D6604D", "RK4 ODE (4 steps/day)" = "#2166AC")) +
+  labs(x = "Event day", y = "Incidence",
+       title = "One-step Euler vs. RK4-integrated SIR ODE", colour = NULL, linetype = NULL) +
+  theme_minimal(base_size = 13) + theme(legend.position = "bottom")
 ```
 
 ---
 
-## Tips for writing your own `intensity_fn`
+## Tips for writing your own component
 
-1. **Return the full `log_mean`, not just a trend.** Unlike HSGP/AR1 (which return a trend added to an intercept), `custom_process` is responsible for the entire `log_mean[T × S]` matrix — include any baseline/intercept in your function.
-
-2. **Parameterise on the unconstrained scale.** Use `exp(theta[i])` for positive parameters (R0, sigma, scale), `plogis(theta[i])` for probabilities.  Provide `inits` on the same unconstrained scale.
-
-3. **Know your `n_time` before constructing the process.** The innovations in a random walk have length `n_time`.  Check this first with a helper call:
-   ```r
-   n_times <- prepare_data(model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
-                           m = your_m_matrix)$max_time
-   ```
-
-4. **Accumulation without `[<-`:** use `cumsum(sigma * eps)` for a random walk; `Reduce(f, 1:n, accumulate = TRUE)` for more complex recursions — both are AD-safe without any overloading.
-
-5. **Accumulation with `[<-`:** if you need a pre-allocated vector in a `for` loop (e.g. an ODE), put `'[<-' <- RTMB::ADoverload('[<-')` at the **very first line** of `intensity_fn`.
-
-6. **Guard `log` of near-zero values.** Incidence can approach zero in early/late epidemic phases.  Use `log((x + abs(x)) * 0.5 + 1e-8)` — the `(x + abs(x)) / 2` is the AD-safe `pmax(x, 0)`.
-
-7. **Validate before fitting.** `validate_custom_process()` test-tapes your function and checks finite gradients.  Call it right after defining the process.
-
-8. **RTMBode for production ODE models.** This vignette uses a hand-rolled Euler scheme.  For stiff systems or when adaptive step-size control matters, the `RTMBode` package provides a full Sundials/CVODES adjoint solver that integrates cleanly with RTMB.  Add it to your project with `install.packages("RTMBode")` and consult its documentation for the `ode()` interface.
+1. **Parameterise on the unconstrained scale.** Use `exp(theta[i])` for positive quantities, `plogis(theta[i])` for probabilities; give `inits` on that same scale.
+2. **A custom epidemic owns the whole `log_mean`.** Include any baseline level — nothing (no intercept, no covariates) is added on top.
+3. **Know `max_time` first** if your function loops over time. `infer_max_time(tn)` gives the number of event-times the model spans.
+4. **Accumulate without `[<-` when you can.** `cumsum(sigma * eps)` builds a random walk with no index assignment (so no overload needed). Reach for `` `[<-` <- RTMB::ADoverload("[<-") `` only when a loop must fill a pre-allocated vector (e.g. an ODE).
+5. **Guard `log` of near-zero values** with `log((x + abs(x)) * 0.5 + 1e-8)` — the `(x + abs(x))/2` is an AD-safe `pmax(x, 0)`.
+6. **Validate before fitting** — `validate_custom_delay()` / `validate_custom_epidemic()` catch non-differentiable code early.
+7. **For production ODEs**, the `RTMBode` package offers an adaptive/stiff solver that plugs into RTMB; the hand-rolled Euler loop above keeps this vignette dependency-free.

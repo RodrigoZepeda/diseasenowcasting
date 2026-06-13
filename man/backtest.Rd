@@ -59,7 +59,7 @@ Backtest one or more nowcast models across a set of as-of dates
 \details{
 \code{backtest()} evaluates one nowcast per (as-of date x model) cell and these
 cells are \strong{embarrassingly parallel}.  The work is dispatched with
-\pkg{foreach} + \pkg{doFuture}, so parallelism is controlled by the
+\pkg{future.apply}, so parallelism is controlled by the
 \pkg{future} plan you set \emph{before} calling \code{backtest()}:
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{library(future)

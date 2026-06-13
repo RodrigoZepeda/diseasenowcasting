@@ -3,12 +3,11 @@
 
 ## usethis namespace: start
 #' @import tbl.now
-#' @importFrom doFuture %dofuture%
-#' @importFrom foreach foreach %dopar%
 #' @importFrom ggplot2 autoplot
 #' @importFrom lifecycle deprecated
 #' @importFrom methods as
 #' @importFrom RTMB pnorm dnorm dgamma pgamma dbeta dexp dweibull dchisq dnbinom plogis
+#' @importFrom rlang .data
 #' @importFrom stats nlminb optim median sd quantile approx setNames coef predict
 #' @importFrom stats rnbinom rpois rnorm rcauchy rt runif rgamma rweibull rlnorm rchisq rexp rlogis rbeta
 #' @importFrom utils head tail
@@ -18,28 +17,20 @@ NULL
 # Null-coalescing helper available on all supported R versions.
 `%||%` <- function(x, y) if (is.null(x) || length(x) == 0) y else x
 
-# Suppress R CMD check NOTEs for column names used in aes() / dplyr NSE
+# R CMD check NOTE suppression.
+#
+# Non-standard evaluation elsewhere is handled in the code itself, so it needs
+# no declarations here:
+#   * dplyr/ggplot2 data-masking uses the rlang `.data` pronoun (`aes(x = .data$delay)`);
+#   * tbl.now tidy-select uses injection (`event_date = !!as.symbol("onset")`);
+#   * the backtest worker takes its row index as a real function argument
+#     (`future.apply::future_lapply(..., function(cell_row) ...)`).
+#
+# What remains below are the only variables with no lexical binding the static
+# checker can see: RTMB `getAll(params, objective_data)` drops every parameter /
+# data name into the objective closure's environment (the AD programming model).
+# This cannot be expressed with `.data`, so it must be declared for `R CMD check`.
 utils::globalVariables(c(
-  # ggplot2 column aesthetics (autoplot methods)
-  "t", "median", "q5", "q25", "q75", "q95", "q2.5", "q97.5", ".event_num",
-  "delay", "weight", "cdf", "density", "lo", "hi", "med", "pmf",
-  "t_idx", "observed", "pred",
-  "wis", "disease", "group",
-  "x_val", "reported", "predicted_total", "q_lo", "q_hi", "stratum", "event_date",
-  # dplyr column names (score/backtest)
-  "model", "date_run", "final", "quantile_level", "predicted",
-  "epidemic_label", "nb_label", "delay_label", "n",
-  "overprediction", "underprediction", "dispersion",
-  "interval_coverage_50", "interval_coverage_90",
-  # dplyr NSE column names used in prepare_data helpers (09_prepare_data.R)
-  "time", "strata", "count",
-  # dplyr NSE column names used in update helpers (22_update.R)
-  "is_surprising", "direction",
-  # foreach %dofuture% iterator variable (23_backtest.R)
-  "cell_row",
-  # tbl.now / nowcast internals
-  ".data", "window", "epidemic", "n_events", "now",
-  "onset", "reported",   # NSE column names in .temporal_effect_matrix grid
   # RTMB getAll() closure variables (delay-only objective)
   "delay_logits", "censoring_col", "obs_delays", "row_sums_exact",
   "col_sums_exact", "col_sums_cens",
@@ -71,11 +62,9 @@ utils::globalVariables(c(
   "custom_prior_dists", "custom_prior_params", "custom_is_free",
   # validate_custom_delay() RTMB tape parameter
   "cdf_validate_theta",
-  # RTMB getAll() closure variables (custom process, epidemic_model 4)
-  "custom_process_params", "is_custom_process", "n_params_custom_proc",
-  "proc_prior_dists", "proc_prior_params", "proc_is_free",
-  # validate_custom_process() RTMB tape parameter
-  "custom_validate_theta_proc",
-  # surprise() internal variable
-  "parlist"
+  # RTMB getAll() closure variables (custom epidemic, epidemic_model 4)
+  "custom_epidemic_params", "is_custom_epidemic", "n_params_custom_epi",
+  "epi_prior_dists", "epi_prior_params", "epi_is_free",
+  # validate_custom_epidemic() RTMB tape parameter
+  "custom_validate_theta_epi"
 ))
