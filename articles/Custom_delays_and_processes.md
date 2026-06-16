@@ -55,6 +55,7 @@ are unfamiliar with it here are some basic rules:
 
 ``` r
 
+set.seed(26378)
 library(diseasenowcasting)
 library(tbl.now)
 library(RTMB) # <--------- REQUIRED for custom components 
@@ -74,7 +75,7 @@ the two time indices the nowcast needs:
 
 #Get just one season for making the example fast
 dengue_season <- denguedat |> 
-  filter(onset_week <= as.Date("1990-06-01") & 
+  filter(report_week  <= as.Date("1991-06-01") & 
            onset_week <= as.Date("1991-06-01"))
 
 #Construct the tbl_now
