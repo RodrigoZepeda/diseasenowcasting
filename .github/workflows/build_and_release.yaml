@@ -1,0 +1,68 @@
+name: Build and Release Package
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write 
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+          extra-repositories: 'https://epinowcast.r-universe.dev'
+
+      - name: Setup pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+
+      - name: Install dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck, any::pkgdown
+
+      - name: Extract version and release notes
+        id: release_metadata
+        run: |
+          # 1. Get version from DESCRIPTION
+          VERSION=$(grep "^Version:" DESCRIPTION | awk '{print $2}')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "PKG_FILE=diseasenowcasting_${VERSION}.tar.gz" >> $GITHUB_ENV
+          
+          # 2. Extract news section for this specific version
+          if [ -f NEWS.md ]; then
+            awk -v ver="$VERSION" '
+              BEGIN { found = 0 }
+              /^#+ / {
+                if (found) exit;
+                if ($0 ~ ver) { found = 1; next }
+              }
+              found { print }
+            ' NEWS.md > release_notes.md
+          else
+            echo "Automated release for version $VERSION" > release_notes.md
+          fi
+        shell: bash
+
+      - name: Build package bundle
+        run: |
+          R CMD build .
+        shell: bash
+
+      - name: Create or Update GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ env.VERSION }}
+          name: diseasenowcasting v${{ env.VERSION }}
+          artifacts: "${{ env.PKG_FILE }}"
+          bodyFile: "release_notes.md"
+          allowUpdates: true
+          token: ${{ secrets.GITHUB_TOKEN }}
