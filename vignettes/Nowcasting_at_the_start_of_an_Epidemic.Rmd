@@ -1,6 +1,6 @@
 ---
 title: "Nowcasting at the Start of an Epidemic"
-author: "Rodrigo Zepeda-Tello"
+author: "diseasenowcasting team"
 output:
   rmarkdown::html_vignette:
     toc: true
@@ -191,7 +191,7 @@ The reproduction numbe `R0` controls how fast and how big the epidemic is.
 Here we loop through three different `R0` values showing how a higher `R0` 
 translates into faster growth. 
 
-```{r prior-sir, fig.cap="_Prior-predictive epidemic from the SIR model under three R0 priors (median + 90% band)._"}
+```{r prior-sir, fig.cap="*Prior-predictive epidemic from the SIR model under three R0 priors (median + 90% band).*"}
 #Loop through different values for R0
 model_list <- list(); k <- 0
 for (R0val in c(1.5, 2.5, 4.0)){
@@ -294,7 +294,7 @@ Thw following shows all the nowcasted values alongside the final *truth*. Initia
 the SIR outperforms AR(1) and HGSP. As more data arrives HGSP takes over while
 the SIR model eventually blows up. 
 
-```{r covid-plots, fig.height=16, fig.cap="_Nowcast (median + 90% CI) for each epidemic model at five progressive observation windows._"}
+```{r covid-plots, fig.height=16, fig.cap="*Nowcast (median + 90% CI) for each epidemic model at five progressive observation windows.*"}
 # Plot only the last 20 event-times of each window (most relevant)
 plot_data <- all_results |>
   group_by(window, epidemic) |>

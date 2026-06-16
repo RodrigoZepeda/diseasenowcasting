@@ -17,9 +17,15 @@
 #' @param object A `nowcast_class` object.
 #' @param n_draws Number of posterior draws (default: min(`object@n_draws`, 500)).
 #' @param seed Optional RNG seed.
+#' @param previous_times Number of most recent event-times to display in panels 2
+#'   (smoothed incidence) and 3 (nowcast): only the last `previous_times` dates
+#'   (including the nowcast target) are shown, as in [autoplot()].  Panel 1 (the
+#'   delay distribution) always uses all delays.  Default `30`; use `Inf` (or
+#'   `NULL`) to show every event-time.
 #' @returns A `patchwork` combined plot (or a named list of three ggplots).
 #' @export
-nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machine$integer.max, 1)) {
+nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machine$integer.max, 1),
+                               previous_times = 30) {
   if (!is.null(seed)) set.seed(seed)
   n_draws <- n_draws %||% min(object@n_draws, 500L)
 
@@ -30,6 +36,11 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
   n_time  <- data$max_time
   observed_total <- rowSums(if (is.matrix(data$case_counts)) data$case_counts
                              else matrix(data$case_counts, n_time, 1))
+  # Panels 2 & 3 keep only the most recent `previous_times` event-times (the
+  # delay panel is unaffected).  `keep_from` is the smallest event-index to keep
+  # (event-indices are 0-based, running 0 .. n_time - 1).
+  keep_from <- if (!is.null(previous_times) && is.finite(previous_times))
+    max(0L, n_time - as.integer(previous_times)) else 0L
 
   # Map each event-index to a calendar event-date (same grid predict() uses), and
   # read the time unit (e.g. "days"/"weeks") from the tbl_now for the axis labels.
@@ -69,6 +80,8 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
         c(exp_logits, 1) / (sum(exp_logits) + 1)
       }
       .nonparametric_delay_functions(simplex, n_bins)
+    } else if (family == 5L) {
+      priors$cdf_factory(as.numeric(fit$parList$custom_delay_params))
     } else if (family == 3L) {
       .delay_distribution_functions(3L, reconstructed$delay_mu,
         .gengamma_shape_transform(fit$parList$delay_Q %||% -2)$shape_Q, reconstructed$delay_sigma)
@@ -84,13 +97,13 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
 
   p1 <- ggplot2::ggplot() +
     ggplot2::geom_bar(data = hist_df,
-                      ggplot2::aes(x = delay, weight = weight / sum(weight)),
+                      ggplot2::aes(x = .data$delay, weight = .data$weight / sum(.data$weight)),
                       fill = pal["predicted"], colour = "white", alpha = 0.8, width = 0.8) +
     ggplot2::labs(x = paste0("Reporting delay (", time_unit, ")"), y = "Density",
                   title = "Reporting-delay distribution")
   if (!is.null(delay_density_df))
     p1 <- p1 + ggplot2::geom_line(data = delay_density_df,
-                                   ggplot2::aes(x = delay, y = density),
+                                   ggplot2::aes(x = .data$delay, y = .data$density),
                                    colour = pal["accent"], linewidth = 1.2)
   p1 <- p1 + theme_diseasenowcasting()
 
@@ -105,12 +118,13 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
     q95    = apply(lambda_draws, 2, stats::quantile, probs = 0.95,  na.rm = TRUE)
   )
   lambda_sum$x <- if (use_dates) event_dates else lambda_sum$t
-  p2 <- ggplot2::ggplot(lambda_sum, ggplot2::aes(x = x)) +
-    ggplot2::geom_ribbon(ggplot2::aes(ymin = q5,  ymax = q95),
+  lambda_sum <- lambda_sum[lambda_sum$t >= keep_from, , drop = FALSE]
+  p2 <- ggplot2::ggplot(lambda_sum, ggplot2::aes(x = .data$x)) +
+    ggplot2::geom_ribbon(ggplot2::aes(ymin = .data$q5,  ymax = .data$q95),
                          fill = pal["reported"], alpha = 0.15) +
-    ggplot2::geom_ribbon(ggplot2::aes(ymin = q25, ymax = q75),
+    ggplot2::geom_ribbon(ggplot2::aes(ymin = .data$q25, ymax = .data$q75),
                          fill = pal["reported"], alpha = 0.30) +
-    ggplot2::geom_line(ggplot2::aes(y = median),
+    ggplot2::geom_line(ggplot2::aes(y = .data$median),
                        colour = pal["reported"], linewidth = 1) +
     ggplot2::labs(x = event_axis, y = expression(lambda[t]),
                   title = "Smoothed epidemic process") +
@@ -127,15 +141,17 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
     nc_sum$x <- nc_sum$.event_num
     obs_df$x <- obs_df$t
   }
+  nc_sum <- nc_sum[nc_sum$.event_num >= keep_from, , drop = FALSE]
+  obs_df <- obs_df[obs_df$t >= keep_from, , drop = FALSE]
 
-  p3 <- ggplot2::ggplot(nc_sum, ggplot2::aes(x = x)) +
-    ggplot2::geom_ribbon(ggplot2::aes(ymin = q2.5, ymax = q97.5),
+  p3 <- ggplot2::ggplot(nc_sum, ggplot2::aes(x = .data$x)) +
+    ggplot2::geom_ribbon(ggplot2::aes(ymin = .data$q2.5, ymax = .data$q97.5),
                          fill = pal["reported"], alpha = 0.15) +
-    ggplot2::geom_ribbon(ggplot2::aes(ymin = q25,  ymax = q75),
+    ggplot2::geom_ribbon(ggplot2::aes(ymin = .data$q25,  ymax = .data$q75),
                          fill = pal["reported"], alpha = 0.30) +
-    ggplot2::geom_line(ggplot2::aes(y = median),
+    ggplot2::geom_line(ggplot2::aes(y = .data$median),
                        colour = pal["reported"], linewidth = 1) +
-    ggplot2::geom_point(data = obs_df, ggplot2::aes(x = x, y = observed),
+    ggplot2::geom_point(data = obs_df, ggplot2::aes(x = .data$x, y = .data$observed),
                         colour = pal["dark"], size = 1.2) +
     ggplot2::labs(x = event_axis, y = "Cases",
                   title = "Nowcast (black = observed)") +

@@ -208,8 +208,8 @@ extreme_values <- function(nc) {
   if (is.null(ds)) return(invisible(NULL))
 
   bad <- ds |>
-    dplyr::filter(is_surprising, direction == "long") |>
-    dplyr::arrange(dplyr::desc(delay))
+    dplyr::filter(.data$is_surprising, .data$direction == "long") |>
+    dplyr::arrange(dplyr::desc(.data$delay))
   if (nrow(bad) == 0L) return(invisible(NULL))
 
   bullets <- sprintf(

@@ -1,6 +1,6 @@
 ---
 title: "Benchmark (diseasenowcasting vs NobBS and epinowcast)"
-author: "Rodrigo Zepeda-Tello"
+author: "diseasenowcasting team"
 output: rmarkdown::html_vignette
 bibliography: references.bib
 vignette: >
@@ -62,6 +62,33 @@ have empirical coverage close to the corresponding level.
 
 All comparisons are performed on a **common date set** — dates where both `diseasenowcasting` and the
 comparison method have produced a valid nowcast — ensuring fairness.
+
+### Like-for-like comparison
+
+To compare *methods* rather than *software defaults*, each package is configured
+with **matched model components and the same inference quality**:
+
+- **Reporting-delay family** — epinowcast is fit with Log-normal, Log-logistic
+  and Gamma delays (`enw_reference(distribution = ...)`), mirroring
+  `diseasenowcasting`'s Log-normal / Generalized-Gamma / Dirichlet families,
+  rather than being left at its default delay.
+- **Expectation process** — a random walk (`~ 1 + rw(day)`), the closest
+  epinowcast analogue of `diseasenowcasting`'s AR(1) latent process, held fixed
+  so the comparison isolates the reporting-delay choice.
+- **Inference** — full NUTS (epinowcast's default) is the gold standard, but it
+  is **prohibitively slow** at this benchmark's scale (minutes per nowcast, across
+  many dates x configs x diseases). So both packages are run with their *fast
+  approximate* inference: `diseasenowcasting` with the Laplace approximation and
+  epinowcast with **Pathfinder** (variational) — a deliberately like-for-like
+  pairing of approximate methods. Caveat: Pathfinder under-estimates the
+  posterior more aggressively than Laplace, so epinowcast's interval **coverage
+  reported here is conservative** (a lower bound). Set `ENW_SAMPLER=nuts` to fit
+  it with full MCMC if runtime allows.
+
+Some components have no exact cross-package analogue (epinowcast has no SIR
+mechanistic process or Generalized-Gamma delay; `diseasenowcasting` has no
+identical GP-on-expectation), so those models are reported as method-specific
+rather than forced into a false pairing.
 
 
 ## Results
@@ -127,7 +154,7 @@ knitr::kable(dengue_tab, digits = 2, row.names = FALSE,
 **Key findings (dengue):**
 
 - All `diseasenowcasting` HSGP variants beat NobBS and all Epinowcast variants on WIS.
-- Best `diseasenowcasting`: **HSGP / GenGamma**, WIS ≈ 7.0, cov90 ≈ 0.94.
+- Best `diseasenowcasting`: **HSGP / GenGamma**, WIS $\approx$ 7.0, cov90 $\approx$ 0.94.
 
 ### Mpox (daily, USA)
 
@@ -172,10 +199,12 @@ consistently the ranking among the top performers.
 
 The full benchmark — the **complete own-model grid** (HSGP / AR(1) / SIR x
 {LogNormal, Generalized-Gamma, Dirichlet}) fit with `nowcast()`
-and the seasonal / day-of-week covariates, plus **NobBS** and **three
-Epinowcast variants** (point effect / random effect, default, random walk),
-scored on a common evaluation-date set — lives in a single self-contained
-script:
+and the seasonal / day-of-week covariates, plus **NobBS** and **three matched
+Epinowcast configurations** (Log-normal / Log-logistic / Gamma reporting delays
+under a shared random-walk expectation, fit with **Pathfinder** — epinowcast's
+fast variational inference, since full NUTS is too slow at this scale; see
+"Like-for-like comparison" above), scored on a common evaluation-date set — lives
+in a single self-contained script:
 
 ```
 devel/benchmark_full.R
@@ -185,9 +214,18 @@ Run it (after `R CMD INSTALL` of this package, so the parallel workers can load
 it):
 
 ```sh
-Rscript devel/benchmark_full.R                                  # all 3 diseases, 50 dates
-N_DATES=50  Rscript devel/benchmark_full.R  
+Rscript devel/benchmark_full.R                                  # all 3 diseases, 50 dates (epinowcast Pathfinder)
+N_DATES=6 Rscript devel/benchmark_full.R                        # quick smoke
+ENW_SAMPLER=nuts Rscript devel/benchmark_full.R                 # slow: epinowcast with full NUTS
+FLOOR_SIG_FRAC=0.25 Rscript devel/benchmark_full.R             # own models at the package-default spread
 ```
+
+> **Note.** Full NUTS for epinowcast is too slow at this scale (minutes per
+> nowcast x dates x configs x diseases), so epinowcast is fit with **Pathfinder**
+> (variational) by default — the analogue of the fast Laplace approximation
+> `diseasenowcasting` uses. Pathfinder under-estimates the posterior, so
+> epinowcast's interval coverage here is **conservative**; set `ENW_SAMPLER=nuts`
+> for the slow, fully-calibrated run.
 
 It prints a ranked WIS table per disease and saves the tidy scores to
 `devel/results/benchmark_scores.rds`.

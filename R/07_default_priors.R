@@ -14,6 +14,49 @@
 #   R0, gamma_sir, N_eff                       (SIR)
 # =============================================================================
 
+#' Resolve a per-parameter prior list for a custom component (delay or process)
+#'
+#' Both `custom_delay()` and `custom_epidemic()` accept a `priors` list whose
+#' elements are each *either* a `prior_class` object (a free parameter to be
+#' estimated) *or* a single numeric (a fixed parameter held constant).  This
+#' helper flattens that list into the four parallel vectors the RTMB objective
+#' consumes, so the two component branches in [default_priors()] stay short and
+#' identical in behaviour.
+#'
+#' @param priors_list The user's `priors` list (length `n_params`).  `NULL`
+#'   elements (from an empty `list()`) fall back to `std_normal_prior()`.
+#' @param n_params Integer number of parameters.
+#' @returns A list with four length-`n_params` slots:
+#'   `dists` (prior `num_id`, `0L` when fixed), `params_mat` (`n_params x 3`
+#'   matrix of prior parameters), `is_free` (`1L` free / `0L` fixed), and
+#'   `fixed_vals` (the fixed value, `0` when free).
+#' @noRd
+#' @keywords internal
+.resolve_custom_param_priors <- function(priors_list, n_params) {
+  dists      <- integer(n_params)
+  params_mat <- matrix(0.0, n_params, 3L)
+  is_free    <- integer(n_params)
+  fixed_vals <- numeric(n_params)
+  for (i in seq_len(n_params)) {
+    this_prior <- priors_list[[i]]
+    if (S7::S7_inherits(this_prior, prior_class)) {            # free parameter
+      dists[i]        <- this_prior@num_id
+      params_mat[i, ] <- .pad3(this_prior@stan_params)
+      is_free[i]      <- 1L
+    } else if (is.numeric(this_prior) && length(this_prior) == 1L) {  # fixed value
+      dists[i]        <- 0L
+      is_free[i]      <- 0L
+      fixed_vals[i]   <- as.numeric(this_prior)
+    } else {                                                   # default: std normal
+      default_prior   <- std_normal_prior()
+      dists[i]        <- default_prior@num_id
+      params_mat[i, ] <- .pad3(default_prior@stan_params)
+      is_free[i]      <- 1L
+    }
+  }
+  list(dists = dists, params_mat = params_mat, is_free = is_free, fixed_vals = fixed_vals)
+}
+
 #' Build the default prior bundle for an RTMB nowcast model
 #'
 #' @param mod A [model()] object.
@@ -114,6 +157,16 @@ default_priors <- function(mod, data = NULL, ...) {
     pr$ar_phi    <- .res(numeric(0), std_normal_prior(),     key = "ar_phi")
     pr$ar_sigma  <- .res(numeric(0), exponential_prior(100), key = "ar_sigma")
     pr$N_eff     <- .res(epi@N_eff, beta_prior(2, 5),        key = "N_eff")
+  } else if (S7::S7_inherits(epi, custom_epidemic_class)) {
+    n_custom_epi <- as.integer(epi@n_params)
+    resolved      <- .resolve_custom_param_priors(epi@priors, n_custom_epi)
+    pr$intensity_fn                     <- epi@intensity_fn
+    pr$custom_epidemic_n_params          <- n_custom_epi
+    pr$custom_epidemic_prior_dists       <- resolved$dists
+    pr$custom_epidemic_prior_params_mat  <- resolved$params_mat
+    pr$custom_epidemic_is_free           <- resolved$is_free
+    pr$custom_epidemic_fixed_vals        <- resolved$fixed_vals
+    pr$custom_epidemic_inits             <- epi@inits
   }
 
   # -- Delay process priors ----------------------------------------------------
@@ -146,6 +199,16 @@ default_priors <- function(mod, data = NULL, ...) {
       alpha_vec <- rep(1, bins + 1)
     }
     pr$delay_probs <- list(dist = 4L, params = alpha_vec, is_constant = 0L, fixed = numeric(0), bins = bins)
+  } else if (S7::S7_inherits(dly, custom_delay_class)) {
+    n_custom <- as.integer(dly@n_params)
+    resolved <- .resolve_custom_param_priors(dly@priors, n_custom)
+    pr$cdf_factory                   <- dly@cdf_factory
+    pr$custom_delay_n_params         <- n_custom
+    pr$custom_delay_prior_dists      <- resolved$dists
+    pr$custom_delay_prior_params_mat <- resolved$params_mat
+    pr$custom_delay_is_free          <- resolved$is_free
+    pr$custom_delay_fixed_vals       <- resolved$fixed_vals
+    pr$custom_delay_inits            <- dly@inits
   }
 
   pr

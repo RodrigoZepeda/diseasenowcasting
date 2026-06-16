@@ -149,7 +149,9 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE, ..
   grid_df <- data.frame(onset = grid_dates, reported = grid_dates)
 
   built <- tryCatch({
-    gtn <- tbl.now::tbl_now(grid_df, event_date = onset, report_date = reported,
+    gtn <- tbl.now::tbl_now(grid_df,
+                            event_date  = !!as.symbol("onset"),
+                            report_date = !!as.symbol("reported"),
                             data_type = "linelist", verbose = FALSE)
     for (spec in specs) gtn <- tbl.now::add_temporal_effects(gtn, spec$t_effects)
     gtn <- tbl.now::compute_temporal_effects(gtn)

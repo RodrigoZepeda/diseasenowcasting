@@ -135,6 +135,58 @@ valid_positive_prior <- function(object) {
   padded[1:3]
 }
 
+#' Infer the number of parameters of a custom component
+#'
+#' `custom_delay()` / `custom_epidemic()` do not ask the user for `n_params`; it
+#' is read off whichever of `priors`, `param_names`, or `inits` they supplied.
+#' Any that are given must agree on the count.
+#'
+#' @param priors,param_names,inits The (possibly empty/NULL) component arguments.
+#' @returns A single integer: the inferred number of parameters.
+#' @noRd
+#' @keywords internal
+.infer_n_params <- function(priors = list(), param_names = NULL, inits = NULL) {
+  candidates <- c(priors = length(priors), param_names = length(param_names),
+                  inits = length(inits))
+  candidates <- candidates[candidates > 0L]
+  if (length(candidates) == 0L)
+    cli::cli_abort(c("Cannot infer the number of parameters.",
+                     "i" = "Supply a non-empty {.arg priors}, {.arg param_names}, or {.arg inits}."))
+  if (length(unique(candidates)) > 1L)
+    cli::cli_abort(c("{.arg priors}, {.arg param_names} and {.arg inits} imply different parameter counts.",
+                     "i" = "Lengths given: {.val {candidates}}; they must agree."))
+  as.integer(candidates[[1L]])
+}
+
+#' Require RTMB to be on the search path before taping user-supplied functions
+#'
+#' A user's `intensity_fn` / `cdf_factory` lives in the global environment, so
+#' its arithmetic (`+`, `*`, `exp`, `abs`, `cumsum`, …) only dispatches to
+#' RTMB's automatic-differentiation methods when the RTMB package is *attached*
+#' (on the search path), not merely loaded.  The built-in delay / epidemic
+#' models work without this because their math lives inside this package's
+#' namespace (which imports RTMB); only user-supplied functions need RTMB
+#' attached.  `diseasenowcasting` keeps RTMB in `Imports` (not `Depends`) to
+#' avoid masking base functions like `dnorm`/`pnorm` for users who never write a
+#' custom component, so those users must run `library(RTMB)` themselves.  This
+#' guard turns the otherwise-cryptic "unimplemented complex function" /
+#' "lost class attribute" error into an actionable message.
+#'
+#' @param what Short label for the feature needing RTMB (used in the message).
+#' @returns `TRUE` invisibly if RTMB is attached; otherwise aborts.
+#' @noRd
+#' @keywords internal
+.assert_rtmb_attached <- function(what = "custom delays / processes") {
+  if (!"RTMB" %in% .packages()) {
+    cli::cli_abort(c(
+      "RTMB must be attached to use {what}.",
+      "i" = "Run {.code library(RTMB)} first (it is needed only for user-written functions).",
+      "x" = "Without it, the arithmetic inside your function cannot be auto-differentiated."
+    ))
+  }
+  invisible(TRUE)
+}
+
 #' Class union for parameter slots (a number or a prior)
 #' @noRd
 #' @keywords internal

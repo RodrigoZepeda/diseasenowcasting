@@ -47,8 +47,9 @@ articles:
   - title: Applications
     contents:
       - Nowcasting_at_the_start_of_an_Epidemic
-      - Benchmark
+      - Custom_delays_and_processes
 
   - title: Miscellaneous
     contents:
       - LLM_Usage
+      - Benchmark

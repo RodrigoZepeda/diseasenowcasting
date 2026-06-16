@@ -73,8 +73,8 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
                      count = as.numeric(obs_mat[, 2]))
 
     agg <- df |>
-      dplyr::group_by(delay, time) |>
-      dplyr::summarise(count = sum(count), .groups = "drop")
+      dplyr::group_by(.data$delay, .data$time) |>
+      dplyr::summarise(count = sum(.data$count), .groups = "drop")
 
     unique_delays <- sort(unique(agg$delay))
     cases_mat <- matrix(0.0, length(unique_delays), max_time)
@@ -102,8 +102,8 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     )
 
     agg <- df |>
-      dplyr::group_by(time, strata) |>
-      dplyr::summarise(count = sum(count), .groups = "drop")
+      dplyr::group_by(.data$time, .data$strata) |>
+      dplyr::summarise(count = sum(.data$count), .groups = "drop")
 
     mat <- matrix(0.0, max_time, num_strata)
     mat[cbind(agg$time, agg$strata)] <- agg$count
@@ -156,6 +156,8 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     # SIR
     N_pop = if (S7::S7_inherits(epi, sir_epidemic_class)) epi@N_pop else 1e6,
     use_beta_rw_trend = if (S7::S7_inherits(epi, sir_epidemic_class)) as.integer(epi@use_beta_rw_trend) else 1L,
+    # Custom epidemic
+    custom_epidemic_n_params = if (S7::S7_inherits(epi, custom_epidemic_class)) as.integer(epi@n_params) else 0L,
     # bounds
     mu_log_upper_bound = min(max(6, log1p(casemax)), 16),
     ar_sigma_max = ar_sigma_max

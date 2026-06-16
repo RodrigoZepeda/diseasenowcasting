@@ -27,9 +27,10 @@
 #' @noRd
 build_delay_only_obj <- function(data, priors, init = NULL) {
   family <- data$delay_family
-  if (!family %in% c(1L, 2L, 3L, 4L))
-    cli::cli_abort("build_delay_only_obj supports families 1/2/3/4; family {family} given.")
+  if (!family %in% c(1L, 2L, 3L, 4L, 5L))
+    cli::cli_abort("build_delay_only_obj supports families 1/2/3/4/5; family {family} given.")
   if (family == 4L) return(.build_delay_only_nonparametric(data, priors, init))
+  if (family == 5L) return(.build_delay_only_custom(data, priors, init))
   is_gengamma <- family == 3L
 
   delay_mu_is_fixed    <- isTRUE(priors$delay_mu$is_constant == 1L)
@@ -179,4 +180,85 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
   }
 
   RTMB::MakeADFun(negative_log_posterior, parameters, silent = TRUE)
+}
+
+#' Build the delay-only RTMB objective for a user-supplied custom delay (family 5)
+#'
+#' Stage-1 delay fit for `custom_delay()` distributions.  The user's
+#' `cdf_factory(theta)` is called inside the tape with the vector of free
+#' parameters.  Fixed parameters (those whose prior is a scalar) are held
+#' constant via RTMB's `map` mechanism.
+#' @keywords internal
+#' @noRd
+.build_delay_only_custom <- function(data, priors, init = NULL) {
+  .assert_rtmb_attached("custom delay distributions")
+  cdf_factory      <- priors$cdf_factory
+  n_params_custom  <- as.integer(priors$custom_delay_n_params)
+  custom_is_free   <- priors$custom_delay_is_free
+  custom_fixed_vals <- priors$custom_delay_fixed_vals
+  custom_prior_dists  <- priors$custom_delay_prior_dists
+  custom_prior_params <- priors$custom_delay_prior_params_mat
+
+  objective_data <- list(
+    obs_delays      = data$obs_delays,
+    row_sums_exact  = data$row_sums_exact,
+    col_sums_exact  = data$col_sums_exact,
+    obs_delays_cens = data$obs_delays_cens,
+    row_sums_cens   = data$row_sums_cens,
+    col_sums_cens   = data$col_sums_cens,
+    censoring_col   = data$censoring_col,
+    split_delay     = max(2, .wtd_median(data$m[, 3], data$m[, 2])),
+    n_params_custom  = n_params_custom,
+    custom_is_free   = custom_is_free,
+    custom_prior_dists  = custom_prior_dists,
+    custom_prior_params = custom_prior_params
+  )
+
+  user_inits <- priors$custom_delay_inits %||% rep(0.0, n_params_custom)
+  init_vals  <- numeric(n_params_custom)
+  for (i in seq_len(n_params_custom)) {
+    init_vals[i] <- if (custom_is_free[i] == 0L) custom_fixed_vals[i]
+                    else (init$custom_delay_params[i] %||% user_inits[i])
+  }
+  parameters <- list(custom_delay_params = init_vals)
+
+  map <- list()
+  if (any(custom_is_free == 0L)) {
+    map_vals  <- rep(NA_integer_, n_params_custom)
+    free_idx  <- 0L
+    for (i in seq_len(n_params_custom)) {
+      if (custom_is_free[i] == 1L) {
+        free_idx <- free_idx + 1L
+        map_vals[i] <- free_idx
+      }
+    }
+    map$custom_delay_params <- factor(map_vals)
+  }
+
+  negative_log_posterior <- function(params) {
+    RTMB::getAll(params, objective_data)
+    delay_fns          <- cdf_factory(custom_delay_params)
+    log_cdf_censoring  <- delay_fns$log_cdf(censoring_col)
+
+    loglik <- 0
+    if (length(obs_delays) > 0)
+      loglik <- loglik +
+        .discretised_delay_loglik(obs_delays, row_sums_exact, split_delay,
+                                  delay_fns$log_cdf, delay_fns$log_survival) -
+        sum(col_sums_exact * log_cdf_censoring)
+    if (length(obs_delays_cens) > 0)
+      loglik <- loglik + sum(row_sums_cens * delay_fns$log_cdf(obs_delays_cens)) -
+        sum(col_sums_cens * log_cdf_censoring)
+
+    log_prior <- 0
+    for (i in seq_len(n_params_custom)) {
+      if (custom_is_free[i] == 1L)
+        log_prior <- log_prior +
+          prior_lpdf(custom_delay_params[i], custom_prior_dists[i], custom_prior_params[i, ])
+    }
+
+    -(loglik + log_prior)
+  }
+
+  RTMB::MakeADFun(negative_log_posterior, parameters, map = map, silent = TRUE)
 }

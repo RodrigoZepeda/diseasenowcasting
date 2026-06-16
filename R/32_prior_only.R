@@ -79,7 +79,24 @@
   # -- epidemic process -----------------------------------------------------
   # Each parameter is drawn from its prior then mapped to the UNCONSTRAINED scale
   # the objective expects (log for positives, logit for bounded quantities).
-  if (epidemic_model == 3L) {                        # coupled SIR
+  if (epidemic_model == 4L) {                        # custom epidemic — sample from each free prior
+    n_custom_epi  <- as.integer(engine$custom_epidemic_n_params %||% 0L)
+    custom_inits_p <- priors$custom_epidemic_inits %||% rep(0.0, n_custom_epi)
+    epi_is_free_p <- priors$custom_epidemic_is_free %||% rep(1L, n_custom_epi)
+    epi_vals      <- numeric(n_custom_epi)
+    for (i in seq_len(n_custom_epi)) {
+      if (epi_is_free_p[i] == 0L) {
+        epi_vals[i] <- (priors$custom_epidemic_fixed_vals %||% numeric(n_custom_epi))[i]
+      } else {
+        pr_entry <- list(dist   = priors$custom_epidemic_prior_dists[i],
+                         params = priors$custom_epidemic_prior_params_mat[i, ],
+                         is_constant = 0L)
+        epi_vals[i] <- tryCatch(.sample_prior_entry(pr_entry, 1L),
+                                 error = function(e) custom_inits_p[i])
+      }
+    }
+    parlist$custom_epidemic_params <- epi_vals
+  } else if (epidemic_model == 3L) {                 # coupled SIR
     parlist$log_R0  <- log(max(draw_one(priors$R0), 1e-3))
     parlist$u_gamma <- stats::qlogis(clamp(draw_one(priors$gamma_sir), 1e-4, 1 - 1e-4))
     parlist$u_neff  <- stats::qlogis(clamp(draw_one(priors$N_eff),     1e-4, 1 - 1e-4))
