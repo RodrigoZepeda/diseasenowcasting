@@ -64,6 +64,7 @@ To fit, the package needs the gradient of the likelihood with respect to the par
 > **Note** Each extension has a **validator** (`validate_custom_delay()`, `validate_custom_epidemic()`). It checks your function for possible errors. The validator is not perfect and might raise false-positive flags (i.e. functions that do work on RTMB might crash the validator). So if you know what you are doing feel free to ignore it. 
 
 ```{r load}
+set.seed(26378)
 library(diseasenowcasting)
 library(tbl.now)
 library(RTMB) # <--------- REQUIRED for custom components 
@@ -81,7 +82,7 @@ library(dplyr)
 ```{r dengue-data}
 #Get just one season for making the example fast
 dengue_season <- denguedat |> 
-  filter(onset_week <= as.Date("1990-06-01") & 
+  filter(report_week  <= as.Date("1991-06-01") & 
            onset_week <= as.Date("1991-06-01"))
 
 #Construct the tbl_now
