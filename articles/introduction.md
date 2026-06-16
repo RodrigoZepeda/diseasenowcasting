@@ -170,12 +170,12 @@ the `tbl_now`:
 autoplot(nc_dengue) 
 ```
 
-![\_Nowcast for dengue example. The shaded bars show the median while
-the errorbar has the 90 % credible
-intervals.\_](introduction_files/figure-html/dengue-plot-1.png)
+![\*Nowcast for dengue example. The shaded bars show the median while
+the errorbar has the 90% credible
+intervals.\*](introduction_files/figure-html/dengue-plot-1.png)
 
 *Nowcast for dengue example. The shaded bars show the median while the
-errorbar has the 90 % credible intervals.*
+errorbar has the 90% credible intervals.*
 
 Values can be obtained via
 [`predict()`](https://rdrr.io/r/stats/predict.html) and
@@ -421,6 +421,12 @@ vignettes:
   against the data. Uses the prior-predictive tools
   (`nowcast(..., prior_only = TRUE)`) to *see* what a prior implies
   before fitting.
+
+- **[Custom delays and epidemic
+  processes](https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.html)**
+  — Two examples on how to set **your own delays and epidemic
+  processes**. Includes how to use ordinary differential equation
+  models.
 
 - **[Handling Outlier Delays with
   Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.md)**

@@ -87,8 +87,8 @@ A `backtest_class` object.
 
 `backtest()` evaluates one nowcast per (as-of date x model) cell and
 these cells are **embarrassingly parallel**. The work is dispatched with
-foreach + doFuture, so parallelism is controlled by the future plan you
-set *before* calling `backtest()`:
+future.apply, so parallelism is controlled by the future plan you set
+*before* calling `backtest()`:
 
     library(future)
     plan(multisession, workers = 4)   # 4 parallel R sessions

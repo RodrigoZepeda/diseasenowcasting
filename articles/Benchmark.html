@@ -41,7 +41,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,8 +73,8 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Benchmark (diseasenowcasting vs NobBS and epinowcast)</h1>
-                        <h4 data-toc-skip class="author">Rodrigo
-Zepeda-Tello</h4>
+                        <h4 data-toc-skip class="author">diseasenowcasting
+team</h4>
             
       
       <small class="dont-index">Source: <a href="https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/vignettes/Benchmark.Rmd" class="external-link"><code>vignettes/Benchmark.Rmd</code></a></small>
@@ -172,6 +172,43 @@ level.</p>
 <p>All comparisons are performed on a <strong>common date set</strong> —
 dates where both <code>diseasenowcasting</code> and the comparison
 method have produced a valid nowcast — ensuring fairness.</p>
+<div class="section level4">
+<h4 id="like-for-like-comparison">Like-for-like comparison<a class="anchor" aria-label="anchor" href="#like-for-like-comparison"></a>
+</h4>
+<p>To compare <em>methods</em> rather than <em>software defaults</em>,
+each package is configured with <strong>matched model components and the
+same inference quality</strong>:</p>
+<ul>
+<li>
+<strong>Reporting-delay family</strong> — epinowcast is fit with
+Log-normal, Log-logistic and Gamma delays
+(<code>enw_reference(distribution = ...)</code>), mirroring
+<code>diseasenowcasting</code>’s Log-normal / Generalized-Gamma /
+Dirichlet families, rather than being left at its default delay.</li>
+<li>
+<strong>Expectation process</strong> — a random walk
+(<code>~ 1 + rw(day)</code>), the closest epinowcast analogue of
+<code>diseasenowcasting</code>’s AR(1) latent process, held fixed so the
+comparison isolates the reporting-delay choice.</li>
+<li>
+<strong>Inference</strong> — full NUTS (epinowcast’s default) is the
+gold standard, but it is <strong>prohibitively slow</strong> at this
+benchmark’s scale (minutes per nowcast, across many dates x configs x
+diseases). So both packages are run with their <em>fast approximate</em>
+inference: <code>diseasenowcasting</code> with the Laplace approximation
+and epinowcast with <strong>Pathfinder</strong> (variational) — a
+deliberately like-for-like pairing of approximate methods. Caveat:
+Pathfinder under-estimates the posterior more aggressively than Laplace,
+so epinowcast’s interval <strong>coverage reported here is
+conservative</strong> (a lower bound). Set <code>ENW_SAMPLER=nuts</code>
+to fit it with full MCMC if runtime allows.</li>
+</ul>
+<p>Some components have no exact cross-package analogue (epinowcast has
+no SIR mechanistic process or Generalized-Gamma delay;
+<code>diseasenowcasting</code> has no identical GP-on-expectation), so
+those models are reported as method-specific rather than forced into a
+false pairing.</p>
+</div>
 </div>
 <div class="section level3">
 <h3 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a>
@@ -424,7 +461,8 @@ weekly).</caption>
 <li>All <code>diseasenowcasting</code> HSGP variants beat NobBS and all
 Epinowcast variants on WIS.</li>
 <li>Best <code>diseasenowcasting</code>: <strong>HSGP /
-GenGamma</strong>, WIS ≈ 7.0, cov90 ≈ 0.94.</li>
+GenGamma</strong>, WIS <span class="math inline">\approx</span> 7.0,
+cov90 <span class="math inline">\approx</span> 0.94.</li>
 </ul>
 </div>
 <div class="section level4">
@@ -840,15 +878,30 @@ top performers.</p>
 <p>The full benchmark — the <strong>complete own-model grid</strong>
 (HSGP / AR(1) / SIR x {LogNormal, Generalized-Gamma, Dirichlet}) fit
 with <code><a href="../reference/nowcast.html">nowcast()</a></code> and the seasonal / day-of-week covariates,
-plus <strong>NobBS</strong> and <strong>three Epinowcast
-variants</strong> (point effect / random effect, default, random walk),
-scored on a common evaluation-date set — lives in a single
-self-contained script:</p>
+plus <strong>NobBS</strong> and <strong>three matched Epinowcast
+configurations</strong> (Log-normal / Log-logistic / Gamma reporting
+delays under a shared random-walk expectation, fit with
+<strong>Pathfinder</strong> — epinowcast’s fast variational inference,
+since full NUTS is too slow at this scale; see “Like-for-like
+comparison” above), scored on a common evaluation-date set — lives in a
+single self-contained script:</p>
 <pre><code><span><span class="va">devel</span><span class="op">/</span><span class="va">benchmark_full.R</span></span></code></pre>
 <p>Run it (after <code>R CMD INSTALL</code> of this package, so the
 parallel workers can load it):</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="ex">Rscript</span> devel/benchmark_full.R                                  <span class="co"># all 3 diseases, 50 dates</span></span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="va">N_DATES</span><span class="op">=</span>50  <span class="ex">Rscript</span> devel/benchmark_full.R  </span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="ex">Rscript</span> devel/benchmark_full.R                                  <span class="co"># all 3 diseases, 50 dates (epinowcast Pathfinder)</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="va">N_DATES</span><span class="op">=</span>6 <span class="ex">Rscript</span> devel/benchmark_full.R                        <span class="co"># quick smoke</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="va">ENW_SAMPLER</span><span class="op">=</span>nuts <span class="ex">Rscript</span> devel/benchmark_full.R                 <span class="co"># slow: epinowcast with full NUTS</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="va">FLOOR_SIG_FRAC</span><span class="op">=</span>0.25 <span class="ex">Rscript</span> devel/benchmark_full.R             <span class="co"># own models at the package-default spread</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note.</strong> Full NUTS for epinowcast is too slow at this
+scale (minutes per nowcast x dates x configs x diseases), so epinowcast
+is fit with <strong>Pathfinder</strong> (variational) by default — the
+analogue of the fast Laplace approximation
+<code>diseasenowcasting</code> uses. Pathfinder under-estimates the
+posterior, so epinowcast’s interval coverage here is
+<strong>conservative</strong>; set <code>ENW_SAMPLER=nuts</code> for the
+slow, fully-calibrated run.</p>
+</blockquote>
 <p>It prints a ranked WIS table per disease and saves the tidy scores to
 <code>devel/results/benchmark_scores.rds</code>.</p>
 <blockquote>

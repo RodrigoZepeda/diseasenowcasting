@@ -11,7 +11,8 @@ fitted density, (2) smoothed latent incidence lambda with 50/90% CI, and
 nowcast_diagnostic(
   object,
   n_draws = NULL,
-  seed = sample.int(.Machine$integer.max, 1)
+  seed = sample.int(.Machine$integer.max, 1),
+  previous_times = 30
 )
 ```
 
@@ -28,6 +29,15 @@ nowcast_diagnostic(
 - seed:
 
   Optional RNG seed.
+
+- previous_times:
+
+  Number of most recent event-times to display in panels 2 (smoothed
+  incidence) and 3 (nowcast): only the last `previous_times` dates
+  (including the nowcast target) are shown, as in
+  [`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html).
+  Panel 1 (the delay distribution) always uses all delays. Default `30`;
+  use `Inf` (or `NULL`) to show every event-time.
 
 ## Value
 

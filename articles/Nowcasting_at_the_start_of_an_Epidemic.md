@@ -251,9 +251,9 @@ ggplot(sir_df, aes(day, med, colour = scenario, fill = scenario)) +
   theme_diseasenowcasting()
 ```
 
-![\_Prior-predictive epidemic from the SIR model under three R0 priors
+![\*Prior-predictive epidemic from the SIR model under three R0 priors
 (median + 90%
-band).\_](Nowcasting_at_the_start_of_an_Epidemic_files/figure-html/prior-sir-1.png)
+band).\*](Nowcasting_at_the_start_of_an_Epidemic_files/figure-html/prior-sir-1.png)
 
 *Prior-predictive epidemic from the SIR model under three R0 priors
 (median + 90% band).*
@@ -353,9 +353,9 @@ ggplot(plot_data, aes(x = days_to_nowcast)) +
   theme_diseasenowcasting()
 ```
 
-![\_Nowcast (median + 90% CI) for each epidemic model at five
+![\*Nowcast (median + 90% CI) for each epidemic model at five
 progressive observation
-windows.\_](Nowcasting_at_the_start_of_an_Epidemic_files/figure-html/covid-plots-1.png)
+windows.\*](Nowcasting_at_the_start_of_an_Epidemic_files/figure-html/covid-plots-1.png)
 
 *Nowcast (median + 90% CI) for each epidemic model at five progressive
 observation windows.*

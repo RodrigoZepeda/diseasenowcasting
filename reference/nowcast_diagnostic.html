@@ -27,7 +27,7 @@ patchwork package for a combined output."><meta property="og:image" content="htt
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,7 +50,7 @@ patchwork package for a combined output."><meta property="og:image" content="htt
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Three-panel diagnostic plot for a fitted nowcast</h1>
-      <small class="dont-index">Source: <a href="https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/R/26_autoplot_nowcast.R" class="external-link"><code>R/26_autoplot_nowcast.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/R/26_nowcast_diagnostic.R" class="external-link"><code>R/26_nowcast_diagnostic.R</code></a></small>
       <div class="d-none name"><code>nowcast_diagnostic.Rd</code></div>
     </div>
 
@@ -66,7 +66,8 @@ posterior-predictive nowcast with observed counts.  Requires the
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">nowcast_diagnostic</span><span class="op">(</span></span>
 <span>  <span class="va">object</span>,</span>
 <span>  n_draws <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample.int</a></span><span class="op">(</span><span class="va">.Machine</span><span class="op">$</span><span class="va">integer.max</span>, <span class="fl">1</span><span class="op">)</span></span>
+<span>  seed <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample.int</a></span><span class="op">(</span><span class="va">.Machine</span><span class="op">$</span><span class="va">integer.max</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  previous_times <span class="op">=</span> <span class="fl">30</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -84,6 +85,14 @@ posterior-predictive nowcast with observed counts.  Requires the
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
 <dd><p>Optional RNG seed.</p></dd>
+
+
+<dt id="arg-previous-times">previous_times<a class="anchor" aria-label="anchor" href="#arg-previous-times"></a></dt>
+<dd><p>Number of most recent event-times to display in panels 2
+(smoothed incidence) and 3 (nowcast): only the last <code>previous_times</code> dates
+(including the nowcast target) are shown, as in <code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code>.  Panel 1 (the
+delay distribution) always uses all delays.  Default <code>30</code>; use <code>Inf</code> (or
+<code>NULL</code>) to show every event-time.</p></dd>
 
 </dl></div>
     <div class="section level2">

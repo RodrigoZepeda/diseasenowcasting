@@ -3,13 +3,14 @@ pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
   Benchmark: Benchmark.html
+  Custom_delays_and_processes: Custom_delays_and_processes.html
   Handling_Outlier_Delays_with_Censoring: Handling_Outlier_Delays_with_Censoring.html
   introduction: introduction.html
   LLM_Usage: LLM_Usage.html
   Mathematics: Mathematics.html
   Nowcasting_at_the_start_of_an_Epidemic: Nowcasting_at_the_start_of_an_Epidemic.html
   Understanding_Priors: Understanding_Priors.html
-last_built: 2026-06-10T20:33Z
+last_built: 2026-06-16T21:21Z
 urls:
   reference: https://rodrigozepeda.github.io/diseasenowcasting/reference
   article: https://rodrigozepeda.github.io/diseasenowcasting/articles

@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -88,6 +88,12 @@
 </tr><tr><td><code>sir_epidemic(N_pop=1e6, use_beta_rw_trend=TRUE)</code></td>
 <td><code>N_pop</code></td>
 <td>Discrete-time SIR; coupled force of infection across strata.</td>
+</tr><tr><td><code>custom_epidemic(intensity_fn, priors, ...)</code></td>
+<td>
+<code>intensity_fn</code>, <code>priors</code>
+</td>
+<td>
+<strong>User-defined</strong> <code>f(t)</code>. Any RTMB-traceable generator of <code>log_mean[T×S]</code>. See §2b.</td>
 </tr></tbody></table></div>
 <div class="section level3">
 <h3 id="delay-families">Delay families<a class="anchor" aria-label="anchor" href="#delay-families"></a></h3>
@@ -106,6 +112,9 @@
 </tr><tr><td><code>dirichlet_delay(bins=NA)</code></td>
 <td>Non-parametric simplex</td>
 <td>Dirichlet prior + geometric tail; two-stage only.</td>
+</tr><tr><td><code>custom_delay(cdf_factory, priors, ...)</code></td>
+<td><strong>User-defined</strong></td>
+<td>Any RTMB-traceable CDF. See §2b.</td>
 </tr></tbody></table></div>
 <div class="section level3">
 <h3 id="combining">Combining<a class="anchor" aria-label="anchor" href="#combining"></a></h3>
@@ -114,10 +123,65 @@
 <hr></div>
 </div>
 <div class="section level2">
+<h2 id="id_2b-custom-components-user-defined-delays--epidemic-processes">2b. Custom components (user-defined delays &amp; epidemic processes)<a class="anchor" aria-label="anchor" href="#id_2b-custom-components-user-defined-delays--epidemic-processes"></a></h2>
+<p>Users can supply their <strong>own</strong> delay distribution or epidemic process as an R function, instead of choosing from the built-in menu. Both go into the <code><a href="reference/model.html">model()</a></code> exactly like a built-in component.</p>
+<p><strong>⚠️ <code><a href="https://github.com/kaskr/RTMB" class="external-link">library(RTMB)</a></code> is REQUIRED.</strong> RTMB is in <code>Imports</code> (not <code>Depends</code>), so <code><a href="https://rodrigozepeda.github.io/diseasenowcasting/">library(diseasenowcasting)</a></code> does NOT attach it. Built-in models work anyway (their math lives in the package namespace), but a <em>user-written</em> function lives in the global env and its arithmetic only dispatches to RTMB’s autodiff methods when RTMB is <strong>attached</strong>. The fit/validate path calls <code>.assert_rtmb_attached()</code> and aborts with a clear “Run <code><a href="https://github.com/kaskr/RTMB" class="external-link">library(RTMB)</a></code>” message if it is missing. This is also why the <code>test-custom-components.R</code> tests <code><a href="https://github.com/kaskr/RTMB" class="external-link">library(RTMB)</a></code> at the top and the vignette does so in its setup chunk.</p>
+<p><strong>The one rule (AD-traceability).</strong> Every op inside the user function must be RTMB-differentiable: - ✅ <code>+ - * /</code>, <code>exp</code>, <code>log</code>, <code>sqrt</code>, <code>abs</code>, <code>sum</code>, <code>cumsum</code>, <code>pnorm</code>, <code>pgamma</code>, <code>lgamma</code>, matrix arithmetic, <strong>fixed-length</strong> <code>for</code> loops. - ❌ <code>if</code>/<code>ifelse</code> on a <em>parameter value</em>, <code>pmax</code>/<code>pmin</code> on AD types (use <code>(x + abs(x))/2</code> for <code>pmax(x,0)</code>), RNG, external solvers (<code>deSolve</code>). - <strong>Index assignment in a loop</strong> (<code>v[t] &lt;- ...</code>) needs <code>`[&lt;-` &lt;- RTMB::ADoverload("[&lt;-")</code> as the FIRST line of the function. Prefer <code><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum()</a></code> to avoid it.</p>
+<p>Always run the <strong>validator</strong> first — it test-tapes the function and reports finite <code>fn()</code>/<code>gr()</code>, turning a cryptic optimiser failure into a clear message.</p>
+<div class="section level3">
+<h3 id="custom_delay--num_id-5">custom_delay() — num_id 5<a class="anchor" aria-label="anchor" href="#custom_delay--num_id-5"></a></h3>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Each of cdf / log_cdf / log_survival is `function(theta) -&gt; function(d)`.</span></span>
+<span><span class="co"># Only `cdf` is required; log_cdf defaults to log(cdf), log_survival to log(1-cdf).</span></span>
+<span><span class="co"># Supply log_survival explicitly for heavy tails (default log(1-cdf) loses precision as F-&gt;1).</span></span>
+<span><span class="va">weibull_cdf</span>      <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span> <span class="va">shape</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span>; <span class="va">scale</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span>  <span class="co"># log scale =&gt; unconstrained</span></span>
+<span>                                      <span class="kw">function</span><span class="op">(</span><span class="va">d</span><span class="op">)</span> <span class="fl">1</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="op">-</span><span class="op">(</span><span class="va">d</span><span class="op">/</span><span class="va">scale</span><span class="op">)</span><span class="op">^</span><span class="va">shape</span><span class="op">)</span> <span class="op">}</span></span>
+<span><span class="va">weibull_log_surv</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span> <span class="va">shape</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span>; <span class="va">scale</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span></span>
+<span>                                      <span class="kw">function</span><span class="op">(</span><span class="va">d</span><span class="op">)</span> <span class="op">-</span><span class="op">(</span><span class="va">d</span><span class="op">/</span><span class="va">scale</span><span class="op">)</span><span class="op">^</span><span class="va">shape</span> <span class="op">}</span>            <span class="co"># exact, stable in the tail</span></span>
+<span><span class="va">dly</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/custom_delay.html">custom_delay</a></span><span class="op">(</span></span>
+<span>  cdf          <span class="op">=</span> <span class="va">weibull_cdf</span>,</span>
+<span>  log_survival <span class="op">=</span> <span class="va">weibull_log_surv</span>,</span>
+<span>  priors       <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="reference/priors.html">normal_prior</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span>, <span class="fu"><a href="reference/priors.html">normal_prior</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">7</span><span class="op">)</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span>,  <span class="co"># per-param: prior=free, number=fixed</span></span>
+<span>  name <span class="op">=</span> <span class="st">"Weibull"</span>, param_names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"log_shape"</span>,<span class="st">"log_scale"</span><span class="op">)</span>, inits <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">7</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># No n_params argument: it is inferred from priors / param_names / inits (must agree).</span></span>
+<span><span class="fu"><a href="reference/validate_custom_delay.html">validate_custom_delay</a></span><span class="op">(</span><span class="va">dly</span><span class="op">)</span>             <span class="co"># REQUIRES library(RTMB)</span></span>
+<span><span class="fu"><a href="reference/model.html">model</a></span><span class="op">(</span><span class="fu"><a href="reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="reference/epidemic_process.html">ar1_epidemic</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">dly</span><span class="op">)</span></span></code></pre></div>
+<p>Works in BOTH the joint and the two-stage Stage-1 delay-only fit. Fitted params land in <code>fit$parList$custom_delay_params</code>. Internally the three functions are assembled into <code>priors$cdf_factory</code>, carried downstream (reconstruct / surprise / diagnostics).</p>
+</div>
+<div class="section level3">
+<h3 id="custom_epidemic--num_id-4-epidemic_model">custom_epidemic() — num_id 4 (epidemic_model)<a class="anchor" aria-label="anchor" href="#custom_epidemic--num_id-4-epidemic_model"></a></h3>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># intensity_fn(theta) -&gt; numeric matrix log_mean[max_time x n_strata] (the FULL log f(t),</span></span>
+<span><span class="co"># including any intercept; NOT just a trend). One column =&gt; unstratified.</span></span>
+<span><span class="va">max_time</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer_max_time.html">infer_max_time</a></span><span class="op">(</span><span class="va">tn</span><span class="op">)</span>                   <span class="co"># event-times the model spans (see note)</span></span>
+<span><span class="va">rw_fn</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span>                       <span class="co"># pure random walk on log-incidence</span></span>
+<span>  <span class="va">log_mu0</span> <span class="op">&lt;-</span> <span class="va">theta</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>; <span class="va">sigma</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span>; <span class="va">eps</span> <span class="op">&lt;-</span> <span class="va">theta</span><span class="op">[</span><span class="fl">3</span><span class="op">:</span><span class="op">(</span><span class="fl">2L</span> <span class="op">+</span> <span class="va">max_time</span><span class="op">)</span><span class="op">]</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="va">log_mu0</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="va">sigma</span> <span class="op">*</span> <span class="va">eps</span><span class="op">)</span>, <span class="va">max_time</span>, <span class="fl">1L</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">custom_epi</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/custom_epidemic.html">custom_epidemic</a></span><span class="op">(</span></span>
+<span>  intensity_fn <span class="op">=</span> <span class="va">rw_fn</span>,</span>
+<span>  priors       <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="reference/priors.html">normal_prior</a></span><span class="op">(</span><span class="fl">3</span>,<span class="fl">1</span><span class="op">)</span>, <span class="fu"><a href="reference/priors.html">normal_prior</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2</span>,<span class="fl">0.5</span><span class="op">)</span><span class="op">)</span>,  <span class="co"># n_params inferred (2 + max_time)</span></span>
+<span>                   <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="reference/priors.html">std_normal_prior</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>, <span class="va">max_time</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  inits        <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="op">-</span><span class="fl">2</span>, <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">max_time</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/validate_custom_epidemic.html">validate_custom_epidemic</a></span><span class="op">(</span><span class="va">custom_epi</span><span class="op">)</span>            <span class="co"># REQUIRES library(RTMB)</span></span>
+<span><span class="fu"><a href="reference/model.html">model</a></span><span class="op">(</span><span class="fu"><a href="reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">custom_epi</span>, <span class="fu"><a href="reference/delay_process.html">lognormal_delay</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<ul><li>
+<strong>No <code>n_params</code> argument</strong> — it is inferred from <code>priors</code> / <code>param_names</code> / <code>inits</code> (whichever are supplied must agree on the count).</li>
+<li>
+<strong>For time-varying dims</strong> (e.g. a RW with one innovation per event-time), get <code>max_time</code> first with <code>infer_max_time(tn)</code> (= <code>prepare_from_tbl_now(tn, model)$max_time</code>).</li>
+<li>v1 is <strong>fixed-effects only</strong> (no <code>random=</code> Laplace over custom latents); fine for short/medium series. Custom processes are joint-fit only (not the two-stage Stage-1, which is delay-specific — unaffected).</li>
+<li>ODE example: write the RHS + a fixed-step RK4/Euler loop inside <code>intensity_fn</code> (with the <code>[&lt;-</code> overload). For stiff/adaptive needs, <code>RTMBode</code> is the production path (add to Suggests; not used by the package itself).</li>
+<li>Fitted params in <code>fit$parList$custom_epidemic_params</code>; <code>priors$intensity_fn</code> carries the function to <code>.joint_reconstruct()</code> / prior-only / diagnostics.</li>
+</ul><p>See <code><a href="articles/Custom_delays_and_processes.html">vignette("Custom_delays_and_processes")</a></code> for worked Weibull-delay, random-walk, and SIR-ODE examples with built-in comparisons.</p>
+<hr></div>
+</div>
+<div class="section level2">
 <h2 id="id_3-data-preparation">3. Data preparation<a class="anchor" aria-label="anchor" href="#id_3-data-preparation"></a></h2>
 <div class="section level3">
 <h3 id="the-tbl_now-workflow-recommended">The tbl_now workflow (recommended)<a class="anchor" aria-label="anchor" href="#the-tbl_now-workflow-recommended"></a></h3>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rodrigozepeda.github.io/tbl.now/" class="external-link">tbl.now</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># From a linelist (one row per case):</span></span>
@@ -138,7 +202,7 @@
 <h3 id="tblnow-companion-package--full-reference">tbl.now companion package — full reference<a class="anchor" aria-label="anchor" href="#tblnow-companion-package--full-reference"></a></h3>
 <p><code>diseasenowcasting</code> consumes data as a <code>tbl_now</code> object from the companion <a href="https://github.com/RodrigoZepeda/tbl.now" class="external-link"><code>tbl.now</code></a> package: a tibble that carries <strong>two time indices</strong> (<code>event_date</code>, <code>report_date</code>) plus modelling metadata (strata, covariates, temporal effects, <code>now</code>, units, data type) and is fully dplyr-compatible.</p>
 <p><strong>Create</strong></p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html" class="external-link">tbl_now</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">event_date</span>, <span class="va">report_date</span>,</span>
 <span>        strata <span class="op">=</span> <span class="cn">NULL</span>, covariates <span class="op">=</span> <span class="cn">NULL</span>, case_count <span class="op">=</span> <span class="cn">NULL</span>, is_censored <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>        now <span class="op">=</span> <span class="cn">NULL</span>,                <span class="co"># Date; default max(report_date)</span></span>
@@ -149,7 +213,7 @@
 <span>        verbose <span class="op">=</span> <span class="cn">TRUE</span>, align_weeks <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p>Auto-added <strong>protected</strong> columns: <code>.event_num</code>, <code>.report_num</code>, <code>.delay</code> (= <code>.report_num - .event_num</code>). Removing a protected column downgrades the object back to a plain tibble (with a warning).</p>
 <p><strong>Getters</strong> (every attribute has one)</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/nowcast_data_getters.html" class="external-link">get_event_date</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/nowcast_data_getters.html" class="external-link">get_report_date</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>    <span class="co"># column NAMES (character), not the dates</span></span>
 <span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/nowcast_data_getters.html" class="external-link">get_event_units</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/nowcast_data_getters.html" class="external-link">get_report_units</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>  <span class="co"># "days"|"weeks"|"months"|"years"|"numeric"</span></span>
 <span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/nowcast_data_getters.html" class="external-link">get_now</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>                                 <span class="co"># Date — the as-of date</span></span>
@@ -162,7 +226,7 @@
 <span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/get_latest_first.html" class="external-link">get_initial_reported_cases</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>  <span class="co"># first-reported count per event_date</span></span></code></pre></div>
 <p><strong>Data types</strong> — <code>"linelist"</code> (one row per case), <code>"count-incidence"</code> (count reported <em>exactly</em> on <code>report_date</code>), <code>"count-cumulative"</code> (cumulative up to <code>report_date</code>). Convert with <code>to_count(x, to = "count-incidence")</code>.</p>
 <p><strong>Temporal effects (lazy, two-step).</strong> <code>nowcast(temporal_effects = "auto")</code> does this for you, but to control it manually:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/temporal_effects.html" class="external-link">temporal_effects</a></span><span class="op">(</span>day_of_week <span class="op">=</span> <span class="cn">TRUE</span>, week_of_year <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>                         month_of_year <span class="op">=</span> <span class="cn">FALSE</span>, seasons <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span><span class="op">)</span>  <span class="co"># seasons = Fourier periods, e.g. c(7, 52)</span></span>
 <span><span class="va">x</span> <span class="op">&lt;-</span> <span class="va">x</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/add_temporal_effects.html" class="external-link">add_temporal_effects</a></span><span class="op">(</span><span class="va">spec</span>, date_type <span class="op">=</span> <span class="st">"event_date"</span><span class="op">)</span>  <span class="co"># attaches spec; NO columns yet</span></span>
@@ -170,13 +234,13 @@
 <span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/nowcast_data_getters.html" class="external-link">get_temporal_effect_cols</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>                                     <span class="co"># the created column names</span></span></code></pre></div>
 <p>dplyr verbs (<code>filter</code>/<code>select</code>/<code>mutate</code>/<code>group_by</code>/<code>rename</code>/…) <strong>preserve the spec</strong> and never trigger computation; only <code><a href="https://rodrigozepeda.github.io/tbl.now/reference/compute_temporal_effects.html" class="external-link">compute_temporal_effects()</a></code> adds columns. Pre-attach + compute on the <code>tbl_now</code> and <code><a href="reference/nowcast.html">nowcast()</a></code> will use the covariates; otherwise pass <code>temporal_effects = "none"</code> to disable.</p>
 <p><strong>Modify metadata</strong> — changers replace, adders append, removers drop:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/change.html" class="external-link">change_now</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2023-06-01"</span><span class="op">)</span><span class="op">)</span>           <span class="co"># move the as-of date (re-censors)</span></span>
 <span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/change.html" class="external-link">change_strata</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/add.html" class="external-link">add_strata</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/remove.html" class="external-link">remove_strata</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/change.html" class="external-link">change_covariates</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/add.html" class="external-link">add_covariates</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/remove.html" class="external-link">remove_covariates</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/add.html" class="external-link">add_is_censored</a></span><span class="op">(</span><span class="va">x</span>, is_censored <span class="op">=</span> <span class="va">my_logical</span><span class="op">)</span>   <span class="co"># mark reports as right-censored delays</span></span></code></pre></div>
 <p><strong>Utilities</strong></p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/complete_zeroes.html" class="external-link">complete_zeroes</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>             <span class="co"># fill missing event/report/strata cells with 0</span></span>
 <span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/align_weeks.html" class="external-link">align_weeks</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">date_col</span><span class="op">)</span>       <span class="co"># snap to a consistent epiweek day (integer .delay)</span></span>
 <span><span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/week_2_date.html" class="external-link">week_2_date</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">week</span>, <span class="va">year</span><span class="op">)</span>     <span class="co"># epiweek + year -&gt; Date</span></span>
@@ -197,15 +261,22 @@
 </div>
 <div class="section level3">
 <h3 id="prepare_from_tbl_now">prepare_from_tbl_now()<a class="anchor" aria-label="anchor" href="#prepare_from_tbl_now"></a></h3>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Internal; called automatically by nowcast()</span></span>
 <span><span class="va">prep</span> <span class="op">&lt;-</span> <span class="fu">prepare_from_tbl_now</span><span class="op">(</span><span class="va">tn</span>, <span class="va">model</span>, now <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2023-01-01"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co"># Returns list(data=engine, now, event_col, min_event, event_unit,</span></span>
 <span><span class="co">#              max_time, strata_cols, strata_levels)</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="infer_max_time">infer_max_time()<a class="anchor" aria-label="anchor" href="#infer_max_time"></a></h3>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Exported convenience: the number of event-times the model spans (t = 0..max_time-1).</span></span>
+<span><span class="co"># Use it to size a custom_epidemic() intensity_fn whose loop runs over time.</span></span>
+<span><span class="va">max_time</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer_max_time.html">infer_max_time</a></span><span class="op">(</span><span class="va">tn</span><span class="op">)</span>                  <span class="co"># = prepare_from_tbl_now(tn, model())$max_time</span></span></code></pre></div>
+</div>
+<div class="section level3">
 <h3 id="prepare_data--lower-level">prepare_data() — lower-level<a class="anchor" aria-label="anchor" href="#prepare_data--lower-level"></a></h3>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">engine</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/prepare_data.html">prepare_data</a></span><span class="op">(</span></span>
 <span>  <span class="va">model</span>, <span class="va">m</span>,                 <span class="co"># m = [event_time, count, delay, cell_index] matrix</span></span>
 <span>  X        <span class="op">=</span> <span class="cn">NULL</span>,          <span class="co"># [max_time × P] covariate matrix</span></span>
@@ -223,7 +294,7 @@
 <h2 id="id_4-fitting">4. Fitting<a class="anchor" aria-label="anchor" href="#id_4-fitting"></a></h2>
 <div class="section level3">
 <h3 id="main-entry-point-nowcast">Main entry point: nowcast()<a class="anchor" aria-label="anchor" href="#main-entry-point-nowcast"></a></h3>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nc</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/nowcast.html">nowcast</a></span><span class="op">(</span></span>
 <span>  <span class="va">data</span>,                        <span class="co"># tbl_now</span></span>
 <span>  <span class="va">model</span>,                       <span class="co"># model() object</span></span>
@@ -251,7 +322,7 @@
 </ul></div>
 <div class="section level3">
 <h3 id="fit--lower-level">fit() — lower-level<a class="anchor" aria-label="anchor" href="#fit--lower-level"></a></h3>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Returns a list: par, parList, nll, convergence, obj, opt, random,</span></span>
 <span><span class="co">#   use_random, epi_model, is_nb, lambda [T×S], mu, mu_safe, Gstar [T×S],</span></span>
 <span><span class="co">#   delay_mu, delay_sigma, phi_nb, reconstruct, Bmat, freq, data, priors, model</span></span>
@@ -259,7 +330,7 @@
 </div>
 <div class="section level3">
 <h3 id="default_priors">default_priors()<a class="anchor" aria-label="anchor" href="#default_priors"></a></h3>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">priors</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/default_priors.html">default_priors</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">engine</span>, phi <span class="op">=</span> <span class="fu"><a href="reference/priors.html">lognormal_prior</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">20</span><span class="op">)</span>, <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co"># Returns named list of prior_class objects: delay_mu, delay_sigma, delay_Q,</span></span>
 <span><span class="co"># phi_nb, mu_intercept, gamma_cov, gp_alpha, gp_ell, ar_phi, ar_sigma,</span></span>
@@ -270,7 +341,7 @@
 <h2 id="id_5-results">5. Results<a class="anchor" aria-label="anchor" href="#id_5-results"></a></h2>
 <div class="section level3">
 <h3 id="parameter-estimates">Parameter estimates<a class="anchor" aria-label="anchor" href="#parameter-estimates"></a></h3>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">nc</span><span class="op">)</span></span>
 <span><span class="co"># Named vector: delay_mu, delay_sigma, phi_nb, mu_intercept,</span></span>
 <span><span class="co">#               log_gp_alpha, log_gp_ell, ar_phi_unc, log_ar_sigma_unc, ...</span></span>
@@ -278,7 +349,7 @@
 </div>
 <div class="section level3">
 <h3 id="posterior-predictive-nowcast">Posterior-predictive nowcast<a class="anchor" aria-label="anchor" href="#posterior-predictive-nowcast"></a></h3>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nc</span>, n_draws <span class="op">=</span> <span class="cn">NULL</span>, summary <span class="op">=</span> <span class="cn">FALSE</span>, seed <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span><span class="co"># Returns nowcast_prediction_class with slot @draws [n_draws × max_time]</span></span>
 <span></span>
@@ -290,7 +361,7 @@
 </div>
 <div class="section level3">
 <h3 id="latent-incidence-lambda">Latent incidence (lambda)<a class="anchor" aria-label="anchor" href="#latent-incidence-lambda"></a></h3>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">nc</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span>       <span class="co"># numeric vector length max_time (posterior mean)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span><span class="op">(</span><span class="va">nc</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span>     <span class="co"># posterior median</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">nc</span>, probs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span>  <span class="co"># [max_time × probs]</span></span>
@@ -298,7 +369,7 @@
 </div>
 <div class="section level3">
 <h3 id="lower-level-draw-helper">Lower-level draw helper<a class="anchor" aria-label="anchor" href="#lower-level-draw-helper"></a></h3>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/summarise_nowcast_matrix.html">summarise_nowcast_matrix</a></span><span class="op">(</span><span class="va">draws_matrix</span><span class="op">)</span></span>
 <span><span class="co"># draws_matrix: [n_draws × max_time] → data.frame with q2.5..q97.5 + .event_num</span></span></code></pre></div>
 <hr></div>
@@ -307,7 +378,7 @@
 <h2 id="id_6-backtesting-and-scoring">6. Backtesting and scoring<a class="anchor" aria-label="anchor" href="#id_6-backtesting-and-scoring"></a></h2>
 <div class="section level3">
 <h3 id="backtest">backtest()<a class="anchor" aria-label="anchor" href="#backtest"></a></h3>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/backtest.html">backtest</a></span><span class="op">(</span></span>
 <span>  <span class="va">data</span>,                          <span class="co"># tbl_now</span></span>
 <span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">mdl1</span>, <span class="va">mdl2</span><span class="op">)</span>,     <span class="co"># or a single model()</span></span>
@@ -324,12 +395,12 @@
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co"># Returns backtest_class; parallelised via doFuture (%dofuture%)</span></span>
+<span><span class="co"># Returns backtest_class; parallelised via future.apply::future_lapply()</span></span>
 <span><span class="co"># Set future::plan(multisession, workers=8) before calling for parallel execution</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="score">score()<a class="anchor" aria-label="anchor" href="#score"></a></h3>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/score.html">score</a></span><span class="op">(</span><span class="va">bt</span>, metric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wis"</span>, <span class="st">"ape"</span>, <span class="st">"mse"</span><span class="op">)</span>, report <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="co"># Returns data.frame: model, wis, ape, mse, coverage_50, coverage_90</span></span>
 <span><span class="co"># Sorted best-first by `metric`; cli report printed if report=TRUE</span></span>
@@ -337,7 +408,7 @@
 </div>
 <div class="section level3">
 <h3 id="autoplot">autoplot<a class="anchor" aria-label="anchor" href="#autoplot"></a></h3>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span>     <span class="co"># faceted by model; median + 50%/90% ribbons vs final truth</span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">pred</span><span class="op">)</span>   <span class="co"># single nowcast</span></span></code></pre></div>
 <hr></div>
@@ -346,7 +417,7 @@
 <h2 id="id_6b-surprise-anomaly-detection-and-censoring">6b. Surprise (anomaly detection) and censoring<a class="anchor" aria-label="anchor" href="#id_6b-surprise-anomaly-detection-and-censoring"></a></h2>
 <div class="section level3">
 <h3 id="surprise--is-new-data-surprising-under-the-fit">surprise() — is new data surprising under the fit?<a class="anchor" aria-label="anchor" href="#surprise--is-new-data-surprising-under-the-fit"></a></h3>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># type "count": new_data has columns event_index (0-indexed), count</span></span>
 <span><span class="co"># type "delay": new_data has columns delay (event units), optional weight</span></span>
 <span><span class="co"># type "both" (default): supply both. level = credible level (default 0.99).</span></span>
@@ -356,7 +427,7 @@
 </div>
 <div class="section level3">
 <h3 id="update-computes-surprise-automatically--warns">update() computes surprise automatically + warns<a class="anchor" aria-label="anchor" href="#update-computes-surprise-automatically--warns"></a></h3>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nc2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">nc</span>, <span class="va">new_rows</span>, surprise_level <span class="op">=</span> <span class="fl">0.99</span><span class="op">)</span>   <span class="co"># one warning listing surprising delays</span></span>
 <span><span class="fu"><a href="reference/extreme_values.html">extreme_values</a></span><span class="op">(</span><span class="va">nc2</span><span class="op">)</span>                                  <span class="co"># tidy data.frame of flagged surprises (or NULL)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">nc</span>, <span class="va">new_rows</span>, compute_surprise <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>        <span class="co"># silent</span></span></code></pre></div>
@@ -364,7 +435,7 @@
 </div>
 <div class="section level3">
 <h3 id="prior_only-see-what-a-prior-implies">prior_only: see what a prior implies<a class="anchor" aria-label="anchor" href="#prior_only-see-what-a-prior-implies"></a></h3>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Draw the epidemic from the PRIORS only (no fitting); data just sets the grid.</span></span>
 <span><span class="va">nc</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">tn</span>, <span class="fu"><a href="reference/model.html">model</a></span><span class="op">(</span><span class="fu"><a href="reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="reference/epidemic_process.html">sir_epidemic</a></span><span class="op">(</span>R0 <span class="op">=</span> <span class="fu"><a href="reference/priors.html">lognormal_prior</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span>, <span class="fl">0.1</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="reference/delay_process.html">lognormal_delay</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>              prior_only <span class="op">=</span> <span class="cn">TRUE</span>, n_draws <span class="op">=</span> <span class="fl">300</span><span class="op">)</span></span>
@@ -378,7 +449,7 @@
 <div class="section level3">
 <h3 id="censoring-an-outlier-delay-m_censored">Censoring an outlier delay (m_censored)<a class="anchor" aria-label="anchor" href="#censoring-an-outlier-delay-m_censored"></a></h3>
 <p>A report flagged <code>is_censored</code> contributes <code>log G_D(j)</code> (delay &lt;= j, an upper bound) instead of the exact-delay term — so an extreme outlier delay stops distorting the fitted delay distribution. <code><a href="reference/nowcast.html">nowcast()</a></code> reads the tbl_now’s <code>is_censored</code> column automatically (both the delay-only and joint objectives handle it).</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Flag every report whose delay exceeds a bound as censored, then re-fit:</span></span>
 <span><span class="va">tn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/censor_delays_above.html">censor_delays_above</a></span><span class="op">(</span><span class="va">tn</span>, max_delay <span class="op">=</span> <span class="fl">45</span><span class="op">)</span>   <span class="co"># sets is_censored = TRUE for delay &gt; 45</span></span>
 <span><span class="va">nc</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">tn2</span>, <span class="fu"><a href="reference/model.html">model</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>                      <span class="co"># uses the censored delays</span></span>
@@ -392,7 +463,7 @@
 <h2 id="id_7-internal-architecture-for-contributors">7. Internal architecture (for contributors)<a class="anchor" aria-label="anchor" href="#id_7-internal-architecture-for-contributors"></a></h2>
 <div class="section level3">
 <h3 id="build_joint_obj">build_joint_obj()<a class="anchor" aria-label="anchor" href="#build_joint_obj"></a></h3>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">built</span> <span class="op">&lt;-</span> <span class="fu">build_joint_obj</span><span class="op">(</span><span class="va">data</span>, <span class="va">priors</span>, init <span class="op">=</span> <span class="cn">NULL</span>, use_random <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="co"># Returns list(obj, random, epi_model, is_nb, Bmat, freq, n_strata)</span></span>
 <span><span class="co"># obj is an RTMB::MakeADFun result; obj$fn/gr/he are the nll/gradient/hessian</span></span></code></pre></div>
@@ -440,8 +511,17 @@
 <code>delay_logits</code> (Dirichlet)</td>
 <td><code>[n_bins]</code></td>
 <td>Yes</td>
-</tr></tbody></table><p><strong>Smooth cap on log_mean</strong> (prevents exp() overflow):</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+</tr><tr><td>
+<code>custom_delay_params</code> (custom delay, family 5)</td>
+<td><code>[n_params]</code></td>
+<td>Yes</td>
+</tr><tr><td>
+<code>custom_epidemic_params</code> (custom epidemic, epidemic_model 4)</td>
+<td><code>[n_params]</code></td>
+<td>n/a (user owns full <code>log_mean[T×S]</code>)</td>
+</tr></tbody></table><p><strong>Component dispatch codes.</strong> <code>delay_family</code>: 1=LogNormal, 2=Gamma, 3=GenGamma, 4=Dirichlet, <strong>5=Custom</strong>. <code>epidemic_model</code>: 1=HSGP, 2=AR1, 3=SIR, <strong>4=Custom</strong>. Custom params are fixed via the per-element <code>priors</code> API (a number fixes, a prior frees) → an RTMB <code>map</code> with <code>factor(NA)</code> entries.</p>
+<p><strong>Smooth cap on log_mean</strong> (prevents exp() overflow):</p>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">log_mean_capped</span> <span class="op">&lt;-</span> <span class="va">upper_bound</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log1p</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">upper_bound</span> <span class="op">-</span> <span class="va">log_mean_col</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>where <code>upper_bound = min(max(6, log1p(casemax)), 16)</code>.</p>
 </div>
@@ -451,7 +531,7 @@
 </div>
 <div class="section level3">
 <h3 id="nowcast_draws">.nowcast_draws()<a class="anchor" aria-label="anchor" href="#nowcast_draws"></a></h3>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu">.nowcast_draws</span><span class="op">(</span><span class="va">fit</span>, <span class="va">target</span>, <span class="va">n_draws</span>, <span class="va">probs</span>, <span class="va">seed</span><span class="op">)</span></span>
 <span><span class="co"># fit must have: $data, $priors, $obj (with last.par.best), $use_random,</span></span>
 <span><span class="co">#               $Bmat, $freq</span></span>
@@ -462,14 +542,14 @@
 </div>
 <div class="section level3">
 <h3 id="pool_fit_draws">.pool_fit_draws()<a class="anchor" aria-label="anchor" href="#pool_fit_draws"></a></h3>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pooled</span> <span class="op">&lt;-</span> <span class="fu">.pool_fit_draws</span><span class="op">(</span><span class="va">fits_list</span>, <span class="va">target</span>, <span class="va">n_draws</span><span class="op">)</span></span>
 <span><span class="co"># Returns list(M [pooled_n×T], lambda [pooled_n×T])</span></span>
 <span><span class="co"># Used by both predict() and .nowcast_lambda_draws()</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="delay-aggregation-prepare_data">Delay aggregation (prepare_data)<a class="anchor" aria-label="anchor" href="#delay-aggregation-prepare_data"></a></h3>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">aggregate_by_delay_and_time</span><span class="op">(</span><span class="va">obs_matrix</span><span class="op">)</span></span>
 <span><span class="co"># Pools ALL strata (ignores col 4) — correct because delay is shared</span></span>
 <span><span class="co"># Returns list(obs_delays, row_sums, col_sums)</span></span>
@@ -481,14 +561,14 @@
 <div class="section level3">
 <h3 id="per-stratum-vector-shapes">Per-stratum vector shapes<a class="anchor" aria-label="anchor" href="#per-stratum-vector-shapes"></a></h3>
 <p><code>ar_phi_unc</code> and <code>log_ar_sigma_unc</code> <strong>must</strong> have length <code>num_strata</code>, not 1. If you warm-start with a scalar from a previous fit, <code>.adapt_init()</code> recycles it to the right length — but if you build <code>init</code> by hand you must do this yourself:</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">init</span><span class="op">$</span><span class="va">log_ar_sigma_unc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2</span>, <span class="va">engine</span><span class="op">$</span><span class="va">num_strata</span><span class="op">)</span></span>
 <span><span class="va">init</span><span class="op">$</span><span class="va">ar_phi_unc</span>       <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>,  <span class="va">engine</span><span class="op">$</span><span class="va">num_strata</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="matrix-init-for-basis_coefs--ar_innov--gamma">Matrix init for basis_coefs / ar_innov / gamma<a class="anchor" aria-label="anchor" href="#matrix-init-for-basis_coefs--ar_innov--gamma"></a></h3>
 <p>These are <code>[rows × num_strata]</code> matrices. Always initialise as matrices:</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">init</span><span class="op">$</span><span class="va">basis_coefs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">engine</span><span class="op">$</span><span class="va">num_basis</span>, <span class="va">engine</span><span class="op">$</span><span class="va">num_strata</span><span class="op">)</span></span>
 <span><span class="va">init</span><span class="op">$</span><span class="va">ar_innov</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">engine</span><span class="op">$</span><span class="va">max_time</span>,  <span class="va">engine</span><span class="op">$</span><span class="va">num_strata</span><span class="op">)</span></span>
 <span><span class="va">init</span><span class="op">$</span><span class="va">gamma</span>       <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">engine</span><span class="op">$</span><span class="va">P</span>,         <span class="va">engine</span><span class="op">$</span><span class="va">num_strata</span><span class="op">)</span></span></code></pre></div>
@@ -496,7 +576,7 @@
 <div class="section level3">
 <h3 id="gengamma-q-bounds">GenGamma Q bounds<a class="anchor" aria-label="anchor" href="#gengamma-q-bounds"></a></h3>
 <p>The raw parameter <code>delay_Q</code> is the <em>unconstrained</em> value; the actual shape is:</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">shape_Q</span> <span class="op">&lt;-</span> <span class="fl">0.05</span> <span class="op">+</span> <span class="fl">2.95</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">delay_Q</span><span class="op">)</span>   <span class="co"># ∈ (0.05, 3)</span></span></code></pre></div>
 <p>Never set <code>shape_Q</code> directly in <code>init</code>; set <code>delay_Q</code> (the raw unconstrained value). Raw <code>delay_Q = -2</code> ≈ <code>shape_Q = 0.27</code> (near log-normal).</p>
 </div>
@@ -507,7 +587,7 @@
 <div class="section level3">
 <h3 id="hsgp-num_basis-for-long-daily-series">HSGP num_basis for long daily series<a class="anchor" aria-label="anchor" href="#hsgp-num_basis-for-long-daily-series"></a></h3>
 <p>Auto <code>num_basis = ceiling(1.5 * sqrt(max_time))</code> → ~60 for a 1,500-day series, which can cause an ill-conditioned Laplace. For COVID-length series, cap at 20:</p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/model.html">model</a></span><span class="op">(</span><span class="fu"><a href="reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="reference/epidemic_process.html">hsgp_epidemic</a></span><span class="op">(</span>num_basis <span class="op">=</span> <span class="fl">20L</span><span class="op">)</span>, <span class="fu"><a href="reference/delay_process.html">lognormal_delay</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -545,7 +625,7 @@
 <hr></div>
 <div class="section level2">
 <h2 id="id_10-typical-session-skeleton">10. Typical session skeleton<a class="anchor" aria-label="anchor" href="#id_10-typical-session-skeleton"></a></h2>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rodrigozepeda.github.io/diseasenowcasting/">diseasenowcasting</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rodrigozepeda.github.io/tbl.now/" class="external-link">tbl.now</a></span><span class="op">)</span></span>
 <span></span>

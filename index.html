@@ -47,7 +47,7 @@
 
     <a class="navbar-brand me-2" href="index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -81,7 +81,7 @@
 </div>
 <!-- badges: start -->
 
-<p><code>diseasenowcasting</code> is an R package for <strong>nowcasting</strong> time series of epidemiological cases.</p>
+<p><code>diseasenowcasting</code> is an R package for nowcasting time series of epidemiological cases.</p>
 <div class="section level2">
 <h2 id="what-is-nowcasting">What is nowcasting?<a class="anchor" aria-label="anchor" href="#what-is-nowcasting"></a>
 </h2>
@@ -213,6 +213,7 @@
 <li><p><strong><a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Nowcasting_at_the_start_of_an_Epidemic.html">Nowcasting at the Start of an Epidemic</a></strong> — A worked, end-to-end case study of monitoring an outbreak in real time: choosing a model when data are scarce, reading the nowcast as the epidemic grows, and using the prior to encode what you already believe before much data has arrived.</p></li>
 <li><p><strong><a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Understanding_Priors.html">Understanding Priors in diseasenowcasting</a></strong> — <em>Make the model say what you mean.</em> The package’s default priors, how to tighten or loosen them, and how to <em>see</em> what a prior implies before fitting (<code>nowcast(..., prior_only = TRUE)</code>).</p></li>
 <li><p><strong><a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.html">Handling Outlier Delays with Censoring</a></strong> — <em>Robustness to reporting glitches.</em> How the censored likelihood copes with unusually long delays, and how to flag and censor extreme delays in your surveillance stream.</p></li>
+<li><p><strong><a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.html">Custom delays and epidemic processes</a></strong> — Two examples on how to set <strong>your own delays and epidemic processes</strong>. Includes how to use ordinary differential equation models.</p></li>
 <li><p><strong><a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/LLM_Usage.html">Using alongside an LLM</a></strong> — <em>Use AI.</em> How to use the <a href="https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/SKILL.md" class="external-link"><code>SKILL.md</code></a> to teach a Large Language Model how to you develop your nowcasts with <code>diseasenowcasting</code>.</p></li>
 <li><p><strong><a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Benchmark.html">Benchmark (diseasenowcasting vs NobBS and epinowcast)</a></strong> — <em>How does it compare?</em> A reproducible backtest comparing <code>diseasenowcasting</code> against the <code>NobBS</code> and <code>epinowcast</code> packages.</p></li>
 <li><p><strong><a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.html">Mathematical Foundations of diseasenowcasting</a></strong> — <em>Under the hood.</em> The censored likelihood, the epidemic processes (HSGP, AR(1), SIR), the delay families, and the Laplace-approximation inference that powers <code>RTMB</code>.</p></li>

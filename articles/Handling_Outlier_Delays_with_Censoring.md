@@ -55,10 +55,10 @@ summary(tbl_covid$.delay)
 #>     0.0     4.0    10.0    11.6    17.0   330.0
 ```
 
-![\_Reporting-delay distribution of COVID-19 Colombia (extremes
+![\*Reporting-delay distribution of COVID-19 Colombia (extremes
 exagerated for illustration purposes). A few reports arrive hundreds of
 days
-late.\_](Handling_Outlier_Delays_with_Censoring_files/figure-html/delay-hist2-1.png)
+late.\*](Handling_Outlier_Delays_with_Censoring_files/figure-html/delay-hist2-1.png)
 
 *Reporting-delay distribution of COVID-19 Colombia (extremes exagerated
 for illustration purposes). A few reports arrive hundreds of days late.*

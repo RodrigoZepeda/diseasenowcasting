@@ -1,6 +1,6 @@
 # diseasenowcasting
 
-`diseasenowcasting` is an R package for **nowcasting** time series of
+`diseasenowcasting` is an R package for nowcasting time series of
 epidemiological cases.
 
 ## What is nowcasting?
@@ -257,6 +257,12 @@ From there, depending on what you want to do next:
   copes with unusually long delays, and how to flag and censor extreme
   delays in your surveillance stream.
 
+- **[Custom delays and epidemic
+  processes](https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.html)**
+  — Two examples on how to set **your own delays and epidemic
+  processes**. Includes how to use ordinary differential equation
+  models.
+
 - **[Using alongside an
   LLM](https://rodrigozepeda.github.io/diseasenowcasting/articles/LLM_Usage.html)**
   — *Use AI.* How to use the
@@ -296,6 +302,12 @@ for the full function documentation.
 - [`covid_colombia`](https://rodrigozepeda.github.io/diseasenowcasting/reference/covid_colombia.md)
   : COVID-19 Notifications – Colombia 2020-2023
 
+- [`custom_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_delay.md)
+  : User-defined delay distribution
+
+- [`custom_epidemic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_epidemic.md)
+  : User-defined epidemic process
+
 - [`default_priors()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/default_priors.md)
   : Build the default prior bundle for an RTMB nowcast model
 
@@ -326,6 +338,11 @@ for the full function documentation.
   : Hard-fix a parameter in a prior bundle (treat as data, drop from
   estimation)
 
+- [`infer_max_time()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/infer_max_time.md)
+  :
+
+  Infer `max_time` for custom epidemic processes
+
 - [`poisson_likelihood()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/likelihood.md)
   [`nb_likelihood()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/likelihood.md)
   : Likelihood for the Bayesian Nowcast
@@ -341,9 +358,6 @@ for the full function documentation.
 
 - [`nowcast_twostage()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_twostage.md)
   : Two-stage multiple-imputation nowcast
-
-- [`ppc()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/ppc.md)
-  : Posterior predictive check for a fitted nowcast
 
 - [`prepare_data()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/prepare_data.md)
   : Prepare data for the RTMB nowcast engine
@@ -394,6 +408,12 @@ for the full function documentation.
 - [`tidy()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/tidy.md)
   : Tidy parameter estimates from a fitted nowcast
 
+- [`validate_custom_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_delay.md)
+  : Validate a custom delay distribution for RTMB traceability
+
+- [`validate_custom_epidemic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_epidemic.md)
+  : Validate a user-defined epidemic process for RTMB traceability
+
 # Articles
 
 ### Get started
@@ -414,10 +434,12 @@ for the full function documentation.
 
 - [Nowcasting at the Start of an
   Epidemic](https://rodrigozepeda.github.io/diseasenowcasting/articles/Nowcasting_at_the_start_of_an_Epidemic.md):
-- [Benchmark (diseasenowcasting vs NobBS and
-  epinowcast)](https://rodrigozepeda.github.io/diseasenowcasting/articles/Benchmark.md):
+- [Custom Delays and Epidemic
+  Processes](https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.md):
 
 ### Miscellaneous
 
 - [Using alongside an LLM
   (AI)](https://rodrigozepeda.github.io/diseasenowcasting/articles/LLM_Usage.md):
+- [Benchmark (diseasenowcasting vs NobBS and
+  epinowcast)](https://rodrigozepeda.github.io/diseasenowcasting/articles/Benchmark.md):

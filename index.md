@@ -1,6 +1,6 @@
 # diseasenowcasting
 
-`diseasenowcasting` is an R package for **nowcasting** time series of
+`diseasenowcasting` is an R package for nowcasting time series of
 epidemiological cases.
 
 ## What is nowcasting?
@@ -256,6 +256,12 @@ From there, depending on what you want to do next:
   — *Robustness to reporting glitches.* How the censored likelihood
   copes with unusually long delays, and how to flag and censor extreme
   delays in your surveillance stream.
+
+- **[Custom delays and epidemic
+  processes](https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.html)**
+  — Two examples on how to set **your own delays and epidemic
+  processes**. Includes how to use ordinary differential equation
+  models.
 
 - **[Using alongside an
   LLM](https://rodrigozepeda.github.io/diseasenowcasting/articles/LLM_Usage.html)**

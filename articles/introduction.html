@@ -41,7 +41,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,8 +73,8 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Introduction to diseasenowcasting: Real-Time Epidemic Nowcasting</h1>
-                        <h4 data-toc-skip class="author">Rodrigo
-Zepeda-Tello</h4>
+                        <h4 data-toc-skip class="author">diseasenowcasting
+team</h4>
             
       
       <small class="dont-index">Source: <a href="https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/vignettes/introduction.Rmd" class="external-link"><code>vignettes/introduction.Rmd</code></a></small>
@@ -224,9 +224,9 @@ that the nowcast was already stratified by the strata specified in the
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">nc_dengue</span><span class="op">)</span> </span></code></pre></div>
 <div class="figure" style="text-align: center">
-<img src="introduction_files/figure-html/dengue-plot-1.png" class="r-plt" alt="_Nowcast for dengue example. The shaded bars show the median while the errorbar has the 90 % credible intervals._" width="672"><p class="caption">
+<img src="introduction_files/figure-html/dengue-plot-1.png" class="r-plt" alt="*Nowcast for dengue example. The shaded bars show the median while the errorbar has the 90% credible intervals.*" width="672"><p class="caption">
 <em>Nowcast for dengue example. The shaded bars show the median while
-the errorbar has the 90 % credible intervals.</em>
+the errorbar has the 90% credible intervals.</em>
 </p>
 </div>
 <p>Values can be obtained via <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> and
@@ -419,6 +419,10 @@ mean.</em> Shows the package’s default priors, how to tighten or loosen
 them, and how the prior trades off against the data. Uses the
 prior-predictive tools (<code>nowcast(..., prior_only = TRUE)</code>) to
 <em>see</em> what a prior implies before fitting.</p></li>
+<li><p><strong><a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.html">Custom
+delays and epidemic processes</a></strong> — Two examples on how to set
+<strong>your own delays and epidemic processes</strong>. Includes how to
+use ordinary differential equation models.</p></li>
 <li><p><strong><a href="Handling_Outlier_Delays_with_Censoring.html">Handling Outlier
 Delays with Censoring</a></strong> — <em>Robustness to reporting
 glitches.</em> How the censored likelihood copes with unusually long

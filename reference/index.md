@@ -11,6 +11,12 @@
 - [`covid_colombia`](https://rodrigozepeda.github.io/diseasenowcasting/reference/covid_colombia.md)
   : COVID-19 Notifications – Colombia 2020-2023
 
+- [`custom_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_delay.md)
+  : User-defined delay distribution
+
+- [`custom_epidemic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_epidemic.md)
+  : User-defined epidemic process
+
 - [`default_priors()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/default_priors.md)
   : Build the default prior bundle for an RTMB nowcast model
 
@@ -41,6 +47,11 @@
   : Hard-fix a parameter in a prior bundle (treat as data, drop from
   estimation)
 
+- [`infer_max_time()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/infer_max_time.md)
+  :
+
+  Infer `max_time` for custom epidemic processes
+
 - [`poisson_likelihood()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/likelihood.md)
   [`nb_likelihood()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/likelihood.md)
   : Likelihood for the Bayesian Nowcast
@@ -56,9 +67,6 @@
 
 - [`nowcast_twostage()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_twostage.md)
   : Two-stage multiple-imputation nowcast
-
-- [`ppc()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/ppc.md)
-  : Posterior predictive check for a fitted nowcast
 
 - [`prepare_data()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/prepare_data.md)
   : Prepare data for the RTMB nowcast engine
@@ -108,3 +116,9 @@
 
 - [`tidy()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/tidy.md)
   : Tidy parameter estimates from a fitted nowcast
+
+- [`validate_custom_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_delay.md)
+  : Validate a custom delay distribution for RTMB traceability
+
+- [`validate_custom_epidemic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_epidemic.md)
+  : Validate a user-defined epidemic process for RTMB traceability
