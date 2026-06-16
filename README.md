@@ -48,7 +48,7 @@ and
 
 How `diseasenowcasting` compares with other R nowcasting packages:
 
-> | Feature | `diseasenowcasting` | [`baselinenowcast`](https://github.com/epinowcast/baselinenowcast) | \>[`NobBS`](https://cran.r-project.org/package=NobBS) | [`nowcaster`](https://github.com/covid19br/nowcaster) | \>[`epinowcast`](https://github.com/epinowcast/epinowcast) |
+> | Feature | `diseasenowcasting` | [`baselinenowcast`](https://github.com/epinowcast/baselinenowcast) | [`NobBS`](https://cran.r-project.org/package=NobBS) | [`nowcaster`](https://github.com/covid19br/nowcaster) | [`epinowcast`](https://github.com/epinowcast/epinowcast) |
 > |----|:--:|:--:|:--:|:--:|:--:|
 > | Arbitrary delay distributions <sup>†</sup> | ✅ | ❌ | ❌ | ❌ | ❌ |
 > | Arbitrary epidemic processes <sup>†</sup> | ✅ | ❌ | ❌ | ❌ | ❌ |
@@ -59,23 +59,19 @@ How `diseasenowcasting` compares with other R nowcasting packages:
 > | Counts that can decrease (cases later un-confirmed) | 🚧 | ✅ | ❌ | ❌ | ❌ |
 > | Effective reproductive number (Rₜ) | ❌ | ❌ | ❌ | ❌ | ✅ |
 >
-> <sub> <sup>†</sup> *Arbitrary* means you supply your own custom R
-> function: any distribution for the delay, any function `f(t)` for the
-> epidemic process (not just a choice from a built-in menu).
+> <sub> <sup><b>†</b></sup> *Arbitrary* means you supply your own custom
+> R function: any distribution for the delay, any function `f(t)` for
+> the epidemic process (not just a choice from a built-in menu).
 > `epinowcast` is very flexible through parametric families and model
 > formulas, but does not take arbitrary user-defined functions.
->
-> <sup>‡</sup> `NobBS` requires JAGS and `epinowcast` requires CmdStan
-> (an external Stan toolchain); `nowcaster` runs entirely in R but
-> depends on the (non-CRAN) `INLA` package.
->
-> <sup>§</sup> `nowcaster` stratifies by age/region structure only, not
-> arbitrary user-defined strata; `diseasenowcasting` allows any
-> combination of strata columns.
->
-> <sup>🚧</sup> In development for `diseasenowcasting` (counts that
-> revise *downward*, e.g. a positive later re-classified as negative);
-> `baselinenowcast` already supports this. </sub>
+> <sup><b>‡</b></sup> `NobBS` requires JAGS and `epinowcast` requires
+> CmdStan (an external Stan toolchain); `nowcaster` runs entirely in R
+> but depends on the (non-CRAN) `INLA` package. <sup><b>§</b></sup>
+> `nowcaster` stratifies by age/region structure only, not arbitrary
+> user-defined strata; `diseasenowcasting` allows any combination of
+> strata columns. <sup>🚧</sup> In development for `diseasenowcasting`
+> (counts that revise *downward*, e.g. a positive later re-classified as
+> negative); `baselinenowcast` already supports this. </sub>
 
 ## Installing
 
