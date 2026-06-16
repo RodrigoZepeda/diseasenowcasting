@@ -92,6 +92,102 @@
 </blockquote>
 </div>
 <div class="section level2">
+<h2 id="why-diseasenowcasting">Why <code>diseasenowcasting</code>?<a class="anchor" aria-label="anchor" href="#why-diseasenowcasting"></a>
+</h2>
+<p>How <code>diseasenowcasting</code> compares with other R nowcasting packages:</p>
+<blockquote>
+<table style="width:100%;" class="table">
+<colgroup>
+<col width="16%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
+</colgroup>
+<thead><tr>
+<th>Feature</th>
+<th align="center"><code>diseasenowcasting</code></th>
+<th align="center"><a href="https://github.com/epinowcast/baselinenowcast" class="external-link"><code>baselinenowcast</code></a></th>
+<th align="center"><a href="https://cran.r-project.org/package=NobBS" class="external-link"><code>NobBS</code></a></th>
+<th align="center"><a href="https://github.com/covid19br/nowcaster" class="external-link"><code>nowcaster</code></a></th>
+<th align="center"><a href="https://github.com/epinowcast/epinowcast" class="external-link"><code>epinowcast</code></a></th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Arbitrary delay distributions <sup>†</sup>
+</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>Arbitrary epidemic processes <sup>†</sup>
+</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>No per-model compilation</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>Pure R — no external engine (Stan/JAGS) <sup>‡</sup>
+</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>Stratified data</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">✅<sup>§</sup>
+</td>
+<td align="center">✅</td>
+</tr>
+<tr>
+<td>Calendar / day-of-week effects</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">✅</td>
+</tr>
+<tr>
+<td>Counts that can decrease (cases later un-confirmed)</td>
+<td align="center">🚧</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>Effective reproductive number (Rₜ)</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">✅</td>
+</tr>
+</tbody>
+</table>
+<p><sub><sup><b>†</b></sup><em>Arbitrary</em> means you supply your own custom R function: any distribution for the delay, any function <code>f(t)</code> for the epidemic process (not just a choice from a built-in menu). <code>epinowcast</code> is very flexible through parametric families and model formulas, but does not take arbitrary user-defined functions. <sup><b>‡</b></sup><code>NobBS</code> requires JAGS and <code>epinowcast</code> requires CmdStan (an external Stan toolchain); <code>nowcaster</code> runs entirely in R but depends on the (non-CRAN) <code>INLA</code> package. <sup><b>§</b></sup><code>nowcaster</code> stratifies by age/region structure only, not arbitrary user-defined strata; <code>diseasenowcasting</code> allows any combination of strata columns. <sup>🚧</sup> In development for <code>diseasenowcasting</code> (counts that revise <em>downward</em>, e.g. a positive later re-classified as negative); <code>baselinenowcast</code> already supports this. </sub></p>
+</blockquote>
+</div>
+<div class="section level2">
 <h2 id="installing">Installing<a class="anchor" aria-label="anchor" href="#installing"></a>
 </h2>
 <p>You can install <code>diseasenowcasting</code> (and its companion data package <a href="https://github.com/RodrigoZepeda/tbl.now" class="external-link"><code>tbl.now</code></a>) from GitHub with <a href="https://pak.r-lib.org/" class="external-link"><code>pak</code></a>:</p>

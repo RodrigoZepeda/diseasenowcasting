@@ -30,6 +30,23 @@ and
 > ⚠️ `diseasenowcasting` is currently under active development and parts
 > of the interface might still change.
 
+## Why `diseasenowcasting`?
+
+How `diseasenowcasting` compares with other R nowcasting packages:
+
+> | Feature | `diseasenowcasting` | [`baselinenowcast`](https://github.com/epinowcast/baselinenowcast) | [`NobBS`](https://cran.r-project.org/package=NobBS) | [`nowcaster`](https://github.com/covid19br/nowcaster) | [`epinowcast`](https://github.com/epinowcast/epinowcast) |
+> |----|:--:|:--:|:--:|:--:|:--:|
+> | Arbitrary delay distributions ^(†) | ✅ | ❌ | ❌ | ❌ | ❌ |
+> | Arbitrary epidemic processes ^(†) | ✅ | ❌ | ❌ | ❌ | ❌ |
+> | No per-model compilation | ✅ | ✅ | ✅ | ✅ | ❌ |
+> | Pure R — no external engine (Stan/JAGS) ^(‡) | ✅ | ✅ | ❌ | ✅ | ❌ |
+> | Stratified data | ✅ | ❌ | ❌ | ✅^(§) | ✅ |
+> | Calendar / day-of-week effects | ✅ | ❌ | ❌ | ❌ | ✅ |
+> | Counts that can decrease (cases later un-confirmed) | 🚧 | ✅ | ❌ | ❌ | ❌ |
+> | Effective reproductive number (Rₜ) | ❌ | ❌ | ❌ | ❌ | ✅ |
+>
+> _(^(**†**)*Arbitrary* means you supply your own custom R function: any distribution for the delay, any function `f(t)` for the epidemic process (not just a choice from a built-in menu). `epinowcast` is very flexible through parametric families and model formulas, but does not take arbitrary user-defined functions. ^(**‡**)`NobBS` requires JAGS and `epinowcast` requires CmdStan (an external Stan toolchain); `nowcaster` runs entirely in R but depends on the (non-CRAN) `INLA` package. ^(**§**)`nowcaster` stratifies by age/region structure only, not arbitrary user-defined strata; `diseasenowcasting` allows any combination of strata columns. ^(🚧) In development for `diseasenowcasting` (counts that revise *downward*, e.g. a positive later re-classified as negative); `baselinenowcast` already supports this.)
+
 ## Installing
 
 You can install `diseasenowcasting` (and its companion data package
