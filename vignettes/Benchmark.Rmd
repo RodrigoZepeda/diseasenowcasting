@@ -1,6 +1,6 @@
 ---
 title: "Benchmark (diseasenowcasting vs NobBS and epinowcast)"
-author: "Rodrigo Zepeda-Tello"
+author: "diseasenowcasting team"
 output: rmarkdown::html_vignette
 bibliography: references.bib
 vignette: >

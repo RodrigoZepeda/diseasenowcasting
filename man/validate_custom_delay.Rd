@@ -2,7 +2,7 @@
 % Please edit documentation in R/03_delay_class.R
 \name{validate_custom_delay}
 \alias{validate_custom_delay}
-\title{Validate a custom-delay CDF factory for RTMB traceability}
+\title{Validate a custom delay distribution for RTMB traceability}
 \usage{
 validate_custom_delay(delay, test_theta = NULL, test_delays = 1:14)
 }
@@ -18,21 +18,19 @@ test point.  Defaults to the \code{inits} slot.}
 Invisibly returns \code{TRUE} on success.
 }
 \description{
-Test-tapes the user-supplied \code{cdf_factory} on a dummy numeric vector,
-checking that \code{obj$fn()} and \code{obj$gr()} are finite.  Emits a clear error
-(including common causes) on failure.
+Test-tapes the user-supplied \code{cdf} / \code{log_cdf} / \code{log_survival} on a dummy
+numeric vector, checking that \code{obj$fn()} and \code{obj$gr()} are finite.  Emits a
+clear error (including common causes) on failure.
 }
 \examples{
 # Custom components tape USER functions, so RTMB must be attached
 # (it is kept in Imports, not Depends, so attach it yourself):
 library(RTMB)
-weibull_cdf_factory <- function(theta) {
+weibull_cdf <- function(theta) {
   shape <- exp(theta[1]); scale <- exp(theta[2])
-  list(cdf          = function(d) 1 - exp(-(d / scale)^shape),
-       log_cdf      = function(d) log(1 - exp(-(d / scale)^shape) + 1e-300),
-       log_survival = function(d) -(d / scale)^shape)
+  function(d) 1 - exp(-(d / scale)^shape)
 }
-dly <- custom_delay(weibull_cdf_factory,
+dly <- custom_delay(weibull_cdf,
                     priors = list(normal_prior(0, 1), normal_prior(log(7), 1)),
                     name = "Weibull", inits = c(0, log(7)))
 validate_custom_delay(dly)

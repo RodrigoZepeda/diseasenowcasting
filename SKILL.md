@@ -98,26 +98,27 @@ finite `fn()`/`gr()`, turning a cryptic optimiser failure into a clear message.
 ### custom_delay() — num_id 5
 
 ```r
-# cdf_factory(theta) -> list(cdf, log_cdf, log_survival), each a function of delay d.
-# log_cdf/log_survival are separate for tail numerical stability.
-weibull_factory <- function(theta) {
-  shape <- exp(theta[1]); scale <- exp(theta[2])     # log scale => unconstrained
-  list(cdf          = function(d) 1 - exp(-(d/scale)^shape),
-       log_cdf      = function(d) log(1 - exp(-(d/scale)^shape) + 1e-300),
-       log_survival = function(d) -(d/scale)^shape)
-}
+# Each of cdf / log_cdf / log_survival is `function(theta) -> function(d)`.
+# Only `cdf` is required; log_cdf defaults to log(cdf), log_survival to log(1-cdf).
+# Supply log_survival explicitly for heavy tails (default log(1-cdf) loses precision as F->1).
+weibull_cdf      <- function(theta) { shape <- exp(theta[1]); scale <- exp(theta[2])  # log scale => unconstrained
+                                      function(d) 1 - exp(-(d/scale)^shape) }
+weibull_log_surv <- function(theta) { shape <- exp(theta[1]); scale <- exp(theta[2])
+                                      function(d) -(d/scale)^shape }            # exact, stable in the tail
 dly <- custom_delay(
-  cdf_factory = weibull_factory,
-  priors      = list(normal_prior(0,1), normal_prior(log(7),1)),  # per-param: prior=free, number=fixed
-  name        = "Weibull", param_names = c("log_shape","log_scale"), inits = c(0, log(7))
+  cdf          = weibull_cdf,
+  log_survival = weibull_log_surv,
+  priors       = list(normal_prior(0,1), normal_prior(log(7),1)),  # per-param: prior=free, number=fixed
+  name = "Weibull", param_names = c("log_shape","log_scale"), inits = c(0, log(7))
 )
 # No n_params argument: it is inferred from priors / param_names / inits (must agree).
 validate_custom_delay(dly)             # REQUIRES library(RTMB)
 model(nb_likelihood(), ar1_epidemic(), dly)
 ```
 Works in BOTH the joint and the two-stage Stage-1 delay-only fit.  Fitted
-params land in `fit$parList$custom_delay_params`.  `priors$cdf_factory` carries
-the function downstream (reconstruct / surprise / diagnostics).
+params land in `fit$parList$custom_delay_params`.  Internally the three functions
+are assembled into `priors$cdf_factory`, carried downstream (reconstruct /
+surprise / diagnostics).
 
 ### custom_epidemic() — num_id 4 (epidemic_model)
 

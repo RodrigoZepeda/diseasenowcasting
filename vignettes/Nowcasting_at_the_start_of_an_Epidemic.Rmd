@@ -1,6 +1,6 @@
 ---
 title: "Nowcasting at the Start of an Epidemic"
-author: "Rodrigo Zepeda-Tello"
+author: "diseasenowcasting team"
 output:
   rmarkdown::html_vignette:
     toc: true

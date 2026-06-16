@@ -14,17 +14,8 @@ coverage](https://codecov.io/gh/RodrigoZepeda/diseasenowcasting/graph/badge.svg)
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
-`diseasenowcasting` is a **model-agnostic framework** for **nowcasting** time
-series of epidemiological cases. A nowcast is assembled from three
-interchangeable pieces — a **likelihood**, an **epidemic process**, and a
-**reporting-delay distribution** — and for each you can either pick a built-in or
-**supply your own**. Unlike tools built around a single fixed model (such as
-`epinowcast` or `baselinenowcast`), here you choose a ready-made model *or*
-design your own [custom
-delay](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_delay.html)
-or [custom epidemic
-process](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_epidemic.html)
-and fit it with the same machinery.
+`diseasenowcasting` is an R package for nowcasting time series of
+epidemiological cases.
 
 ## What is nowcasting?
 
@@ -252,6 +243,12 @@ From there, depending on what you want to do next:
   — *Robustness to reporting glitches.* How the censored likelihood
   copes with unusually long delays, and how to flag and censor extreme
   delays in your surveillance stream.
+
+- **[Custom delays and epidemic
+  processes](https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.html)**
+  — Two examples on how to set **your own delays and epidemic
+  processes**. Includes how to use ordinary differential equation
+  models.
 
 - **[Using alongside an
   LLM](https://rodrigozepeda.github.io/diseasenowcasting/articles/LLM_Usage.html)**

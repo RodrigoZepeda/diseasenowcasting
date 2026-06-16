@@ -28,16 +28,17 @@ library(RTMB)
 # ── Constructors and validators ──────────────────────────────────────────────
 
 test_that("custom_delay() builds a valid object with the expected slots", {
-  weibull_factory <- function(theta) {
+  # cdf / log_survival are each function(theta) -> function(d)
+  weibull_cdf <- function(theta) {
     shape <- exp(theta[1]); scale <- exp(theta[2])
-    list(
-      cdf          = function(d) 1 - exp(-(d / scale)^shape),
-      log_cdf      = function(d) log(1 - exp(-(d / scale)^shape) + 1e-300),
-      log_survival = function(d) -(d / scale)^shape
-    )
+    function(d) 1 - exp(-(d / scale)^shape)
+  }
+  weibull_log_surv <- function(theta) {
+    shape <- exp(theta[1]); scale <- exp(theta[2])
+    function(d) -(d / scale)^shape
   }
   # n_params is inferred (here 2) from priors / param_names / inits
-  dly <- custom_delay(weibull_factory,
+  dly <- custom_delay(cdf = weibull_cdf, log_survival = weibull_log_surv,
                       priors = list(normal_prior(0, 1), normal_prior(log(7), 1)),
                       name = "Weibull", param_names = c("log_shape", "log_scale"),
                       inits = c(0, log(7)))
@@ -72,15 +73,11 @@ test_that("n_params is inferred and disagreements are rejected", {
   expect_error(custom_epidemic(fn), "infer")
 })
 
-test_that("validate_custom_delay accepts an AD-safe factory", {
-  exp_factory <- function(theta) {
-    rate <- exp(theta[1])
-    list(cdf = function(d) 1 - exp(-rate * d),
-         log_cdf = function(d) log(1 - exp(-rate * d) + 1e-300),
-         log_survival = function(d) -rate * d)
-  }
-  dly <- custom_delay(exp_factory, priors = list(normal_prior(-2, 1)),
-                      name = "Exp", inits = -2)
+test_that("validate_custom_delay accepts AD-safe cdf / log_survival", {
+  exp_cdf      <- function(theta) { rate <- exp(theta[1]); function(d) 1 - exp(-rate * d) }
+  exp_log_surv <- function(theta) { rate <- exp(theta[1]); function(d) -rate * d }
+  dly <- custom_delay(cdf = exp_cdf, log_survival = exp_log_surv,
+                      priors = list(normal_prior(-2, 1)), name = "Exp", inits = -2)
   expect_invisible(validate_custom_delay(dly))
 })
 
@@ -221,13 +218,11 @@ test_that("custom_delay Weibull fits and recovers shape/scale", {
   }
   m <- do.call(rbind, rows)
 
-  weibull_factory <- function(theta) {
-    shape <- exp(theta[1]); scale <- exp(theta[2])
-    list(cdf = function(d) 1 - exp(-(d / scale)^shape),
-         log_cdf = function(d) log(1 - exp(-(d / scale)^shape) + 1e-300),
-         log_survival = function(d) -(d / scale)^shape)
-  }
-  dly <- custom_delay(weibull_factory,
+  weibull_cdf      <- function(theta) { shape <- exp(theta[1]); scale <- exp(theta[2])
+                                        function(d) 1 - exp(-(d / scale)^shape) }
+  weibull_log_surv <- function(theta) { shape <- exp(theta[1]); scale <- exp(theta[2])
+                                        function(d) -(d / scale)^shape }
+  dly <- custom_delay(cdf = weibull_cdf, log_survival = weibull_log_surv,
                       priors = list(normal_prior(0, 1), normal_prior(log(7), 1)),
                       name = "Weibull", inits = c(0, log(7)))
   mod <- model(nb_likelihood(), ar1_epidemic(), dly)

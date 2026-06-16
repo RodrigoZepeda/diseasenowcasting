@@ -1,6 +1,6 @@
 ---
 title: "Introduction to diseasenowcasting: Real-Time Epidemic Nowcasting"
-author: "Rodrigo Zepeda-Tello"
+author: "diseasenowcasting team"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Introduction to diseasenowcasting: Real-Time Epidemic Nowcasting}
@@ -20,11 +20,8 @@ knitr::opts_chunk$set(
 )
 ```
 
-`diseasenowcasting` is a framework for nowcasting time series of epidemiological cases. Epidemiologic surveillance tools usually have an intrinsic delay between the **true date of an event** (`event_date`) and the **report date for that event** (`report_date`). Some examples include the true date being symptom onset or testing time and the report date corresponds to when the case was registered in the system.
+`diseasenowcasting` is an R package for nowcasting time series of epidemiological cases. Epidemiologic surveillance tools usually have an intrinsic delay between the **true date of an event** (`event_date`) and the **report date for that event** (`report_date`). Some examples include the true date being symptom onset or testing time and the report date corresponds to when the case was registered in the system.
 `diseasenowcasting` uses censored Bayesian models (via R's Template Model Builder [`RTMB`](https://cran.r-project.org/web/packages/RTMB/index.html)) to infer the cases that have not yet been reported thus providing a prediction of the final number of casees.
-
-Every nowcast is assembled from three interchangeable pieces — a **likelihood**, an **epidemic process**, and a **reporting-delay distribution** — and for each you can either pick one of the built-in models or **design your own**. This is what makes the package *model-agnostic*: rather than committing you to a single fixed model (as tools like `epinowcast` or `baselinenowcast` do), it lets you choose a ready-made component or supply a [custom delay](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_delay.html) or [custom epidemic process](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_epidemic.html) and fit it with the same machinery (see the *Custom Delays and Epidemic Processes* vignette).
-
 
 ## Your data: the `tbl_now` format
 
@@ -294,6 +291,11 @@ vignettes:
   to tighten or loosen them, and how the prior trades off against the data. Uses
   the prior-predictive tools (`nowcast(..., prior_only = TRUE)`) to *see* what a
   prior implies before fitting.
+  
+- **[Custom delays and epidemic processes](https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.html)**
+  — Two examples on how to set **your own delays and epidemic processes**. Includes
+  how to use ordinary differential equation models. 
+
 
 - **[Handling Outlier Delays with Censoring](Handling_Outlier_Delays_with_Censoring.html)**
   — *Robustness to reporting glitches.* How the censored likelihood copes with

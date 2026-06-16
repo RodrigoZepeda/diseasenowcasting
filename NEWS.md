@@ -6,7 +6,8 @@
   built from a likelihood, an epidemic process, and a reporting-delay
   distribution, and each can be a built-in *or* one you write yourself.
 * Added **custom reporting-delay distributions** via `custom_delay()` (supply any
-  RTMB-traceable CDF factory) with a `validate_custom_delay()` checker.
+  RTMB-traceable CDF as `cdf`, with optional `log_cdf` / `log_survival`) with a
+  `validate_custom_delay()` checker.
 * Added **custom epidemic processes** via `custom_epidemic()` (supply any
   RTMB-traceable `intensity_fn(theta)` returning `log_mean[max_time x n_strata]`)
   with a `validate_custom_epidemic()` checker. Random walks, ODE/SIR models,

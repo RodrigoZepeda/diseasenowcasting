@@ -1,6 +1,6 @@
 ---
 title: "Using alongside an LLM (AI)"
-author: "Rodrigo Zepeda-Tello"
+author: "diseasenowcasting team"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{LLM Usage}

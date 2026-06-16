@@ -220,6 +220,8 @@ custom_epidemic_class <- S7::new_class(
 #' epidemic-process agnostic: random walks, ODE models, regression surfaces,
 #' and anything else that can be written in AD-safe arithmetic are all valid.
 #'
+#' `r lifecycle::badge('experimental')`
+#' 
 #' @param intensity_fn A function `function(theta)` that takes a numeric
 #'   parameter vector and returns a numeric matrix of dimensions
 #'   `[n_time x n_strata]` containing log expected incidence (the full
@@ -279,7 +281,9 @@ custom_epidemic <- function(intensity_fn, priors = list(), name = "Custom",
 
 #' Validate a user-defined epidemic process for RTMB traceability
 #'
-#' Tapes `intensity_fn` through `RTMB::MakeADFun` at the supplied (or default)
+#' `r lifecycle::badge('experimental')`
+#' 
+#' Passes `intensity_fn` through `RTMB::MakeADFun` at the supplied (or default)
 #' initial values and confirms that the objective value and gradient are both
 #' finite.  Emits an informative error if the function is not AD-safe.
 #'

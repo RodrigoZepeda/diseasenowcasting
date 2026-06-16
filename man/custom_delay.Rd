@@ -2,10 +2,12 @@
 % Please edit documentation in R/03_delay_class.R
 \name{custom_delay}
 \alias{custom_delay}
-\title{User-defined delay distribution via a CDF factory}
+\title{User-defined delay distribution}
 \usage{
 custom_delay(
-  cdf_factory,
+  cdf,
+  log_cdf = function(theta) function(d) log(cdf(theta)(d)),
+  log_survival = function(theta) function(d) log(1 - cdf(theta)(d)),
   priors = list(),
   name = "Custom",
   param_names = NULL,
@@ -15,22 +17,24 @@ custom_delay(
 )
 }
 \arguments{
-\item{cdf_factory}{A function \code{cdf_factory(theta)} where \code{theta} is a numeric
-vector of length \code{n_params}.  Must return a named list with elements:
-\describe{
-\item{\code{cdf(d)}}{The CDF F(d), values in (0, 1).}
-\item{\code{log_cdf(d)}}{log F(d); must be finite for all finite d.}
-\item{\code{log_survival(d)}}{log(1 - F(d)); must be finite for all finite d.}
-}
-All three functions must be written using RTMB-traceable operations
-(\code{+}, \code{-}, \code{*}, \code{/}, \code{exp}, \code{log}, \code{pnorm}, \code{pgamma}, etc.) — no
-\code{if}/\code{ifelse} on parameter values, no \code{pmax}/\code{pmin} on AD types.}
+\item{cdf}{A function \code{cdf(theta)} returning a function of the delay \code{d} that
+evaluates the CDF \code{F(d)} (values in (0, 1)).  This is the only required piece.}
 
-\item{priors}{A list with one element per parameter \code{cdf_factory} expects.
-Each element is either a \code{prior_class} object (free parameter, assigned that
-prior) or a length-1 numeric (parameter is fixed to that value and not
-estimated).  The number of parameters is inferred from the length of this
-list (or from \code{param_names} / \code{inits} if \code{priors} is omitted).}
+\item{log_cdf}{Optional function \code{log_cdf(theta)} returning a function of \code{d}
+for \verb{log F(d)}.  Defaults to \code{function(theta) function(d) log(cdf(theta)(d))}.}
+
+\item{log_survival}{Optional function \code{log_survival(theta)} returning a
+function of \code{d} for \code{log(1 - F(d))}.  Defaults to
+\code{function(theta) function(d) log(1 - cdf(theta)(d))}.  Supplying it
+explicitly is recommended for heavy-tailed delays, where the default
+\code{log(1 - F)} loses precision as \code{F -> 1} (e.g. for a Weibull,
+\code{log_survival = -(d / scale)^shape} is exact and stable).}
+
+\item{priors}{A list with one element per parameter.  Each element is either a
+\code{prior_class} object (free parameter, assigned that prior) or a length-1
+numeric (parameter is fixed to that value and not estimated).  The number of
+parameters is inferred from the length of this list (or from \code{param_names} /
+\code{inits} if \code{priors} is omitted).}
 
 \item{name}{A display name for the distribution (used in print output).}
 
@@ -38,7 +42,7 @@ list (or from \code{param_names} / \code{inits} if \code{priors} is omitted).}
 diagnostics); its length sets the number of parameters if \code{priors} is empty.}
 
 \item{inits}{Numeric vector of initial values for the parameters (on the
-unconstrained scale passed to \code{cdf_factory}); its length sets the number of
+unconstrained scale passed to the functions); its length sets the number of
 parameters if \code{priors} and \code{param_names} are empty.  Defaults to zeros.}
 
 \item{num_delay_seasons}{Number of periodic delay seasons.  Default 1.}
@@ -49,16 +53,24 @@ parameters if \code{priors} and \code{param_names} are empty.  Defaults to zeros
 A \code{custom_delay_class} object (a \code{delay_process_class}).
 }
 \description{
-Allows any reporting-delay distribution that can be expressed as an
-RTMB-traceable CDF.  The user supplies a \code{cdf_factory(theta)} that receives
-the parameter vector (an \code{advector} inside the RTMB tape) and returns a list
-with three closures: \code{cdf(d)}, \code{log_cdf(d)}, and \code{log_survival(d)}, each
-vectorised over delay values \code{d}.
+Allows any reporting-delay distribution that can be expressed with
+RTMB-traceable functions.  You supply the cumulative distribution function
+\code{cdf}; \code{log_cdf} and \code{log_survival} are optional and default to the obvious
+transforms of \code{cdf}.  Each is given as a function of the parameter vector
+\code{theta} that \strong{returns a function of the delay} \code{d}:
+}
+\details{
+\preformatted{cdf(theta)          -> function(d) returning F(d)
+log_cdf(theta)      -> function(d) returning log F(d)
+log_survival(theta) -> function(d) returning log(1 - F(d))}
+
+Inside the RTMB tape \code{theta} is an \code{advector}, so every operation must be
+AD-traceable (see the \emph{RTMB traceability} section).
 }
 \section{RTMB traceability}{
 
-All operations inside \code{cdf_factory} must be differentiable under RTMB's
-CppAD tape:
+All operations inside \code{cdf} / \code{log_cdf} / \code{log_survival} must be differentiable
+under RTMB's CppAD tape:
 \itemize{
 \item Allowed: \code{+}, \code{-}, \code{*}, \code{/}, \code{exp}, \code{log}, \code{sqrt}, \code{pnorm},
 \code{pgamma}, \code{lgamma}, \code{abs}, \code{sum}, scalar multiplication, fixed-length
@@ -67,22 +79,23 @@ CppAD tape:
 types (use \code{(x + abs(x)) / 2} for \code{pmax(x, 0)}), external solvers,
 anything non-differentiable.
 }
-Use \code{\link[=validate_custom_delay]{validate_custom_delay()}} to check your factory before fitting.
+Use \code{\link[=validate_custom_delay]{validate_custom_delay()}} to check your functions before fitting.
 }
 
 \examples{
-# Weibull delay: theta = c(log_shape, log_scale)
-weibull_cdf_factory <- function(theta) {
-  shape <- exp(theta[1])
-  scale <- exp(theta[2])
-  list(
-    cdf          = function(d) 1 - exp(-(d / scale)^shape),
-    log_cdf      = function(d) log(1 - exp(-(d / scale)^shape) + 1e-300),
-    log_survival = function(d) -(d / scale)^shape
-  )
+# Weibull delay: theta = c(log_shape, log_scale).
+# Only `cdf` is required; we also supply `log_survival` (exact in the tail).
+weibull_cdf <- function(theta) {
+  shape <- exp(theta[1]); scale <- exp(theta[2])
+  function(d) 1 - exp(-(d / scale)^shape)
+}
+weibull_log_survival <- function(theta) {
+  shape <- exp(theta[1]); scale <- exp(theta[2])
+  function(d) -(d / scale)^shape
 }
 custom_delay(
-  cdf_factory  = weibull_cdf_factory,
+  cdf          = weibull_cdf,
+  log_survival = weibull_log_survival,
   priors       = list(normal_prior(0, 1), normal_prior(log(7), 1)),
   name         = "Weibull",
   param_names  = c("log_shape", "log_scale"),

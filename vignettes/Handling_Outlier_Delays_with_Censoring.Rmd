@@ -1,6 +1,6 @@
 ---
 title: "Handling Outlier Delays with Censoring"
-author: "Rodrigo Zepeda-Tello"
+author: "diseasenowcasting team"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Handling Outlier Delays with Censoring}

@@ -241,34 +241,43 @@ custom_delay_class <- S7::new_class(
   }
 )
 
-#' User-defined delay distribution via a CDF factory
+#' User-defined delay distribution
+#' 
+#' `r lifecycle::badge('experimental')`
+#' 
+#' Allows any reporting-delay distribution that can be expressed with
+#' RTMB-traceable functions.  You supply the cumulative distribution function
+#' `cdf`; `log_cdf` and `log_survival` are optional and default to the obvious
+#' transforms of `cdf`.  Each is given as a function of the parameter vector
+#' `theta` that **returns a function of the delay** `d`:
 #'
-#' Allows any reporting-delay distribution that can be expressed as an
-#' RTMB-traceable CDF.  The user supplies a `cdf_factory(theta)` that receives
-#' the parameter vector (an `advector` inside the RTMB tape) and returns a list
-#' with three closures: `cdf(d)`, `log_cdf(d)`, and `log_survival(d)`, each
-#' vectorised over delay values `d`.
+#' \preformatted{cdf(theta)          -> function(d) returning F(d)
+#' log_cdf(theta)      -> function(d) returning log F(d)
+#' log_survival(theta) -> function(d) returning log(1 - F(d))}
 #'
-#' @param cdf_factory A function `cdf_factory(theta)` where `theta` is a numeric
-#'   vector of length `n_params`.  Must return a named list with elements:
-#'   \describe{
-#'     \item{`cdf(d)`}{The CDF F(d), values in (0, 1).}
-#'     \item{`log_cdf(d)`}{log F(d); must be finite for all finite d.}
-#'     \item{`log_survival(d)`}{log(1 - F(d)); must be finite for all finite d.}
-#'   }
-#'   All three functions must be written using RTMB-traceable operations
-#'   (`+`, `-`, `*`, `/`, `exp`, `log`, `pnorm`, `pgamma`, etc.) — no
-#'   `if`/`ifelse` on parameter values, no `pmax`/`pmin` on AD types.
-#' @param priors A list with one element per parameter `cdf_factory` expects.
-#'   Each element is either a `prior_class` object (free parameter, assigned that
-#'   prior) or a length-1 numeric (parameter is fixed to that value and not
-#'   estimated).  The number of parameters is inferred from the length of this
-#'   list (or from `param_names` / `inits` if `priors` is omitted).
+#' Inside the RTMB tape `theta` is an `advector`, so every operation must be
+#' AD-traceable (see the *RTMB traceability* section).
+#'
+#' @param cdf A function `cdf(theta)` returning a function of the delay `d` that
+#'   evaluates the CDF `F(d)` (values in (0, 1)).  This is the only required piece.
+#' @param log_cdf Optional function `log_cdf(theta)` returning a function of `d`
+#'   for `log F(d)`.  Defaults to `function(theta) function(d) log(cdf(theta)(d))`.
+#' @param log_survival Optional function `log_survival(theta)` returning a
+#'   function of `d` for `log(1 - F(d))`.  Defaults to
+#'   `function(theta) function(d) log(1 - cdf(theta)(d))`.  Supplying it
+#'   explicitly is recommended for heavy-tailed delays, where the default
+#'   `log(1 - F)` loses precision as `F -> 1` (e.g. for a Weibull,
+#'   `log_survival = -(d / scale)^shape` is exact and stable).
+#' @param priors A list with one element per parameter.  Each element is either a
+#'   `prior_class` object (free parameter, assigned that prior) or a length-1
+#'   numeric (parameter is fixed to that value and not estimated).  The number of
+#'   parameters is inferred from the length of this list (or from `param_names` /
+#'   `inits` if `priors` is omitted).
 #' @param name A display name for the distribution (used in print output).
 #' @param param_names Optional character vector naming each parameter (used in
 #'   diagnostics); its length sets the number of parameters if `priors` is empty.
 #' @param inits Numeric vector of initial values for the parameters (on the
-#'   unconstrained scale passed to `cdf_factory`); its length sets the number of
+#'   unconstrained scale passed to the functions); its length sets the number of
 #'   parameters if `priors` and `param_names` are empty.  Defaults to zeros.
 #' @param num_delay_seasons Number of periodic delay seasons.  Default 1.
 #' @param season_distribution Prior for the delay-season effects.
@@ -276,8 +285,8 @@ custom_delay_class <- S7::new_class(
 #' @returns A `custom_delay_class` object (a `delay_process_class`).
 #'
 #' @section RTMB traceability:
-#' All operations inside `cdf_factory` must be differentiable under RTMB's
-#' CppAD tape:
+#' All operations inside `cdf` / `log_cdf` / `log_survival` must be differentiable
+#' under RTMB's CppAD tape:
 #' \itemize{
 #'   \item Allowed: `+`, `-`, `*`, `/`, `exp`, `log`, `sqrt`, `pnorm`,
 #'     `pgamma`, `lgamma`, `abs`, `sum`, scalar multiplication, fixed-length
@@ -286,21 +295,22 @@ custom_delay_class <- S7::new_class(
 #'     types (use `(x + abs(x)) / 2` for `pmax(x, 0)`), external solvers,
 #'     anything non-differentiable.
 #' }
-#' Use [validate_custom_delay()] to check your factory before fitting.
+#' Use [validate_custom_delay()] to check your functions before fitting.
 #'
 #' @examples
-#' # Weibull delay: theta = c(log_shape, log_scale)
-#' weibull_cdf_factory <- function(theta) {
-#'   shape <- exp(theta[1])
-#'   scale <- exp(theta[2])
-#'   list(
-#'     cdf          = function(d) 1 - exp(-(d / scale)^shape),
-#'     log_cdf      = function(d) log(1 - exp(-(d / scale)^shape) + 1e-300),
-#'     log_survival = function(d) -(d / scale)^shape
-#'   )
+#' # Weibull delay: theta = c(log_shape, log_scale).
+#' # Only `cdf` is required; we also supply `log_survival` (exact in the tail).
+#' weibull_cdf <- function(theta) {
+#'   shape <- exp(theta[1]); scale <- exp(theta[2])
+#'   function(d) 1 - exp(-(d / scale)^shape)
+#' }
+#' weibull_log_survival <- function(theta) {
+#'   shape <- exp(theta[1]); scale <- exp(theta[2])
+#'   function(d) -(d / scale)^shape
 #' }
 #' custom_delay(
-#'   cdf_factory  = weibull_cdf_factory,
+#'   cdf          = weibull_cdf,
+#'   log_survival = weibull_log_survival,
 #'   priors       = list(normal_prior(0, 1), normal_prior(log(7), 1)),
 #'   name         = "Weibull",
 #'   param_names  = c("log_shape", "log_scale"),
@@ -309,12 +319,21 @@ custom_delay_class <- S7::new_class(
 #'
 #' @seealso [validate_custom_delay()], [delay_process]
 #' @export
-custom_delay <- function(cdf_factory, priors = list(),
-                         name = "Custom", param_names = NULL,
+custom_delay <- function(cdf,
+                         log_cdf      = function(theta) function(d) log(cdf(theta)(d)),
+                         log_survival = function(theta) function(d) log(1 - cdf(theta)(d)),
+                         priors = list(), name = "Custom", param_names = NULL,
                          inits = NULL,
                          num_delay_seasons = 1L,
                          season_distribution = std_normal_prior()) {
   n_params <- .infer_n_params(priors, param_names, inits)
+  # Assemble the internal factory the objective consumes from the three pieces:
+  # each of cdf / log_cdf / log_survival is `function(theta) -> function(d)`.
+  cdf_factory <- function(theta) list(
+    cdf          = cdf(theta),
+    log_cdf      = log_cdf(theta),
+    log_survival = log_survival(theta)
+  )
   # The class constructor fills any empty argument to length `n_params`.
   custom_delay_class(
     cdf_factory         = cdf_factory,
@@ -328,11 +347,13 @@ custom_delay <- function(cdf_factory, priors = list(),
   )
 }
 
-#' Validate a custom-delay CDF factory for RTMB traceability
-#'
-#' Test-tapes the user-supplied `cdf_factory` on a dummy numeric vector,
-#' checking that `obj$fn()` and `obj$gr()` are finite.  Emits a clear error
-#' (including common causes) on failure.
+#' Validate a custom delay distribution for RTMB traceability
+#' 
+#' `r lifecycle::badge('experimental')`
+#' 
+#' Tests the user-supplied `cdf` / `log_cdf` / `log_survival` on a dummy
+#' numeric vector, checking that `obj$fn()` and `obj$gr()` are finite.  Emits a
+#' clear error (including common causes) on failure.
 #'
 #' @param delay A `custom_delay_class` object from [custom_delay()].
 #' @param test_theta Optional numeric vector of length `n_params` to use as the
@@ -343,13 +364,11 @@ custom_delay <- function(cdf_factory, priors = list(),
 #' # Custom components tape USER functions, so RTMB must be attached
 #' # (it is kept in Imports, not Depends, so attach it yourself):
 #' library(RTMB)
-#' weibull_cdf_factory <- function(theta) {
+#' weibull_cdf <- function(theta) {
 #'   shape <- exp(theta[1]); scale <- exp(theta[2])
-#'   list(cdf          = function(d) 1 - exp(-(d / scale)^shape),
-#'        log_cdf      = function(d) log(1 - exp(-(d / scale)^shape) + 1e-300),
-#'        log_survival = function(d) -(d / scale)^shape)
+#'   function(d) 1 - exp(-(d / scale)^shape)
 #' }
-#' dly <- custom_delay(weibull_cdf_factory,
+#' dly <- custom_delay(weibull_cdf,
 #'                     priors = list(normal_prior(0, 1), normal_prior(log(7), 1)),
 #'                     name = "Weibull", inits = c(0, log(7)))
 #' validate_custom_delay(dly)

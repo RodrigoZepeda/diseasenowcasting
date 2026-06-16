@@ -1,6 +1,6 @@
 ---
 title: "Mathematical Foundations of diseasenowcasting"
-author: "Rodrigo Zepeda-Tello"
+author: "diseasenowcasting team"
 output:
   rmarkdown::html_vignette:
     toc: true
