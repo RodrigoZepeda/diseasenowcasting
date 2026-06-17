@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,7 +58,7 @@
 <span>  <span class="va">data</span>,</span>
 <span>  models <span class="op">=</span> <span class="fu">diseasenowcasting</span><span class="fu">::</span><span class="fu"><a href="model.html">model</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  dates <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"two_stage"</span>, <span class="st">"one_stage"</span><span class="op">)</span>,</span>
+<span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"two_stage"</span>, <span class="st">"one_stage"</span>, <span class="st">"auto"</span><span class="op">)</span>,</span>
 <span>  n_dates <span class="op">=</span> <span class="fl">20L</span>,</span>
 <span>  max_delay <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  return_simulations <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -89,7 +89,8 @@ observed range (interior points) is sampled.</p></dd>
 
 
 <dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
-<dd><p><code>"two_stage"</code> (default) or <code>"one_stage"</code>.</p></dd>
+<dd><p><code>"two_stage"</code> (default), <code>"one_stage"</code>, or <code>"auto"</code> (per delay:
+dirichlet one-stage, all other delays two-stage).</p></dd>
 
 
 <dt id="arg-n-dates">n_dates<a class="anchor" aria-label="anchor" href="#arg-n-dates"></a></dt>

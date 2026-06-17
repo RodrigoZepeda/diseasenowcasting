@@ -1,10 +1,6 @@
 # User-defined delay distribution
 
-Allows any reporting-delay distribution that can be expressed with
-RTMB-traceable functions. You supply the cumulative distribution
-function `cdf`; `log_cdf` and `log_survival` are optional and default to
-the obvious transforms of `cdf`. Each is given as a function of the
-parameter vector `theta` that **returns a function of the delay** `d`:
+**\[experimental\]**
 
 ## Usage
 
@@ -82,6 +78,12 @@ custom_delay(
 A `custom_delay_class` object (a `delay_process_class`).
 
 ## Details
+
+Allows any reporting-delay distribution that can be expressed with
+RTMB-traceable functions. You supply the cumulative distribution
+function `cdf`; `log_cdf` and `log_survival` are optional and default to
+the obvious transforms of `cdf`. Each is given as a function of the
+parameter vector `theta` that **returns a function of the delay** `d`:
 
     cdf(theta)          -> function(d) returning F(d)
     log_cdf(theta)      -> function(d) returning log F(d)

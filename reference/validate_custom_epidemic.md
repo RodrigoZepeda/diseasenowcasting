@@ -1,9 +1,6 @@
 # Validate a user-defined epidemic process for RTMB traceability
 
-Tapes `intensity_fn` through `RTMB::MakeADFun` at the supplied (or
-default) initial values and confirms that the objective value and
-gradient are both finite. Emits an informative error if the function is
-not AD-safe.
+**\[experimental\]**
 
 ## Usage
 
@@ -26,6 +23,13 @@ validate_custom_epidemic(epidemic, test_theta = NULL)
 ## Value
 
 `epidemic`, invisibly. Emits a success message if the check passes.
+
+## Details
+
+Passes `intensity_fn` through `RTMB::MakeADFun` at the supplied (or
+default) initial values and confirms that the objective value and
+gradient are both finite. Emits an informative error if the function is
+not AD-safe.
 
 ## Examples
 

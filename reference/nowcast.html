@@ -31,7 +31,7 @@ coef()."><meta property="og:image" content="https://rodrigozepeda.github.io/dise
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -72,7 +72,7 @@ incidence by <code><a href="https://rdrr.io/r/base/mean.html" class="external-li
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">nowcast</span><span class="op">(</span></span>
 <span>  <span class="va">data</span>,</span>
 <span>  model <span class="op">=</span> <span class="fu">diseasenowcasting</span><span class="fu">::</span><span class="fu"><a href="model.html">model</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"two_stage"</span>, <span class="st">"one_stage"</span><span class="op">)</span>,</span>
+<span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"two_stage"</span>, <span class="st">"one_stage"</span>, <span class="st">"auto"</span><span class="op">)</span>,</span>
 <span>  now <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  K <span class="op">=</span> <span class="fl">25L</span>,</span>
 <span>  n_draws <span class="op">=</span> <span class="fl">2000L</span>,</span>
@@ -100,8 +100,9 @@ incidence by <code><a href="https://rdrr.io/r/base/mean.html" class="external-li
 
 
 <dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
-<dd><p><code>"two_stage"</code> (default; delay-imputation pooling) or <code>"one_stage"</code>
-(a single joint fit).</p></dd>
+<dd><p><code>"two_stage"</code> (default; delay-imputation pooling), <code>"one_stage"</code>
+(a single joint fit), or <code>"auto"</code> (per delay: dirichlet one-stage, all other
+delays two-stage – the better choice for each in our experiments).</p></dd>
 
 
 <dt id="arg-now">now<a class="anchor" aria-label="anchor" href="#arg-now"></a></dt>

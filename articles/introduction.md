@@ -10,7 +10,7 @@ date corresponds to when the case was registered in the system.
 Model Builder
 [`RTMB`](https://cran.r-project.org/web/packages/RTMB/index.html)) to
 infer the cases that have not yet been reported thus providing a
-prediction of the final number of casees.
+prediction of the final number of cases.
 
 ## Your data: the `tbl_now` format
 
@@ -36,6 +36,7 @@ the roles of its columns:
 
 library(diseasenowcasting)
 library(tbl.now)
+library(dplyr)
 library(ggplot2)
 set.seed(27653)
 ```
@@ -190,13 +191,13 @@ pred_dengue <- predict(nc_dengue)
 summary(pred_dengue) 
 ```
 
-    #>         mean median        sd     mad q2.5  q5 q10    q25 q50 q75 q90    q95
-    #> 154 108.7795    108  1.966167  1.4826  107 107 107 107.00 108 110 111 112.00
-    #> 155  89.2505     89  2.942291  2.9652   86  86  86  87.00  89  91  93  95.00
-    #> 156  68.6660     68  5.163504  4.4478   62  63  64  65.00  68  71  75  78.00
-    #> 157  47.2860     45 12.477341  7.4130   36  37  38  41.00  45  51  59  65.05
-    #> 158  44.6450     41 20.220891 14.8260   23  24  27  32.00  41  52  66  81.05
-    #> 159  39.8925     35 23.713121 17.7912   11  13  17  24.75  35  50  69  84.05
+    #>         mean median        sd     mad q2.5  q5 q10 q25 q50 q75 q90    q95
+    #> 154 108.7795    108  1.966167  1.4826  107 107 107 107 108 110 111 112.00
+    #> 155  89.2495     89  2.941356  2.9652   86  86  86  87  89  91  93  95.00
+    #> 156  68.6660     68  5.163892  4.4478   62  63  64  65  68  71  75  78.00
+    #> 157  47.2860     45 12.477341  7.4130   36  37  38  41  45  51  59  65.05
+    #> 158  44.6465     41 20.218134 14.8260   23  24  27  32  41  52  66  81.05
+    #> 159  39.8955     35 23.713261 17.7912   11  13  17  25  35  50  69  84.05
     #>       q97.5 .event_num stratum event_date
     #> 154 113.025         47   Total 1990-11-26
     #> 155  97.000         48   Total 1990-12-03
@@ -370,13 +371,13 @@ Or obtain it via
 # Rank by Weighted Interval Score (WIS) -- lower is better
 score(backtest_mpox)
 #>               model       wis overprediction underprediction dispersion
-#> 1  SIR/nb/LogNormal  9.811354       0.000000        6.855556   2.955799
-#> 2  AR1/nb/LogNormal 13.368333       3.166667        2.500000   7.701667
-#> 3 HSGP/nb/LogNormal 17.360035       2.708333        4.402778  10.248924
-#>   coverage_50 coverage_90       ape      mse n
-#> 1        0.75           1 0.4073142 1660.250 4
-#> 2        0.25           1 7.1411720 1260.500 4
-#> 3        0.50           1 1.6262153 2064.062 4
+#> 1  SIR/nb/LogNormal  9.980729       0.000000        7.111111   2.869618
+#> 2  AR1/nb/LogNormal 13.258611       3.055556        2.250000   7.953056
+#> 3 HSGP/nb/LogNormal 17.036597       2.055556        4.527778  10.453264
+#>   coverage_50 coverage_90       ape     mse n
+#> 1        0.75           1 0.4181395 1636.50 4
+#> 2        0.25           1 6.6225133 1203.75 4
+#> 3        0.50           1 1.4416330 1823.25 4
 ```
 
 The
@@ -389,6 +390,146 @@ lowest WIS and coverage close to these levels.
 > WIS at essentially the same coverage as HGSP. Note however that for
 > the tutorial we only used 5 historical dates which is too low to reach
 > a definite conslusion.
+
+## Example 4 – Letting the package choose the model (`auto_nowcast()`)
+
+Doing the backtest-and-compare loop by hand (Example 3) is exactly what
+[`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
+automates. Given a `tbl_now`, it builds a grid of candidate models
+*sized to how much data you have* (which epidemic processes are even
+feasible, crossed with the delay families), backtests them, scores them,
+and **refits the single best one** on the full data. The result is an
+ordinary nowcast, with the ranked comparison stored alongside it.
+
+Here we use all the dengue data up to 1994:
+
+``` r
+
+#All dengue observed as of January 1994
+dengue_94 <- denguedat |>
+  filter(onset_week  <= as.Date("1994-01-01") &
+         report_week <= as.Date("1994-01-01"))
+
+dengue_tbl_94 <- tbl_now(
+  dengue_94,
+  event_date  = onset_week,
+  report_date = report_week,
+  data_type   = "linelist",
+  now         = as.Date("1994-01-01")
+)
+```
+
+Backtesting the whole grid is the expensive step. To run the candidates
+in parallel, set a
+[`future::plan()`](https://future.futureverse.org/reference/plan.html)
+before the call and restore it afterwards (left commented here so the
+vignette stays single-process):
+
+``` r
+
+# Uncomment to run candidates in parallel:
+# library(future)
+# plan(multisession, workers = max(parallel::detectCores() - 1, 1))
+auto_ncast <- auto_nowcast(
+  dengue_tbl_94,
+  metric         = "wis",   # rank candidates by Weighted Interval Score
+  n_dates        = 10,      # backtest at 10 historical dates (raise for a firmer choice)
+  n_draws_select = 150,     # draws while comparing (small => fast)
+  n_draws        = 500,     # draws for the final fit of the winner
+  K              = 8        # delay imputations (small => fast)
+)
+# plan(sequential)
+```
+
+We can show the scores of the models to see the best performer:
+
+``` r
+
+comparison_scores(auto_ncast)  # every candidate, ranked best-first
+#>                      model       wis overprediction underprediction dispersion
+#> 1        HSGP/nb/Dirichlet  8.783583     0.23888889        4.065556   4.479139
+#> 2 HSGP/nb/GeneralizedGamma  8.898986     0.06111111        3.563333   5.274542
+#> 3         AR1/nb/Dirichlet  9.347750     0.26666667        3.932778   5.148306
+#> 4        HSGP/nb/LogNormal  9.519069     0.05555556        4.181111   5.282403
+#> 5  AR1/nb/GeneralizedGamma  9.938111     0.15555556        4.708889   5.073667
+#> 6         AR1/nb/LogNormal 10.708569     0.13333333        5.328889   5.246347
+#>   coverage_50 coverage_90       ape     mse  n
+#> 1         0.5         1.0 0.3841347 562.350 10
+#> 2         0.6         1.0 0.3574846 480.475 10
+#> 3         0.4         0.9 0.4105952 609.700 10
+#> 4         0.6         1.0 0.3892143 592.150 10
+#> 5         0.5         0.9 0.3934019 635.350 10
+#> 6         0.4         0.9 0.4432077 742.225 10
+```
+
+[`best_model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/best_model.md)
+hands back the winning
+[`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
+object, so you can reuse the same specification on other data (or feed
+it to
+[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
+/
+[`backtest()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.md)):
+
+``` r
+
+winner <- best_model(auto_ncast)
+winner
+```
+
+Because the result is a normal nowcast, everything else just works:
+
+``` r
+
+autoplot(auto_ncast)
+```
+
+![\_Nowcast from the model auto_nowcast()
+selected.\_](introduction_files/figure-html/auto-plot-1.png)
+
+*Nowcast from the model auto_nowcast() selected.*
+
+### Updating the chosen model as new data arrive
+
+The selected nowcast is an ordinary `nowcast_class`, so once
+[`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
+has picked a model you keep it and feed it the next batch of reports
+with [`update()`](https://rdrr.io/r/stats/update.html) – no need to
+re-run the selection. [`update()`](https://rdrr.io/r/stats/update.html)
+warm-refits the *same* winning model and scores the incoming reports
+against the fitted delay, warning if any arrive far later than expected:
+
+``` r
+
+# A few more weeks of dengue, observed as of 1994-04-01:
+dengue_apr <- denguedat |>
+  filter(onset_week  <= as.Date("1994-04-01") &
+         report_week <= as.Date("1994-04-01"))
+
+dengue_tbl_apr <- tbl_now(
+  dengue_apr,
+  event_date  = onset_week,
+  report_date = report_week,
+  data_type   = "linelist",
+  now         = as.Date("1994-04-01")
+)
+
+auto_ncast_updated <- update(auto_ncast, dengue_tbl_apr)
+```
+
+Any reports with surprising delays are collected by
+[`extreme_values()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/extreme_values.md)
+(it returns `NULL` when nothing looks off):
+
+``` r
+
+extreme_values(auto_ncast_updated)
+#> NULL
+```
+
+See the vignette on [Handling Outlier Delays with
+Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.md)
+for what to do when a delay *is* flagged.
 
 ## Next steps
 

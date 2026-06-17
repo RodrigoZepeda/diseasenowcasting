@@ -394,13 +394,52 @@ default
 [`nb_likelihood()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/likelihood.md)
 uses `lognormal_prior(log(20), 0.5)`.
 
-### one_stage vs two_stage
+### one_stage vs two_stage vs auto
 
 - `one_stage`: single joint fit of delay + epidemic simultaneously.
   Fast; can underestimate delay uncertainty.
 - `two_stage`: Stage 1 = delay-only fit on a recent window; Stage 2 = K
   joint fits with delay hard-fixed at imputed values; draws are pooled.
   Recommended for production. Adds ~K× the cost of one fit.
+- `auto`: resolves per delay in `.collect_nowcast_fits` — **dirichlet
+  one-stage, every other delay two-stage** (dirichlet scored worse under
+  two-stage simplex imputation in experiments). Available on
+  [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
+  and
+  [`backtest()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.md).
+
+### auto_nowcast() — pick the best model automatically
+
+``` r
+
+# Builds a candidate grid (epidemic process x delay) sized to the series length,
+# backtests + scores it, refits the winner. Returns a nowcast_class with the
+# scoreboard in @comparison = list(scores, chosen, metric, max_time).
+nc <- auto_nowcast(
+  data,                          # tbl_now
+  metric = "wis",                # "wis"|"ape"|"mse"|"coverage_50"(|cov50-.5|)|"coverage_90"(|cov90-.9|)|"coverage"(both)
+  type   = "auto",               # backtest + final fit strategy
+  sir = NULL, ar = NULL, hsgp = NULL,   # pass a component to inject priors + force it in
+  delays = NULL,                 # default {lognormal, gen-gamma, dirichlet}
+  likelihood = nb_likelihood(),  # single, OR list(nb_likelihood(), poisson_likelihood())
+  models = NULL,                 # extra model() objects (e.g. custom_delay/custom_epidemic) to compare
+  n_dates = 6, n_draws_select = 500,    # fast selection backtest
+  n_draws = 2000, K = 25,        # full final refit
+  min_ar = 15, min_hsgp = 30)    # length thresholds
+# Epidemic candidates by max_time: <min_ar -> {SIR}; [min_ar,min_hsgp) -> {SIR,AR1};
+# >=min_hsgp -> {AR1,HSGP}. Any explicit sir=/ar=/hsgp= is force-included.
+# Set future::plan(multisession) before calling for parallel backtesting.
+
+# Accessors (prefer over reaching into @comparison):
+best_model_name(nc)    # winning label, e.g. "SIR/nb/Dirichlet" (= @comparison$chosen)
+best_model(nc)         # the winning model() object (= nc@model), reusable in nowcast()/backtest()
+comparison_scores(nc)  # the ranked scoreboard data.frame (= @comparison$scores)
+best_score(nc)         # the single scoreboard row for the winner
+selection_metric(nc)   # the metric used (= @comparison$metric)
+# best_model_name/comparison_scores/best_score/selection_metric error on a plain
+# nowcast() (no @comparison); best_model() works on any nowcast. print(nc) shows
+# the top of the scoreboard when @comparison is present.
+```
 
 ### fit() — lower-level
 

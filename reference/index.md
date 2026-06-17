@@ -2,17 +2,46 @@
 
 ## All functions
 
+- [`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
+  : Automatically select and fit the best nowcasting model
+
 - [`backtest()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.md)
   : Backtest one or more nowcast models across a set of as-of dates
 
+- [`best_model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/best_model.md)
+  :
+
+  The winning
+  [`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
+  object from a nowcast
+
+- [`best_model_name()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/best_model_name.md)
+  :
+
+  Name of the model chosen by
+  [`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
+
+- [`best_score()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/best_score.md)
+  :
+
+  The scoreboard row for the model
+  [`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
+  chose
+
 - [`censor_delays_above()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/censor_delays_above.md)
   : Flag reports with an implausibly long delay as censored
+
+- [`comparison_scores()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/comparison_scores.md)
+  :
+
+  The model-selection scoreboard from
+  [`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
 
 - [`covid_colombia`](https://rodrigozepeda.github.io/diseasenowcasting/reference/covid_colombia.md)
   : COVID-19 Notifications – Colombia 2020-2023
 
 - [`custom_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_delay.md)
-  : User-defined delay distribution
+  **\[experimental\]** : User-defined delay distribution
 
 - [`custom_epidemic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_epidemic.md)
   : User-defined epidemic process
@@ -102,6 +131,13 @@
 - [`score()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md)
   : Score a backtest: WIS, APE, MSE per model (and rank them)
 
+- [`selection_metric()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/selection_metric.md)
+  :
+
+  The metric
+  [`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
+  used to pick the winner
+
 - [`summarise_nowcast_matrix()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/summarise_nowcast_matrix.md)
   : Quantile-table summary of a pooled nowcast draws matrix
 
@@ -118,7 +154,9 @@
   : Tidy parameter estimates from a fitted nowcast
 
 - [`validate_custom_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_delay.md)
-  : Validate a custom delay distribution for RTMB traceability
+  **\[experimental\]** : Validate a custom delay distribution for RTMB
+  traceability
 
 - [`validate_custom_epidemic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_epidemic.md)
-  : Validate a user-defined epidemic process for RTMB traceability
+  **\[experimental\]** : Validate a user-defined epidemic process for
+  RTMB traceability

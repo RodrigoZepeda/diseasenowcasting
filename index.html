@@ -47,7 +47,7 @@
 
     <a class="navbar-brand me-2" href="index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -95,7 +95,6 @@
 <h2 id="why-diseasenowcasting">Why <code>diseasenowcasting</code>?<a class="anchor" aria-label="anchor" href="#why-diseasenowcasting"></a>
 </h2>
 <p>How <code>diseasenowcasting</code> compares with other R nowcasting packages:</p>
-<blockquote>
 <table style="width:100%;" class="table">
 <colgroup>
 <col width="16%">
@@ -167,7 +166,32 @@
 <td align="center">✅</td>
 </tr>
 <tr>
-<td>Counts that can decrease (cases later un-confirmed)</td>
+<td>Additional covariates</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">✅<sup>§</sup>
+</td>
+<td align="center">✅</td>
+</tr>
+<tr>
+<td>Automatic extreme-delay detection</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>Automatic selection of best model</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>Counts that can decrease (suspected cases later un-confirmed)</td>
 <td align="center">🚧</td>
 <td align="center">✅</td>
 <td align="center">❌</td>
@@ -185,7 +209,6 @@
 </tbody>
 </table>
 <p><sub><sup><b>†</b></sup><em>Arbitrary</em> means you supply your own custom R function: any distribution for the delay, any function <code>f(t)</code> for the epidemic process (not just a choice from a built-in menu). <code>epinowcast</code> is very flexible through parametric families and model formulas, but does not take arbitrary user-defined functions. <sup><b>‡</b></sup><code>NobBS</code> requires JAGS and <code>epinowcast</code> requires CmdStan (an external Stan toolchain); <code>nowcaster</code> runs entirely in R but depends on the (non-CRAN) <code>INLA</code> package. <sup><b>§</b></sup><code>nowcaster</code> stratifies by age/region structure only, not arbitrary user-defined strata; <code>diseasenowcasting</code> allows any combination of strata columns. <sup>🚧</sup> In development for <code>diseasenowcasting</code> (counts that revise <em>downward</em>, e.g. a positive later re-classified as negative); <code>baselinenowcast</code> already supports this. </sub></p>
-</blockquote>
 </div>
 <div class="section level2">
 <h2 id="installing">Installing<a class="anchor" aria-label="anchor" href="#installing"></a>
@@ -282,10 +305,50 @@
 <span><span class="co">#&gt; 2   0.3333333           1 0.7030839 1089 3</span></span></code></pre></div>
 </div>
 <div class="section level2">
+<h2 id="automatic-model-selection">Automatic model selection<a class="anchor" aria-label="anchor" href="#automatic-model-selection"></a>
+</h2>
+<p>Not sure which model to pick? <code><a href="reference/auto_nowcast.html">auto_nowcast()</a></code> automates the compare-and-choose loop above: it builds a grid of candidate models sized to how much data you have, backtests them, and refits the single best one. The result is an ordinary nowcast, with the ranked comparison attached.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Compares epidemic processes x delay families and keeps the best (default by WIS)</span></span>
+<span><span class="co"># here we use n_dates = 10 just as an example. Set to higher. </span></span>
+<span><span class="co"># In real life this number represents how many dates are used to compare </span></span>
+<span><span class="co"># the nowcasts</span></span>
+<span></span>
+<span><span class="co"># Uncomment to run candidates in parallel:</span></span>
+<span><span class="co"># library(future)</span></span>
+<span><span class="co"># plan(multisession, workers = max(parallel::detectCores() - 1, 1))</span></span>
+<span><span class="va">auto_ncast</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/auto_nowcast.html">auto_nowcast</a></span><span class="op">(</span><span class="va">dengue_tbl</span>, n_dates <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
+<span><span class="co"># plan(sequential)</span></span>
+<span></span>
+<span><span class="co"># Get the chosen model</span></span>
+<span><span class="fu"><a href="reference/best_model_name.html">best_model_name</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "HSGP/nb/GeneralizedGamma"</span></span>
+<span></span>
+<span><span class="co"># Get the scores for all the models</span></span>
+<span><span class="fu"><a href="reference/comparison_scores.html">comparison_scores</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                      model      wis overprediction underprediction dispersion</span></span>
+<span><span class="co">#&gt; 1 HSGP/nb/GeneralizedGamma 8.234750     0.06666667        4.348333   3.819750</span></span>
+<span><span class="co">#&gt; 2        HSGP/nb/Dirichlet 8.388472     0.06666667        5.168889   3.152917</span></span>
+<span><span class="co">#&gt; 3  AR1/nb/GeneralizedGamma 8.540056     0.06666667        5.455556   3.017833</span></span>
+<span><span class="co">#&gt; 4         AR1/nb/LogNormal 8.637097     0.06666667        5.730000   2.840431</span></span>
+<span><span class="co">#&gt; 5         AR1/nb/Dirichlet 8.800778     0.06666667        6.055000   2.679111</span></span>
+<span><span class="co">#&gt;   coverage_50 coverage_90       ape     mse  n</span></span>
+<span><span class="co">#&gt; 1         0.3         0.9 0.7755133 650.025 10</span></span>
+<span><span class="co">#&gt; 2         0.4         0.9 0.7806480 667.800 10</span></span>
+<span><span class="co">#&gt; 3         0.2         0.8 0.8099661 694.300 10</span></span>
+<span><span class="co">#&gt; 4         0.0         0.8 0.8043512 680.900 10</span></span>
+<span><span class="co">#&gt; 5         0.0         0.8 0.7968068 659.700 10</span></span>
+<span><span class="co">#&gt;  [ reached 'max' / getOption("max.print") -- omitted 1 rows ]</span></span>
+<span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-auto-1.png" alt="" width="100%"></p>
+<p>You can also feed it priors (<code>sir = sir_epidemic(R0 = ...)</code>), compare likelihoods (<code>likelihood = list(nb_likelihood(), poisson_likelihood())</code>), or add your own <code><a href="reference/custom_delay.html">custom_delay()</a></code> / <code><a href="reference/custom_epidemic.html">custom_epidemic()</a></code> models via <code>models =</code>. See the <a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/introduction.html">Introduction</a> vignette for a more complete example.</p>
+</div>
+<div class="section level2">
 <h2 id="handling-extreme-delays">Handling extreme delays<a class="anchor" aria-label="anchor" href="#handling-extreme-delays"></a>
 </h2>
 <p>When new data arrives, <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> re-scores every incoming report against the previously fitted delay distribution and <strong>warns</strong> about anything that seems implausibly delayed. The flagged reports are available via <code><a href="reference/extreme_values.html">extreme_values()</a></code>:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#Simulate getting new data</span></span>
 <span><span class="va">dengue_update</span> <span class="op">&lt;-</span> <span class="va">denguedat</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">onset_week</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1991-01-14"</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">report_week</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1991-01-14"</span><span class="op">)</span><span class="op">)</span></span>
@@ -297,7 +360,13 @@
 <span><span class="co"># The model identified two extreme (very unlikely) delays of 9 and 10 weeks: </span></span>
 <span><span class="co"># A human should check them based on domain knowledge and decide whether to keep</span></span>
 <span><span class="co"># them or to censor them. </span></span>
-<span><span class="fu"><a href="reference/extreme_values.html">extreme_values</a></span><span class="op">(</span><span class="va">nc_updated</span><span class="op">)</span>  </span></code></pre></div>
+<span><span class="fu"><a href="reference/extreme_values.html">extreme_values</a></span><span class="op">(</span><span class="va">nc_updated</span><span class="op">)</span>  </span>
+<span><span class="co">#&gt;   delay weight mean_tail_prob cdf_prob     lpd relative_surprise direction</span></span>
+<span><span class="co">#&gt; 1     9      1       0.007545 0.992455 -5.3454            0.0149      long</span></span>
+<span><span class="co">#&gt; 2    10      1       0.004104 0.995896 -5.9928            0.0078      long</span></span>
+<span><span class="co">#&gt;   surprise level</span></span>
+<span><span class="co">#&gt; 1    delay  0.99</span></span>
+<span><span class="co">#&gt; 2    delay  0.99</span></span></code></pre></div>
 <p>A complete tutorial on handling extreme delays is available at the <a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.html">Handling Outlier Delays with Censoring</a> vignette.</p>
 </div>
 <div class="section level2">

@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,6 +58,13 @@
 
       <dl><dt>
 
+          <code><a href="auto_nowcast.html">auto_nowcast()</a></code>
+
+        </dt>
+        <dd>Automatically select and fit the best nowcasting model</dd>
+
+        <dt>
+
           <code><a href="backtest.html">backtest()</a></code>
 
         </dt>
@@ -65,10 +72,38 @@
 
         <dt>
 
+          <code><a href="best_model.html">best_model()</a></code>
+
+        </dt>
+        <dd>The winning <code><a href="../reference/model.html">model()</a></code> object from a nowcast</dd>
+
+        <dt>
+
+          <code><a href="best_model_name.html">best_model_name()</a></code>
+
+        </dt>
+        <dd>Name of the model chosen by <code><a href="../reference/auto_nowcast.html">auto_nowcast()</a></code></dd>
+
+        <dt>
+
+          <code><a href="best_score.html">best_score()</a></code>
+
+        </dt>
+        <dd>The scoreboard row for the model <code><a href="../reference/auto_nowcast.html">auto_nowcast()</a></code> chose</dd>
+
+        <dt>
+
           <code><a href="censor_delays_above.html">censor_delays_above()</a></code>
 
         </dt>
         <dd>Flag reports with an implausibly long delay as censored</dd>
+
+        <dt>
+
+          <code><a href="comparison_scores.html">comparison_scores()</a></code>
+
+        </dt>
+        <dd>The model-selection scoreboard from <code><a href="../reference/auto_nowcast.html">auto_nowcast()</a></code></dd>
 
         <dt>
 
@@ -80,7 +115,7 @@
         <dt>
 
           <code><a href="custom_delay.html">custom_delay()</a></code>
-
+          <span class="badge lifecycle lifecycle-experimental">experimental</span>
         </dt>
         <dd>User-defined delay distribution</dd>
 
@@ -212,6 +247,13 @@
 
         <dt>
 
+          <code><a href="selection_metric.html">selection_metric()</a></code>
+
+        </dt>
+        <dd>The metric <code><a href="../reference/auto_nowcast.html">auto_nowcast()</a></code> used to pick the winner</dd>
+
+        <dt>
+
           <code><a href="summarise_nowcast_matrix.html">summarise_nowcast_matrix()</a></code>
 
         </dt>
@@ -248,14 +290,14 @@
         <dt>
 
           <code><a href="validate_custom_delay.html">validate_custom_delay()</a></code>
-
+          <span class="badge lifecycle lifecycle-experimental">experimental</span>
         </dt>
         <dd>Validate a custom delay distribution for RTMB traceability</dd>
 
         <dt>
 
           <code><a href="validate_custom_epidemic.html">validate_custom_epidemic()</a></code>
-
+          <span class="badge lifecycle lifecycle-experimental">experimental</span>
         </dt>
         <dd>Validate a user-defined epidemic process for RTMB traceability</dd>
       </dl></div>

@@ -41,7 +41,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -93,7 +93,7 @@ corresponds to when the case was registered in the system.
 <code>diseasenowcasting</code> uses censored Bayesian models (via R’s
 Template Model Builder <a href="https://cran.r-project.org/web/packages/RTMB/index.html" class="external-link"><code>RTMB</code></a>)
 to infer the cases that have not yet been reported thus providing a
-prediction of the final number of casees.</p>
+prediction of the final number of cases.</p>
 <div class="section level2">
 <h2 id="your-data-the-tbl_now-format">Your data: the <code>tbl_now</code> format<a class="anchor" aria-label="anchor" href="#your-data-the-tbl_now-format"></a>
 </h2>
@@ -116,6 +116,7 @@ not cases the missingness can be translated into zero cases)</p></li>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rodrigozepeda.github.io/diseasenowcasting/">diseasenowcasting</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rodrigozepeda.github.io/tbl.now/" class="external-link">tbl.now</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">27653</span><span class="op">)</span></span></code></pre></div>
 <p>As a quick example, here is how to build a <code>tbl_now</code> using
@@ -237,13 +238,13 @@ the errorbar has the 90% credible intervals.</em>
 <span></span>
 <span><span class="co">#This creates a summary of mean and quantiles</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">pred_dengue</span><span class="op">)</span> </span></code></pre></div>
-<pre><code><span><span class="co">#&gt;         mean median        sd     mad q2.5  q5 q10    q25 q50 q75 q90    q95</span></span>
-<span><span class="co">#&gt; 154 108.7795    108  1.966167  1.4826  107 107 107 107.00 108 110 111 112.00</span></span>
-<span><span class="co">#&gt; 155  89.2505     89  2.942291  2.9652   86  86  86  87.00  89  91  93  95.00</span></span>
-<span><span class="co">#&gt; 156  68.6660     68  5.163504  4.4478   62  63  64  65.00  68  71  75  78.00</span></span>
-<span><span class="co">#&gt; 157  47.2860     45 12.477341  7.4130   36  37  38  41.00  45  51  59  65.05</span></span>
-<span><span class="co">#&gt; 158  44.6450     41 20.220891 14.8260   23  24  27  32.00  41  52  66  81.05</span></span>
-<span><span class="co">#&gt; 159  39.8925     35 23.713121 17.7912   11  13  17  24.75  35  50  69  84.05</span></span>
+<pre><code><span><span class="co">#&gt;         mean median        sd     mad q2.5  q5 q10 q25 q50 q75 q90    q95</span></span>
+<span><span class="co">#&gt; 154 108.7795    108  1.966167  1.4826  107 107 107 107 108 110 111 112.00</span></span>
+<span><span class="co">#&gt; 155  89.2495     89  2.941356  2.9652   86  86  86  87  89  91  93  95.00</span></span>
+<span><span class="co">#&gt; 156  68.6660     68  5.163892  4.4478   62  63  64  65  68  71  75  78.00</span></span>
+<span><span class="co">#&gt; 157  47.2860     45 12.477341  7.4130   36  37  38  41  45  51  59  65.05</span></span>
+<span><span class="co">#&gt; 158  44.6465     41 20.218134 14.8260   23  24  27  32  41  52  66  81.05</span></span>
+<span><span class="co">#&gt; 159  39.8955     35 23.713261 17.7912   11  13  17  25  35  50  69  84.05</span></span>
 <span><span class="co">#&gt;       q97.5 .event_num stratum event_date</span></span>
 <span><span class="co">#&gt; 154 113.025         47   Total 1990-11-26</span></span>
 <span><span class="co">#&gt; 155  97.000         48   Total 1990-12-03</span></span>
@@ -378,13 +379,13 @@ coverage:</p>
 <code class="sourceCode R"><span><span class="co"># Rank by Weighted Interval Score (WIS) -- lower is better</span></span>
 <span><span class="fu"><a href="../reference/score.html">score</a></span><span class="op">(</span><span class="va">backtest_mpox</span><span class="op">)</span></span>
 <span><span class="co">#&gt;               model       wis overprediction underprediction dispersion</span></span>
-<span><span class="co">#&gt; 1  SIR/nb/LogNormal  9.811354       0.000000        6.855556   2.955799</span></span>
-<span><span class="co">#&gt; 2  AR1/nb/LogNormal 13.368333       3.166667        2.500000   7.701667</span></span>
-<span><span class="co">#&gt; 3 HSGP/nb/LogNormal 17.360035       2.708333        4.402778  10.248924</span></span>
-<span><span class="co">#&gt;   coverage_50 coverage_90       ape      mse n</span></span>
-<span><span class="co">#&gt; 1        0.75           1 0.4073142 1660.250 4</span></span>
-<span><span class="co">#&gt; 2        0.25           1 7.1411720 1260.500 4</span></span>
-<span><span class="co">#&gt; 3        0.50           1 1.6262153 2064.062 4</span></span></code></pre></div>
+<span><span class="co">#&gt; 1  SIR/nb/LogNormal  9.980729       0.000000        7.111111   2.869618</span></span>
+<span><span class="co">#&gt; 2  AR1/nb/LogNormal 13.258611       3.055556        2.250000   7.953056</span></span>
+<span><span class="co">#&gt; 3 HSGP/nb/LogNormal 17.036597       2.055556        4.527778  10.453264</span></span>
+<span><span class="co">#&gt;   coverage_50 coverage_90       ape     mse n</span></span>
+<span><span class="co">#&gt; 1        0.75           1 0.4181395 1636.50 4</span></span>
+<span><span class="co">#&gt; 2        0.25           1 6.6225133 1203.75 4</span></span>
+<span><span class="co">#&gt; 3        0.50           1 1.4416330 1823.25 4</span></span></code></pre></div>
 <p>The <code><a href="../reference/score.html">score()</a></code> output shows WIS, absolute percentage error
 (APE), and empirical coverage at 50 % and 90 %. A well-calibrated
 nowcast should have the lowest WIS and coverage close to these
@@ -395,6 +396,116 @@ WIS at essentially the same coverage as HGSP. Note however that for the
 tutorial we only used 5 historical dates which is too low to reach a
 definite conslusion.</p>
 </blockquote>
+</div>
+<div class="section level2">
+<h2 id="example-4-letting-the-package-choose-the-model-auto_nowcast">Example 4 – Letting the package choose the model
+(<code>auto_nowcast()</code>)<a class="anchor" aria-label="anchor" href="#example-4-letting-the-package-choose-the-model-auto_nowcast"></a>
+</h2>
+<p>Doing the backtest-and-compare loop by hand (Example 3) is exactly
+what <code><a href="../reference/auto_nowcast.html">auto_nowcast()</a></code> automates. Given a
+<code>tbl_now</code>, it builds a grid of candidate models <em>sized to
+how much data you have</em> (which epidemic processes are even feasible,
+crossed with the delay families), backtests them, scores them, and
+<strong>refits the single best one</strong> on the full data. The result
+is an ordinary nowcast, with the ranked comparison stored alongside
+it.</p>
+<p>Here we use all the dengue data up to 1994:</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co">#All dengue observed as of January 1994</span></span>
+<span><span class="va">dengue_94</span> <span class="op">&lt;-</span> <span class="va">denguedat</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">onset_week</span>  <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1994-01-01"</span><span class="op">)</span> <span class="op">&amp;</span></span>
+<span>         <span class="va">report_week</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1994-01-01"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">dengue_tbl_94</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html" class="external-link">tbl_now</a></span><span class="op">(</span></span>
+<span>  <span class="va">dengue_94</span>,</span>
+<span>  event_date  <span class="op">=</span> <span class="va">onset_week</span>,</span>
+<span>  report_date <span class="op">=</span> <span class="va">report_week</span>,</span>
+<span>  data_type   <span class="op">=</span> <span class="st">"linelist"</span>,</span>
+<span>  now         <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1994-01-01"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Backtesting the whole grid is the expensive step. To run the
+candidates in parallel, set a <code><a href="https://future.futureverse.org/reference/plan.html" class="external-link">future::plan()</a></code> before the
+call and restore it afterwards (left commented here so the vignette
+stays single-process):</p>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Uncomment to run candidates in parallel:</span></span>
+<span><span class="co"># library(future)</span></span>
+<span><span class="co"># plan(multisession, workers = max(parallel::detectCores() - 1, 1))</span></span>
+<span><span class="va">auto_ncast</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/auto_nowcast.html">auto_nowcast</a></span><span class="op">(</span></span>
+<span>  <span class="va">dengue_tbl_94</span>,</span>
+<span>  metric         <span class="op">=</span> <span class="st">"wis"</span>,   <span class="co"># rank candidates by Weighted Interval Score</span></span>
+<span>  n_dates        <span class="op">=</span> <span class="fl">10</span>,      <span class="co"># backtest at 10 historical dates (raise for a firmer choice)</span></span>
+<span>  n_draws_select <span class="op">=</span> <span class="fl">150</span>,     <span class="co"># draws while comparing (small =&gt; fast)</span></span>
+<span>  n_draws        <span class="op">=</span> <span class="fl">500</span>,     <span class="co"># draws for the final fit of the winner</span></span>
+<span>  K              <span class="op">=</span> <span class="fl">8</span>        <span class="co"># delay imputations (small =&gt; fast)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># plan(sequential)</span></span></code></pre></div>
+<p>We can show the scores of the models to see the best performer:</p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/comparison_scores.html">comparison_scores</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span>  <span class="co"># every candidate, ranked best-first</span></span>
+<span><span class="co">#&gt;                      model       wis overprediction underprediction dispersion</span></span>
+<span><span class="co">#&gt; 1        HSGP/nb/Dirichlet  8.783583     0.23888889        4.065556   4.479139</span></span>
+<span><span class="co">#&gt; 2 HSGP/nb/GeneralizedGamma  8.898986     0.06111111        3.563333   5.274542</span></span>
+<span><span class="co">#&gt; 3         AR1/nb/Dirichlet  9.347750     0.26666667        3.932778   5.148306</span></span>
+<span><span class="co">#&gt; 4        HSGP/nb/LogNormal  9.519069     0.05555556        4.181111   5.282403</span></span>
+<span><span class="co">#&gt; 5  AR1/nb/GeneralizedGamma  9.938111     0.15555556        4.708889   5.073667</span></span>
+<span><span class="co">#&gt; 6         AR1/nb/LogNormal 10.708569     0.13333333        5.328889   5.246347</span></span>
+<span><span class="co">#&gt;   coverage_50 coverage_90       ape     mse  n</span></span>
+<span><span class="co">#&gt; 1         0.5         1.0 0.3841347 562.350 10</span></span>
+<span><span class="co">#&gt; 2         0.6         1.0 0.3574846 480.475 10</span></span>
+<span><span class="co">#&gt; 3         0.4         0.9 0.4105952 609.700 10</span></span>
+<span><span class="co">#&gt; 4         0.6         1.0 0.3892143 592.150 10</span></span>
+<span><span class="co">#&gt; 5         0.5         0.9 0.3934019 635.350 10</span></span>
+<span><span class="co">#&gt; 6         0.4         0.9 0.4432077 742.225 10</span></span></code></pre></div>
+<p><code><a href="../reference/best_model.html">best_model()</a></code> hands back the winning <code><a href="../reference/model.html">model()</a></code>
+object, so you can reuse the same specification on other data (or feed
+it to <code><a href="../reference/nowcast.html">nowcast()</a></code> / <code><a href="../reference/backtest.html">backtest()</a></code>):</p>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">winner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_model.html">best_model</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span></span>
+<span><span class="va">winner</span></span></code></pre></div>
+<p>Because the result is a normal nowcast, everything else just
+works:</p>
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span></span></code></pre></div>
+<div class="figure" style="text-align: center">
+<img src="introduction_files/figure-html/auto-plot-1.png" class="r-plt" alt="_Nowcast from the model auto_nowcast() selected._" width="672"><p class="caption">
+<em>Nowcast from the model auto_nowcast() selected.</em>
+</p>
+</div>
+<div class="section level3">
+<h3 id="updating-the-chosen-model-as-new-data-arrive">Updating the chosen model as new data arrive<a class="anchor" aria-label="anchor" href="#updating-the-chosen-model-as-new-data-arrive"></a>
+</h3>
+<p>The selected nowcast is an ordinary <code>nowcast_class</code>, so
+once <code><a href="../reference/auto_nowcast.html">auto_nowcast()</a></code> has picked a model you keep it and feed
+it the next batch of reports with <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> – no need to
+re-run the selection. <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> warm-refits the
+<em>same</em> winning model and scores the incoming reports against the
+fitted delay, warning if any arrive far later than expected:</p>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># A few more weeks of dengue, observed as of 1994-04-01:</span></span>
+<span><span class="va">dengue_apr</span> <span class="op">&lt;-</span> <span class="va">denguedat</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">onset_week</span>  <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1994-04-01"</span><span class="op">)</span> <span class="op">&amp;</span></span>
+<span>         <span class="va">report_week</span> <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1994-04-01"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">dengue_tbl_apr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html" class="external-link">tbl_now</a></span><span class="op">(</span></span>
+<span>  <span class="va">dengue_apr</span>,</span>
+<span>  event_date  <span class="op">=</span> <span class="va">onset_week</span>,</span>
+<span>  report_date <span class="op">=</span> <span class="va">report_week</span>,</span>
+<span>  data_type   <span class="op">=</span> <span class="st">"linelist"</span>,</span>
+<span>  now         <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1994-04-01"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">auto_ncast_updated</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">auto_ncast</span>, <span class="va">dengue_tbl_apr</span><span class="op">)</span></span></code></pre></div>
+<p>Any reports with surprising delays are collected by
+<code><a href="../reference/extreme_values.html">extreme_values()</a></code> (it returns <code>NULL</code> when nothing
+looks off):</p>
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/extreme_values.html">extreme_values</a></span><span class="op">(</span><span class="va">auto_ncast_updated</span><span class="op">)</span></span>
+<span><span class="co">#&gt; NULL</span></span></code></pre></div>
+<p>See the vignette on <a href="Handling_Outlier_Delays_with_Censoring.html">Handling Outlier
+Delays with Censoring</a> for what to do when a delay <em>is</em>
+flagged.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="next-steps">Next steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>

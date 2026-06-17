@@ -1,8 +1,6 @@
 # Validate a custom delay distribution for RTMB traceability
 
-Test-tapes the user-supplied `cdf` / `log_cdf` / `log_survival` on a
-dummy numeric vector, checking that `obj$fn()` and `obj$gr()` are
-finite. Emits a clear error (including common causes) on failure.
+**\[experimental\]**
 
 ## Usage
 
@@ -29,6 +27,12 @@ validate_custom_delay(delay, test_theta = NULL, test_delays = 1:14)
 ## Value
 
 Invisibly returns `TRUE` on success.
+
+## Details
+
+Tests the user-supplied `cdf` / `log_cdf` / `log_survival` on a dummy
+numeric vector, checking that `obj$fn()` and `obj$gr()` are finite.
+Emits a clear error (including common causes) on failure.
 
 ## Examples
 

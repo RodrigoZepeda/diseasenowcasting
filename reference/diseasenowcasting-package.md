@@ -26,6 +26,9 @@ Useful links:
 
 Authors:
 
+- Rodrigo Zepeda-Tello <rzepeda17@gmail.com>
+  ([ORCID](https://orcid.org/0000-0003-4471-5270))
+
 - Rami Yaari ([ORCID](https://orcid.org/0000-0002-8808-8937))
 
 - Matteo Perini ([ORCID](https://orcid.org/0000-0002-9465-6216))

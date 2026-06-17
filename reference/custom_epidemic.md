@@ -66,6 +66,10 @@ custom_epidemic(
 
 A `custom_epidemic_class` object (subclass of `epidemic_process_class`).
 
+## Details
+
+**\[experimental\]**
+
 ## See also
 
 [`validate_custom_epidemic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_epidemic.md),

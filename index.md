@@ -34,18 +34,21 @@ and
 
 How `diseasenowcasting` compares with other R nowcasting packages:
 
-> | Feature | `diseasenowcasting` | [`baselinenowcast`](https://github.com/epinowcast/baselinenowcast) | [`NobBS`](https://cran.r-project.org/package=NobBS) | [`nowcaster`](https://github.com/covid19br/nowcaster) | [`epinowcast`](https://github.com/epinowcast/epinowcast) |
-> |----|:--:|:--:|:--:|:--:|:--:|
-> | Arbitrary delay distributions ^(†) | ✅ | ❌ | ❌ | ❌ | ❌ |
-> | Arbitrary epidemic processes ^(†) | ✅ | ❌ | ❌ | ❌ | ❌ |
-> | No per-model compilation | ✅ | ✅ | ✅ | ✅ | ❌ |
-> | Pure R — no external engine (Stan/JAGS) ^(‡) | ✅ | ✅ | ❌ | ✅ | ❌ |
-> | Stratified data | ✅ | ❌ | ❌ | ✅^(§) | ✅ |
-> | Calendar / day-of-week effects | ✅ | ❌ | ❌ | ❌ | ✅ |
-> | Counts that can decrease (cases later un-confirmed) | 🚧 | ✅ | ❌ | ❌ | ❌ |
-> | Effective reproductive number (Rₜ) | ❌ | ❌ | ❌ | ❌ | ✅ |
->
-> _(^(**†**)*Arbitrary* means you supply your own custom R function: any distribution for the delay, any function `f(t)` for the epidemic process (not just a choice from a built-in menu). `epinowcast` is very flexible through parametric families and model formulas, but does not take arbitrary user-defined functions. ^(**‡**)`NobBS` requires JAGS and `epinowcast` requires CmdStan (an external Stan toolchain); `nowcaster` runs entirely in R but depends on the (non-CRAN) `INLA` package. ^(**§**)`nowcaster` stratifies by age/region structure only, not arbitrary user-defined strata; `diseasenowcasting` allows any combination of strata columns. ^(🚧) In development for `diseasenowcasting` (counts that revise *downward*, e.g. a positive later re-classified as negative); `baselinenowcast` already supports this.)
+| Feature | `diseasenowcasting` | [`baselinenowcast`](https://github.com/epinowcast/baselinenowcast) | [`NobBS`](https://cran.r-project.org/package=NobBS) | [`nowcaster`](https://github.com/covid19br/nowcaster) | [`epinowcast`](https://github.com/epinowcast/epinowcast) |
+|----|:--:|:--:|:--:|:--:|:--:|
+| Arbitrary delay distributions ^(†) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Arbitrary epidemic processes ^(†) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| No per-model compilation | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Pure R — no external engine (Stan/JAGS) ^(‡) | ✅ | ✅ | ❌ | ✅ | ❌ |
+| Stratified data | ✅ | ❌ | ❌ | ✅^(§) | ✅ |
+| Calendar / day-of-week effects | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Additional covariates | ✅ | ❌ | ❌ | ✅^(§) | ✅ |
+| Automatic extreme-delay detection | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Automatic selection of best model | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Counts that can decrease (suspected cases later un-confirmed) | 🚧 | ✅ | ❌ | ❌ | ❌ |
+| Effective reproductive number (Rₜ) | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+_(^(**†**)*Arbitrary* means you supply your own custom R function: any distribution for the delay, any function `f(t)` for the epidemic process (not just a choice from a built-in menu). `epinowcast` is very flexible through parametric families and model formulas, but does not take arbitrary user-defined functions. ^(**‡**)`NobBS` requires JAGS and `epinowcast` requires CmdStan (an external Stan toolchain); `nowcaster` runs entirely in R but depends on the (non-CRAN) `INLA` package. ^(**§**)`nowcaster` stratifies by age/region structure only, not arbitrary user-defined strata; `diseasenowcasting` allows any combination of strata columns. ^(🚧) In development for `diseasenowcasting` (counts that revise *downward*, e.g. a positive later re-classified as negative); `baselinenowcast` already supports this.)
 
 ## Installing
 
@@ -209,6 +212,64 @@ score(bt)
 #> 2   0.3333333           1 0.7030839 1089 3
 ```
 
+## Automatic model selection
+
+Not sure which model to pick?
+[`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
+automates the compare-and-choose loop above: it builds a grid of
+candidate models sized to how much data you have, backtests them, and
+refits the single best one. The result is an ordinary nowcast, with the
+ranked comparison attached.
+
+``` r
+
+# Compares epidemic processes x delay families and keeps the best (default by WIS)
+# here we use n_dates = 10 just as an example. Set to higher. 
+# In real life this number represents how many dates are used to compare 
+# the nowcasts
+
+# Uncomment to run candidates in parallel:
+# library(future)
+# plan(multisession, workers = max(parallel::detectCores() - 1, 1))
+auto_ncast <- auto_nowcast(dengue_tbl, n_dates = 10)
+# plan(sequential)
+
+# Get the chosen model
+best_model_name(auto_ncast)
+#> [1] "HSGP/nb/GeneralizedGamma"
+
+# Get the scores for all the models
+comparison_scores(auto_ncast)
+#>                      model      wis overprediction underprediction dispersion
+#> 1 HSGP/nb/GeneralizedGamma 8.234750     0.06666667        4.348333   3.819750
+#> 2        HSGP/nb/Dirichlet 8.388472     0.06666667        5.168889   3.152917
+#> 3  AR1/nb/GeneralizedGamma 8.540056     0.06666667        5.455556   3.017833
+#> 4         AR1/nb/LogNormal 8.637097     0.06666667        5.730000   2.840431
+#> 5         AR1/nb/Dirichlet 8.800778     0.06666667        6.055000   2.679111
+#>   coverage_50 coverage_90       ape     mse  n
+#> 1         0.3         0.9 0.7755133 650.025 10
+#> 2         0.4         0.9 0.7806480 667.800 10
+#> 3         0.2         0.8 0.8099661 694.300 10
+#> 4         0.0         0.8 0.8043512 680.900 10
+#> 5         0.0         0.8 0.7968068 659.700 10
+#>  [ reached 'max' / getOption("max.print") -- omitted 1 rows ]
+
+autoplot(auto_ncast)
+```
+
+![](reference/figures/README-auto-1.png)
+
+You can also feed it priors (`sir = sir_epidemic(R0 = ...)`), compare
+likelihoods
+(`likelihood = list(nb_likelihood(), poisson_likelihood())`), or add
+your own
+[`custom_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_delay.md)
+/
+[`custom_epidemic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_epidemic.md)
+models via `models =`. See the
+[Introduction](https://rodrigozepeda.github.io/diseasenowcasting/articles/introduction.html)
+vignette for a more complete example.
+
 ## Handling extreme delays
 
 When new data arrives, [`update()`](https://rdrr.io/r/stats/update.html)
@@ -231,6 +292,12 @@ nc_updated <- update(ncast, new_data = dengue_update, level = 0.99)
 # A human should check them based on domain knowledge and decide whether to keep
 # them or to censor them. 
 extreme_values(nc_updated)  
+#>   delay weight mean_tail_prob cdf_prob     lpd relative_surprise direction
+#> 1     9      1       0.007545 0.992455 -5.3454            0.0149      long
+#> 2    10      1       0.004104 0.995896 -5.9928            0.0078      long
+#>   surprise level
+#> 1    delay  0.99
+#> 2    delay  0.99
 ```
 
 A complete tutorial on handling extreme delays is available at the

@@ -9,7 +9,7 @@ backtest(
   data,
   models = diseasenowcasting::model(),
   dates = NULL,
-  type = c("two_stage", "one_stage"),
+  type = c("two_stage", "one_stage", "auto"),
   n_dates = 20L,
   max_delay = NULL,
   return_simulations = FALSE,
@@ -42,7 +42,8 @@ backtest(
 
 - type:
 
-  `"two_stage"` (default) or `"one_stage"`.
+  `"two_stage"` (default), `"one_stage"`, or `"auto"` (per delay:
+  dirichlet one-stage, all other delays two-stage).
 
 - n_dates:
 

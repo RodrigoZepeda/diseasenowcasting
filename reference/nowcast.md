@@ -17,7 +17,7 @@ the parameter estimates by
 nowcast(
   data,
   model = diseasenowcasting::model(),
-  type = c("two_stage", "one_stage"),
+  type = c("two_stage", "one_stage", "auto"),
   now = NULL,
   K = 25L,
   n_draws = 2000L,
@@ -49,8 +49,10 @@ nowcast(
 
 - type:
 
-  `"two_stage"` (default; delay-imputation pooling) or `"one_stage"` (a
-  single joint fit).
+  `"two_stage"` (default; delay-imputation pooling), `"one_stage"` (a
+  single joint fit), or `"auto"` (per delay: dirichlet one-stage, all
+  other delays two-stage – the better choice for each in our
+  experiments).
 
 - now:
 
