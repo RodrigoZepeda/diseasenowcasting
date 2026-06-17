@@ -199,5 +199,28 @@ S7::method(print, nowcast_class) <- function(x, ...) {
     "Use {.fn predict} / {.fn autoplot} for the nowcast, {.fn coef} / {.fn summary} for estimates."))
   cli::cli_text(cli::col_grey(
     "Call {.code print(nc@model)} for the full model spec (including priors)."))
+
+  # If this is an auto_nowcast() result, show why it chose this model.
+  cmp <- x@comparison
+  if (!is.null(cmp)) {
+    n_cand <- nrow(cmp$scores)
+    cli::cli_rule(left = cli::col_grey("auto_nowcast"))
+    cli::cli_text(cli::col_grey(
+      "Selected {.strong {cmp$chosen}} from {n_cand} candidate{?s} (best {cmp$metric})."))
+    # A compact top-of-board: chosen model first, then the next few by score.
+    board   <- cmp$scores
+    chosen  <- match(cmp$chosen, board$model)
+    ord     <- c(chosen, setdiff(seq_len(nrow(board)), chosen))
+    board   <- board[ord, , drop = FALSE]
+    show_n  <- min(3L, nrow(board))
+    for (i in seq_len(show_n)) {
+      mark <- if (i == 1L) cli::col_green(cli::symbol$tick) else " "
+      cli::cli_text(cli::col_grey(
+        "{mark} {board$model[i]}  (wis = {signif(board$wis[i], 3)})"))
+    }
+    if (nrow(board) > show_n)
+      cli::cli_text(cli::col_grey(
+        "  ... {nrow(board) - show_n} more; see {.fn comparison_scores}."))
+  }
   invisible(x)
 }

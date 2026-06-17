@@ -24,6 +24,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Rodrigo Zepeda-Tello \email{rzepeda17@gmail.com} (\href{https://orcid.org/0000-0003-4471-5270}{ORCID})
   \item Rami Yaari (\href{https://orcid.org/0000-0002-8808-8937}{ORCID})
   \item Matteo Perini (\href{https://orcid.org/0000-0002-9465-6216}{ORCID})
 }

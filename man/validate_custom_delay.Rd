@@ -18,7 +18,10 @@ test point.  Defaults to the \code{inits} slot.}
 Invisibly returns \code{TRUE} on success.
 }
 \description{
-Test-tapes the user-supplied \code{cdf} / \code{log_cdf} / \code{log_survival} on a dummy
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+}
+\details{
+Tests the user-supplied \code{cdf} / \code{log_cdf} / \code{log_survival} on a dummy
 numeric vector, checking that \code{obj$fn()} and \code{obj$gr()} are finite.  Emits a
 clear error (including common causes) on failure.
 }

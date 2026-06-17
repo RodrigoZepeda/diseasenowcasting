@@ -8,7 +8,7 @@ backtest(
   data,
   models = diseasenowcasting::model(),
   dates = NULL,
-  type = c("two_stage", "one_stage"),
+  type = c("two_stage", "one_stage", "auto"),
   n_dates = 20L,
   max_delay = NULL,
   return_simulations = FALSE,
@@ -28,7 +28,8 @@ backtest can rank them (see \code{\link[=score]{score()}}).}
 \item{dates}{A vector of as-of dates.  If \code{NULL}, a default grid spanning the
 observed range (interior points) is sampled.}
 
-\item{type}{\code{"two_stage"} (default) or \code{"one_stage"}.}
+\item{type}{\code{"two_stage"} (default), \code{"one_stage"}, or \code{"auto"} (per delay:
+dirichlet one-stage, all other delays two-stage).}
 
 \item{n_dates}{If \code{dates} is \code{NULL}, how many to sample. Default 20.}
 

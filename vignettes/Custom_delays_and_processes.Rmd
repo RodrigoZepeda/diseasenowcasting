@@ -2,8 +2,10 @@
 title: "Custom Delays and Epidemic Processes"
 author: "diseasenowcasting team"
 output: rmarkdown::html_vignette
-vignette: "%\\VignetteIndexEntry{Custom Delays and Epidemic Processes} %\\VignetteEncoding{UTF-8}
-  %\\VignetteEngine{knitr::rmarkdown}\n"
+vignette: >
+  %\VignetteIndexEntry{Custom Delays and Epidemic Processes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}

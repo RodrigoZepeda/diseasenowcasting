@@ -1,6 +1,6 @@
 Package: diseasenowcasting
 Title: Nowcast Time Series of Epidemiological Cases
-Version: 1.1.0
+Version: 1.2.0
 Authors@R:
     c(person("Rodrigo", "Zepeda-Tello", role = c("aut", "cre"),
              email = "rzepeda17@gmail.com",
@@ -30,10 +30,10 @@ URL: https://rodrigozepeda.github.io/diseasenowcasting/,
 BugReports: https://github.com/RodrigoZepeda/diseasenowcasting/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
+RoxygenNote: 8.0.0
 Depends:
     R (>= 4.2.0),
-    tbl.now (>= 0.7.2)
+    tbl.now (>= 0.7.6)
 Imports:
     cli,
     dplyr,

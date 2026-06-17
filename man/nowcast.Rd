@@ -7,7 +7,7 @@
 nowcast(
   data,
   model = diseasenowcasting::model(),
-  type = c("two_stage", "one_stage"),
+  type = c("two_stage", "one_stage", "auto"),
   now = NULL,
   K = 25L,
   n_draws = 2000L,
@@ -26,8 +26,9 @@ nowcast(
 
 \item{model}{A \code{\link[=model]{model()}} object.  Default: \code{model()} (NB + HSGP + Dirichlet).}
 
-\item{type}{\code{"two_stage"} (default; delay-imputation pooling) or \code{"one_stage"}
-(a single joint fit).}
+\item{type}{\code{"two_stage"} (default; delay-imputation pooling), \code{"one_stage"}
+(a single joint fit), or \code{"auto"} (per delay: dirichlet one-stage, all other
+delays two-stage -- the better choice for each in our experiments).}
 
 \item{now}{As-of date; only events/reports up to \code{now} are used.  Default:
 \code{tbl.now::get_now(data)}, falling back to the latest report date.}

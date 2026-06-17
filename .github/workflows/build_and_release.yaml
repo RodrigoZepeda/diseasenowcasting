@@ -1,19 +1,26 @@
 name: Build and Release Package
 
 on:
-  push:
-    branches:
-      - master
+  workflow_run:
+    workflows: ["R-CMD-check.yaml"]
+    types:
+      - completed
 
 jobs:
   build-and-release:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'master' 
+
     runs-on: ubuntu-latest
     permissions:
       contents: write 
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup R
         uses: r-lib/actions/setup-r@v2

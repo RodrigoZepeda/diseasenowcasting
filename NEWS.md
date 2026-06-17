@@ -1,4 +1,34 @@
-# 1.1.0
+# 1.2.0
+
+## Automatic model selection
+
+* Added `auto_nowcast()`: give it a `tbl_now` and it builds a grid of candidate
+  models (epidemic process x delay family) sized to how much data you have,
+  backtests them over several dates, scores them, and refits the winner on the
+  full data. The returned object is an ordinary `nowcast()` result with the
+  ranked scoreboard in its `comparison` slot. You can
+  - pass priors to the candidates (e.g. `sir = sir_epidemic(R0 = ...)`);
+  - compare likelihoods (`likelihood = list(nb_likelihood(), poisson_likelihood())`);
+  - add your own `custom_delay()`/`custom_epidemic()` models via `models = ...`;
+  - select on `metric = "wis"` (default), `"ape"`, `"mse"`, or a calibration
+    criterion: `"coverage_50"`, `"coverage_90"`, or `"coverage"` (both intervals'
+    miss from nominal, summed).
+* Accessors for an `auto_nowcast()` result: `best_model_name()` (the winning
+  label), `best_model()` (the winning `model()` object, to reuse elsewhere),
+  `comparison_scores()` (the ranked scoreboard), `best_score()` (the winner's
+  row), and `selection_metric()` (the criterion used). Printing an
+  `auto_nowcast()` result now also shows the top of the scoreboard.
+* `nowcast()` / `backtest()` gain a `type = "auto"` option: the Dirichlet delay is
+  fit one-stage and every other delay two-stage (the better choice for each in
+  our experiments).
+  
+## Miscelaneous
+
+* Updated `roxygen2` to 8.0.0
+* Added the S7 `@` to `NAMESPACE`. 
+* Improved test coverage. 
+  
+# 1.1.0  
 
 ## Custom (user-defined) components
 

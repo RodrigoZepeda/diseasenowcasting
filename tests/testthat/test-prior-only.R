@@ -41,3 +41,36 @@ test_that("prior_only is sensitive to the prior: higher SIR R0 -> larger epidemi
                                     probs = 0.5, seed = 2), na.rm = TRUE)
   expect_gt(peak(4.0), peak(1.5))
 })
+
+# ── prior_only: delay families and the Poisson likelihood ────────────────────
+
+test_that("prior_only samples Dirichlet and GeneralizedGamma delays", {
+  tn <- .grid_tn()
+  # Dirichlet (non-parametric) -> delay_family == 4 simplex-sampling path
+  nc_dir <- nowcast(tn, model(nb_likelihood(), ar1_epidemic(), dirichlet_delay()),
+                    prior_only = TRUE, n_draws = 60, seed = 1)
+  expect_true(all(is.finite(quantile(nc_dir, probs = 0.5, seed = 2))))
+  # Generalized Gamma -> delay_family == 3, exercising the delay_Q logit branch
+  nc_gg <- nowcast(tn, model(nb_likelihood(), ar1_epidemic(), generalized_gamma_delay()),
+                   prior_only = TRUE, n_draws = 60, seed = 1)
+  expect_true(all(is.finite(quantile(nc_gg, probs = 0.5, seed = 2))))
+})
+
+test_that("prior_only works with a Poisson likelihood (no overdispersion draw)", {
+  tn <- .grid_tn()
+  # Poisson -> is_negative_binomial == 0, so log_phi_nb is NOT drawn and the
+  # Poisson RNG path is used.
+  nc_pois <- nowcast(tn, model(poisson_likelihood(), ar1_epidemic(), lognormal_delay()),
+                     prior_only = TRUE, n_draws = 60, seed = 1)
+  expect_equal(nc_pois@type, "prior_only")
+  expect_true(all(is.finite(quantile(nc_pois, probs = 0.5, seed = 2))))
+})
+
+test_that("prior_only predict() resamples to a different draw count", {
+  tn <- .grid_tn()
+  nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
+                prior_only = TRUE, n_draws = 80, seed = 1)
+  # fewer than simulated -> subsample; more -> sample with replacement
+  expect_true(all(is.finite(summary(predict(nc, n_draws = 40,  seed = 2))$median)))
+  expect_true(all(is.finite(summary(predict(nc, n_draws = 200, seed = 2))$median)))
+})

@@ -16,7 +16,10 @@ test point.  Defaults to \code{epidemic@inits}.}
 \code{epidemic}, invisibly.  Emits a success message if the check passes.
 }
 \description{
-Tapes \code{intensity_fn} through \code{RTMB::MakeADFun} at the supplied (or default)
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+}
+\details{
+Passes \code{intensity_fn} through \code{RTMB::MakeADFun} at the supplied (or default)
 initial values and confirms that the objective value and gradient are both
 finite.  Emits an informative error if the function is not AD-safe.
 }

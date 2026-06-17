@@ -52,19 +52,22 @@ families](https://rodrigozepeda.github.io/diseasenowcasting/reference/delay_proc
 
 How `diseasenowcasting` compares with other R nowcasting packages:
 
->
-> | Feature | `diseasenowcasting` | [`baselinenowcast`](https://github.com/epinowcast/baselinenowcast) | [`NobBS`](https://cran.r-project.org/package=NobBS) | [`nowcaster`](https://github.com/covid19br/nowcaster) | [`epinowcast`](https://github.com/epinowcast/epinowcast) |
->|---|:---:|:---:|:---:|:---:|:---:|
->| Arbitrary delay distributions <sup>†</sup> | ✅ | ❌ | ❌ | ❌ | ❌ |
->| Arbitrary epidemic processes <sup>†</sup> | ✅ | ❌ | ❌ | ❌ | ❌ |
->| No per-model compilation | ✅ | ✅ | ✅ | ✅ | ❌ |
->| Pure R — no external engine (Stan/JAGS) <sup>‡</sup> | ✅ | ✅ | ❌ | ✅ | ❌ |
->| Stratified data | ✅ | ❌ | ❌ | ✅<sup>§</sup> | ✅ |
->| Calendar / day-of-week effects | ✅ | ❌ | ❌ | ❌ | ✅ |
->| Counts that can decrease (cases later un-confirmed) | 🚧 | ✅ | ❌ | ❌ | ❌ |
->| Effective reproductive number (Rₜ)  | ❌ | ❌ | ❌ | ❌ | ✅ |
->
-> <sub> <sup><b>†</b></sup> *Arbitrary* means you supply your own custom R function: any distribution for the
+
+ | Feature | `diseasenowcasting` | [`baselinenowcast`](https://github.com/epinowcast/baselinenowcast) | [`NobBS`](https://cran.r-project.org/package=NobBS) | [`nowcaster`](https://github.com/covid19br/nowcaster) | [`epinowcast`](https://github.com/epinowcast/epinowcast) |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Arbitrary delay distributions <sup>†</sup> | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Arbitrary epidemic processes <sup>†</sup> | ✅ | ❌ | ❌ | ❌ | ❌ |
+| No per-model compilation | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Pure R — no external engine (Stan/JAGS) <sup>‡</sup> | ✅ | ✅ | ❌ | ✅ | ❌ |
+| Stratified data | ✅ | ❌ | ❌ | ✅<sup>§</sup> | ✅ |
+| Calendar / day-of-week effects | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Additional covariates | ✅ | ❌ | ❌ | ✅<sup>§</sup> | ✅ |
+| Automatic extreme-delay detection | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Automatic selection of best model | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Counts that can decrease (suspected cases later un-confirmed) | 🚧 | ✅ | ❌ | ❌ | ❌ |
+| Effective reproductive number (Rₜ)  | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+<sub> <sup><b>†</b></sup> *Arbitrary* means you supply your own custom R function: any distribution for the
 delay, any function `f(t)` for the epidemic process  (not just a choice from a built-in menu).
 `epinowcast` is very flexible through parametric families and model formulas, but does
 not take arbitrary user-defined functions. <sup><b>‡</b></sup> `NobBS` requires JAGS and `epinowcast` requires CmdStan (an external Stan
@@ -187,6 +190,39 @@ You can access these quantities directly with `score`
 score(bt)
 ```
 
+## Automatic model selection
+
+Not sure which model to pick? `auto_nowcast()` automates the
+compare-and-choose loop above: it builds a grid of candidate models sized to how
+much data you have, backtests them, and refits the single best one. The result is
+an ordinary nowcast, with the ranked comparison attached.
+
+```{r auto, eval = TRUE}
+# Compares epidemic processes x delay families and keeps the best (default by WIS)
+# here we use n_dates = 10 just as an example. Set to higher. 
+# In real life this number represents how many dates are used to compare 
+# the nowcasts
+
+# Uncomment to run candidates in parallel:
+# library(future)
+# plan(multisession, workers = max(parallel::detectCores() - 1, 1))
+auto_ncast <- auto_nowcast(dengue_tbl, n_dates = 10)
+# plan(sequential)
+
+# Get the chosen model
+best_model_name(auto_ncast)
+
+# Get the scores for all the models
+comparison_scores(auto_ncast)
+
+autoplot(auto_ncast)
+```
+
+You can also feed it priors (`sir = sir_epidemic(R0 = ...)`), compare likelihoods
+(`likelihood = list(nb_likelihood(), poisson_likelihood())`), or add your own
+`custom_delay()` / `custom_epidemic()` models via `models =`. See the
+[Introduction](https://rodrigozepeda.github.io/diseasenowcasting/articles/introduction.html) vignette for a more complete example.
+
 ## Handling extreme delays
 
 When new data arrives, `update()` re-scores every incoming report against 
@@ -194,7 +230,7 @@ the previously fitted delay distribution and **warns** about anything that
 seems implausibly delayed. 
 The flagged reports are available via `extreme_values()`:
 
-```{r censor-detect, eval = FALSE, warning=FALSE}
+```{r censor-detect, eval = TRUE, warning=FALSE}
 #Simulate getting new data
 dengue_update <- denguedat |> 
   filter(onset_week <= as.Date("1991-01-14") & report_week <= as.Date("1991-01-14"))

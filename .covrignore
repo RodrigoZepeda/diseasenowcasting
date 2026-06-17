@@ -1,0 +1,3 @@
+# Files excluded from test-coverage reporting.
+# zzz.R only registers S7 methods on load (.onLoad); nothing to unit-test.
+R/zzz.R
