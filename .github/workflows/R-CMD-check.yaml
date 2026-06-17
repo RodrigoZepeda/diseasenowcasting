@@ -16,6 +16,11 @@ on:
       - 'SKILL.md'
       - '*.Rproj'
       - 'Dockerfile'
+      - 'codecov.yml'
+      - '.gitignore'
+      - 'devel/**'
+      - 'pkgdown/**'
+      - 'inst/figures/hex.png'
   pull_request:
     branches: [master]
     paths-ignore:      
@@ -27,8 +32,13 @@ on:
       - 'SKILL.md'
       - '*.Rproj'
       - 'Dockerfile'
+      - 'codecov.yml'
+      - '.gitignore'
+      - 'devel/**'
+      - 'pkgdown/**'
+      - 'inst/figures/hex.png'
 
-name: R-CMD-check
+name: R-CMD-check.yaml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

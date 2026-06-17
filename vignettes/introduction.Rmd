@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
 ```
 
 `diseasenowcasting` is an R package for nowcasting time series of epidemiological cases. Epidemiologic surveillance tools usually have an intrinsic delay between the **true date of an event** (`event_date`) and the **report date for that event** (`report_date`). Some examples include the true date being symptom onset or testing time and the report date corresponds to when the case was registered in the system.
-`diseasenowcasting` uses censored Bayesian models (via R's Template Model Builder [`RTMB`](https://cran.r-project.org/web/packages/RTMB/index.html)) to infer the cases that have not yet been reported thus providing a prediction of the final number of casees.
+`diseasenowcasting` uses censored Bayesian models (via R's Template Model Builder [`RTMB`](https://cran.r-project.org/web/packages/RTMB/index.html)) to infer the cases that have not yet been reported thus providing a prediction of the final number of cases.
 
 ## Your data: the `tbl_now` format
 
