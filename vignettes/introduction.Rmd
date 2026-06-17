@@ -43,6 +43,7 @@ if one day there were not cases the missingness can be translated into zero case
 ```{r load}
 library(diseasenowcasting)
 library(tbl.now)
+library(dplyr)
 library(ggplot2)
 set.seed(27653)
 ```
@@ -269,7 +270,107 @@ WIS and coverage close to these levels.
 > In this specific test we would choose the SIR for
 having the lowest WIS at essentially the same coverage as HGSP. Note however that
 for the tutorial  we only used 5 historical dates which is too low to reach
-a definite conslusion. 
+a definite conslusion.
+
+## Example 4 -- Letting the package choose the model (`auto_nowcast()`)
+
+Doing the backtest-and-compare loop by hand (Example 3) is exactly what
+`auto_nowcast()` automates. Given a `tbl_now`, it builds a grid of candidate
+models *sized to how much data you have* (which epidemic processes are even
+feasible, crossed with the delay families), backtests them, scores them, and
+**refits the single best one** on the full data. The result is an ordinary
+nowcast, with the ranked comparison stored alongside it.
+
+Here we use all the dengue data up to 1994:
+
+```{r auto-data}
+#All dengue observed as of January 1994
+dengue_94 <- denguedat |>
+  filter(onset_week  <= as.Date("1994-01-01") &
+         report_week <= as.Date("1994-01-01"))
+
+dengue_tbl_94 <- tbl_now(
+  dengue_94,
+  event_date  = onset_week,
+  report_date = report_week,
+  data_type   = "linelist",
+  now         = as.Date("1994-01-01")
+)
+```
+
+Backtesting the whole grid is the expensive step. To run the candidates in
+parallel, set a `future::plan()` before the call and restore it afterwards (left
+commented here so the vignette stays single-process):
+
+```{r auto-fit}
+# Uncomment to run candidates in parallel:
+# library(future)
+# plan(multisession, workers = max(parallel::detectCores() - 1, 1))
+auto_ncast <- auto_nowcast(
+  dengue_tbl_94,
+  metric         = "wis",   # rank candidates by Weighted Interval Score
+  n_dates        = 10,      # backtest at 10 historical dates (raise for a firmer choice)
+  n_draws_select = 150,     # draws while comparing (small => fast)
+  n_draws        = 500,     # draws for the final fit of the winner
+  K              = 8        # delay imputations (small => fast)
+)
+# plan(sequential)
+```
+
+We can show the scores of the models to see the best performer:
+
+```{r auto-result}
+comparison_scores(auto_ncast)  # every candidate, ranked best-first
+```
+
+`best_model()` hands back the winning `model()` object, so you can reuse the same
+specification on other data (or feed it to `nowcast()` / `backtest()`):
+
+```{r auto-best-model}
+winner <- best_model(auto_ncast)
+winner
+```
+
+Because the result is a normal nowcast, everything else just works:
+
+```{r auto-plot, fig.cap="_Nowcast from the model auto_nowcast() selected._"}
+autoplot(auto_ncast)
+```
+
+### Updating the chosen model as new data arrive
+
+The selected nowcast is an ordinary `nowcast_class`, so once `auto_nowcast()` has
+picked a model you keep it and feed it the next batch of reports with `update()`
+-- no need to re-run the selection. `update()` warm-refits the *same* winning
+model and scores the incoming reports against the fitted delay, warning if any
+arrive far later than expected:
+
+```{r auto-update, warning=TRUE}
+# A few more weeks of dengue, observed as of 1994-04-01:
+dengue_apr <- denguedat |>
+  filter(onset_week  <= as.Date("1994-04-01") &
+         report_week <= as.Date("1994-04-01"))
+
+dengue_tbl_apr <- tbl_now(
+  dengue_apr,
+  event_date  = onset_week,
+  report_date = report_week,
+  data_type   = "linelist",
+  now         = as.Date("1994-04-01")
+)
+
+auto_ncast_updated <- update(auto_ncast, dengue_tbl_apr)
+```
+
+Any reports with surprising delays are collected by `extreme_values()` (it
+returns `NULL` when nothing looks off):
+
+```{r auto-extreme}
+extreme_values(auto_ncast_updated)
+```
+
+See the vignette on [Handling Outlier Delays with Censoring](Handling_Outlier_Delays_with_Censoring.html) for what to do when a
+delay *is* flagged.
 
 ## Next steps
 

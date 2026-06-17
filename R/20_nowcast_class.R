@@ -23,7 +23,10 @@ nowcast_class <- S7::new_class(
     engine = S7::class_list,     # prepared-data list (prepare_data output)
     priors = S7::class_list,
     phi    = S7::class_any,      # NB overdispersion prior (for update())
-    n_draws = S7::class_numeric  # default posterior draws for predict/summaries
+    n_draws = S7::class_numeric, # default posterior draws for predict/summaries
+    # Model-selection scoreboard, set by auto_nowcast() (NULL for a plain fit):
+    # list(scores = <ranked data.frame>, chosen = <label>, metric = <chr>).
+    comparison = S7::new_property(S7::class_any, default = NULL)
   )
 )
 
@@ -38,8 +41,9 @@ nowcast_class <- S7::new_class(
 #'
 #' @param data A `tbl_now` object (`tbl.now::tbl_now()`).
 #' @param model A [model()] object.  Default: `model()` (NB + HSGP + Dirichlet).
-#' @param type `"two_stage"` (default; delay-imputation pooling) or `"one_stage"`
-#'   (a single joint fit).
+#' @param type `"two_stage"` (default; delay-imputation pooling), `"one_stage"`
+#'   (a single joint fit), or `"auto"` (per delay: dirichlet one-stage, all other
+#'   delays two-stage -- the better choice for each in our experiments).
 #' @param now As-of date; only events/reports up to `now` are used.  Default:
 #'   `tbl.now::get_now(data)`, falling back to the latest report date.
 #' @param K Number of delay imputations for the two-stage path.
@@ -80,7 +84,7 @@ nowcast_class <- S7::new_class(
 #' }
 #' @export
 nowcast <- function(data, model = diseasenowcasting::model(),
-                    type = c("two_stage", "one_stage"), now = NULL,
+                    type = c("two_stage", "one_stage", "auto"), now = NULL,
                     K = 25L, n_draws = 2000L, delay_window = 120L, np_spread = 1,
                     floor_mu = 0.15, floor_sig_frac = 0.25,
                     temporal_effects = "auto", prior_only = FALSE,

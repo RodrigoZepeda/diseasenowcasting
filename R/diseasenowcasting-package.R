@@ -14,6 +14,10 @@
 ## usethis namespace: end
 NULL
 
+# enable usage of <S7_object>@name in package code
+#' @rawNamespace if (getRversion() < "4.3.0") importFrom("S7", "@")
+NULL
+
 # Null-coalescing helper available on all supported R versions.
 `%||%` <- function(x, y) if (is.null(x) || length(x) == 0) y else x
 

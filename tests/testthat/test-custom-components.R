@@ -3,10 +3,11 @@
 # into the autodiff objective.
 #
 # These tests tape user functions through RTMB, which requires RTMB to be on the
-# search path (see `.assert_rtmb_attached()`).  `library(diseasenowcasting)`
-# attaches it via Depends in R CMD check, but `devtools::test()` (load_all) does
-# not — so we attach it explicitly here.  RTMB is a hard dependency, so this is
-# safe and does not change behaviour for the other test files.
+# search path (see `.assert_rtmb_attached()`).  RTMB is in Imports (not Depends),
+# so loading diseasenowcasting does NOT attach it automatically -- under neither
+# R CMD check nor `devtools::test()`.  We therefore attach it explicitly here.
+# RTMB is a hard dependency, so this is safe and does not change behaviour for
+# the other test files.
 library(RTMB)
 
 # Under `devtools::test()` (pkgload / load_all) RTMB's S3 methods for vector
@@ -101,6 +102,43 @@ test_that("validate_custom_epidemic rejects a non-AD-safe intensity_fn", {
   }
   proc <- custom_epidemic(bad_fn, priors = list(normal_prior(0, 1)), inits = 0.5)
   expect_error(validate_custom_epidemic(proc))
+})
+
+# These guard/argument checks fire BEFORE any RTMB taping, so they run
+# deterministically regardless of the load_all dispatch quirk above.
+test_that("validate_custom_* reject objects of the wrong class", {
+  expect_error(validate_custom_epidemic(1:3), "custom_epidemic_class")
+  expect_error(validate_custom_delay(1:3),    "custom_delay_class")
+})
+
+test_that("validate_custom_delay checks test_theta length", {
+  exp_cdf <- function(theta) { rate <- exp(theta[1]); function(d) 1 - exp(-rate * d) }
+  dly <- custom_delay(cdf = exp_cdf, priors = list(normal_prior(-2, 1), normal_prior(0, 1)),
+                      name = "Exp2", inits = c(-2, 0))            # n_params = 2
+  expect_error(validate_custom_delay(dly, test_theta = 1), "length")
+})
+
+test_that("build_delay_only_obj tapes and optimises a custom delay (family 5)", {
+  # Exercises .build_delay_only_custom() in R/11_objective.R directly via the
+  # objective builder (the high-level .fit_delay_only() wrapper assumes a
+  # parametric delay_sd and does not support custom delays).  Custom-delay
+  # factories use basic arithmetic, so taping is reliable even under load_all.
+  set.seed(41)
+  exp_cdf      <- function(theta) { rate <- exp(theta[1]); function(d) 1 - exp(-rate * d) }
+  exp_log_surv <- function(theta) { rate <- exp(theta[1]); function(d) -rate * d }
+  dly <- custom_delay(cdf = exp_cdf, log_survival = exp_log_surv,
+                      priors = list(normal_prior(log(1 / 5), 1)), name = "Exp", inits = log(1 / 5))
+  d   <- pmax(1L, rpois(3000, 5))
+  m   <- cbind(event = 1L, count = 1L, delay = d, strata = 1L)
+  m   <- m[m[, "delay"] <= 119L, , drop = FALSE]
+  mdl <- model(nb_likelihood(), hsgp_epidemic(), dly)
+  dat <- prepare_data(mdl, m, max_time = 120L, delay_only = TRUE)
+  obj <- build_delay_only_obj(dat, default_priors(mdl, dat))
+  expect_true(is.finite(obj$fn()))
+  expect_true(all(is.finite(obj$gr())))
+  opt <- nlminb(obj$par, obj$fn, obj$gr)
+  expect_equal(opt$convergence, 0L)
+  expect_equal(exp(opt$par[[1]]), 1 / 5, tolerance = 0.3)   # roughly recovers the rate
 })
 
 # ── Fixed vs free parameters (the priors list dual API) ───────────────────────

@@ -14,5 +14,7 @@ logs/
 .Rproj.user
 SKILL.md
 CUSTOM_COMPONENTS_PLAN.md
+CENSORED_POINT*.md
+SUPPLEMENT*.md
 Dockerfile
 devel/paper_sim

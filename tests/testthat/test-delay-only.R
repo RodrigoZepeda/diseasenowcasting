@@ -46,3 +46,42 @@ test_that("hard-fixing the delay removes it from estimation", {
   expect_equal(rf$delay_mu, log(7))
   expect_equal(rf$delay_sigma, 3)
 })
+
+# ── build_delay_only_obj across delay families (R/11_objective.R branches) ────
+# A single early event over a long horizon keeps censoring non-binding, so each
+# family's Stage-1 delay objective is exercised and converges.
+
+.delay_only_m <- function(delays, max_time = 120L) {
+  m <- cbind(event = 1L, count = 1L, delay = delays, strata = 1L)
+  m[m[, "delay"] <= max_time - 1L, , drop = FALSE]
+}
+
+test_that("delay-only fit runs for Gamma, GeneralizedGamma and Dirichlet families", {
+  set.seed(5)
+  d <- pmax(1L, rpois(4000, 5))
+  for (dl in list(gamma_delay(), generalized_gamma_delay(), dirichlet_delay())) {
+    mdl <- model(nb_likelihood(), hsgp_epidemic(), dl)
+    dat <- prepare_data(mdl, .delay_only_m(d), max_time = 120L, delay_only = TRUE)
+    rf  <- fit(mdl, dat, default_priors(mdl, dat))
+    expect_equal(rf$convergence, 0L)
+    expect_true(is.finite(rf$nll))
+  }
+})
+
+test_that("delay-only fit handles censored observations (m_censored)", {
+  set.seed(6)
+  d <- pmax(1L, rpois(3000, 5))
+  mdl <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
+  # exact rows + a block of CENSORED rows -> exercises the *_cens log-lik terms
+  dat <- prepare_data(mdl, .delay_only_m(d[1:2000]),
+                      m_censored = .delay_only_m(d[2001:3000]),
+                      max_time = 120L, delay_only = TRUE)
+  expect_gt(sum(dat$row_sums_cens), 0)            # censored mass is present
+  rf <- fit(mdl, dat, default_priors(mdl, dat))
+  expect_equal(rf$convergence, 0L)
+})
+
+test_that("build_delay_only_obj rejects an unknown delay family", {
+  expect_error(diseasenowcasting:::build_delay_only_obj(list(delay_family = 9L), priors = list()),
+               "famil")
+})

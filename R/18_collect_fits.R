@@ -13,7 +13,8 @@
 #' @param model A [model()] object.
 #' @param engine Prepared-data list from [prepare_data()] (`delay_only = FALSE`).
 #' @param priors Prior bundle from [default_priors()].
-#' @param type `"two_stage"` (default) or `"one_stage"`.
+#' @param type `"two_stage"` (default), `"one_stage"`, or `"auto"` (resolves per
+#'   delay: dirichlet one-stage, everything else two-stage).
 #' @param K Delay imputations for the two-stage path.
 #' @param floor_mu,floor_sig_frac Imputation-spread floors (parametric families).
 #' @param np_spread Dirichlet simplex imputation covariance inflation.
@@ -25,6 +26,15 @@
                                   K = 25L, floor_mu = 0.15, floor_sig_frac = 0.25,
                                   np_spread = 1, delay_window = 120L, warm_inits = NULL) {
   target <- engine$max_time
+
+  # `type = "auto"` chooses the stage per delay family: the non-parametric
+  # (Dirichlet) delay is fit ONE-stage, every parametric delay TWO-stage.  In
+  # our experiments the Dirichlet delay fit *worse* under the two-stage simplex
+  # imputation than fit directly one-stage, while parametric delays benefit from
+  # the two-stage delay-uncertainty propagation -- so "auto" picks the better of
+  # the two for each.
+  if (type == "auto")
+    type <- if (model@delay@num_id == 4L) "one_stage" else "two_stage"
 
   if (type == "one_stage") {
     return(list(fits = list(fit(model, engine, priors = priors, init = warm_inits)),

@@ -50,6 +50,9 @@ as the latent epidemic process for the nowcast.  This makes the framework
 epidemic-process agnostic: random walks, ODE models, regression surfaces,
 and anything else that can be written in AD-safe arithmetic are all valid.
 }
+\details{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+}
 \examples{
 # Pure random walk on log-incidence (max_time = 20)
 # Uses cumsum() — no [<- assignment needed, so fully AD-safe.

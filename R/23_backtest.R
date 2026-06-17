@@ -29,7 +29,8 @@ backtest_class <- S7::new_class(
 #'   backtest can rank them (see [score()]).
 #' @param dates A vector of as-of dates.  If `NULL`, a default grid spanning the
 #'   observed range (interior points) is sampled.
-#' @param type `"two_stage"` (default) or `"one_stage"`.
+#' @param type `"two_stage"` (default), `"one_stage"`, or `"auto"` (per delay:
+#'   dirichlet one-stage, all other delays two-stage).
 #' @param n_dates If `dates` is `NULL`, how many to sample. Default 20.
 #' @param max_delay Truth-completeness horizon (in event units).  Event dates
 #'   within `max_delay` units of the last report do not yet have a fully
@@ -73,7 +74,7 @@ backtest_class <- S7::new_class(
 #' }
 #' @export
 backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
-                     type = c("two_stage", "one_stage"), n_dates = 20L,
+                     type = c("two_stage", "one_stage", "auto"), n_dates = 20L,
                      max_delay = NULL,
                      return_simulations = FALSE, n_draws = 1000L, K = 25L,
                      np_spread = 1, seed = sample.int(.Machine$integer.max, 1), ...) {

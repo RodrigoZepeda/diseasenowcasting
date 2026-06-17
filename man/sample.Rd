@@ -5,6 +5,12 @@
 \title{Draw random samples from a prior (or fall back to \code{\link[base:sample]{base::sample()}})}
 \usage{
 sample(object, size, ...)
+
+## S7 method for class <any>
+sample(object, size, ...)
+
+## S7 method for class <diseasenowcasting::prior_class>
+sample(object, size, ...)
 }
 \arguments{
 \item{object}{A \code{prior_class}, or any object accepted by \code{\link[base:sample]{base::sample()}}.}

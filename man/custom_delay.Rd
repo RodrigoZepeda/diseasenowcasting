@@ -53,13 +53,15 @@ parameters if \code{priors} and \code{param_names} are empty.  Defaults to zeros
 A \code{custom_delay_class} object (a \code{delay_process_class}).
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+}
+\details{
 Allows any reporting-delay distribution that can be expressed with
 RTMB-traceable functions.  You supply the cumulative distribution function
 \code{cdf}; \code{log_cdf} and \code{log_survival} are optional and default to the obvious
 transforms of \code{cdf}.  Each is given as a function of the parameter vector
 \code{theta} that \strong{returns a function of the delay} \code{d}:
-}
-\details{
+
 \preformatted{cdf(theta)          -> function(d) returning F(d)
 log_cdf(theta)      -> function(d) returning log F(d)
 log_survival(theta) -> function(d) returning log(1 - F(d))}

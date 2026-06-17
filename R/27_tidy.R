@@ -90,30 +90,10 @@ S7::method(tidy, nowcast_class) <- function(x, conf.level = 0.95, ...) {
     stringsAsFactors = FALSE
   )
 
-  # In a two-stage fit the delay is imputed K times, so the single mode reported
-  # above is just the first imputation.  Replace the delay point estimates with
-  # the average across imputations to reflect the pooled delay.
-  has_multiple_imputations <- length(x@fits) > 1L
-  has_delay_params <- any(grepl("^delay_mu$|^delay_sigma$|^delay_Q$", out$term))
-  if (has_multiple_imputations && has_delay_params) {
-    per_imputation_delay <- lapply(x@fits, function(fit_k) {
-      list(delay_mu = fit_k$parList$delay_mu, delay_sigma = fit_k$delay_sigma)
-    })
-    mean_delay_mu    <- mean(vapply(per_imputation_delay,
-                                    function(d) d$delay_mu %||% NA_real_, numeric(1)), na.rm = TRUE)
-    mean_delay_sigma <- mean(vapply(per_imputation_delay,
-                                    function(d) d$delay_sigma %||% NA_real_, numeric(1)), na.rm = TRUE)
-
-    if ("delay_mu" %in% out$term && is.finite(mean_delay_mu))
-      out$estimate[out$term == "delay_mu"] <- mean_delay_mu
-
-    # delay_sigma is reported on the log "excess" scale, so convert the averaged
-    # natural-scale SD back the same way (matching how the fit stores it).
-    is_sigma_row <- grepl("delay_sigma|log_delay_sigma", out$term)
-    if (any(is_sigma_row) && is.finite(mean_delay_sigma))
-      out$estimate[is_sigma_row][1] <- log(max(mean_delay_sigma - 0.01, 1e-6))
-  }
-
+  # NB: a two-stage fit reports the epidemic + likelihood parameters only.  The
+  # reporting delay is fixed during Stage 2 (imputed K times beforehand), so it
+  # does not appear in `last.par.best` and therefore has no row here -- the delay
+  # is summarised separately, not as a tidy() parameter.
   out <- out[order(out$type, out$term), ]
   rownames(out) <- NULL
   out

@@ -124,7 +124,8 @@
 #' Generate prior-predictive nowcast draws (the prior_only engine).
 #' @keywords internal
 #' @noRd
-.simulate_prior_draws <- function(engine, priors, n_draws, Bmat, freq, seed = NULL) {
+.simulate_prior_draws <- function(engine, priors, n_draws, Bmat, freq,
+                                  seed = sample.int(.Machine$integer.max, 1)) {
   if (!is.null(seed)) set.seed(seed)
   n_time   <- engine$max_time
   n_strata <- as.integer(engine$num_strata %||% 1L)
