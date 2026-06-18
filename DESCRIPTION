@@ -1,6 +1,6 @@
 Package: diseasenowcasting
 Title: Nowcast Time Series of Epidemiological Cases
-Version: 1.2.0
+Version: 1.3.0
 Authors@R:
     c(person("Rodrigo", "Zepeda-Tello", role = c("aut", "cre"),
              email = "rzepeda17@gmail.com",
@@ -21,8 +21,8 @@ Description: Implements Bayesian nowcasting models for incident disease cases
     reporting delay is modelled directly as a stochastic process, jointly with
     the epidemic dynamics, via a censored likelihood.
     Inference uses RTMB (CppAD autodiff + Laplace approximation). Supports
-    multiple epidemic models (HSGP, AR1, SIR), multiple
-    delay families (LogNormal, GenGamma, Dirichlet), stratified data,
+    arbitrary epidemic models (including HSGP, AR1, SIR), arbitrary
+    delay families (including LogNormal, GenGamma, Dirichlet), stratified data,
     extreme-delay detection, and backtesting.
 License: MIT + file LICENSE
 URL: https://rodrigozepeda.github.io/diseasenowcasting/,
@@ -33,7 +33,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 8.0.0
 Depends:
     R (>= 4.2.0),
-    tbl.now (>= 0.7.6)
+    tbl.now (>= 0.7.8)
 Imports:
     cli,
     dplyr,

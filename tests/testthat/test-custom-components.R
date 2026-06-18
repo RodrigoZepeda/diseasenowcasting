@@ -111,6 +111,26 @@ test_that("validate_custom_* reject objects of the wrong class", {
   expect_error(validate_custom_delay(1:3),    "custom_delay_class")
 })
 
+test_that("validate_custom_epidemic never crashes R and errors cleanly if taping fails", {
+  # A well-formed intensity_fn using cumsum()/matrix() on an advector.  Under
+  # R CMD check (package attached) this tapes and validation succeeds; under
+  # covr / load_all the AD vector-op dispatch is inactive so MakeADFun fails --
+  # but validate_custom_epidemic must catch it and raise a clean cli error, never
+  # abort the R session.  This exercises the tape-failure branch under covr.
+  rw <- function(theta) matrix(theta[1] + cumsum(exp(theta[2]) * theta[3:7]), 5L, 1L)
+  proc <- custom_epidemic(rw,
+                          priors = c(list(normal_prior(0, 1), normal_prior(-2, 0.5)),
+                                     rep(list(std_normal_prior()), 5L)),
+                          inits = c(0, -2, rep(0, 5L)))
+  outcome <- tryCatch({ validate_custom_epidemic(proc); "ok" },
+                      error = function(e) {
+                        expect_match(conditionMessage(e), "Custom epidemic|tape|finite",
+                                     ignore.case = TRUE)
+                        "err"
+                      })
+  expect_true(outcome %in% c("ok", "err"))
+})
+
 test_that("validate_custom_delay checks test_theta length", {
   exp_cdf <- function(theta) { rate <- exp(theta[1]); function(d) 1 - exp(-rate * d) }
   dly <- custom_delay(cdf = exp_cdf, priors = list(normal_prior(-2, 1), normal_prior(0, 1)),
@@ -118,11 +138,11 @@ test_that("validate_custom_delay checks test_theta length", {
   expect_error(validate_custom_delay(dly, test_theta = 1), "length")
 })
 
-test_that("build_delay_only_obj tapes and optimises a custom delay (family 5)", {
-  # Exercises .build_delay_only_custom() in R/11_objective.R directly via the
-  # objective builder (the high-level .fit_delay_only() wrapper assumes a
-  # parametric delay_sd and does not support custom delays).  Custom-delay
-  # factories use basic arithmetic, so taping is reliable even under load_all.
+test_that("delay-only fit() works for a custom delay (family 5)", {
+  # Exercises .build_delay_only_custom() (R/11_objective.R) AND the
+  # .fit_delay_only_custom() wrapper (R/12_fit.R).  A custom delay is parametric
+  # (it carries custom_delay_params), so fit() must optimise it rather than
+  # assuming the parametric delay_mu/delay_sigma reporting.
   set.seed(41)
   exp_cdf      <- function(theta) { rate <- exp(theta[1]); function(d) 1 - exp(-rate * d) }
   exp_log_surv <- function(theta) { rate <- exp(theta[1]); function(d) -rate * d }
@@ -133,12 +153,67 @@ test_that("build_delay_only_obj tapes and optimises a custom delay (family 5)", 
   m   <- m[m[, "delay"] <= 119L, , drop = FALSE]
   mdl <- model(nb_likelihood(), hsgp_epidemic(), dly)
   dat <- prepare_data(mdl, m, max_time = 120L, delay_only = TRUE)
-  obj <- build_delay_only_obj(dat, default_priors(mdl, dat))
-  expect_true(is.finite(obj$fn()))
-  expect_true(all(is.finite(obj$gr())))
-  opt <- nlminb(obj$par, obj$fn, obj$gr)
-  expect_equal(opt$convergence, 0L)
-  expect_equal(exp(opt$par[[1]]), 1 / 5, tolerance = 0.3)   # roughly recovers the rate
+  rf  <- fit(mdl, dat, default_priors(mdl, dat))
+  expect_equal(rf$convergence, 0L)
+  expect_length(rf$custom_delay_params, 1L)
+  expect_equal(exp(rf$custom_delay_params[1]), 1 / 5, tolerance = 0.3)  # recovers rate
+  expect_true(is.na(rf$delay_mu))                # parametric fields are NA for custom
+})
+
+test_that("delay surprise works for a custom delay (family 5)", {
+  skip_on_cran()
+  # Exercises the family == 5 branch of .delay_fns_for_parlist() in R/29_surprise.R.
+  set.seed(43)
+  dd <- data.frame(onset    = as.Date("2020-01-01") + rep(0:50, each = 6),
+                   reported = as.Date("2020-01-01") + rep(0:50, each = 6) + pmax(1L, rpois(306, 4)))
+  tn <- tbl.now::tbl_now(dd, event_date = onset, report_date = reported,
+                         data_type = "linelist", verbose = FALSE)
+  exp_cdf <- function(theta) { rate <- exp(theta[1]); function(d) 1 - exp(-rate * d) }
+  dly <- custom_delay(cdf = exp_cdf, priors = list(normal_prior(log(1 / 5), 1)),
+                      name = "Exp", inits = log(1 / 5))
+  nc <- nowcast(tn, model(nb_likelihood(), ar1_epidemic(), dly), type = "one_stage",
+                n_draws = 120, seed = 1)
+  s  <- surprise(nc, data.frame(delay = c(3, 200)), type = "delay", n_draws = 80, seed = 2)
+  ds <- s$delay_surprise
+  expect_true(all(is.finite(ds$mean_tail_prob)))
+  expect_equal(ds$direction[ds$delay == 200], "long")
+})
+
+test_that("a custom-delay nowcast round-trips through save_nowcast/load_nowcast", {
+  skip_on_cran()
+  set.seed(44)
+  dd <- data.frame(onset    = as.Date("2020-01-01") + rep(0:50, each = 6),
+                   reported = as.Date("2020-01-01") + rep(0:50, each = 6) + pmax(1L, rpois(306, 4)))
+  tn <- tbl.now::tbl_now(dd, event_date = onset, report_date = reported,
+                         data_type = "linelist", verbose = FALSE)
+  exp_cdf <- function(theta) { rate <- exp(theta[1]); function(d) 1 - exp(-rate * d) }
+  dly <- custom_delay(cdf = exp_cdf, priors = list(normal_prior(log(1 / 5), 1)),
+                      name = "Exp", inits = log(1 / 5))
+  nc  <- nowcast(tn, model(nb_likelihood(), ar1_epidemic(), dly), type = "one_stage",
+                 n_draws = 120, seed = 1)
+  f <- tempfile(fileext = ".rds")
+  suppressMessages(save_nowcast(nc, f))
+  nc2 <- load_nowcast(f)
+  # the custom cdf_factory is plain R, so the loaded model predicts identically
+  expect_equal(predict(nc,  summary = TRUE, seed = 7)$median,
+               predict(nc2, summary = TRUE, seed = 7)$median)
+})
+
+test_that("two-stage nowcast with a custom delay fits one-stage without error", {
+  skip_on_cran()
+  set.seed(42)
+  dd <- data.frame(onset    = as.Date("2020-01-01") + rep(0:40, each = 5),
+                   reported = as.Date("2020-01-01") + rep(0:40, each = 5) + pmax(1L, rpois(205, 4)))
+  tn <- tbl.now::tbl_now(dd, event_date = onset, report_date = reported,
+                         data_type = "linelist", verbose = FALSE)
+  exp_cdf <- function(theta) { rate <- exp(theta[1]); function(d) 1 - exp(-rate * d) }
+  dly <- custom_delay(cdf = exp_cdf, priors = list(normal_prior(log(1 / 5), 1)),
+                      name = "Exp", inits = log(1 / 5))
+  nc <- nowcast(tn, model(nb_likelihood(), ar1_epidemic(), dly),
+                type = "two_stage", K = 3, n_draws = 40, seed = 1)
+  # custom delays carry no delay_mu/sigma to impute, so they fit one-stage
+  expect_equal(nc@rung, "onestage")
+  expect_true(all(is.finite(quantile(nc, probs = 0.5, seed = 2))))
 })
 
 # ── Fixed vs free parameters (the priors list dual API) ───────────────────────

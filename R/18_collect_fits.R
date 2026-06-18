@@ -36,6 +36,12 @@
   if (type == "auto")
     type <- if (model@delay@num_id == 4L) "one_stage" else "two_stage"
 
+  # Custom delays (family 5) are parametric but carry arbitrary `custom_delay_params`,
+  # not the `delay_mu`/`delay_sigma` the two-stage parametric imputation pools.  Until
+  # a dedicated custom imputation exists they are fit one-stage (the delay is still
+  # estimated jointly), regardless of the requested `type`.
+  if (model@delay@num_id == 5L) type <- "one_stage"
+
   if (type == "one_stage") {
     return(list(fits = list(fit(model, engine, priors = priors, init = warm_inits)),
                 rung = "onestage", target = target))

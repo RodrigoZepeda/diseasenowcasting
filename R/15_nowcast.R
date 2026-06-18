@@ -137,7 +137,15 @@ summarise_nowcast_matrix <- function(draws_matrix) {
   #  - joint-mode fit (no random=, the fast default): precision = Hessian of the
   #    joint nll = obj$he(mode).  This is exactly cmdstanr $laplace().
   #  - marginal fit (random=): precision = sdreport joint precision over (fixed, random).
-  if (isFALSE(fit$use_random %||% FALSE)) {
+  if (is.null(obj)) {
+    # A saved/loaded fit: the live RTMB tape is gone, but save_nowcast() stored
+    # the Laplace mode and precision -- sample from those directly (any n_draws).
+    mode_vector      <- fit$mode
+    precision_matrix <- fit$precision
+    if (is.null(mode_vector) || is.null(precision_matrix))
+      cli::cli_abort(c("This fit has no live RTMB objective and no stored Laplace mode/precision.",
+                       "i" = "Re-load with {.code load_nowcast(file, rebuild = TRUE)}, or re-fit."))
+  } else if (isFALSE(fit$use_random %||% FALSE)) {
     mode_vector <- obj$env$last.par.best
     precision_matrix <- methods::as(obj$he(mode_vector), "sparseMatrix")
   } else {

@@ -35,7 +35,8 @@ S7::method(tidy, nowcast_class) <- function(x, conf.level = 0.95, ...) {
   # `last.par.best` is the joint mode (fixed + random effects); its names label
   # every estimated parameter, and its values are the point estimates.
   obj             <- fit$obj
-  posterior_mode  <- obj$env$last.par.best
+  # A saved/loaded fit has no live tape: use the stored Laplace mode + precision.
+  posterior_mode  <- if (is.null(obj)) fit$mode else obj$env$last.par.best
   parameter_names <- names(posterior_mode)
   estimates       <- as.numeric(posterior_mode)
 
@@ -44,7 +45,7 @@ S7::method(tidy, nowcast_class) <- function(x, conf.level = 0.95, ...) {
   # definite at a weakly-identified mode, so we retry the Cholesky factorisation
   # with a progressively larger diagonal ridge until it succeeds.
   std_errors <- tryCatch({
-    hessian <- methods::as(obj$he(posterior_mode), "sparseMatrix")
+    hessian <- if (is.null(obj)) fit$precision else methods::as(obj$he(posterior_mode), "sparseMatrix")
     n_par   <- nrow(hessian)
 
     cholesky_factor <- NULL

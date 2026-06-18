@@ -1,3 +1,19 @@
+# 1.3.0
+
+* Added `save_nowcast()` / `load_nowcast()` to persist a fitted `nowcast()` (or
+  `auto_nowcast()`) to a single `.rds`. The RTMB autodiff tape cannot be
+  serialized, so the bundle stores the `model()` spec, the input `tbl_now`, and
+  each fit's parameters plus its Laplace mode and precision. A loaded nowcast
+  works with `predict()` / `coef()` / `tidy()` / `autoplot()` straight away (any
+  `n_draws`, no RTMB needed -- even for custom delays/epidemics), and can be
+  re-fit from its `model` + bundled data. `load_nowcast(file, rebuild = TRUE)`
+  also re-tapes the objective (no re-optimization) when a live tape is needed.
+* Removed the `censor_delays_above()` function as it now lives in `tbl.now`.
+  It remains available with the same signature because `tbl.now` is a dependency
+  (attached whenever `diseasenowcasting` is).
+* Improved documentation and badges with `lifecycle`. 
+* Updated dependency on tbl.now to latest version (0.7.8)
+
 # 1.2.0
 
 ## Automatic model selection

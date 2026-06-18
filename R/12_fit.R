@@ -99,6 +99,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
 .fit_delay_only <- function(model, data, priors, init = NULL,
                             control = list(iter.max = 500, eval.max = 1000, rel.tol = 1e-9)) {
   if (data$delay_family == 4L) return(.fit_delay_only_np(model, data, priors, init, control))
+  if (data$delay_family == 5L) return(.fit_delay_only_custom(model, data, priors, init, control))
   is_gengamma <- data$delay_family == 3L
   total_count <- sum(data$row_sums_exact)
   log_mean_seed <- if (total_count > 0 && length(data$obs_delays) > 0)
@@ -187,4 +188,30 @@ fit <- function(model, data, priors = NULL, init = NULL,
   list(delay_probs = fitted_simplex, delay_logits = obj$env$last.par.best,
        convergence = opt$convergence, nll = opt$objective,
        obj = obj, data = data, priors = priors, model = model)
+}
+
+#' Delay-only fit for a user-defined (custom) delay distribution (family 5,
+#' Stage-1 of two-stage).  A custom delay is parametric -- it carries its own
+#' `custom_delay_params` -- but those are not the `delay_mu`/`delay_sigma` the
+#' parametric path assumes, so it gets its own handler that optimises the free
+#' custom parameters and returns them (with `delay_mu`/`delay_sigma` left `NA`).
+#' @keywords internal
+#' @noRd
+.fit_delay_only_custom <- function(model, data, priors, init = NULL,
+                                   control = list(iter.max = 500, eval.max = 1000, rel.tol = 1e-9)) {
+  obj <- build_delay_only_obj(data, priors, init = init)
+  opt <- tryCatch(nlminb(obj$par, obj$fn, obj$gr, control = control), error = function(e) NULL)
+  if (is.null(opt))
+    cli::cli_abort("Custom delay-only fit failed.")
+  # parList() reassembles the full parameter vector (free + fixed) via the map.
+  fitted_params <- as.numeric(obj$env$parList()$custom_delay_params)
+  param_names <- tryCatch(model@delay@param_names, error = function(e) NULL)
+  if (length(param_names) != length(fitted_params))
+    param_names <- paste0("param_", seq_along(fitted_params))
+  list(custom_delay_params = fitted_params,
+       par = stats::setNames(fitted_params, param_names),
+       delay_mu = NA_real_, delay_sigma = NA_real_, delay_Q = NA_real_,
+       delay_mu_sd = NA_real_, delay_sigma_sd = NA_real_,
+       nll = opt$objective, convergence = opt$convergence,
+       obj = obj, opt = opt, data = data, priors = priors, model = model)
 }
