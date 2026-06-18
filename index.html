@@ -47,7 +47,7 @@
 
     <a class="navbar-brand me-2" href="index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -95,6 +95,7 @@
 <h2 id="why-diseasenowcasting">Why <code>diseasenowcasting</code>?<a class="anchor" aria-label="anchor" href="#why-diseasenowcasting"></a>
 </h2>
 <p>How <code>diseasenowcasting</code> compares with other R nowcasting packages:</p>
+<div class="small-table">
 <table style="width:100%;" class="table">
 <colgroup>
 <col width="16%">
@@ -114,8 +115,7 @@
 </tr></thead>
 <tbody>
 <tr>
-<td>Arbitrary delay distributions <sup>†</sup>
-</td>
+<td>Automatic extreme-delay detection</td>
 <td align="center">✅</td>
 <td align="center">❌</td>
 <td align="center">❌</td>
@@ -123,13 +123,38 @@
 <td align="center">❌</td>
 </tr>
 <tr>
-<td>Arbitrary epidemic processes <sup>†</sup>
-</td>
+<td>Automatic selection of best model</td>
 <td align="center">✅</td>
 <td align="center">❌</td>
 <td align="center">❌</td>
 <td align="center">❌</td>
 <td align="center">❌</td>
+</tr>
+<tr>
+<td>Stratified data</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">✅<sup>§</sup>
+</td>
+<td align="center">✅</td>
+</tr>
+<tr>
+<td>Calendar / day-of-week effects</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">✅</td>
+</tr>
+<tr>
+<td>Additional covariates</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">✅<sup>§</sup>
+</td>
+<td align="center">✅</td>
 </tr>
 <tr>
 <td>No per-model compilation</td>
@@ -149,41 +174,17 @@
 <td align="center">❌</td>
 </tr>
 <tr>
-<td>Stratified data</td>
-<td align="center">✅</td>
-<td align="center">❌</td>
-<td align="center">❌</td>
-<td align="center">✅<sup>§</sup>
+<td>Arbitrary delay distributions <sup>†</sup>
 </td>
 <td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
 </tr>
 <tr>
-<td>Calendar / day-of-week effects</td>
-<td align="center">✅</td>
-<td align="center">❌</td>
-<td align="center">❌</td>
-<td align="center">❌</td>
-<td align="center">✅</td>
-</tr>
-<tr>
-<td>Additional covariates</td>
-<td align="center">✅</td>
-<td align="center">❌</td>
-<td align="center">❌</td>
-<td align="center">✅<sup>§</sup>
+<td>Arbitrary epidemic processes <sup>†</sup>
 </td>
-<td align="center">✅</td>
-</tr>
-<tr>
-<td>Automatic extreme-delay detection</td>
-<td align="center">✅</td>
-<td align="center">❌</td>
-<td align="center">❌</td>
-<td align="center">❌</td>
-<td align="center">❌</td>
-</tr>
-<tr>
-<td>Automatic selection of best model</td>
 <td align="center">✅</td>
 <td align="center">❌</td>
 <td align="center">❌</td>
@@ -199,6 +200,14 @@
 <td align="center">❌</td>
 </tr>
 <tr>
+<td>Nowcasts can be extended into forecasts or scenario-modeling</td>
+<td align="center">🚧</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">✅</td>
+</tr>
+<tr>
 <td>Effective reproductive number (Rₜ)</td>
 <td align="center">❌</td>
 <td align="center">❌</td>
@@ -208,6 +217,7 @@
 </tr>
 </tbody>
 </table>
+</div>
 <p><sub><sup><b>†</b></sup><em>Arbitrary</em> means you supply your own custom R function: any distribution for the delay, any function <code>f(t)</code> for the epidemic process (not just a choice from a built-in menu). <code>epinowcast</code> is very flexible through parametric families and model formulas, but does not take arbitrary user-defined functions. <sup><b>‡</b></sup><code>NobBS</code> requires JAGS and <code>epinowcast</code> requires CmdStan (an external Stan toolchain); <code>nowcaster</code> runs entirely in R but depends on the (non-CRAN) <code>INLA</code> package. <sup><b>§</b></sup><code>nowcaster</code> stratifies by age/region structure only, not arbitrary user-defined strata; <code>diseasenowcasting</code> allows any combination of strata columns. <sup>🚧</sup> In development for <code>diseasenowcasting</code> (counts that revise <em>downward</em>, e.g. a positive later re-classified as negative); <code>baselinenowcast</code> already supports this. </sub></p>
 </div>
 <div class="section level2">
@@ -368,6 +378,17 @@
 <span><span class="co">#&gt; 1    delay  0.99</span></span>
 <span><span class="co">#&gt; 2    delay  0.99</span></span></code></pre></div>
 <p>A complete tutorial on handling extreme delays is available at the <a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.html">Handling Outlier Delays with Censoring</a> vignette.</p>
+</div>
+<div class="section level2">
+<h2 id="saving-and-loading-a-fit">Saving and loading a fit<a class="anchor" aria-label="anchor" href="#saving-and-loading-a-fit"></a>
+</h2>
+<p>Fitting can be slow, so you can <strong>save</strong> a fitted nowcast and reload it later instead of re-fitting. <code>RTMB</code>’s autodiff tape can’t be written to disk, so <code><a href="reference/save_nowcast.html">save_nowcast()</a></code> stores the <code><a href="reference/model.html">model()</a></code>, the input <code>tbl_now</code>, and each fit’s parameters plus its Laplace mode and precision — all <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> needs.</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/save_nowcast.html">save_nowcast</a></span><span class="op">(</span><span class="va">ncast</span>, <span class="st">"dengue_nowcast.rds"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">restored</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_nowcast.html">load_nowcast</a></span><span class="op">(</span><span class="st">"dengue_nowcast.rds"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">restored</span><span class="op">)</span>               <span class="co"># predict() / autoplot() / coef() / tidy() all work</span></span>
+<span><span class="fu"><a href="reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">restored</span><span class="op">@</span><span class="va">data</span>, <span class="va">restored</span><span class="op">@</span><span class="va">model</span><span class="op">)</span>   <span class="co"># or re-fit from the bundled data</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a>

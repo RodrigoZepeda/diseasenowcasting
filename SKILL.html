@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -354,8 +354,23 @@
 <span><span class="co"># the top of the scoreboard when @comparison is present.</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="fit--lower-level">fit() — lower-level<a class="anchor" aria-label="anchor" href="#fit--lower-level"></a></h3>
+<h3 id="save_nowcast--load_nowcast--persist-a-fit-to-disk">save_nowcast() / load_nowcast() — persist a fit to disk<a class="anchor" aria-label="anchor" href="#save_nowcast--load_nowcast--persist-a-fit-to-disk"></a></h3>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># RTMB tapes have external pointers that DON'T survive saveRDS (a reloaded tape</span></span>
+<span><span class="co"># crashes R). save_nowcast() drops the tape and stores: model() spec, input</span></span>
+<span><span class="co"># tbl_now, priors, engine, and per-fit params + Laplace MODE + PRECISION.</span></span>
+<span><span class="fu"><a href="reference/save_nowcast.html">save_nowcast</a></span><span class="op">(</span><span class="va">nc</span>, <span class="st">"fit.rds"</span><span class="op">)</span>          <span class="co"># works on a nowcast() or auto_nowcast() result</span></span>
+<span><span class="va">nc2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_nowcast.html">load_nowcast</a></span><span class="op">(</span><span class="st">"fit.rds"</span><span class="op">)</span>       <span class="co"># predict()/coef()/tidy()/autoplot() all work</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nc2</span>, n_draws <span class="op">=</span> <span class="fl">500</span><span class="op">)</span>          <span class="co"># any n_draws (re-sampled from stored precision; NOT frozen)</span></span>
+<span><span class="fu"><a href="reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">nc2</span><span class="op">@</span><span class="va">data</span>, <span class="va">nc2</span><span class="op">@</span><span class="va">model</span><span class="op">)</span>         <span class="co"># re-fit from the loaded model + bundled data</span></span>
+<span><span class="va">nc3</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_nowcast.html">load_nowcast</a></span><span class="op">(</span><span class="st">"fit.rds"</span>, rebuild <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>  <span class="co"># also re-tape obj (no re-opt); needs RTMB for custom</span></span>
+<span><span class="co"># predict() works with NO RTMB attached, even for custom delays/epidemics (cdf_factory/</span></span>
+<span><span class="co"># intensity_fn are plain R; only the Laplace mode+precision are needed -- see .nowcast_draws</span></span>
+<span><span class="co"># obj==NULL branch in R/15_nowcast.R, and the tidy() obj==NULL fallback in R/27_tidy.R).</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="fit--lower-level">fit() — lower-level<a class="anchor" aria-label="anchor" href="#fit--lower-level"></a></h3>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Returns a list: par, parList, nll, convergence, obj, opt, random,</span></span>
 <span><span class="co">#   use_random, epi_model, is_nb, lambda [T×S], mu, mu_safe, Gstar [T×S],</span></span>
 <span><span class="co">#   delay_mu, delay_sigma, phi_nb, reconstruct, Bmat, freq, data, priors, model</span></span>
@@ -363,7 +378,7 @@
 </div>
 <div class="section level3">
 <h3 id="default_priors">default_priors()<a class="anchor" aria-label="anchor" href="#default_priors"></a></h3>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">priors</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/default_priors.html">default_priors</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">engine</span>, phi <span class="op">=</span> <span class="fu"><a href="reference/priors.html">lognormal_prior</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">20</span><span class="op">)</span>, <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co"># Returns named list of prior_class objects: delay_mu, delay_sigma, delay_Q,</span></span>
 <span><span class="co"># phi_nb, mu_intercept, gamma_cov, gp_alpha, gp_ell, ar_phi, ar_sigma,</span></span>
@@ -374,7 +389,7 @@
 <h2 id="id_5-results">5. Results<a class="anchor" aria-label="anchor" href="#id_5-results"></a></h2>
 <div class="section level3">
 <h3 id="parameter-estimates">Parameter estimates<a class="anchor" aria-label="anchor" href="#parameter-estimates"></a></h3>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">nc</span><span class="op">)</span></span>
 <span><span class="co"># Named vector: delay_mu, delay_sigma, phi_nb, mu_intercept,</span></span>
 <span><span class="co">#               log_gp_alpha, log_gp_ell, ar_phi_unc, log_ar_sigma_unc, ...</span></span>
@@ -382,7 +397,7 @@
 </div>
 <div class="section level3">
 <h3 id="posterior-predictive-nowcast">Posterior-predictive nowcast<a class="anchor" aria-label="anchor" href="#posterior-predictive-nowcast"></a></h3>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nc</span>, n_draws <span class="op">=</span> <span class="cn">NULL</span>, summary <span class="op">=</span> <span class="cn">FALSE</span>, seed <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span><span class="co"># Returns nowcast_prediction_class with slot @draws [n_draws × max_time]</span></span>
 <span></span>
@@ -394,7 +409,7 @@
 </div>
 <div class="section level3">
 <h3 id="latent-incidence-lambda">Latent incidence (lambda)<a class="anchor" aria-label="anchor" href="#latent-incidence-lambda"></a></h3>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">nc</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span>       <span class="co"># numeric vector length max_time (posterior mean)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span><span class="op">(</span><span class="va">nc</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span>     <span class="co"># posterior median</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">nc</span>, probs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span>  <span class="co"># [max_time × probs]</span></span>
@@ -402,7 +417,7 @@
 </div>
 <div class="section level3">
 <h3 id="lower-level-draw-helper">Lower-level draw helper<a class="anchor" aria-label="anchor" href="#lower-level-draw-helper"></a></h3>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/summarise_nowcast_matrix.html">summarise_nowcast_matrix</a></span><span class="op">(</span><span class="va">draws_matrix</span><span class="op">)</span></span>
 <span><span class="co"># draws_matrix: [n_draws × max_time] → data.frame with q2.5..q97.5 + .event_num</span></span></code></pre></div>
 <hr></div>
@@ -411,7 +426,7 @@
 <h2 id="id_6-backtesting-and-scoring">6. Backtesting and scoring<a class="anchor" aria-label="anchor" href="#id_6-backtesting-and-scoring"></a></h2>
 <div class="section level3">
 <h3 id="backtest">backtest()<a class="anchor" aria-label="anchor" href="#backtest"></a></h3>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/backtest.html">backtest</a></span><span class="op">(</span></span>
 <span>  <span class="va">data</span>,                          <span class="co"># tbl_now</span></span>
 <span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">mdl1</span>, <span class="va">mdl2</span><span class="op">)</span>,     <span class="co"># or a single model()</span></span>
@@ -433,7 +448,7 @@
 </div>
 <div class="section level3">
 <h3 id="score">score()<a class="anchor" aria-label="anchor" href="#score"></a></h3>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/score.html">score</a></span><span class="op">(</span><span class="va">bt</span>, metric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wis"</span>, <span class="st">"ape"</span>, <span class="st">"mse"</span><span class="op">)</span>, report <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="co"># Returns data.frame: model, wis, ape, mse, coverage_50, coverage_90</span></span>
 <span><span class="co"># Sorted best-first by `metric`; cli report printed if report=TRUE</span></span>
@@ -441,7 +456,7 @@
 </div>
 <div class="section level3">
 <h3 id="autoplot">autoplot<a class="anchor" aria-label="anchor" href="#autoplot"></a></h3>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span>     <span class="co"># faceted by model; median + 50%/90% ribbons vs final truth</span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">pred</span><span class="op">)</span>   <span class="co"># single nowcast</span></span></code></pre></div>
 <hr></div>
@@ -450,7 +465,7 @@
 <h2 id="id_6b-surprise-anomaly-detection-and-censoring">6b. Surprise (anomaly detection) and censoring<a class="anchor" aria-label="anchor" href="#id_6b-surprise-anomaly-detection-and-censoring"></a></h2>
 <div class="section level3">
 <h3 id="surprise--is-new-data-surprising-under-the-fit">surprise() — is new data surprising under the fit?<a class="anchor" aria-label="anchor" href="#surprise--is-new-data-surprising-under-the-fit"></a></h3>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># type "count": new_data has columns event_index (0-indexed), count</span></span>
 <span><span class="co"># type "delay": new_data has columns delay (event units), optional weight</span></span>
 <span><span class="co"># type "both" (default): supply both. level = credible level (default 0.99).</span></span>
@@ -460,7 +475,7 @@
 </div>
 <div class="section level3">
 <h3 id="update-computes-surprise-automatically--warns">update() computes surprise automatically + warns<a class="anchor" aria-label="anchor" href="#update-computes-surprise-automatically--warns"></a></h3>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nc2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">nc</span>, <span class="va">new_rows</span>, surprise_level <span class="op">=</span> <span class="fl">0.99</span><span class="op">)</span>   <span class="co"># one warning listing surprising delays</span></span>
 <span><span class="fu"><a href="reference/extreme_values.html">extreme_values</a></span><span class="op">(</span><span class="va">nc2</span><span class="op">)</span>                                  <span class="co"># tidy data.frame of flagged surprises (or NULL)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">nc</span>, <span class="va">new_rows</span>, compute_surprise <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>        <span class="co"># silent</span></span></code></pre></div>
@@ -468,7 +483,7 @@
 </div>
 <div class="section level3">
 <h3 id="prior_only-see-what-a-prior-implies">prior_only: see what a prior implies<a class="anchor" aria-label="anchor" href="#prior_only-see-what-a-prior-implies"></a></h3>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Draw the epidemic from the PRIORS only (no fitting); data just sets the grid.</span></span>
 <span><span class="va">nc</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">tn</span>, <span class="fu"><a href="reference/model.html">model</a></span><span class="op">(</span><span class="fu"><a href="reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="reference/epidemic_process.html">sir_epidemic</a></span><span class="op">(</span>R0 <span class="op">=</span> <span class="fu"><a href="reference/priors.html">lognormal_prior</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span>, <span class="fl">0.1</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="reference/delay_process.html">lognormal_delay</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>              prior_only <span class="op">=</span> <span class="cn">TRUE</span>, n_draws <span class="op">=</span> <span class="fl">300</span><span class="op">)</span></span>
@@ -482,21 +497,22 @@
 <div class="section level3">
 <h3 id="censoring-an-outlier-delay-m_censored">Censoring an outlier delay (m_censored)<a class="anchor" aria-label="anchor" href="#censoring-an-outlier-delay-m_censored"></a></h3>
 <p>A report flagged <code>is_censored</code> contributes <code>log G_D(j)</code> (delay &lt;= j, an upper bound) instead of the exact-delay term — so an extreme outlier delay stops distorting the fitted delay distribution. <code><a href="reference/nowcast.html">nowcast()</a></code> reads the tbl_now’s <code>is_censored</code> column automatically (both the delay-only and joint objectives handle it).</p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Flag every report whose delay exceeds a bound as censored, then re-fit:</span></span>
-<span><span class="va">tn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/censor_delays_above.html">censor_delays_above</a></span><span class="op">(</span><span class="va">tn</span>, max_delay <span class="op">=</span> <span class="fl">45</span><span class="op">)</span>   <span class="co"># sets is_censored = TRUE for delay &gt; 45</span></span>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Flag every report whose delay exceeds a bound as censored, then re-fit.</span></span>
+<span><span class="co"># censor_delays_above() lives in tbl.now (a Depends, so it is already attached):</span></span>
+<span><span class="va">tn2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/censor_delays_above.html" class="external-link">censor_delays_above</a></span><span class="op">(</span><span class="va">tn</span>, max_delay <span class="op">=</span> <span class="fl">45</span><span class="op">)</span>   <span class="co"># sets is_censored = TRUE for delay &gt; 45</span></span>
 <span><span class="va">nc</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">tn2</span>, <span class="fu"><a href="reference/model.html">model</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>                      <span class="co"># uses the censored delays</span></span>
 <span></span>
 <span><span class="co"># Or set is_censored yourself when building the tbl_now:</span></span>
 <span><span class="co"># tbl.now::tbl_now(df, ..., is_censored = my_logical_column)</span></span></code></pre></div>
-<p>The typical loop: fit -&gt; <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> warns “delay too long” -&gt; <code><a href="reference/censor_delays_above.html">censor_delays_above()</a></code> -&gt; re-fit (better-calibrated delay distribution, often better WIS for one-stage fits).</p>
+<p>The typical loop: fit -&gt; <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> warns “delay too long” -&gt; <code><a href="https://rodrigozepeda.github.io/tbl.now/reference/censor_delays_above.html" class="external-link">censor_delays_above()</a></code> -&gt; re-fit (better-calibrated delay distribution, often better WIS for one-stage fits).</p>
 <hr></div>
 </div>
 <div class="section level2">
 <h2 id="id_7-internal-architecture-for-contributors">7. Internal architecture (for contributors)<a class="anchor" aria-label="anchor" href="#id_7-internal-architecture-for-contributors"></a></h2>
 <div class="section level3">
 <h3 id="build_joint_obj">build_joint_obj()<a class="anchor" aria-label="anchor" href="#build_joint_obj"></a></h3>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">built</span> <span class="op">&lt;-</span> <span class="fu">build_joint_obj</span><span class="op">(</span><span class="va">data</span>, <span class="va">priors</span>, init <span class="op">=</span> <span class="cn">NULL</span>, use_random <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="co"># Returns list(obj, random, epi_model, is_nb, Bmat, freq, n_strata)</span></span>
 <span><span class="co"># obj is an RTMB::MakeADFun result; obj$fn/gr/he are the nll/gradient/hessian</span></span></code></pre></div>
@@ -554,7 +570,7 @@
 <td>n/a (user owns full <code>log_mean[T×S]</code>)</td>
 </tr></tbody></table><p><strong>Component dispatch codes.</strong> <code>delay_family</code>: 1=LogNormal, 2=Gamma, 3=GenGamma, 4=Dirichlet, <strong>5=Custom</strong>. <code>epidemic_model</code>: 1=HSGP, 2=AR1, 3=SIR, <strong>4=Custom</strong>. Custom params are fixed via the per-element <code>priors</code> API (a number fixes, a prior frees) → an RTMB <code>map</code> with <code>factor(NA)</code> entries.</p>
 <p><strong>Smooth cap on log_mean</strong> (prevents exp() overflow):</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">log_mean_capped</span> <span class="op">&lt;-</span> <span class="va">upper_bound</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log1p</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">upper_bound</span> <span class="op">-</span> <span class="va">log_mean_col</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>where <code>upper_bound = min(max(6, log1p(casemax)), 16)</code>.</p>
 </div>
@@ -564,7 +580,7 @@
 </div>
 <div class="section level3">
 <h3 id="nowcast_draws">.nowcast_draws()<a class="anchor" aria-label="anchor" href="#nowcast_draws"></a></h3>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu">.nowcast_draws</span><span class="op">(</span><span class="va">fit</span>, <span class="va">target</span>, <span class="va">n_draws</span>, <span class="va">probs</span>, <span class="va">seed</span><span class="op">)</span></span>
 <span><span class="co"># fit must have: $data, $priors, $obj (with last.par.best), $use_random,</span></span>
 <span><span class="co">#               $Bmat, $freq</span></span>
@@ -575,14 +591,14 @@
 </div>
 <div class="section level3">
 <h3 id="pool_fit_draws">.pool_fit_draws()<a class="anchor" aria-label="anchor" href="#pool_fit_draws"></a></h3>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pooled</span> <span class="op">&lt;-</span> <span class="fu">.pool_fit_draws</span><span class="op">(</span><span class="va">fits_list</span>, <span class="va">target</span>, <span class="va">n_draws</span><span class="op">)</span></span>
 <span><span class="co"># Returns list(M [pooled_n×T], lambda [pooled_n×T])</span></span>
 <span><span class="co"># Used by both predict() and .nowcast_lambda_draws()</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="delay-aggregation-prepare_data">Delay aggregation (prepare_data)<a class="anchor" aria-label="anchor" href="#delay-aggregation-prepare_data"></a></h3>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">aggregate_by_delay_and_time</span><span class="op">(</span><span class="va">obs_matrix</span><span class="op">)</span></span>
 <span><span class="co"># Pools ALL strata (ignores col 4) — correct because delay is shared</span></span>
 <span><span class="co"># Returns list(obs_delays, row_sums, col_sums)</span></span>
@@ -594,14 +610,14 @@
 <div class="section level3">
 <h3 id="per-stratum-vector-shapes">Per-stratum vector shapes<a class="anchor" aria-label="anchor" href="#per-stratum-vector-shapes"></a></h3>
 <p><code>ar_phi_unc</code> and <code>log_ar_sigma_unc</code> <strong>must</strong> have length <code>num_strata</code>, not 1. If you warm-start with a scalar from a previous fit, <code>.adapt_init()</code> recycles it to the right length — but if you build <code>init</code> by hand you must do this yourself:</p>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">init</span><span class="op">$</span><span class="va">log_ar_sigma_unc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2</span>, <span class="va">engine</span><span class="op">$</span><span class="va">num_strata</span><span class="op">)</span></span>
 <span><span class="va">init</span><span class="op">$</span><span class="va">ar_phi_unc</span>       <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>,  <span class="va">engine</span><span class="op">$</span><span class="va">num_strata</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="matrix-init-for-basis_coefs--ar_innov--gamma">Matrix init for basis_coefs / ar_innov / gamma<a class="anchor" aria-label="anchor" href="#matrix-init-for-basis_coefs--ar_innov--gamma"></a></h3>
 <p>These are <code>[rows × num_strata]</code> matrices. Always initialise as matrices:</p>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">init</span><span class="op">$</span><span class="va">basis_coefs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">engine</span><span class="op">$</span><span class="va">num_basis</span>, <span class="va">engine</span><span class="op">$</span><span class="va">num_strata</span><span class="op">)</span></span>
 <span><span class="va">init</span><span class="op">$</span><span class="va">ar_innov</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">engine</span><span class="op">$</span><span class="va">max_time</span>,  <span class="va">engine</span><span class="op">$</span><span class="va">num_strata</span><span class="op">)</span></span>
 <span><span class="va">init</span><span class="op">$</span><span class="va">gamma</span>       <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">engine</span><span class="op">$</span><span class="va">P</span>,         <span class="va">engine</span><span class="op">$</span><span class="va">num_strata</span><span class="op">)</span></span></code></pre></div>
@@ -609,7 +625,7 @@
 <div class="section level3">
 <h3 id="gengamma-q-bounds">GenGamma Q bounds<a class="anchor" aria-label="anchor" href="#gengamma-q-bounds"></a></h3>
 <p>The raw parameter <code>delay_Q</code> is the <em>unconstrained</em> value; the actual shape is:</p>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">shape_Q</span> <span class="op">&lt;-</span> <span class="fl">0.05</span> <span class="op">+</span> <span class="fl">2.95</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">delay_Q</span><span class="op">)</span>   <span class="co"># ∈ (0.05, 3)</span></span></code></pre></div>
 <p>Never set <code>shape_Q</code> directly in <code>init</code>; set <code>delay_Q</code> (the raw unconstrained value). Raw <code>delay_Q = -2</code> ≈ <code>shape_Q = 0.27</code> (near log-normal).</p>
 </div>
@@ -620,7 +636,7 @@
 <div class="section level3">
 <h3 id="hsgp-num_basis-for-long-daily-series">HSGP num_basis for long daily series<a class="anchor" aria-label="anchor" href="#hsgp-num_basis-for-long-daily-series"></a></h3>
 <p>Auto <code>num_basis = ceiling(1.5 * sqrt(max_time))</code> → ~60 for a 1,500-day series, which can cause an ill-conditioned Laplace. For COVID-length series, cap at 20:</p>
-<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/model.html">model</a></span><span class="op">(</span><span class="fu"><a href="reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="reference/epidemic_process.html">hsgp_epidemic</a></span><span class="op">(</span>num_basis <span class="op">=</span> <span class="fl">20L</span><span class="op">)</span>, <span class="fu"><a href="reference/delay_process.html">lognormal_delay</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -658,7 +674,7 @@
 <hr></div>
 <div class="section level2">
 <h2 id="id_10-typical-session-skeleton">10. Typical session skeleton<a class="anchor" aria-label="anchor" href="#id_10-typical-session-skeleton"></a></h2>
-<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rodrigozepeda.github.io/diseasenowcasting/">diseasenowcasting</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rodrigozepeda.github.io/tbl.now/" class="external-link">tbl.now</a></span><span class="op">)</span></span>
 <span></span>

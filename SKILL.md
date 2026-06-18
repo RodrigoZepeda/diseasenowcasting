@@ -441,6 +441,23 @@ selection_metric(nc)   # the metric used (= @comparison$metric)
 # the top of the scoreboard when @comparison is present.
 ```
 
+### save_nowcast() / load_nowcast() — persist a fit to disk
+
+``` r
+
+# RTMB tapes have external pointers that DON'T survive saveRDS (a reloaded tape
+# crashes R). save_nowcast() drops the tape and stores: model() spec, input
+# tbl_now, priors, engine, and per-fit params + Laplace MODE + PRECISION.
+save_nowcast(nc, "fit.rds")          # works on a nowcast() or auto_nowcast() result
+nc2 <- load_nowcast("fit.rds")       # predict()/coef()/tidy()/autoplot() all work
+predict(nc2, n_draws = 500)          # any n_draws (re-sampled from stored precision; NOT frozen)
+nowcast(nc2@data, nc2@model)         # re-fit from the loaded model + bundled data
+nc3 <- load_nowcast("fit.rds", rebuild = TRUE)  # also re-tape obj (no re-opt); needs RTMB for custom
+# predict() works with NO RTMB attached, even for custom delays/epidemics (cdf_factory/
+# intensity_fn are plain R; only the Laplace mode+precision are needed -- see .nowcast_draws
+# obj==NULL branch in R/15_nowcast.R, and the tidy() obj==NULL fallback in R/27_tidy.R).
+```
+
 ### fit() — lower-level
 
 ``` r
@@ -620,7 +637,8 @@ delay-only and joint objectives handle it).
 
 ``` r
 
-# Flag every report whose delay exceeds a bound as censored, then re-fit:
+# Flag every report whose delay exceeds a bound as censored, then re-fit.
+# censor_delays_above() lives in tbl.now (a Depends, so it is already attached):
 tn2 <- censor_delays_above(tn, max_delay = 45)   # sets is_censored = TRUE for delay > 45
 nc  <- nowcast(tn2, model())                      # uses the censored delays
 
@@ -631,7 +649,7 @@ nc  <- nowcast(tn2, model())                      # uses the censored delays
 The typical loop: fit -\>
 [`update()`](https://rdrr.io/r/stats/update.html) warns “delay too long”
 -\>
-[`censor_delays_above()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/censor_delays_above.md)
+[`censor_delays_above()`](https://rodrigozepeda.github.io/tbl.now/reference/censor_delays_above.html)
 -\> re-fit (better-calibrated delay distribution, often better WIS for
 one-stage fits).
 

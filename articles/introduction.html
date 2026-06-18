@@ -41,7 +41,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -506,6 +506,34 @@ looks off):</p>
 Delays with Censoring</a> for what to do when a delay <em>is</em>
 flagged.</p>
 </div>
+</div>
+<div class="section level2">
+<h2 id="saving-and-loading-a-fitted-nowcast">Saving and loading a fitted nowcast<a class="anchor" aria-label="anchor" href="#saving-and-loading-a-fitted-nowcast"></a>
+</h2>
+<p>Fitting can take a while, so you will often want to
+<strong>save</strong> a fitted nowcast and reload it later – in a
+report, a dashboard, or a scheduled job – instead of re-fitting.
+<code><a href="../reference/save_nowcast.html">save_nowcast()</a></code> writes it to a single <code>.rds</code> file
+and <code><a href="../reference/load_nowcast.html">load_nowcast()</a></code> brings it back.</p>
+<p>The autodiff engine (<code>RTMB</code>) cannot itself be written to
+disk, so what is stored is everything needed to <em>reuse</em> the fit:
+the <code><a href="../reference/model.html">model()</a></code> specification, the input <code>tbl_now</code>,
+and each fit’s parameters together with its Laplace mode and precision.
+That is all <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> needs, so a reloaded nowcast behaves
+exactly like the original (any number of draws, no re-fitting):</p>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">saved</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rds"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/save_nowcast.html">save_nowcast</a></span><span class="op">(</span><span class="va">auto_ncast</span>, <span class="va">saved</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">restored</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load_nowcast.html">load_nowcast</a></span><span class="op">(</span><span class="va">saved</span><span class="op">)</span></span>
+<span><span class="co"># predict() / autoplot() / coef() / tidy() all work just as before:</span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">restored</span><span class="op">)</span></span></code></pre></div>
+<p><img src="introduction_files/figure-html/save-load-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
+<p>Because the input data travels in the bundle, you can also
+<strong>re-fit</strong> the saved model later (on the original data, or
+on a newer extract):</p>
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">restored</span><span class="op">@</span><span class="va">data</span>, <span class="va">restored</span><span class="op">@</span><span class="va">model</span><span class="op">)</span>   <span class="co"># re-runs the optimisation</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="next-steps">Next steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>

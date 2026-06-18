@@ -23,7 +23,7 @@ In general the workflow is:
     outliers and which correspond to true values.
 
 4.  The
-    [`censor_delays_above()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/censor_delays_above.md)
+    [`censor_delays_above()`](https://rodrigozepeda.github.io/tbl.now/reference/censor_delays_above.html)
     function turns extreme delays into upper bounds.
 
 5.  Model is re-updated using the censored data consequently improving
@@ -167,7 +167,7 @@ We follow the warning’s advice: we **flag as censored** every report
 whose delay exceeds a sensible bound (here 99 days as reported by
 [`extreme_values()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/extreme_values.md)).
 The function
-[`censor_delays_above()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/censor_delays_above.md)
+[`censor_delays_above()`](https://rodrigozepeda.github.io/tbl.now/reference/censor_delays_above.html)
 works by setting `.is_censored = TRUE` in the `tbl_now` for reports
 greater than the `max_delay`. Extreme delays are thus turned into upper
 bounds. The

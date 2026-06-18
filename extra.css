@@ -5,6 +5,20 @@
   --charcoal: #262626;
 }
 
+.small-table {
+  overflow-x: auto;
+}
+
+.small-table table {
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.small-table th,
+.small-table td {
+  padding: 0.2rem 0.4rem;
+}
+
 .navbar {
   background-color: #B85348 !important;
 }

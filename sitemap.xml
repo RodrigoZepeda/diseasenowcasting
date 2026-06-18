@@ -20,7 +20,6 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/best_model.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/best_model_name.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/best_score.html</loc></url>
-<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/censor_delays_above.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/comparison_scores.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/covid_colombia.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_delay.html</loc></url>
@@ -36,6 +35,7 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/index.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/infer_max_time.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/likelihood.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/load_nowcast.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/model.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_diagnostic.html</loc></url>
@@ -44,6 +44,7 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/priors.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/reexports.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/sample.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/save_nowcast.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/score.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/selection_metric.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/summarise_nowcast_matrix.html</loc></url>

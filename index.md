@@ -36,16 +36,17 @@ How `diseasenowcasting` compares with other R nowcasting packages:
 
 | Feature | `diseasenowcasting` | [`baselinenowcast`](https://github.com/epinowcast/baselinenowcast) | [`NobBS`](https://cran.r-project.org/package=NobBS) | [`nowcaster`](https://github.com/covid19br/nowcaster) | [`epinowcast`](https://github.com/epinowcast/epinowcast) |
 |----|:--:|:--:|:--:|:--:|:--:|
-| Arbitrary delay distributions ^(†) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Arbitrary epidemic processes ^(†) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| No per-model compilation | ✅ | ✅ | ✅ | ✅ | ❌ |
-| Pure R — no external engine (Stan/JAGS) ^(‡) | ✅ | ✅ | ❌ | ✅ | ❌ |
-| Stratified data | ✅ | ❌ | ❌ | ✅^(§) | ✅ |
-| Calendar / day-of-week effects | ✅ | ❌ | ❌ | ❌ | ✅ |
-| Additional covariates | ✅ | ❌ | ❌ | ✅^(§) | ✅ |
 | Automatic extreme-delay detection | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Automatic selection of best model | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Stratified data | ✅ | ✅ | ❌ | ✅^(§) | ✅ |
+| Calendar / day-of-week effects | ✅ | ✅ | ❌ | ❌ | ✅ |
+| Additional covariates | ✅ | ❌ | ❌ | ✅^(§) | ✅ |
+| No per-model compilation | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Pure R — no external engine (Stan/JAGS) ^(‡) | ✅ | ✅ | ❌ | ✅ | ❌ |
+| Arbitrary delay distributions ^(†) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Arbitrary epidemic processes ^(†) | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Counts that can decrease (suspected cases later un-confirmed) | 🚧 | ✅ | ❌ | ❌ | ❌ |
+| Nowcasts can be extended into forecasts or scenario-modeling | 🚧 | ❌ | ❌ | ❌ | ✅ |
 | Effective reproductive number (Rₜ) | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 _(^(**†**)*Arbitrary* means you supply your own custom R function: any distribution for the delay, any function `f(t)` for the epidemic process (not just a choice from a built-in menu). `epinowcast` is very flexible through parametric families and model formulas, but does not take arbitrary user-defined functions. ^(**‡**)`NobBS` requires JAGS and `epinowcast` requires CmdStan (an external Stan toolchain); `nowcaster` runs entirely in R but depends on the (non-CRAN) `INLA` package. ^(**§**)`nowcaster` stratifies by age/region structure only, not arbitrary user-defined strata; `diseasenowcasting` allows any combination of strata columns. ^(🚧) In development for `diseasenowcasting` (counts that revise *downward*, e.g. a positive later re-classified as negative); `baselinenowcast` already supports this.)
@@ -304,6 +305,27 @@ A complete tutorial on handling extreme delays is available at the
 [Handling Outlier Delays with
 Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.html)
 vignette.
+
+## Saving and loading a fit
+
+Fitting can be slow, so you can **save** a fitted nowcast and reload it
+later instead of re-fitting. `RTMB`’s autodiff tape can’t be written to
+disk, so
+[`save_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/save_nowcast.md)
+stores the
+[`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md),
+the input `tbl_now`, and each fit’s parameters plus its Laplace mode and
+precision — all [`predict()`](https://rdrr.io/r/stats/predict.html)
+needs.
+
+``` r
+
+save_nowcast(ncast, "dengue_nowcast.rds")
+
+restored <- load_nowcast("dengue_nowcast.rds")
+predict(restored)               # predict() / autoplot() / coef() / tidy() all work
+nowcast(restored@data, restored@model)   # or re-fit from the bundled data
+```
 
 ## See also
 

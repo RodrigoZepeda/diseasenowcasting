@@ -28,9 +28,6 @@
   [`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
   chose
 
-- [`censor_delays_above()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/censor_delays_above.md)
-  : Flag reports with an implausibly long delay as censored
-
 - [`comparison_scores()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/comparison_scores.md)
   :
 
@@ -85,6 +82,12 @@
   [`nb_likelihood()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/likelihood.md)
   : Likelihood for the Bayesian Nowcast
 
+- [`load_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/load_nowcast.md)
+  :
+
+  Load a nowcast saved with
+  [`save_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/save_nowcast.md)
+
 - [`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
   : Bayesian Nowcast Model
 
@@ -127,6 +130,9 @@
 
   Draw random samples from a prior (or fall back to
   [`base::sample()`](https://rdrr.io/r/base/sample.html))
+
+- [`save_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/save_nowcast.md)
+  : Save a fitted nowcast to disk
 
 - [`score()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md)
   : Score a backtest: WIS, APE, MSE per model (and rank them)

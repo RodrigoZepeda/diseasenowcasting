@@ -531,6 +531,45 @@ See the vignette on [Handling Outlier Delays with
 Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.md)
 for what to do when a delay *is* flagged.
 
+## Saving and loading a fitted nowcast
+
+Fitting can take a while, so you will often want to **save** a fitted
+nowcast and reload it later – in a report, a dashboard, or a scheduled
+job – instead of re-fitting.
+[`save_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/save_nowcast.md)
+writes it to a single `.rds` file and
+[`load_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/load_nowcast.md)
+brings it back.
+
+The autodiff engine (`RTMB`) cannot itself be written to disk, so what
+is stored is everything needed to *reuse* the fit: the
+[`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
+specification, the input `tbl_now`, and each fit’s parameters together
+with its Laplace mode and precision. That is all
+[`predict()`](https://rdrr.io/r/stats/predict.html) needs, so a reloaded
+nowcast behaves exactly like the original (any number of draws, no
+re-fitting):
+
+``` r
+
+saved <- tempfile(fileext = ".rds")
+save_nowcast(auto_ncast, saved)
+
+restored <- load_nowcast(saved)
+# predict() / autoplot() / coef() / tidy() all work just as before:
+autoplot(restored)
+```
+
+![](introduction_files/figure-html/save-load-1.png)
+
+Because the input data travels in the bundle, you can also **re-fit**
+the saved model later (on the original data, or on a newer extract):
+
+``` r
+
+nowcast(restored@data, restored@model)   # re-runs the optimisation
+```
+
 ## Next steps
 
 This vignette covered the basics: building a `tbl_now`, fitting a
