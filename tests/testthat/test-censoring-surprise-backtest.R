@@ -36,17 +36,8 @@ test_that("backtest with max_delay = Inf keeps user-supplied recent dates", {
 })
 
 # ── TASK 3: censored delays (m_censored) ─────────────────────────────────────
-
-test_that("censor_delays_above flags long-delay reports", {
-  df <- data.frame(onset = as.Date("2020-01-01") + c(0, 0, 1, 2),
-                   reported = as.Date("2020-01-01") + c(1, 5, 2, 300))
-  tn <- tbl_now(df, event_date = onset, report_date = reported,
-                data_type = "linelist", verbose = FALSE)
-  tn2 <- censor_delays_above(tn, max_delay = 60, quiet = TRUE)
-  cc  <- tbl.now::get_is_censored(tn2)
-  expect_true(length(cc) == 1L)
-  expect_equal(sum(as.logical(tn2[[cc]])), 1L)            # only the 300-day report
-})
+# `censor_delays_above()` itself now lives in tbl.now; here we only check that a
+# censored tbl_now flows correctly through diseasenowcasting's engine.
 
 test_that("a censored tbl_now feeds m_censored through to the engine", {
   set.seed(3)
@@ -122,6 +113,39 @@ test_that("delay surprise works for the Dirichlet (non-parametric) delay", {
   expect_true(all(is.finite(ds$mean_tail_prob)))               # no NA/crash
   expect_true(all(diff(ds$mean_tail_prob) <= 1e-8))            # P(D >= d) is non-increasing in d
   expect_equal(ds$direction[ds$delay == 300], "long")          # a 300-unit delay is surprisingly long
+})
+
+test_that("surprise() dispatch, input validation, type='both' and printing", {
+  tn <- .make_synth_tblnow(Tn = 55L, seed = 8)
+  nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
+                type = "one_stage", n_draws = 150, seed = 1)
+
+  # method dispatch + guards
+  expect_error(surprise(42, new_data = data.frame(delay = 3)), "No.+method")          # default
+  expect_error(surprise(list(foo = 1), new_data = data.frame(delay = 3)), "Unrecognized")
+  expect_error(surprise(nc, data.frame(x = 1), type = "count"), "event_index")        # missing cols
+  expect_error(surprise(nc, data.frame(x = 1), type = "delay"), "delay")
+
+  # surprise.list runs on a raw fit() result (nc@fits[[1]] is that list); type="both"
+  s <- surprise(nc@fits[[1]], data.frame(event_index = 25, count = 0, delay = 0),
+                type = "both", level = 0.95, n_draws = 120, seed = 2)
+  expect_s3_class(s, "diseasenowcasting_surprise")
+  expect_false(is.null(s$count_surprise))
+  expect_false(is.null(s$delay_surprise))
+
+  # print() produces output (dispatches to print.diseasenowcasting_surprise once
+  # the package is installed, e.g. under R CMD check / covr).
+  expect_output(print(s))
+})
+
+test_that("delay surprise works for the GeneralizedGamma delay (family 3)", {
+  tn <- .make_synth_tblnow(Tn = 60L, seed = 10)
+  nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), generalized_gamma_delay()),
+                type = "one_stage", n_draws = 150, seed = 1)
+  s  <- surprise(nc, data.frame(delay = c(3, 250)), type = "delay", n_draws = 100, seed = 2)
+  ds <- s$delay_surprise
+  expect_true(all(is.finite(ds$mean_tail_prob)))
+  expect_equal(ds$direction[ds$delay == 250], "long")
 })
 
 test_that("update() warns about a surprising new delay and stores the result", {

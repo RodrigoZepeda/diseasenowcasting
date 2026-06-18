@@ -334,6 +334,13 @@ test_that("epidemic constructors reject invalid parameter slots", {
   expect_error(sir_epidemic(gamma = -1),      "gamma")
   expect_error(sir_epidemic(N_eff = -1),      "N_eff")
   expect_error(sir_epidemic(N_pop = -10),     "N_pop")
+  expect_error(sir_epidemic(use_beta_rw_trend = c(TRUE, FALSE)), "use_beta_rw_trend")
+})
+
+test_that("epidemic_process base validator checks num_id and name", {
+  epc <- diseasenowcasting:::epidemic_process_class
+  expect_error(epc(name = "HSGP", num_id = c(1, 2)), "length 1")
+  expect_error(epc(name = "Nope", num_id = 1L),      "Invalid epidemic process")
 })
 
 test_that("custom_epidemic infers n_params and flags inconsistent lengths", {
@@ -357,34 +364,17 @@ test_that("custom_epidemic_class validator checks slot-length consistency", {
   expect_error(cls(intensity_fn = f, n_params = 0L), "n_params")
   expect_error(cls(intensity_fn = f, n_params = 2L, param_names = c("a", "b"),
                    inits = c(0, 0, 0)), "inits")
+  # param_names length mismatch (inits correct so the param_names check is reached)
+  expect_error(cls(intensity_fn = f, n_params = 2L, inits = c(0, 0),
+                   param_names = c("a", "b", "c")), "param_names")
+  # priors length mismatch (inits + param_names correct)
+  expect_error(cls(intensity_fn = f, n_params = 2L, inits = c(0, 0),
+                   param_names = c("a", "b"),
+                   priors = list(normal_prior(0, 1), normal_prior(0, 1), normal_prior(0, 1))),
+               "priors")
 })
 
-# ── 31_censoring.R (65% → target high) ──────────────────────────────────────
-
-test_that("censor_delays_above validates its inputs", {
-  tn <- .make_synth_tblnow(Tn = 20L, seed = 60)
-  expect_error(censor_delays_above(data.frame(x = 1), 10), "tbl_now")
-  expect_error(censor_delays_above(tn, max_delay = -1),    "non-negative")
-  expect_error(censor_delays_above(tn, max_delay = c(1, 2)), "single")
-})
-
-test_that("censor_delays_above merges with prior censoring and is monotone", {
-  tn  <- .make_synth_tblnow(Tn = 40L, seed = 61)
-
-  # First pass (create path): a generous bound, quiet.
-  tn1 <- censor_delays_above(tn, max_delay = 50, quiet = TRUE)
-  col1 <- tbl.now::get_is_censored(tn1)
-  c1   <- as.logical(tn1[[col1]]); c1[is.na(c1)] <- FALSE
-
-  # Second pass (merge path) with a tighter bound; message is emitted.
-  expect_message(tn2 <- censor_delays_above(tn1, max_delay = 15), "censored")
-  col2 <- tbl.now::get_is_censored(tn2)
-  c2   <- as.logical(tn2[[col2]]); c2[is.na(c2)] <- FALSE
-
-  # tighter bound can only add censoring, never remove it
-  expect_true(all(c2[c1]))
-  expect_gte(sum(c2), sum(c1))
-})
+# (censor_delays_above() moved to tbl.now; its unit tests live there now.)
 
 # ── 03_delay_class.R (73% → target high) ────────────────────────────────────
 
