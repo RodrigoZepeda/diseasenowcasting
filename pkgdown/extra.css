@@ -5,18 +5,26 @@
   --charcoal: #262626;
 }
 
-.small-table {
-  overflow-x: auto;
-}
-
 .small-table table {
   font-size: 0.8rem;
-  white-space: nowrap;
 }
 
 .small-table th,
 .small-table td {
   padding: 0.2rem 0.4rem;
+}
+
+/* First column wraps */
+.small-table th:first-child,
+.small-table td:first-child {
+  white-space: normal;
+  min-width: 220px;   /* adjust as needed */
+}
+
+/* All other columns stay on one line */
+.small-table th:not(:first-child),
+.small-table td:not(:first-child) {
+  white-space: nowrap;
 }
 
 .navbar {
