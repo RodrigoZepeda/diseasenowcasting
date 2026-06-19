@@ -63,8 +63,8 @@ if (requireNamespace("tbl.now", quietly = TRUE)) {
 #>   `tbl.now::add_temporal_effects()` + `tbl.now::compute_temporal_effects()`
 #>   before calling `nowcast()`.
 #> • To disable, call `nowcast(..., temporal_effects = "none")`.
-#> ✔ Saved nowcast to /tmp/RtmpicGBxA/file1a8d4979b543.rds.
-#> ℹ Restore with `load_nowcast("/tmp/RtmpicGBxA/file1a8d4979b543.rds")`.
+#> ✔ Saved nowcast to /tmp/Rtmpq9utTi/file1a1a4444c6ed.rds.
+#> ℹ Restore with `load_nowcast("/tmp/Rtmpq9utTi/file1a1a4444c6ed.rds")`.
 #>       mean median          sd     mad    q2.5     q5   q10    q25   q50    q75
 #> 1   61.000   61.0  0.00000000  0.0000  61.000  61.00  61.0  61.00  61.0  61.00
 #> 2   50.000   50.0  0.00000000  0.0000  50.000  50.00  50.0  50.00  50.0  50.00
