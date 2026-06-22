@@ -13,6 +13,11 @@
   (attached whenever `diseasenowcasting` is).
 * Improved documentation and badges with `lifecycle`. 
 * Updated dependency on tbl.now to latest version (0.7.8)
+* Removed `rlang` dependency
+* Added `RTMBode` as a remote repository and to suggests. 
+* The advanced ODE example in the *Custom Delays and Epidemic Processes* vignette
+  now integrates the SIR system with the `RTMBode` solver instead of a
+  hand-written RK4 scheme.
 
 # 1.2.0
 
