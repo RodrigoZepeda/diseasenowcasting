@@ -25,5 +25,5 @@
 
 - [Using alongside an LLM
   (AI)](https://rodrigozepeda.github.io/diseasenowcasting/articles/LLM_Usage.md):
-- [Benchmark (diseasenowcasting vs NobBS and
-  epinowcast)](https://rodrigozepeda.github.io/diseasenowcasting/articles/Benchmark.md):
+- [Benchmark (diseasenowcasting vs NobBS, epinowcast and
+  baselinenowcast)](https://rodrigozepeda.github.io/diseasenowcasting/articles/Benchmark.md):

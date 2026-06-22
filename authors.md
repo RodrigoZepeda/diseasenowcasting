@@ -25,13 +25,13 @@ Source:
 [`DESCRIPTION`](https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/DESCRIPTION)
 
 Zepeda-Tello R, Yaari R, Perini M (2026). *diseasenowcasting: Nowcast
-Time Series of Epidemiological Cases*. R package version 1.3.0,
+Time Series of Epidemiological Cases*. R package version 1.3.1,
 <https://rodrigozepeda.github.io/diseasenowcasting/>.
 
     @Manual{,
       title = {diseasenowcasting: Nowcast Time Series of Epidemiological Cases},
       author = {Rodrigo Zepeda-Tello and Rami Yaari and Matteo Perini},
       year = {2026},
-      note = {R package version 1.3.0},
+      note = {R package version 1.3.1},
       url = {https://rodrigozepeda.github.io/diseasenowcasting/},
     }

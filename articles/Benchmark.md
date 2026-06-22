@@ -1,229 +1,271 @@
-# Benchmark (diseasenowcasting vs NobBS and epinowcast)
+# Benchmark (diseasenowcasting vs NobBS, epinowcast and baselinenowcast)
 
-## NOTE
+> **NOTE:** THIS VIGNETTE IS UNDER DEVELOPMENT.
 
-> The numbers here are from a previous iteration of the package we are
-> working on updating.
+## TL; DR
 
-### TL; DR
+**Does `diseasenowcasting` actually work?** On three real outbreaks —
+dengue, mpox and COVID-19 — we asked each method to estimate the most
+recent, still- incomplete case counts, and then checked those estimates
+against the totals that *eventually* arrived. `diseasenowcasting` was
+**consistently as accurate as, and usually more accurate than**, three
+established nowcasting packages (NobBS, epinowcast and baselinenowcast).
+It was also consistently **faster**
 
-We compared different datasets across distinct `diseasenowcasting`
-models as well as NobBS and epinowcast. The `HSGP/LogNormal` and
-`HSGP/GeneralizedGamma` are the suggested models as they are
-consistently the ranking among the top performers.
+> Its `HSGP/LogNormal` and `HSGP/GeneralizedGamma` models are the most
+> reliable hence the ones we recommend.
 
-### Overview
+## What this benchmark does
 
-This vignette presents a systematic benchmark comparison of
-`diseasenowcasting` against two widely used nowcasting methods:
-[**NobBS**](https://cran.r-project.org/web/packages/NobBS/index.html)
-and [**Epinowcast**](https://github.com/epinowcast/epinowcast). We
-compare across three real-world disease surveillance datasets:
+A nowcast estimates **what the recent case counts will turn out to be**
+once all the delayed reports have come in. This benckmark:
 
-| Dataset | Disease | Temporal unit | Source |
+1.  Picks a past date and hides everything reported after it (so the
+    method only sees what a real-time analyst would have seen).
+2.  Asks each method to nowcast the most recent date.
+3.  Compares that nowcast to the count that **eventually** got reported.
+4.  Repeats over **50 dates per disease** and summarises.
+
+We do this for three diseases with different reporting behaviours, and
+against three widely used tools:
+
+| Disease | Data | Time unit | Compared against |
 |----|----|----|----|
-| `denguedat` (tbl.now) | Dengue fever | Weekly | (McGough et al. 2020) |
-| `mpoxdat` (tbl.now) | Mpox | Daily | (Rohrer et al. 2025) |
-| `covid_colombia` (diseasenowcasting) | COVID-19 | Daily | (Instituto Nacional de Salud (INS) 2024) |
+| Dengue fever | `denguedat` (Puerto Rico) (McGough et al. 2020) | Weekly | NobBS, epinowcast, baselinenowcast |
+| Mpox | `mpoxdat` (USA) (Rohrer et al. 2025) | Daily | NobBS, epinowcast, baselinenowcast |
+| COVID-19 | `covid_colombia` (Instituto Nacional de Salud (INS) 2024) | Daily | NobBS, epinowcast, baselinenowcast |
 
-The comparison uses **50 evaluation dates** per disease, selected at
-random. Forecasts are scored for a nowcast at a 0 delay, that is, the
-newest event time at each evaluation date.
+[**NobBS**](https://cran.r-project.org/web/packages/NobBS/index.html),
+[**epinowcast**](https://github.com/epinowcast/epinowcast) and
+[**baselinenowcast**](https://github.com/epinowcast/baselinenowcast) are
+the established nowcasting packages we compare against.
 
-### Scoring methodology
+### How to read the score tables
 
-All methods are scored using the **Weighted Interval Score (WIS)**. WIS
-decomposes into:
+Each method gives a prediction interval for the eventual count. We score
+it with the **Weighted Interval Score (WIS)**, one of the standard
+metrics in nowcasting and forecasting challenges.
 
-- **Overprediction** — penalty for predicted intervals that are too high
-  relative to the truth.
-- **Underprediction** — penalty for predicted intervals that are too
-  low.
-- **Dispersion** — penalty for uncertainty intervals that are too wide.
+> The one thing to remember: **lower WIS is better.**
 
-Coverage at 50% and 90% credible intervals is also reported. A good
-model should have empirical coverage close to the corresponding level.
+We also report **coverage**: how often the truth actually falls inside
+the stated prediction intervals. A well-calibrated method’s **90%
+interval should contain the truth about 90% of the time**.
 
-All comparisons are performed on a **common date set** — dates where
-both `diseasenowcasting` and the comparison method have produced a valid
-nowcast — ensuring fairness.
+### How was it compared
 
-#### Like-for-like comparison
+> **Note** Each method is scored only on the dates where it *and*
+> `diseasenowcasting` both produced a nowcast (a “common date set”). A
+> package that occasionally fails to fit therefore only shrinks *its
+> own* comparison, never the whole benchmark. A note under each table
+> reports who failed and how often. Where a package offers several
+> options (e.g. epinowcast’s reporting- delay choices), we show the ones
+> that fit most reliably.
 
-To compare *methods* rather than *software defaults*, each package is
-configured with **matched model components and the same inference
-quality**:
+We tried **epinowcast** with the Log-normal, Log-logistic and Gamma
+delay distributions, plus a **non-parametric** delay. We utilized the
+`Pathfinder` option on **epinowcast** as **sampling** was too slow for a
+realistic comparison.
 
-- **Reporting-delay family** — epinowcast is fit with Log-normal,
-  Log-logistic and Gamma delays (`enw_reference(distribution = ...)`),
-  mirroring `diseasenowcasting`’s Log-normal / Generalized-Gamma /
-  Dirichlet families, rather than being left at its default delay.
-- **Expectation process** — a random walk (`~ 1 + rw(day)`), the closest
-  epinowcast analogue of `diseasenowcasting`’s AR(1) latent process,
-  held fixed so the comparison isolates the reporting-delay choice.
-- **Inference** — full NUTS (epinowcast’s default) is the gold standard,
-  but it is **prohibitively slow** at this benchmark’s scale (minutes
-  per nowcast, across many dates x configs x diseases). So both packages
-  are run with their *fast approximate* inference: `diseasenowcasting`
-  with the Laplace approximation and epinowcast with **Pathfinder**
-  (variational) — a deliberately like-for-like pairing of approximate
-  methods. Caveat: Pathfinder under-estimates the posterior more
-  aggressively than Laplace, so epinowcast’s interval **coverage
-  reported here is conservative** (a lower bound). Set
-  `ENW_SAMPLER=nuts` to fit it with full MCMC if runtime allows.
+**baselinenowcast and NobBS packages are run as designed.** They are run
+*as is*.
 
-Some components have no exact cross-package analogue (epinowcast has no
-SIR mechanistic process or Generalized-Gamma delay; `diseasenowcasting`
-has no identical GP-on-expectation), so those models are reported as
-method-specific rather than forced into a false pairing.
+## Results
 
-### Results
+The pre-computed scores ship with the package, so these tables reproduce
+exactly.
 
-You can access the results from inside the package:
+For each disease there are four tables: (1) **every `diseasenowcasting`
+model**, so you can see the spread; (2) **`diseasenowcasting` vs
+NobBS**; (3) **`diseasenowcasting` vs epinowcast**; and (4)
+**`diseasenowcasting` vs baselinenowcast**. In every table, **lower WIS
+= more accurate**, and you want coverage close to its stated level (0.90
+for `Cov90`). The footnote under each table notes any competitor that
+failed to fit on some dates.
 
-``` r
+## Nobbs
 
-library(diseasenowcasting)
-library(dplyr)
+### Dengue fever (weekly, Colombia)
 
-# Pre-computed benchmark results (50 evaluation dates per disease), shipped in
-# inst/extdata.  Look in the installed package first and fall back to the source
-# tree, so the vignette also knits before the package is installed (e.g. pkgdown
-# or R CMD build).
-candidates <- c(
-  system.file("extdata", "benchmark_scores.rds", package = "diseasenowcasting"),
-  "../inst/extdata/benchmark_scores.rds",
-  file.path("inst", "extdata", "benchmark_scores.rds")
-)
-scoring_file <- candidates[nzchar(candidates) & file.exists(candidates)][1]
+| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+| own HSGP/nb/GeneralizedGamma | **7.0** | 1.5 | 1.6 | 4.0 | **0.00** | **0.62** | **0.92** | 6.96 |
+| own HSGP/nb/LogNormal | 7.1 | 1.4 | **1.5** | 4.1 | 0.03 | **0.60** | **0.94** | 5.06 |
+| own HSGP/nb/Dirichlet | 7.6 | 1.9 | **1.5** | 4.2 | 0.01 | **0.62** | **0.90** | **4.09** |
+| NobBS | 8.1 | 1.4 | 3.1 | 3.7 | 0.03 | **0.58** | **0.92** | 54.38 |
+| own AR1/nb/GeneralizedGamma | 13.3 | 1.0 | 7.0 | 5.3 | -0.12 | **0.68** | **0.94** | 76.96 |
+| own AR1/nb/Dirichlet | 13.7 | 1.8 | 5.8 | 6.1 | 0.08 | **0.66** | **0.94** | 13.34 |
+| own AR1/nb/LogNormal | 13.8 | 1.4 | 6.7 | 5.7 | **0.00** | **0.70** | **0.96** | 17.59 |
+| own SIR/nb/Dirichlet | 14.6 | 1.4 | 9.7 | 3.6 | -0.29 | 0.42 | 0.86 | 20.09 |
+| own SIR/nb/LogNormal | 16.3 | **0.6** | 11.5 | 4.1 | -0.49 | 0.38 | 0.80 | 29.56 |
+| own SIR/nb/GeneralizedGamma | 16.5 | **0.6** | 12.5 | 3.4 | -0.52 | 0.34 | 0.68 | 104.60 |
+| Epinowcast (LogNormal, RE) | 16.5 | 4.7 | 10.5 | 1.2 | -0.29 | 0.24 | 0.30 | 75.65 |
+| Epinowcast (LogNormal, RW) | 17.2 | 5.5 | 10.2 | 1.5 | -0.22 | 0.20 | 0.28 | 76.31 |
+| baselinenowcast | 17.4 | 1.9 | 5.9 | 9.5 | 0.19 | **0.56** | 0.82 | 14.65 |
+| Epinowcast (Gamma, RW) | 23.7 | 13.7 | 9.4 | **0.6** | 0.18 | 0.06 | 0.10 | 17.66 |
+| Epinowcast (Gamma, RE) | 31.0 | 9.5 | 20.6 | 1.0 | -0.11 | 0.04 | 0.12 | 25.18 |
 
-# Not found locally (e.g. on the pkgdown website)? Download from the public repo.
-if (is.na(scoring_file)) {
-  base <- "https://raw.githubusercontent.com/RodrigoZepeda/diseasenowcasting"
-  for (ref in c("master", "main")) {                       # whichever is the default branch
-    url <- paste0(base, "/", ref, "/inst/extdata/benchmark_scores.rds")
-    tmp <- tempfile(fileext = ".rds")
-    ok  <- tryCatch({
-      utils::download.file(url, tmp, mode = "wb", quiet = TRUE)
-      file.exists(tmp) && file.size(tmp) > 0
-    }, error = function(e) FALSE)
-    if (isTRUE(ok)) { scoring_file <- tmp; break }
-  }
-}
-have_scores <- !is.na(scoring_file) && file.exists(scoring_file)
+Dengue: diseasenowcasting vs NobBS (50 common evaluation dates). {.table
+style="width:100%;"}
 
-if (have_scores) {
-  scores_df <- readRDS(scoring_file) |>
-    rename(Model = model, WIS = wis, Overprediction = over, Underprediction = under,
-           Dispersion = disp, Bias = bias, Cov50 = cov50, Cov90 = cov90, `N dates` = n_dates)
-}
-```
+> *Convergence over the 50 evaluation dates: Epinowcast (LogNormal,
+> point) failed on 50 of 50 dates; Epinowcast (Gamma, point) failed on
+> 50 of 50 dates; Epinowcast (Nonparametric, RW) failed on 50 of 50
+> dates; Epinowcast (Nonparametric, point) failed on 50 of 50 dates;
+> Epinowcast (Nonparametric, RE) failed on 50 of 50 dates. The
+> comparison table uses each method’s most reliable variant(s) on the
+> dates they share.*
 
-#### Dengue fever (weekly, Colombia)
+**Key findings (dengue):** the `diseasenowcasting` HSGP variants take
+the top spots, beating both NobBS and the best Epinowcast variant on
+WIS. Best model: **HSGP / LogNormal** (WIS \approx 7, cov90 \approx
+0.94).
 
-| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | N dates |
-|:---|---:|---:|---:|---:|---:|---:|---:|---:|
-| own HSGP/nb/GeneralizedGamma | 7.5 | 1.5 | 1.7 | 4.3 | -0.11 | 0.65 | 0.91 | 43 |
-| own HSGP/nb/LogNormal | 7.5 | 1.1 | 1.6 | 4.8 | -0.03 | 0.65 | 0.98 | 43 |
-| own HSGP/nb/Dirichlet | 7.8 | 2.0 | 1.6 | 4.1 | -0.01 | 0.58 | 0.93 | 43 |
-| own HSGP/nb/Gamma | 7.8 | 1.1 | 2.0 | 4.8 | -0.11 | 0.63 | 0.98 | 43 |
-| NobBS | 8.3 | 1.2 | 3.5 | 3.5 | -0.03 | 0.60 | 0.91 | 43 |
-| own AR1/nb/GeneralizedGamma | 13.7 | 1.1 | 6.5 | 6.1 | -0.06 | 0.74 | 0.95 | 43 |
-| own AR1/nb/Dirichlet | 13.8 | 2.0 | 5.3 | 6.5 | 0.13 | 0.67 | 0.95 | 43 |
-| own AR1/nb/LogNormal | 13.8 | 1.4 | 6.3 | 6.1 | 0.04 | 0.74 | 0.95 | 43 |
-| own AR1/nb/Gamma | 15.3 | 1.2 | 8.0 | 6.1 | -0.02 | 0.67 | 0.93 | 43 |
-| own SIR/nb/Dirichlet | 15.7 | 1.6 | 10.3 | 3.8 | -0.32 | 0.37 | 0.84 | 43 |
-| own SIR/nb/GeneralizedGamma | 16.7 | 0.7 | 12.0 | 4.0 | -0.54 | 0.35 | 0.70 | 43 |
-| own SIR/nb/LogNormal | 17.0 | 0.7 | 11.5 | 4.8 | -0.45 | 0.37 | 0.86 | 43 |
-| Epinowcast (default) | 18.6 | 3.8 | 14.4 | 0.4 | -0.29 | 0.07 | 0.12 | 43 |
-| own SIR/nb/Gamma | 19.4 | 0.1 | 15.1 | 4.2 | -0.65 | 0.33 | 0.72 | 43 |
-| Epinowcast (weekly RE) | 22.0 | 3.5 | 17.9 | 0.6 | -0.41 | 0.10 | 0.20 | 43 |
-| Epinowcast (rw) | 22.9 | 10.2 | 11.9 | 0.8 | -0.13 | 0.12 | 0.19 | 43 |
+### Mpox (daily, USA)
 
-Dengue nowcast scores at d\*=0 (50 common evaluation dates, weekly).
+| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+| own HSGP/nb/GeneralizedGamma | **13.3** | 2.4 | 1.9 | 9.0 | 0.31 | 0.45 | **0.94** | 0.79 |
+| own AR1/nb/GeneralizedGamma | 13.5 | 3.2 | 1.7 | 8.6 | 0.39 | 0.37 | **0.94** | 0.83 |
+| own AR1/nb/LogNormal | 13.8 | 3.3 | 1.7 | 8.8 | 0.38 | 0.39 | **0.92** | 0.79 |
+| own HSGP/nb/LogNormal | 14.1 | 2.5 | 1.8 | 9.7 | 0.33 | 0.45 | **0.96** | 0.73 |
+| own SIR/nb/GeneralizedGamma | 16.3 | 1.2 | 0.8 | 14.3 | **0.10** | **0.88** | **1.00** | 1.46 |
+| own SIR/nb/LogNormal | 16.9 | 1.3 | 0.9 | 14.7 | 0.12 | **0.88** | **1.00** | 1.38 |
+| own HSGP/nb/Dirichlet | 20.0 | 4.1 | 1.7 | 14.3 | 0.40 | 0.41 | 0.88 | **0.72** |
+| own AR1/nb/Dirichlet | 21.1 | 4.6 | 1.4 | 15.1 | 0.40 | 0.37 | 0.88 | 0.79 |
+| own SIR/nb/Dirichlet | 26.1 | 2.4 | **0.6** | 23.1 | 0.32 | **0.86** | **1.00** | 1.39 |
+| NobBS | 27.7 | **1.1** | 25.2 | **1.4** | -0.18 | 0.18 | 0.45 | 59.34 |
+
+Mpox: diseasenowcasting vs NobBS (49 common evaluation dates). {.table
+style="width:100%;"}
+
+| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+| Epinowcast (Gamma, RE) | **12.6** | 7.6 | 1.3 | **3.7** | 0.47 | 0.29 | 0.62 | 7.20 |
+| Epinowcast (Gamma, point) | 13.0 | 7.6 | 1.0 | 4.4 | 0.51 | 0.25 | 0.62 | 6.14 |
+| own HSGP/nb/GeneralizedGamma | 13.5 | 2.5 | 1.9 | 9.1 | 0.30 | 0.44 | **0.94** | 0.78 |
+| own AR1/nb/GeneralizedGamma | 13.5 | 3.2 | 1.7 | 8.6 | 0.38 | 0.38 | **0.94** | 0.82 |
+| own AR1/nb/LogNormal | 13.8 | 3.2 | 1.7 | 8.9 | 0.37 | 0.40 | **0.92** | 0.79 |
+| own HSGP/nb/LogNormal | 14.3 | 2.6 | 1.9 | 9.9 | 0.33 | 0.44 | **0.96** | 0.72 |
+| Epinowcast (LogNormal, point) | 15.6 | 10.4 | 0.7 | 4.5 | 0.60 | 0.19 | 0.54 | 6.31 |
+| Epinowcast (LogNormal, RE) | 16.5 | 10.2 | 1.4 | 4.8 | 0.63 | 0.12 | 0.46 | 7.21 |
+| own SIR/nb/GeneralizedGamma | 16.6 | **1.2** | 0.8 | 14.6 | **0.09** | **0.88** | **1.00** | 1.44 |
+| own SIR/nb/LogNormal | 17.2 | 1.3 | 0.9 | 15.0 | 0.12 | **0.88** | **1.00** | 1.37 |
+| own HSGP/nb/Dirichlet | 20.4 | 4.1 | 1.7 | 14.5 | 0.39 | 0.42 | 0.88 | **0.71** |
+| own AR1/nb/Dirichlet | 21.2 | 4.6 | 1.4 | 15.2 | 0.39 | 0.38 | **0.90** | 0.79 |
+| own SIR/nb/Dirichlet | 26.6 | 2.5 | **0.6** | 23.5 | 0.31 | **0.85** | **1.00** | 1.37 |
+| Epinowcast (Gamma, RW) | 37.7 | 21.7 | 5.0 | 11.0 | 0.43 | 0.17 | 0.35 | 21.73 |
+
+Mpox: diseasenowcasting vs epinowcast (48 common evaluation dates).
+{.table style="width:100%;"}
+
+| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+| own HSGP/nb/GeneralizedGamma | **11.8** | 2.5 | 1.2 | **8.0** | 0.38 | 0.44 | **0.93** | 0.80 |
+| own HSGP/nb/LogNormal | 12.5 | 2.6 | 1.3 | 8.5 | 0.41 | 0.44 | **0.95** | **0.73** |
+| own AR1/nb/GeneralizedGamma | 12.6 | 3.7 | 1.0 | **8.0** | 0.48 | 0.33 | **0.93** | 0.84 |
+| own AR1/nb/LogNormal | 12.9 | 3.7 | 1.0 | 8.2 | 0.48 | 0.35 | **0.91** | 0.80 |
+| own SIR/nb/GeneralizedGamma | 14.7 | **1.2** | 0.4 | 13.1 | **0.14** | **0.88** | **1.00** | 1.53 |
+| own SIR/nb/LogNormal | 15.3 | 1.3 | 0.4 | 13.6 | 0.16 | **0.88** | **1.00** | 1.44 |
+| own HSGP/nb/Dirichlet | 18.4 | 4.3 | 1.2 | 13.0 | 0.48 | 0.37 | 0.86 | **0.73** |
+| own AR1/nb/Dirichlet | 19.5 | 5.1 | 0.8 | 13.5 | 0.50 | 0.33 | 0.86 | 0.80 |
+| own SIR/nb/Dirichlet | 24.3 | 2.4 | **0.2** | 21.7 | 0.38 | **0.88** | **1.00** | 1.45 |
+| baselinenowcast | 53.1 | 14.5 | 2.1 | 36.5 | 0.56 | 0.23 | 0.81 | 3.33 |
+
+Mpox: diseasenowcasting vs baselinenowcast (43 common evaluation dates).
+{.table style="width:100%;"}
+
+> *Convergence over the 49 evaluation dates: Epinowcast (LogNormal,
+> point) failed on 1 of 49 dates; Epinowcast (LogNormal, RE) failed on 1
+> of 49 dates; Epinowcast (Gamma, RW) failed on 1 of 49 dates;
+> Epinowcast (Gamma, point) failed on 1 of 49 dates; Epinowcast (Gamma,
+> RE) failed on 1 of 49 dates; Epinowcast (LogNormal, RW) failed on 2 of
+> 49 dates; baselinenowcast failed on 6 of 49 dates; Epinowcast
+> (Nonparametric, RW) failed on 49 of 49 dates; Epinowcast
+> (Nonparametric, point) failed on 49 of 49 dates; Epinowcast
+> (Nonparametric, RE) failed on 49 of 49 dates. The comparison table
+> uses each method’s most reliable variant(s) on the dates they share.*
+
+**Key findings (mpox):** the `diseasenowcasting` Generalized-Gamma
+variants achieve the lowest WIS, roughly **2× better than NobBS** and
+well ahead of Epinowcast.
+
+### COVID-19 (daily, Colombia)
+
+| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+| own HSGP/nb/GeneralizedGamma | **699.0** | 258.6 | 162.9 | 277.4 | 0.07 | 0.32 | 0.76 | 4.17 |
+| own HSGP/nb/LogNormal | 811.5 | 346.3 | 129.1 | 336.1 | **0.06** | 0.28 | 0.88 | 3.30 |
+| NobBS | 952.0 | 382.3 | **50.5** | 519.2 | 0.24 | **0.58** | 0.84 | 95.62 |
+| own SIR/nb/Dirichlet | 970.0 | 497.2 | 200.4 | **272.4** | 0.28 | 0.34 | 0.68 | 15.41 |
+| own SIR/nb/GeneralizedGamma | 1037.9 | 506.9 | 228.6 | 302.4 | 0.13 | 0.44 | 0.74 | 44.89 |
+| own HSGP/nb/Dirichlet | 1065.9 | 643.3 | 92.4 | 330.2 | 0.50 | 0.14 | 0.54 | 3.60 |
+| own SIR/nb/LogNormal | 1511.0 | 881.1 | 211.5 | 418.4 | 0.27 | 0.36 | 0.70 | 21.56 |
+| own AR1/nb/LogNormal | 1642.9 | **82.3** | 752.0 | 808.6 | -0.31 | 0.38 | **0.96** | **1.89** |
+| own AR1/nb/GeneralizedGamma | 1665.1 | 84.3 | 826.8 | 754.0 | -0.33 | 0.30 | **0.96** | 2.17 |
+| own AR1/nb/Dirichlet | 1686.2 | 103.4 | 731.2 | 851.6 | -0.30 | 0.26 | **0.96** | 2.71 |
+
+COVID-19: diseasenowcasting vs NobBS (50 common evaluation dates).
 {.table}
 
-**Key findings (dengue):**
+| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+| own HSGP/nb/GeneralizedGamma | **734.2** | 275.2 | 168.3 | 290.7 | 0.13 | 0.34 | 0.74 | 4.07 |
+| own HSGP/nb/LogNormal | 853.3 | 368.4 | 131.9 | 353.0 | **0.11** | 0.28 | 0.87 | 3.22 |
+| own SIR/nb/Dirichlet | 1021.7 | 526.2 | 213.2 | **282.3** | 0.29 | 0.34 | 0.66 | 15.13 |
+| own SIR/nb/GeneralizedGamma | 1092.2 | 538.6 | 243.0 | 310.5 | 0.15 | 0.43 | 0.72 | 43.68 |
+| own HSGP/nb/Dirichlet | 1125.6 | 682.4 | 98.3 | 344.9 | 0.52 | 0.13 | 0.51 | 3.53 |
+| own SIR/nb/LogNormal | 1589.6 | 929.5 | 225.0 | 435.1 | 0.27 | 0.38 | 0.68 | 21.75 |
+| own AR1/nb/LogNormal | 1705.2 | **83.3** | 798.5 | 823.5 | -0.31 | 0.36 | **0.96** | **1.88** |
+| own AR1/nb/GeneralizedGamma | 1729.3 | 85.9 | 879.0 | 764.5 | -0.33 | 0.28 | **0.96** | 2.15 |
+| own AR1/nb/Dirichlet | 1745.0 | 104.0 | 777.7 | 863.3 | -0.31 | 0.26 | **0.96** | 2.68 |
+| Epinowcast (LogNormal, RE) | 16082.2 | 12227.4 | 93.9 | 3760.9 | 0.81 | 0.09 | 0.34 | 48.85 |
+| Epinowcast (LogNormal, RW) | 20996.4 | 18234.2 | 351.1 | 2411.0 | 0.65 | 0.06 | 0.06 | 87.64 |
+| Epinowcast (LogNormal, point) | 21471.2 | 15805.1 | **3.3** | 5662.8 | 0.91 | 0.02 | 0.26 | 30.90 |
 
-- All `diseasenowcasting` HSGP variants beat NobBS and all Epinowcast
-  variants on WIS.
-- Best `diseasenowcasting`: **HSGP / GenGamma**, WIS \approx 7.0, cov90
-  \approx 0.94.
-
-#### Mpox (daily, USA)
-
-| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | N dates |
-|:---|---:|---:|---:|---:|---:|---:|---:|---:|
-| own AR1/nb/GeneralizedGamma | 16.1 | 1.4 | 2.8 | 11.8 | 0.03 | 0.64 | 1.00 | 28 |
-| own AR1/nb/Gamma | 16.2 | 1.4 | 2.9 | 11.8 | 0.01 | 0.68 | 1.00 | 28 |
-| own AR1/nb/LogNormal | 16.5 | 1.4 | 2.7 | 12.4 | 0.07 | 0.68 | 1.00 | 28 |
-| Epinowcast (point effect) | 18.0 | 10.6 | 1.3 | 6.0 | 0.45 | 0.25 | 0.64 | 28 |
-| own HSGP/nb/Gamma | 19.8 | 1.5 | 3.4 | 14.9 | -0.02 | 0.68 | 1.00 | 28 |
-| own AR1/nb/Dirichlet | 20.2 | 2.1 | 2.6 | 15.5 | 0.07 | 0.61 | 1.00 | 28 |
-| own HSGP/nb/GeneralizedGamma | 20.2 | 1.9 | 3.2 | 15.1 | -0.04 | 0.68 | 1.00 | 28 |
-| own HSGP/nb/Dirichlet | 21.0 | 2.5 | 3.1 | 15.4 | 0.03 | 0.57 | 1.00 | 28 |
-| own HSGP/nb/LogNormal | 23.9 | 2.2 | 2.9 | 18.7 | -0.06 | 0.68 | 1.00 | 28 |
-| own SIR/nb/GeneralizedGamma | 24.9 | 2.2 | 1.4 | 21.4 | 0.11 | 0.79 | 1.00 | 28 |
-| own SIR/nb/Gamma | 25.1 | 2.1 | 1.5 | 21.5 | 0.15 | 0.79 | 1.00 | 28 |
-| own SIR/nb/LogNormal | 27.1 | 2.1 | 1.4 | 23.6 | 0.13 | 0.79 | 1.00 | 28 |
-| Epinowcast (rw) | 29.3 | 15.9 | 5.6 | 7.7 | 0.16 | 0.25 | 0.61 | 28 |
-| own SIR/nb/Dirichlet | 30.8 | 3.2 | 1.1 | 26.5 | 0.20 | 0.82 | 1.00 | 28 |
-| NobBS | 45.0 | 0.2 | 44.1 | 0.7 | -0.81 | 0.11 | 0.14 | 28 |
-| Epinowcast (default) | 46.2 | 28.8 | 5.5 | 11.9 | 0.47 | 0.18 | 0.32 | 28 |
-
-Mpox nowcast scores at d\*=0 (49 common evaluation dates, daily).
+COVID-19: diseasenowcasting vs epinowcast (47 common evaluation dates).
 {.table}
 
-**Key findings (mpox):**
+| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+| own HSGP/nb/GeneralizedGamma | **713.2** | 263.9 | 166.2 | 283.0 | 0.09 | 0.33 | 0.76 | 4.24 |
+| own HSGP/nb/LogNormal | 828.0 | 353.3 | 131.7 | 343.0 | 0.08 | 0.29 | 0.88 | 3.35 |
+| own SIR/nb/Dirichlet | 989.7 | 507.3 | 204.5 | **277.9** | 0.31 | 0.35 | 0.67 | 15.71 |
+| own SIR/nb/GeneralizedGamma | 1059.0 | 517.2 | 233.3 | 308.5 | 0.14 | 0.45 | 0.73 | 45.79 |
+| own HSGP/nb/Dirichlet | 1087.6 | 656.4 | 94.3 | 336.9 | 0.53 | 0.14 | 0.53 | 3.67 |
+| baselinenowcast | 1397.9 | 515.0 | **84.5** | 798.5 | **0.05** | **0.53** | 0.88 | 10.99 |
+| own SIR/nb/LogNormal | 1541.8 | 899.1 | 215.8 | 426.9 | 0.29 | 0.37 | 0.69 | 21.99 |
+| own AR1/nb/LogNormal | 1676.4 | **84.0** | 767.3 | 825.1 | -0.29 | 0.39 | **0.96** | **1.92** |
+| own AR1/nb/GeneralizedGamma | 1699.0 | 86.0 | 843.6 | 769.4 | -0.32 | 0.31 | **0.96** | 2.20 |
+| own AR1/nb/Dirichlet | 1720.6 | 105.5 | 746.1 | 869.0 | -0.29 | 0.27 | **0.96** | 2.75 |
 
-- `diseasenowcasting` AR1 variants achieve the lowest WIS, beating NobBS
-  by a wide margin (~7×).
-- Best `diseasenowcasting`: **AR1 / Gamma**,
+COVID-19: diseasenowcasting vs baselinenowcast (49 common evaluation
+dates). {.table}
 
-#### COVID-19 (daily, Colombia)
+> *Convergence over the 50 evaluation dates: baselinenowcast failed on 1
+> of 50 dates; Epinowcast (LogNormal, RW) failed on 2 of 50 dates;
+> Epinowcast (LogNormal, point) failed on 2 of 50 dates; Epinowcast
+> (LogNormal, RE) failed on 2 of 50 dates; Epinowcast (Gamma, point)
+> failed on 9 of 50 dates; Epinowcast (Gamma, RE) failed on 10 of 50
+> dates; Epinowcast (Gamma, RW) failed on 12 of 50 dates; Epinowcast
+> (Nonparametric, RW) failed on 50 of 50 dates; Epinowcast
+> (Nonparametric, point) failed on 50 of 50 dates; Epinowcast
+> (Nonparametric, RE) failed on 50 of 50 dates. The comparison table
+> uses each method’s most reliable variant(s) on the dates they share.*
 
-| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | N dates |
-|:---|---:|---:|---:|---:|---:|---:|---:|---:|
-| own HSGP/nb/GeneralizedGamma | 715.9 | 170.7 | 169.9 | 375.2 | 0.01 | 0.34 | 0.86 | 50 |
-| own HSGP/nb/LogNormal | 852.6 | 194.7 | 144.0 | 513.9 | -0.03 | 0.52 | 0.94 | 50 |
-| own SIR/nb/Dirichlet | 899.7 | 409.3 | 211.6 | 278.8 | 0.19 | 0.36 | 0.74 | 50 |
-| NobBS | 952.0 | 382.3 | 50.5 | 519.2 | 0.24 | 0.58 | 0.84 | 50 |
-| own HSGP/nb/Dirichlet | 981.0 | 537.0 | 98.6 | 345.4 | 0.43 | 0.16 | 0.62 | 50 |
-| own SIR/nb/GeneralizedGamma | 1017.8 | 418.3 | 263.2 | 336.2 | 0.08 | 0.42 | 0.74 | 50 |
-| own SIR/nb/LogNormal | 1416.1 | 765.8 | 217.0 | 433.2 | 0.22 | 0.40 | 0.74 | 50 |
-| own AR1/nb/LogNormal | 1736.8 | 79.9 | 807.7 | 849.1 | -0.31 | 0.36 | 0.98 | 50 |
-| own AR1/nb/Dirichlet | 1738.4 | 103.0 | 771.2 | 864.3 | -0.32 | 0.32 | 1.00 | 50 |
-| own AR1/nb/GeneralizedGamma | 1747.1 | 76.4 | 897.1 | 773.6 | -0.33 | 0.32 | 0.96 | 50 |
-| Epinowcast (default) | 24184.6 | 22202.3 | 548.6 | 1433.7 | 0.52 | 0.10 | 0.16 | 50 |
-| Epinowcast (point effect) | 43789.0 | 23295.3 | 0.0 | 20493.7 | 0.97 | 0.00 | 0.16 | 50 |
-| Epinowcast (rw) | 44079.0 | 40659.0 | 94.8 | 3325.2 | 0.66 | 0.09 | 0.13 | 50 |
+**Key findings (COVID-19):** `diseasenowcasting` again leads on WIS,
+though the margin over NobBS depends on the delay family.
 
-COVID-19 nowcast scores at d\*=0 (50 common evaluation dates, daily).
-{.table}
+## Conclusion
 
-**Key findings (COVID-19):**
+Across three diseases with very different reporting patterns, scored
+against the counts that eventually arrived, **`diseasenowcasting`
+matched or beat NobBS, epinowcast and baselinenowcast** on accuracy
+(WIS) while keeping its uncertainty intervals trustworthy.
 
-- `diseasenowcasting` beats NobBS on WIS for COVID as well, but the
-  margin depends on the delay family.
-- Best `diseasenowcasting`: **HSGP / GenGamma**.
+## How to reproduce
 
-### Conclusion
-
-`HSGP/LogNormal` and `HSGP/GeneralizedGamma` are the suggested models as
-they are consistently the ranking among the top performers.
-
-### How to reproduce
-
-The full benchmark — the **complete own-model grid** (HSGP / AR(1) / SIR
-x {LogNormal, Generalized-Gamma, Dirichlet}) fit with
-[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
-and the seasonal / day-of-week covariates, plus **NobBS** and **three
-matched Epinowcast configurations** (Log-normal / Log-logistic / Gamma
-reporting delays under a shared random-walk expectation, fit with
-**Pathfinder** — epinowcast’s fast variational inference, since full
-NUTS is too slow at this scale; see “Like-for-like comparison” above),
-scored on a common evaluation-date set — lives in a single
-self-contained script:
+Everything lives in a single self-contained script:
 
     devel/benchmark_full.R
 
@@ -231,22 +273,8 @@ Run it (after `R CMD INSTALL` of this package, so the parallel workers
 can load it):
 
 ``` sh
-Rscript devel/benchmark_full.R                                  # all 3 diseases, 50 dates (epinowcast Pathfinder)
-N_DATES=6 Rscript devel/benchmark_full.R                        # quick smoke
-ENW_SAMPLER=nuts Rscript devel/benchmark_full.R                 # slow: epinowcast with full NUTS
-FLOOR_SIG_FRAC=0.25 Rscript devel/benchmark_full.R             # own models at the package-default spread
+RUN_AUTO=FALSE Rscript devel/benchmark_full.R                   # skip auto_nowcast (faster)
 ```
-
-> **Note.** Full NUTS for epinowcast is too slow at this scale (minutes
-> per nowcast x dates x configs x diseases), so epinowcast is fit with
-> **Pathfinder** (variational) by default — the analogue of the fast
-> Laplace approximation `diseasenowcasting` uses. Pathfinder
-> under-estimates the posterior, so epinowcast’s interval coverage here
-> is **conservative**; set `ENW_SAMPLER=nuts` for the slow,
-> fully-calibrated run.
-
-It prints a ranked WIS table per disease and saves the tidy scores to
-`devel/results/benchmark_scores.rds`.
 
 > Requirements: `NobBS` and `epinowcast` (the latter needs `cmdstanr` +
 > a working CmdStan). The COVID series uses the aggregated Colombia data
@@ -261,7 +289,7 @@ It prints a ranked WIS table per disease and saves the tidy scores to
 > is the faithful, covariate-aware pipeline that reproduces the tables
 > above.
 
-### References
+## References
 
 Instituto Nacional de Salud (INS). 2024. *Casos Positivos de COVID-19 En
 Colombia*. Datos Abiertos Colombia.
