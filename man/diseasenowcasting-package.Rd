@@ -8,7 +8,7 @@
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-Implements Bayesian nowcasting models for incident disease cases using a censored point-process approach. The reporting delay is modelled directly as a stochastic process, jointly with the epidemic dynamics, via a censored likelihood. Inference uses RTMB (CppAD autodiff + Laplace approximation). Supports multiple epidemic models (HSGP, AR1, SIR), multiple delay families (LogNormal, GenGamma, Dirichlet), stratified data, extreme-delay detection, and backtesting.
+Implements Bayesian nowcasting models for incident disease cases using a censored point-process approach. The reporting delay is modelled directly as a stochastic process, jointly with the epidemic dynamics, via a censored likelihood. Inference uses RTMB (CppAD autodiff + Laplace approximation). Supports arbitrary epidemic models (including HSGP, AR1, SIR), arbitrary delay families (including LogNormal, GenGamma, Dirichlet), stratified data, extreme-delay detection, and backtesting.
 }
 \seealso{
 Useful links:

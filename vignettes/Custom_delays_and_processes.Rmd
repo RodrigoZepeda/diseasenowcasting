@@ -306,64 +306,61 @@ autoplot(nc_sir_custom)
 
 # 4. Advanced: A differential equations epidemic process
 
-> Here we give an example of a  continuous SIR ordinary differential equation with a [4th-order Runge–Kutta (RK4)](https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods) scheme and several sub-steps per day. 
+> Here we write the epidemic as a **continuous-time SIR ordinary differential equation** and let a proper solver integrate it. The [`RTMBode`](https://github.com/kaskr/RTMBode) package provides a [`deSolve`](https://cran.r-project.org/package=deSolve)-style `ode()` that is **differentiable through `RTMB`** (it supplies the adjoint), so there is no need to hand-roll an integrator such as Runge–Kutta.
 
 The SIR system is
 
 $$\frac{dS}{dt} = -\beta\,S\,I, \qquad \frac{dI}{dt} = \beta\,S\,I - \gamma\,I, \qquad \beta = \frac{R_0\,\gamma}{N},$$
 
-and the daily incidence is the number of new infections on that day — _i.e._ the drop in `S`. We advance the state with `substeps` (RK4 steps of size `dt = 1/substeps` per day) and accumulate the new infections. 
+and the daily incidence is the number of new infections within each day. We obtain it by adding a **cumulative-infection compartment** $C$ with $dC/dt = \beta\,S\,I$; the per-day incidence is then `diff(C)` across the day boundaries $0, 1, \dots, \texttt{max\_time}$.
 
-```{r sir-ode-fn}
+`RTMBode` is an optional dependency; install it from the kaskr r-universe:
+
+```r
+install.packages("RTMBode", repos = "https://kaskr.r-universe.dev")
+```
+
+```{r ode-available, include=FALSE}
+# RTMBode is a Suggests (non-CRAN) dependency, so the chunks below only run when
+# it is installed; otherwise the code is shown but not evaluated.
+has_rtmbode <- requireNamespace("RTMBode", quietly = TRUE)
+```
+
+```{r sir-ode-fn, eval = has_rtmbode}
 sir_ode_fn <- function(theta) {
-  #Assigning in a for loop a vector requires this:
-  `[<-` <- RTMB::ADoverload("[<-")           
-  
-  #We define R0, gamma and I0 as the parameters we are adjusting:
-  R0        <- exp(theta[1])   #Basic reproductive number
-  gamma     <- exp(theta[2])   #1 / infectious rate
-  I0        <- exp(theta[3])   #Initial infected
-  
-  #The total size of the population is constant:
-  N         <- 1e5
-  
-  #Initial values for S and I
-  S         <- N - I0
-  I         <- I0
-  
-  #Beta (for force of infection)
-  beta      <- R0 * gamma / N
-  
-  #RK-4 hyperparameters
-  substeps <- 4L      # 4 RK4 steps per day
-  dt       <- 1 / substeps              
-  
-  #Differential equation expressions
-  rhs_S <- function(S, I) -beta * S * I            # dS/dt
-  rhs_I <- function(S, I)  beta * S * I - gamma * I # dI/dt
+  #We define R0, gamma and I0 as the parameters we are adjusting (log scale,
+  #so they are always positive):
+  R0    <- exp(theta[1])   #Basic reproductive number
+  gamma <- exp(theta[2])   #Recovery rate (1 / infectious period)
+  I0    <- exp(theta[3])   #Initial infected
 
-  #Empty vector where we'll store the incidence. Has to be instantiated in RTMB
-  incidence <- numeric(max_time)
-  
-  #Loop throughout each date
-  for (t in seq_len(max_time)) {
-    new_today <- 0
-    #RK-4 steps for each day
-    for (k in seq_len(substeps)) {                 # RK4 integration within the day
-      k1S <- rhs_S(S, I);                       k1I <- rhs_I(S, I)
-      k2S <- rhs_S(S + dt/2*k1S, I + dt/2*k1I); k2I <- rhs_I(S + dt/2*k1S, I + dt/2*k1I)
-      k3S <- rhs_S(S + dt/2*k2S, I + dt/2*k2I); k3I <- rhs_I(S + dt/2*k2S, I + dt/2*k2I)
-      k4S <- rhs_S(S + dt*k3S, I + dt*k3I);     k4I <- rhs_I(S + dt*k3S, I + dt*k3I)
-      S_next <- S + dt/6 * (k1S + 2*k2S + 2*k3S + k4S)
-      I_next <- I + dt/6 * (k1I + 2*k2I + 2*k3I + k4I)
-      new_today <- new_today + (S - S_next)        # new infections this sub-step
-      S <- S_next; I <- I_next
-    }
-    
-    #Updated incidence
-    incidence[t] <- new_today
+  #The total population is constant; beta is the transmission rate:
+  N     <- 1e5
+  beta  <- R0 * gamma / N
+
+  #The SIR right-hand side, deSolve-style: a function of (time, state, parms)
+  #returning the derivatives. We add a compartment C that ACCUMULATES new
+  #infections, so the daily incidence is simply diff(C).
+  sir_rhs <- function(time, state, parms) {
+    with(as.list(c(state, parms)), {
+      infection <- beta * S * I
+      list(c(-infection,                # dS/dt
+              infection - gamma * I,    # dI/dt
+              infection))               # dC/dt  (cumulative infections)
+    })
   }
-  
+
+  #RTMBode::ode is a deSolve-compatible solver that is differentiable through
+  #RTMB (it supplies the adjoint), so we let it integrate the system instead of
+  #hand-rolling RK4. Solve at the day boundaries 0, 1, ..., max_time:
+  solution  <- RTMBode::ode(
+    y     = c(S = N - I0, I = I0, C = 0),
+    times = seq.int(0L, max_time),
+    func  = sir_rhs,
+    parms = c(beta = beta, gamma = gamma)
+  )
+  incidence <- diff(solution[, "C"])     # new infections within each day
+
   # log of pmax(incidence, 0), AD-safe, guarding log(0):
   matrix(log((incidence + abs(incidence)) * 0.5 + 1e-8), max_time, 1L)
 }
@@ -371,7 +368,7 @@ sir_ode_fn <- function(theta) {
 
 The wrapping and fitting are exactly as before:
 
-```{r sir-ode-fit, fig.height=8}
+```{r sir-ode-fit, fig.height=8, eval = has_rtmbode}
 sir_ode_epidemic <- custom_epidemic(
   intensity_fn = sir_ode_fn,
   priors       = list(normal_prior(log(1.5), 0.4),

@@ -1,10 +1,10 @@
 ---
-title: "Benchmark (diseasenowcasting vs NobBS and epinowcast)"
+title: "Benchmark (diseasenowcasting vs NobBS, epinowcast and baselinenowcast)"
 author: "diseasenowcasting team"
 output: rmarkdown::html_vignette
 bibliography: references.bib
 vignette: >
-  %\VignetteIndexEntry{Benchmark (diseasenowcasting vs NobBS and epinowcast)}
+  %\VignetteIndexEntry{Benchmark (diseasenowcasting vs NobBS, epinowcast and baselinenowcast)}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -21,190 +21,269 @@ knitr::opts_chunk$set(
 )
 ```
 
-# NOTE
 
-> The numbers here are from a previous iteration of the package we are working on updating. 
+> **NOTE:** THIS VIGNETTE IS UNDER DEVELOPMENT. 
 
 ## TL; DR
 
-We compared different datasets across distinct `diseasenowcasting` models as well as
-NobBS and epinowcast. The `HSGP/LogNormal` and `HSGP/GeneralizedGamma` are the suggested models as they are
-consistently the ranking among the top performers. 
+**Does `diseasenowcasting` actually work?** On three real outbreaks — dengue,
+mpox and COVID-19 — we asked each method to estimate the most recent, still-
+incomplete case counts, and then checked those estimates against the totals that
+*eventually* arrived. `diseasenowcasting` was **consistently as accurate as, and
+usually more accurate than**, three established nowcasting packages (NobBS,
+epinowcast and baselinenowcast). It was also consistently **faster** 
+
+> Its `HSGP/LogNormal` and `HSGP/GeneralizedGamma` models are the most reliable
+hence the ones we recommend. 
 
 
-## Overview
+## What this benchmark does 
 
-This vignette presents a systematic benchmark comparison of `diseasenowcasting` against two widely
-used nowcasting methods: [**NobBS**](https://cran.r-project.org/web/packages/NobBS/index.html)  and 
-[**Epinowcast**](https://github.com/epinowcast/epinowcast).  We compare across three real-world disease surveillance datasets:
+A nowcast estimates **what the recent case counts will turn out to be** once all
+the delayed reports have come in. This benckmark:
 
-| Dataset | Disease | Temporal unit | Source |
-|---------|---------|---------------|--------|
-| `denguedat` (tbl.now) | Dengue fever | Weekly | [@mcgough2020nowcasting] |
-| `mpoxdat` (tbl.now)   | Mpox | Daily | [@rohrer2025nowcasting] |
-| `covid_colombia` (diseasenowcasting) | COVID-19 | Daily | [@colombia] |
+1. Picks a past date and hides everything reported after it (so the method only
+   sees what a real-time analyst would have seen).
+2. Asks each method to nowcast the most recent date.
+3. Compares that nowcast to the count that **eventually** got reported.
+4. Repeats over **50 dates per disease** and summarises.
 
-The comparison uses **50 evaluation dates** per disease, selected at random. Forecasts are scored for a nowcast at a 0 delay, that is, the newest event time 
-at each evaluation date. 
+We do this for three diseases with different reporting behaviours, and against
+three widely used tools:
+
+| Disease | Data | Time unit | Compared against |
+|---|---|---|---|
+| Dengue fever | `denguedat` (Puerto Rico) [@mcgough2020nowcasting] | Weekly | NobBS, epinowcast, baselinenowcast |
+| Mpox | `mpoxdat` (USA) [@rohrer2025nowcasting] | Daily | NobBS, epinowcast, baselinenowcast |
+| COVID-19 | `covid_colombia` [@colombia] | Daily | NobBS, epinowcast, baselinenowcast |
+
+[**NobBS**](https://cran.r-project.org/web/packages/NobBS/index.html),
+[**epinowcast**](https://github.com/epinowcast/epinowcast) and
+[**baselinenowcast**](https://github.com/epinowcast/baselinenowcast) are the 
+established nowcasting packages we compare against. 
+
+### How to read the score tables
+
+Each method gives a prediction interval for the eventual count. We score it 
+with the **Weighted Interval Score (WIS)**, one of the standard metrics in nowcasting and
+forecasting challenges.
+
+> The one thing to remember: **lower WIS is better.** 
+
+We also report **coverage**: how often the truth actually falls inside the stated
+prediction intervals. A well-calibrated method's **90% interval should contain the truth
+about 90% of the time**. 
 
 
-## Scoring methodology
+### How was it compared
 
-All methods are scored using the **Weighted Interval Score (WIS)**.  WIS decomposes
-into:
+> **Note**  Each method is scored only on the dates where it *and*
+`diseasenowcasting` both produced a nowcast (a "common date set"). A package
+that occasionally fails to fit therefore only shrinks *its own* comparison, never
+the whole benchmark. A note under each table reports who failed and how
+often. Where a package offers several options (e.g. epinowcast's reporting-
+delay choices), we show the ones that fit most reliably.
 
-- **Overprediction** — penalty for predicted intervals that are too high relative to the truth.
-- **Underprediction** — penalty for predicted intervals that are too low.
-- **Dispersion** — penalty for uncertainty intervals that are too wide.
+We tried **epinowcast** with the Log-normal, Log-logistic and Gamma delay distributions, 
+plus a **non-parametric** delay. We utilized the `Pathfinder` option on
+**epinowcast** as **sampling** was too slow for a realistic comparison. 
 
-Coverage at 50% and 90% credible intervals is also reported.  A good model should
-have empirical coverage close to the corresponding level.
-
-All comparisons are performed on a **common date set** — dates where both `diseasenowcasting` and the
-comparison method have produced a valid nowcast — ensuring fairness.
-
-### Like-for-like comparison
-
-To compare *methods* rather than *software defaults*, each package is configured
-with **matched model components and the same inference quality**:
-
-- **Reporting-delay family** — epinowcast is fit with Log-normal, Log-logistic
-  and Gamma delays (`enw_reference(distribution = ...)`), mirroring
-  `diseasenowcasting`'s Log-normal / Generalized-Gamma / Dirichlet families,
-  rather than being left at its default delay.
-- **Expectation process** — a random walk (`~ 1 + rw(day)`), the closest
-  epinowcast analogue of `diseasenowcasting`'s AR(1) latent process, held fixed
-  so the comparison isolates the reporting-delay choice.
-- **Inference** — full NUTS (epinowcast's default) is the gold standard, but it
-  is **prohibitively slow** at this benchmark's scale (minutes per nowcast, across
-  many dates x configs x diseases). So both packages are run with their *fast
-  approximate* inference: `diseasenowcasting` with the Laplace approximation and
-  epinowcast with **Pathfinder** (variational) — a deliberately like-for-like
-  pairing of approximate methods. Caveat: Pathfinder under-estimates the
-  posterior more aggressively than Laplace, so epinowcast's interval **coverage
-  reported here is conservative** (a lower bound). Set `ENW_SAMPLER=nuts` to fit
-  it with full MCMC if runtime allows.
-
-Some components have no exact cross-package analogue (epinowcast has no SIR
-mechanistic process or Generalized-Gamma delay; `diseasenowcasting` has no
-identical GP-on-expectation), so those models are reported as method-specific
-rather than forced into a false pairing.
+**baselinenowcast and NobBS packages are run as designed.** They
+are run _as is_. 
 
 
 ## Results
 
-You can access the results from inside the package:
+The pre-computed scores ship with the package, so these tables reproduce exactly.
 
-```{r load-data}
+```{r load-data, echo = FALSE}
 library(diseasenowcasting)
 library(dplyr)
 
-# Pre-computed benchmark results (50 evaluation dates per disease), shipped in
-# inst/extdata.  Look in the installed package first and fall back to the source
-# tree, so the vignette also knits before the package is installed (e.g. pkgdown
-# or R CMD build).
-candidates <- c(
-  system.file("extdata", "benchmark_scores.rds", package = "diseasenowcasting"),
-  "../inst/extdata/benchmark_scores.rds",
-  file.path("inst", "extdata", "benchmark_scores.rds")
-)
-scoring_file <- candidates[nzchar(candidates) & file.exists(candidates)][1]
-
-# Not found locally (e.g. on the pkgdown website)? Download from the public repo.
-if (is.na(scoring_file)) {
+# Locate a pre-computed result file: installed package -> source tree -> repo.
+# This lets the vignette knit before the package is installed (pkgdown, R CMD
+# build) and on the website.
+find_rds <- function(name) {
+  local <- c(system.file("extdata", name, package = "diseasenowcasting"),
+             file.path("../inst/extdata", name), file.path("inst", "extdata", name))
+  local <- local[nzchar(local) & file.exists(local)]
+  if (length(local)) return(local[1])
   base <- "https://raw.githubusercontent.com/RodrigoZepeda/diseasenowcasting"
-  for (ref in c("master", "main")) {                       # whichever is the default branch
-    url <- paste0(base, "/", ref, "/inst/extdata/benchmark_scores.rds")
+  for (ref in c("master", "main")) {
     tmp <- tempfile(fileext = ".rds")
     ok  <- tryCatch({
-      utils::download.file(url, tmp, mode = "wb", quiet = TRUE)
+      utils::download.file(paste0(base, "/", ref, "/inst/extdata/", name),
+                           tmp, mode = "wb", quiet = TRUE)
       file.exists(tmp) && file.size(tmp) > 0
     }, error = function(e) FALSE)
-    if (isTRUE(ok)) { scoring_file <- tmp; break }
+    if (isTRUE(ok)) return(tmp)
   }
+  NA_character_
 }
-have_scores <- !is.na(scoring_file) && file.exists(scoring_file)
 
-if (have_scores) {
-  scores_df <- readRDS(scoring_file) |>
-    rename(Model = model, WIS = wis, Overprediction = over, Underprediction = under,
-           Dispersion = disp, Bias = bias, Cov50 = cov50, Cov90 = cov90, `N dates` = n_dates)
+scores_file <- find_rds("benchmark_scores.rds")
+conv_file   <- find_rds("benchmark_convergence.rds")
+scores_df   <- if (!is.na(scores_file)) readRDS(scores_file) else NULL
+conv_df     <- if (!is.na(conv_file))   readRDS(conv_file)   else NULL
+
+# Defensive: if a run ever included auto_nowcast() (automatic model selection),
+# drop it -- it is not part of these head-to-head accuracy tables.
+if (!is.null(scores_df)) scores_df <- scores_df[scores_df$model != "own auto_nowcast", , drop = FALSE]
+if (!is.null(conv_df))   conv_df   <- conv_df[conv_df$model   != "own auto_nowcast", , drop = FALSE]
+
+# The vignette expects the per-view schema (a `view` column).
+have_scores <- !is.null(scores_df) && "view" %in% names(scores_df)
+```
+
+```{r table-helpers, echo = FALSE}
+# Render one scored view (own / nobbs / epinowcast / baselinenowcast) for a
+# disease as a kable, captioned with the number of common evaluation dates.  Each
+# value column is formatted to a string and the BEST cell(s) are wrapped in
+# <strong> so they render bold (escape = FALSE).  Which cells are "best":
+#   * WIS / Overprediction / Underprediction / Dispersion / Time: ALL rows tied
+#     for the lowest, compared at the DISPLAYED precision (so two rows showing the
+#     same rounded number are both bolded -- not just one);
+#   * Bias: all rows tied for closest to 0 (at two decimals);
+#   * Cov50 / Cov90: every row that is calibrated-or-conservative, i.e. AT OR
+#     ABOVE the nominal level (>= 0.50 / >= 0.90).
+view_table <- function(dis, view_name, caption) {
+  tab <- scores_df[scores_df$disease == dis & scores_df$view %in% view_name, , drop = FALSE]
+  tab <- tab |> dplyr::distinct(model, .keep_all = TRUE) |> dplyr::arrange(wis)
+  if (nrow(tab) == 0) return(invisible(NULL))
+  n_dates <- tab$common_dates[1]
+
+  tied_low <- function(x, digits)                                   # all tied for the min
+    which(round(x, digits) == round(min(x, na.rm = TRUE), digits))
+  tied_0   <- function(x)                                           # all tied for closest to 0
+    which(round(abs(x), 2) == round(min(abs(x), na.rm = TRUE), 2))
+  at_least <- function(x, level) which(x >= level - 1e-9)           # at or above nominal
+  col <- function(x, digits, best) {                               # format + bold the best cells
+    s <- formatC(round(x, digits) + 0, format = "f", digits = digits)  # +0 drops "-0.00"
+    s[best] <- paste0("<strong>", s[best], "</strong>")
+    s
+  }
+
+  out <- data.frame(
+    Model           = tab$model,
+    WIS             = col(tab$wis,   1, tied_low(tab$wis,   1)),
+    Overprediction  = col(tab$over,  1, tied_low(tab$over,  1)),
+    Underprediction = col(tab$under, 1, tied_low(tab$under, 1)),
+    Dispersion      = col(tab$disp,  1, tied_low(tab$disp,  1)),
+    Bias            = col(tab$bias,  2, tied_0(tab$bias)),
+    Cov50           = col(tab$cov50, 2, at_least(tab$cov50, 0.50)),
+    Cov90           = col(tab$cov90, 2, at_least(tab$cov90, 0.90)),
+    check.names = FALSE, stringsAsFactors = FALSE)
+  if ("secs" %in% names(tab))
+    out[["Time (s)"]] <- col(tab$secs, 2, tied_low(tab$secs, 2))
+
+  knitr::kable(out, row.names = FALSE, escape = FALSE,
+               caption = sprintf("%s (%d common evaluation date%s).",
+                                 caption, n_dates, if (n_dates == 1) "" else "s"))
+}
+
+# A one-line convergence footnote for a disease: which competitors failed to
+# converge, and on how many of the evaluation dates.
+conv_note <- function(dis) {
+  if (is.null(conv_df)) return("")
+  bad <- conv_df[conv_df$disease == dis & conv_df$failed > 0, , drop = FALSE]
+  if (nrow(bad) == 0) return("")
+  items <- sprintf("%s failed on %d of %d dates", bad$model, bad$failed, bad$total)
+  paste0("> _Convergence over the ", bad$total[1], " evaluation dates: ",
+         paste(items, collapse = "; "),
+         ". The comparison table uses each method's most reliable variant(s) on the dates they share._")
 }
 ```
 
 ```{r no-scores-note, eval = !have_scores, echo = FALSE, results = "asis"}
-cat("> _The pre-computed benchmark scores (`inst/extdata/benchmark_scores.rds`)",
-    "were not found in this build, so the score tables below are omitted._\n")
+cat("> _The pre-computed benchmark scores were not found (or are in an older",
+    "format) in this build, so the score tables below are omitted. Regenerate",
+    "them with `devel/benchmark_full.R` and copy `devel/results/*.rds` into",
+    "`inst/extdata/`._\n")
 ```
+
+For each disease there are four tables: (1) **every `diseasenowcasting` model**,
+so you can see the spread; (2) **`diseasenowcasting` vs NobBS**; (3)
+**`diseasenowcasting` vs epinowcast**; and (4) **`diseasenowcasting` vs
+baselinenowcast**. In every table, **lower WIS = more accurate**, and you want
+coverage close to its stated level (0.90 for `Cov90`). The footnote under each
+table notes any competitor that failed to fit on some dates.
+
+
+## Nobbs
 
 ### Dengue fever (weekly, Colombia)
 
-```{r dengue-table, echo = FALSE, eval = have_scores}
-#Read the dengue tab
-dengue_tab <- scores_df |>
-  filter(disease == "dengue") |> 
-  select(Model, WIS, Overprediction, Underprediction, Dispersion, Bias,
-         Cov50, Cov90, `N dates`)
-
-
-knitr::kable(dengue_tab, digits = 2, row.names = FALSE,
-             caption = "Dengue nowcast scores at d*=0 (50 common evaluation dates, weekly).")
+```{r dengue-nobbs, echo = FALSE, eval = have_scores}
+view_table("dengue", c("nobbs","epinowcast","baselinenowcast"), "Dengue: diseasenowcasting vs NobBS")
 ```
 
-**Key findings (dengue):**
 
-- All `diseasenowcasting` HSGP variants beat NobBS and all Epinowcast variants on WIS.
-- Best `diseasenowcasting`: **HSGP / GenGamma**, WIS $\approx$ 7.0, cov90 $\approx$ 0.94.
+```{r dengue-note, echo = FALSE, eval = have_scores, results = "asis"}
+cat(conv_note("dengue"))
+```
+
+**Key findings (dengue):** the `diseasenowcasting` HSGP variants take the top
+spots, beating both NobBS and the best Epinowcast variant on WIS. Best model:
+**HSGP / LogNormal** (WIS $\approx$ 7, cov90 $\approx$ 0.94).
 
 ### Mpox (daily, USA)
 
-```{r mpox-table, echo = FALSE, eval = have_scores}
-mpox_tab <- scores_df |>
-  filter(disease == "mpox") |> 
-  select(Model, WIS, Overprediction, Underprediction, Dispersion, Bias,
-         Cov50, Cov90, `N dates`)
 
-knitr::kable(mpox_tab, digits = 2, row.names = FALSE,
-             caption = "Mpox nowcast scores at d*=0 (49 common evaluation dates, daily).")
+```{r mpox-nobbs, echo = FALSE, eval = have_scores}
+view_table("mpox", "nobbs", "Mpox: diseasenowcasting vs NobBS")
 ```
 
-**Key findings (mpox):**
+```{r mpox-enw, echo = FALSE, eval = have_scores}
+view_table("mpox", "epinowcast",
+           "Mpox: diseasenowcasting vs epinowcast")
+```
 
-- `diseasenowcasting` AR1 variants achieve the lowest WIS, beating NobBS by a wide margin (~7×).
-- Best `diseasenowcasting`: **AR1 / Gamma**, 
+```{r mpox-base, echo = FALSE, eval = have_scores}
+view_table("mpox", "baselinenowcast",
+           "Mpox: diseasenowcasting vs baselinenowcast")
+```
+
+```{r mpox-note, echo = FALSE, eval = have_scores, results = "asis"}
+cat(conv_note("mpox"))
+```
+
+**Key findings (mpox):** the `diseasenowcasting` Generalized-Gamma variants
+achieve the lowest WIS, roughly **2× better than NobBS** and well ahead of
+Epinowcast.
 
 ### COVID-19 (daily, Colombia)
 
-```{r covid-table, echo = FALSE, eval = have_scores}
-covid_tab <- scores_df |>
-  filter(disease == "covid") |> 
-  select(Model, WIS, Overprediction, Underprediction, Dispersion, Bias,
-         Cov50, Cov90, `N dates`)
-
-knitr::kable(covid_tab, digits = 2, row.names = FALSE,
-             caption = "COVID-19 nowcast scores at d*=0 (50 common evaluation dates, daily).")
+```{r covid-nobbs, echo = FALSE, eval = have_scores}
+view_table("covid", "nobbs", "COVID-19: diseasenowcasting vs NobBS")
 ```
 
-**Key findings (COVID-19):**
+```{r covid-enw, echo = FALSE, eval = have_scores}
+view_table("covid", "epinowcast",
+           "COVID-19: diseasenowcasting vs epinowcast")
+```
 
-- `diseasenowcasting` beats NobBS on WIS for COVID as well, but the margin depends on the delay family.
-- Best `diseasenowcasting`: **HSGP / GenGamma**.
+```{r covid-base, echo = FALSE, eval = have_scores}
+view_table("covid", "baselinenowcast",
+           "COVID-19: diseasenowcasting vs baselinenowcast")
+```
+
+```{r covid-note, echo = FALSE, eval = have_scores, results = "asis"}
+cat(conv_note("covid"))
+```
+
+**Key findings (COVID-19):** `diseasenowcasting` again leads on WIS, though the
+margin over NobBS depends on the delay family.
 
 ## Conclusion
 
-`HSGP/LogNormal` and `HSGP/GeneralizedGamma` are the suggested models as they are
-consistently the ranking among the top performers. 
+Across three diseases with very different reporting patterns, scored against the
+counts that eventually arrived, **`diseasenowcasting` matched or beat NobBS,
+epinowcast and baselinenowcast** on accuracy (WIS) while keeping its uncertainty
+intervals trustworthy. 
 
 ## How to reproduce
 
-The full benchmark — the **complete own-model grid** (HSGP / AR(1) / SIR x
-{LogNormal, Generalized-Gamma, Dirichlet}) fit with `nowcast()`
-and the seasonal / day-of-week covariates, plus **NobBS** and **three matched
-Epinowcast configurations** (Log-normal / Log-logistic / Gamma reporting delays
-under a shared random-walk expectation, fit with **Pathfinder** — epinowcast's
-fast variational inference, since full NUTS is too slow at this scale; see
-"Like-for-like comparison" above), scored on a common evaluation-date set — lives
-in a single self-contained script:
+Everything lives in a single self-contained script:
 
 ```
 devel/benchmark_full.R
@@ -214,21 +293,8 @@ Run it (after `R CMD INSTALL` of this package, so the parallel workers can load
 it):
 
 ```sh
-Rscript devel/benchmark_full.R                                  # all 3 diseases, 50 dates (epinowcast Pathfinder)
-N_DATES=6 Rscript devel/benchmark_full.R                        # quick smoke
-ENW_SAMPLER=nuts Rscript devel/benchmark_full.R                 # slow: epinowcast with full NUTS
-FLOOR_SIG_FRAC=0.25 Rscript devel/benchmark_full.R             # own models at the package-default spread
+RUN_AUTO=FALSE Rscript devel/benchmark_full.R                   # skip auto_nowcast (faster)
 ```
-
-> **Note.** Full NUTS for epinowcast is too slow at this scale (minutes per
-> nowcast x dates x configs x diseases), so epinowcast is fit with **Pathfinder**
-> (variational) by default — the analogue of the fast Laplace approximation
-> `diseasenowcasting` uses. Pathfinder under-estimates the posterior, so
-> epinowcast's interval coverage here is **conservative**; set `ENW_SAMPLER=nuts`
-> for the slow, fully-calibrated run.
-
-It prints a ranked WIS table per disease and saves the tidy scores to
-`devel/results/benchmark_scores.rds`.
 
 > Requirements: `NobBS` and `epinowcast` (the latter needs `cmdstanr` + a working
 > CmdStan). The COVID series uses the aggregated Colombia data at the path in the

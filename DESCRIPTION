@@ -43,7 +43,6 @@ Imports:
     lifecycle,
     Matrix,
     methods,
-    rlang,
     RTMB,
     RTMBdist,
     S7,
@@ -58,7 +57,10 @@ Suggests:
     covr,
     patchwork,
     pkgdown,
-    almanac
+    almanac,
+    RTMBode
+Additional_repositories:
+    https://kaskr.r-universe.dev
 Remotes:
     RodrigoZepeda/tbl.now
 VignetteBuilder: knitr
