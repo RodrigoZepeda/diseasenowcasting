@@ -43,6 +43,7 @@ Imports:
     lifecycle,
     Matrix,
     methods,
+    rlang,
     RTMB,
     RTMBdist,
     S7,
