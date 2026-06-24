@@ -16,6 +16,7 @@ backtest(
   n_draws = 1000L,
   K = 25L,
   np_spread = 1,
+  recent = FALSE,
   seed = sample.int(.Machine$integer.max, 1),
   ...
 )
@@ -70,6 +71,14 @@ backtest(
 - K, np_spread:
 
   Two-stage controls passed through.
+
+- recent:
+
+  When `dates` is `NULL`, choose the **most recent** `n_dates`
+  complete-truth as-of dates rather than spreading them across the whole
+  history (default `FALSE`). Useful when the backtest is meant to judge
+  how a model does on *recent* dynamics (e.g. for model selection ahead
+  of a present-day nowcast).
 
 - seed:
 

@@ -192,19 +192,19 @@ summary(pred_dengue)
 ```
 
     #>         mean median        sd     mad q2.5  q5 q10    q25 q50 q75 q90    q95
-    #> 154 108.7795    108  1.966167  1.4826  107 107 107 107.00 108 110 111 112.00
-    #> 155  89.2505     89  2.942291  2.9652   86  86  86  87.00  89  91  93  95.00
-    #> 156  68.6660     68  5.163504  4.4478   62  63  64  65.00  68  71  75  78.00
-    #> 157  47.2860     45 12.477341  7.4130   36  37  38  41.00  45  51  59  65.05
-    #> 158  44.6450     41 20.220891 14.8260   23  24  27  32.00  41  52  66  81.05
-    #> 159  39.8925     35 23.713121 17.7912   11  13  17  24.75  35  50  69  84.05
+    #> 154 108.6480    108  1.538597  1.4826  107 107 107 107.75 108 109 111 111.00
+    #> 155  89.1330     89  2.327664  1.4826   86  86  87  87.00  89  90  92  93.00
+    #> 156  68.1615     67  3.834680  2.9652   63  63  64  65.00  67  70  73  75.00
+    #> 157  45.2905     44  7.167901  5.9304   36  37  38  40.00  44  49  54  59.00
+    #> 158  40.6945     38 13.773635 10.3782   24  25  27  32.00  38  46  56  65.05
+    #> 159  36.4080     33 18.350747 16.3086   12  14  17  23.00  33  46  61  71.00
     #>       q97.5 .event_num stratum event_date
-    #> 154 113.025         47   Total 1990-11-26
-    #> 155  97.000         48   Total 1990-12-03
-    #> 156  81.025         49   Total 1990-12-10
-    #> 157  72.000         50   Total 1990-12-17
-    #> 158  94.000         51   Total 1990-12-24
-    #> 159  97.000         52   Total 1990-12-31
+    #> 154 112.000         47   Total 1990-11-26
+    #> 155  95.000         48   Total 1990-12-03
+    #> 156  78.000         49   Total 1990-12-10
+    #> 157  62.025         50   Total 1990-12-17
+    #> 158  73.025         51   Total 1990-12-24
+    #> 159  81.000         52   Total 1990-12-31
 
 Additionally the
 [`nowcast_diagnostic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_diagnostic.md)
@@ -370,14 +370,14 @@ Or obtain it via
 
 # Rank by Weighted Interval Score (WIS) -- lower is better
 score(backtest_mpox)
-#>               model       wis overprediction underprediction dispersion
-#> 1  SIR/nb/LogNormal  9.811354       0.000000        6.855556   2.955799
-#> 2  AR1/nb/LogNormal 13.368333       3.166667        2.500000   7.701667
-#> 3 HSGP/nb/LogNormal 17.360035       2.708333        4.402778  10.248924
+#>               model      wis overprediction underprediction dispersion
+#> 1  SIR/nb/LogNormal 12.29247       0.000000       10.105556   2.186910
+#> 2 HSGP/nb/LogNormal 12.89510       2.013889        4.527778   6.353437
+#> 3  AR1/nb/LogNormal 13.28417       3.138889        2.319444   7.825833
 #>   coverage_50 coverage_90       ape      mse n
-#> 1        0.75           1 0.4073142 1660.250 4
-#> 2        0.25           1 7.1411720 1260.500 4
-#> 3        0.50           1 1.6262153 2064.062 4
+#> 1        0.50        0.75 0.4329608 1766.000 4
+#> 2        0.50        1.00 1.4150650 1679.062 4
+#> 3        0.25        1.00 6.4057984 1215.812 4
 ```
 
 The
@@ -447,19 +447,25 @@ We can show the scores of the models to see the best performer:
 
 comparison_scores(auto_ncast)  # every candidate, ranked best-first
 #>                      model       wis overprediction underprediction dispersion
-#> 1        HSGP/nb/Dirichlet  8.417181     0.11666667        4.148889   4.151625
-#> 2        HSGP/nb/LogNormal  8.982736     0.00000000        3.526667   5.456069
-#> 3 HSGP/nb/GeneralizedGamma  9.637764     0.03333333        4.218889   5.385542
-#> 4         AR1/nb/LogNormal  9.916847     0.11666667        4.375556   5.424625
-#> 5         AR1/nb/Dirichlet  9.992472     0.31666667        4.514444   5.161361
-#> 6  AR1/nb/GeneralizedGamma 10.547875     0.12222222        5.162778   5.262875
-#>   coverage_50 coverage_90       ape     mse  n
-#> 1         0.6         1.0 0.3675763 493.150 10
-#> 2         0.7         1.0 0.3465956 486.325 10
-#> 3         0.4         1.0 0.3737145 542.150 10
-#> 4         0.4         0.9 0.4006238 644.775 10
-#> 5         0.4         0.9 0.4028097 615.675 10
-#> 6         0.5         0.9 0.3991763 727.400 10
+#> 1 HSGP/nb/GeneralizedGamma  8.502125     0.01666667        4.264444   4.221014
+#> 2        HSGP/nb/LogNormal  8.540486     0.04444444        3.810000   4.686042
+#> 3        HSGP/nb/Dirichlet  8.900236     0.20555556        3.876667   4.818014
+#> 4         AR1/nb/Dirichlet  9.515236     0.16666667        4.177778   5.170792
+#> 5  AR1/nb/GeneralizedGamma  9.730778     0.07777778        4.780000   4.873000
+#> 6         AR1/nb/LogNormal 10.358556     0.08888889        5.391111   4.878556
+#> 7  SIR/nb/GeneralizedGamma 21.316139     0.00000000       18.050000   3.266139
+#> 8         SIR/nb/Dirichlet 23.516347     0.00000000       20.546111   2.970236
+#> 9         SIR/nb/LogNormal 23.636236     0.00000000       20.493889   3.142347
+#>   coverage_50 coverage_90       ape      mse  n
+#> 1         0.5         1.0 0.3484614  480.275 10
+#> 2         0.3         1.0 0.3989732  582.225 10
+#> 3         0.3         1.0 0.3821182  568.050 10
+#> 4         0.4         0.9 0.4212942  637.150 10
+#> 5         0.4         0.9 0.4103526  704.400 10
+#> 6         0.4         0.9 0.4405807  785.025 10
+#> 7         0.2         0.6 0.7496154 2819.350 10
+#> 8         0.1         0.6 0.7324501 2765.500 10
+#> 9         0.2         0.7 0.7379645 2790.175 10
 ```
 
 [`best_model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/best_model.md)
@@ -516,7 +522,17 @@ dengue_tbl_apr <- tbl_now(
 
 auto_ncast_updated <- update(auto_ncast, dengue_tbl_apr)
 #> Warning: ! Surprising reporting delay of 11 weeks (1 report): longer than the model
-#>   expects (P(D >= d) = 0.0098).
+#>   expects (P(D >= d) = 3e-05).
+#> ! Surprising reporting delay of 10 weeks (1 report): longer than the model
+#>   expects (P(D >= d) = 9.1e-05).
+#> ! Surprising reporting delay of 9 weeks (2 reports): longer than the model
+#>   expects (P(D >= d) = 0.00028).
+#> ! Surprising reporting delay of 8 weeks (5 reports): longer than the model
+#>   expects (P(D >= d) = 0.00085).
+#> ! Surprising reporting delay of 7 weeks (3 reports): longer than the model
+#>   expects (P(D >= d) = 0.0026).
+#> ! Surprising reporting delay of 6 weeks (2 reports): longer than the model
+#>   expects (P(D >= d) = 0.0079).
 #> ℹ If these are outliers, treat them as censored with `censor_delays_above()`
 #>   and re-fit.
 #> ℹ See all flagged delays with `extreme_values(nc)`.
@@ -529,10 +545,20 @@ Any reports with surprising delays are collected by
 ``` r
 
 extreme_values(auto_ncast_updated)
-#>   delay weight mean_tail_prob cdf_prob    lpd relative_surprise direction
-#> 1    11      1       0.009797 0.990203 -6.204            0.0043      long
+#>   delay weight mean_tail_prob cdf_prob      lpd relative_surprise direction
+#> 1     6      2       0.007928 0.992072  -4.6875            0.0260      long
+#> 2     7      3       0.002606 0.997394  -5.7892            0.0086      long
+#> 3     8      5       0.000852 0.999148  -6.9041            0.0028      long
+#> 4     9      2       0.000278 0.999722  -8.0240            0.0009      long
+#> 5    10      1       0.000091 0.999909  -9.1439            0.0003      long
+#> 6    11      1       0.000030 0.999970 -10.2609            0.0001      long
 #>   surprise level
 #> 1    delay  0.99
+#> 2    delay  0.99
+#> 3    delay  0.99
+#> 4    delay  0.99
+#> 5    delay  0.99
+#> 6    delay  0.99
 ```
 
 See the vignette on [Handling Outlier Delays with

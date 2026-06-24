@@ -65,6 +65,7 @@
 <span>  n_draws <span class="op">=</span> <span class="fl">1000L</span>,</span>
 <span>  K <span class="op">=</span> <span class="fl">25L</span>,</span>
 <span>  np_spread <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  recent <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample.int</a></span><span class="op">(</span><span class="va">.Machine</span><span class="op">$</span><span class="va">integer.max</span>, <span class="fl">1</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -117,6 +118,14 @@ every date regardless of completeness.</p></dd>
 
 <dt id="arg-k-np-spread">K, np_spread<a class="anchor" aria-label="anchor" href="#arg-k-np-spread"></a></dt>
 <dd><p>Two-stage controls passed through.</p></dd>
+
+
+<dt id="arg-recent">recent<a class="anchor" aria-label="anchor" href="#arg-recent"></a></dt>
+<dd><p>When <code>dates</code> is <code>NULL</code>, choose the <strong>most recent</strong> <code>n_dates</code>
+complete-truth as-of dates rather than spreading them across the whole
+history (default <code>FALSE</code>).  Useful when the backtest is meant to judge how a
+model does on <em>recent</em> dynamics (e.g. for model selection ahead of a
+present-day nowcast).</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>

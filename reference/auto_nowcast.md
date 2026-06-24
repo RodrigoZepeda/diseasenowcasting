@@ -31,6 +31,7 @@ auto_nowcast(
   n_draws_select = 500L,
   n_draws = 2000L,
   K = 25L,
+  K_select = 10L,
   min_ar = 15L,
   min_hsgp = 30L,
   now = NULL,
@@ -108,7 +109,17 @@ auto_nowcast(
 
 - K:
 
-  Delay imputations for two-stage fits (default 25).
+  Delay imputations for the **final** two-stage fit of the winning model
+  (default 25).
+
+- K_select:
+
+  Delay imputations during the **selection** backtest (default 10 – kept
+  small for speed, like `n_draws_select`). The selection backtest fits
+  the whole grid over many dates, so its cost scales with `K_select`;
+  ranking the candidates is robust to a coarser imputation than the
+  final fit. Lower it (e.g. `5`) for a long series where selection
+  dominates the runtime.
 
 - min_ar, min_hsgp:
 
@@ -145,27 +156,38 @@ for the selected model, with the model-selection scoreboard in its
 ## Details
 
 **Candidate epidemic processes are chosen by series length**
-(`max_time`, the number of event-times): the SIR process needs the least
-data, the HSGP the most. With the default thresholds:
+(`max_time`, the number of event-times): a process becomes a candidate
+as soon as the series is long enough to support it (SIR needs the least
+data, the HSGP the most) and is never dropped for being *too* long, so
+the comparison always spans every process the data can support. With the
+default thresholds:
 
 - `max_time < min_ar` -\> compares `{SIR}`;
 
 - `min_ar <= max_time < min_hsgp` -\> compares `{SIR, AR(1)}`;
 
-- `max_time >= min_hsgp` -\> compares `{AR(1), HSGP}`.
+- `max_time >= min_hsgp` -\> compares `{SIR, AR(1), HSGP}`.
 
 Any process you pass explicitly via `sir` / `ar` / `hsgp` is *always*
 included (regardless of length), which is how you make a prior compete:
 e.g. pass `sir = sir_epidemic(R0 = lognormal_prior(log(3), 0.2))` and
 the SIR candidate will use that R0 prior throughout the comparison.
 
+**Robustness.** A candidate that fails to converge on a backtest date
+simply drops out of the comparison there (it never aborts the search),
+and candidates are scored on the common set of dates where they all
+produced a forecast so a model cannot "win" on a lucky subset. The
+winner is then refit on the full data; if that refit fails,
+`auto_nowcast()` falls through to the next-best candidate (and so on),
+so it converges whenever any candidate would.
+
 **Candidate delays** default to LogNormal, Generalized-Gamma and
 Dirichlet; override with `delays`.
 
 **Speed.** The grid is backtested with a fast configuration
-(`n_draws_select` posterior draws over `n_dates` dates); only the
-winning model is refit with the full `n_draws`. Backtesting is the
-expensive step – set a
+(`n_draws_select` posterior draws over `n_dates` dates spread across the
+history); only the winning model is refit with the full `n_draws`.
+Backtesting is the expensive step – set a
 [`future::plan()`](https://future.futureverse.org/reference/plan.html)
 (e.g. `future::plan(multisession)`) for parallel speed-up.
 
@@ -200,30 +222,30 @@ nc <- auto_nowcast(tn,
 #> ℹ Running 12 backtest cells sequentially.
 #> • For a large grid, set a parallel plan first:
 #>   `future::plan(future::multisession, workers = N)`.
-#> ✔ auto_nowcast: selected HSGP/nb/Dirichlet (best wis).
+#> ✔ auto_nowcast: selected HSGP/nb/LogNormal (best wis).
 # future::plan(future::sequential)
 best_model_name(nc)    # the winning model's label
-#> [1] "HSGP/nb/Dirichlet"
+#> [1] "HSGP/nb/LogNormal"
 comparison_scores(nc)  # the ranked scoreboard
 #>               model      wis overprediction underprediction dispersion
-#> 1 HSGP/nb/Dirichlet 20.76903              0        11.55556   9.213472
-#> 2  SIR/nb/Dirichlet 21.04875              0        10.88889  10.159861
-#> 3  SIR/nb/LogNormal 22.49292              0        11.55556  10.937361
-#> 4 HSGP/nb/LogNormal 23.38583              0        12.05556  11.330278
-#> 5  AR1/nb/Dirichlet 24.23153              0        16.44444   7.787083
-#> 6  AR1/nb/LogNormal 25.21764              0        16.55556   8.662083
+#> 1 HSGP/nb/LogNormal 18.60444              0        6.000000  12.604444
+#> 2  SIR/nb/Dirichlet 21.49708              0        9.388889  12.108194
+#> 3 HSGP/nb/Dirichlet 22.08194              0       13.333333   8.748611
+#> 4  SIR/nb/LogNormal 22.12306              0       12.000000  10.123056
+#> 5  AR1/nb/Dirichlet 25.44486              0       16.388889   9.055972
+#> 6  AR1/nb/LogNormal 28.04625              0       20.500000   7.546250
 #>   coverage_50 coverage_90       ape     mse n
-#> 1           0           1 0.6287129 4032.25 1
-#> 2           0           1 0.5693069 3306.25 1
-#> 3           0           1 0.5594059 3192.25 1
-#> 4           0           1 0.6732673 4624.00 1
-#> 5           0           1 0.7128713 5184.00 1
-#> 6           0           1 0.7029703 5041.00 1
+#> 1           1           1 0.5346535 2916.00 1
+#> 2           0           1 0.6386139 4160.25 1
+#> 3           0           1 0.6138614 3844.00 1
+#> 4           0           1 0.5643564 3249.00 1
+#> 5           0           1 0.7772277 6162.25 1
+#> 6           0           1 0.7970297 6480.25 1
 best_score(nc)         # just the winner's row
 #>               model      wis overprediction underprediction dispersion
-#> 1 HSGP/nb/Dirichlet 20.76903              0        11.55556   9.213472
-#>   coverage_50 coverage_90       ape     mse n
-#> 1           0           1 0.6287129 4032.25 1
+#> 1 HSGP/nb/LogNormal 18.60444              0               6   12.60444
+#>   coverage_50 coverage_90       ape  mse n
+#> 1           1           1 0.5346535 2916 1
 selection_metric(nc)   # which metric chose it
 #> [1] "wis"
 winner <- best_model(nc)  # the model() object, to reuse elsewhere
