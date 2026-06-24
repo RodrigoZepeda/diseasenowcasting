@@ -324,8 +324,8 @@ nc <- nowcast(
   K       = 25,                # delay imputations (two_stage only)
   n_draws = 2000,
   delay_window = 120,          # days/weeks used for Stage-1 delay fit
-  floor_mu     = 0.15,         # minimum delay-mean spread for imputation
-  floor_sig_frac = 0.25,       # minimum sigma spread fraction
+  floor_mu     = 0.08,         # minimum delay-mean spread for imputation
+  floor_sig_frac = 0.08,       # minimum sigma spread fraction
   np_spread    = 1,            # Dirichlet simplex imputation covariance scale
   temporal_effects = "auto",   # "auto" | "none"; auto-adds DOW/seasonality
   seed = NULL,

@@ -23,7 +23,7 @@
 #' @keywords internal
 #' @noRd
 .collect_nowcast_fits <- function(model, engine, priors, type = "two_stage",
-                                  K = 25L, floor_mu = 0.15, floor_sig_frac = 0.25,
+                                  K = 25L, floor_mu = 0.08, floor_sig_frac = 0.08,
                                   np_spread = 1, delay_window = 120L, warm_inits = NULL) {
   target <- engine$max_time
 

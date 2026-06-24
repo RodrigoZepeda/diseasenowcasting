@@ -52,7 +52,7 @@
 #' @export
 nowcast_twostage <- function(model, m, X = NULL, d_star = NULL, max_time = NULL,
                              target = NULL, delay_window = 120L, K = 25L,
-                             floor_mu = 0.15, floor_sig_frac = 0.25,
+                             floor_mu = 0.08, floor_sig_frac = 0.08,
                              np_spread = 1,
                              n_draws_per = 200L,
                              phi = lognormal_prior(log(20), 0.5),
