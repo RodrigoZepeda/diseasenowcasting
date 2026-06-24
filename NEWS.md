@@ -1,3 +1,30 @@
+# 1.3.2
+
+* Lowered the two-stage delay-imputation spread floors `floor_mu` and
+  `floor_sig_frac` to `0.08` (from `0.15` / `0.25`) in `nowcast()` and
+  `nowcast_twostage()`. The previous defaults over-dispersed low-count daily
+  data; `0.08` is the value the package is backtested at.
+* Made `auto_nowcast()` more robust:
+  - Candidate epidemic processes are now gated by a lower bound only -- a process
+    is compared whenever the series is long enough to support it (and is no
+    longer dropped for being *too* long), so the comparison always spans every
+    process the data can support (e.g. `{SIR, AR(1), HSGP}` for long series).
+  - Candidates are scored on the common set of as-of dates where they all
+    produced a forecast, so a model can no longer "win" on a lucky subset.
+  - The selection backtest is now wrapped: if it cannot run (e.g. the series is
+    too short for any complete-truth date) `auto_nowcast()` refits the grid
+    directly instead of erroring.
+  - The winner is refit on the full data with a fallback: if it fails to
+    converge, `auto_nowcast()` falls through to the next-best candidate, so it
+    now converges whenever any candidate would.
+  - New `K_select` argument: the selection backtest fits the whole grid over many
+    dates, so it now uses a smaller delay-imputation count (default 10) than the
+    final fit's `K` (default 25).  This removes a runtime cliff on long series
+    (selection cost scales with `K_select`) while leaving the winning model fit at
+    full `K`.
+* `backtest()` gains a `recent` argument: when `dates` is `NULL`, choose the most
+  recent complete-truth as-of dates instead of spreading them across the history.
+  
 # 1.3.0
 
 * Added `save_nowcast()` / `load_nowcast()` to persist a fitted `nowcast()` (or

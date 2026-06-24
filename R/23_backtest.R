@@ -42,6 +42,11 @@ backtest_class <- S7::new_class(
 #'   (date, model).  Default FALSE (summaries only: mean/median/sd/quantiles).
 #' @param n_draws Posterior draws per nowcast.
 #' @param K,np_spread Two-stage controls passed through.
+#' @param recent When `dates` is `NULL`, choose the **most recent** `n_dates`
+#'   complete-truth as-of dates rather than spreading them across the whole
+#'   history (default `FALSE`).  Useful when the backtest is meant to judge how a
+#'   model does on *recent* dynamics (e.g. for model selection ahead of a
+#'   present-day nowcast).
 #' @param seed Optional base RNG seed.
 #' @param ... Passed to [nowcast()].
 #' @returns A `backtest_class` object.
@@ -77,7 +82,8 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
                      type = c("two_stage", "one_stage", "auto"), n_dates = 20L,
                      max_delay = NULL,
                      return_simulations = FALSE, n_draws = 1000L, K = 25L,
-                     np_spread = 1, seed = sample.int(.Machine$integer.max, 1), ...) {
+                     np_spread = 1, recent = FALSE,
+                     seed = sample.int(.Machine$integer.max, 1), ...) {
   type <- match.arg(type)
   if (S7::S7_inherits(models, model_class)) models <- list(models)
   model_labels <- vapply(models, .model_label, character(1))
@@ -111,7 +117,15 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
       cli::cli_abort(c("No evaluation dates with a complete eventual count.",
                        "i" = "The series is shorter than {.code max_delay} = {max_delay} event units; pass {.code max_delay} explicitly to override."))
     if (!is.null(seed)) set.seed(seed)
-    dates <- sort(candidate[round(seq(1, length(candidate), length.out = min(n_dates, length(candidate))))])
+    n_keep <- min(n_dates, length(candidate))
+    keep_idx <- if (isTRUE(recent)) {
+      # The most recent complete-truth dates -- judge the model on recent dynamics.
+      seq.int(length(candidate) - n_keep + 1L, length(candidate))
+    } else {
+      # Spread evenly across the observed history.
+      round(seq(1, length(candidate), length.out = n_keep))
+    }
+    dates <- sort(candidate[keep_idx])
   } else if (is.finite(max_delay)) {
     # Drop user-supplied dates whose truth is not yet complete (with a heads-up).
     dates       <- sort(as(dates, class(data[[event_col]])[1]))

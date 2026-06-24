@@ -86,7 +86,7 @@ nowcast_class <- S7::new_class(
 nowcast <- function(data, model = diseasenowcasting::model(),
                     type = c("two_stage", "one_stage", "auto"), now = NULL,
                     K = 25L, n_draws = 2000L, delay_window = 120L, np_spread = 1,
-                    floor_mu = 0.15, floor_sig_frac = 0.25,
+                    floor_mu = 0.08, floor_sig_frac = 0.08,
                     temporal_effects = "auto", prior_only = FALSE,
                     seed = sample.int(.Machine$integer.max, 1), ...) {
   type <- match.arg(type)

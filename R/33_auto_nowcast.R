@@ -17,25 +17,35 @@
 #'
 #' @details
 #' **Candidate epidemic processes are chosen by series length** (`max_time`, the
-#' number of event-times): the SIR process needs the least data, the HSGP the
-#' most.  With the default thresholds:
+#' number of event-times): a process becomes a candidate as soon as the series is
+#' long enough to support it (SIR needs the least data, the HSGP the most) and is
+#' never dropped for being *too* long, so the comparison always spans every
+#' process the data can support.  With the default thresholds:
 #' \itemize{
-#'   \item `max_time < min_ar`         -> compares `{SIR}`;
+#'   \item `max_time < min_ar`             -> compares `{SIR}`;
 #'   \item `min_ar <= max_time < min_hsgp` -> compares `{SIR, AR(1)}`;
-#'   \item `max_time >= min_hsgp`      -> compares `{AR(1), HSGP}`.
+#'   \item `max_time >= min_hsgp`          -> compares `{SIR, AR(1), HSGP}`.
 #' }
 #' Any process you pass explicitly via `sir` / `ar` / `hsgp` is *always* included
 #' (regardless of length), which is how you make a prior compete: e.g. pass
 #' `sir = sir_epidemic(R0 = lognormal_prior(log(3), 0.2))` and the SIR candidate
 #' will use that R0 prior throughout the comparison.
 #'
+#' **Robustness.** A candidate that fails to converge on a backtest date simply
+#' drops out of the comparison there (it never aborts the search), and candidates
+#' are scored on the common set of dates where they all produced a forecast so a
+#' model cannot "win" on a lucky subset.  The winner is then refit on the full
+#' data; if that refit fails, `auto_nowcast()` falls through to the next-best
+#' candidate (and so on), so it converges whenever any candidate would.
+#'
 #' **Candidate delays** default to LogNormal, Generalized-Gamma and Dirichlet;
 #' override with `delays`.
 #'
 #' **Speed.** The grid is backtested with a fast configuration
-#' (`n_draws_select` posterior draws over `n_dates` dates); only the winning model
-#' is refit with the full `n_draws`.  Backtesting is the expensive step -- set a
-#' `future::plan()` (e.g. `future::plan(multisession)`) for parallel speed-up.
+#' (`n_draws_select` posterior draws over `n_dates` dates spread across the
+#' history); only the winning model is refit with the full `n_draws`.  Backtesting
+#' is the expensive step -- set a `future::plan()` (e.g.
+#' `future::plan(multisession)`) for parallel speed-up.
 #'
 #' @param data A `tbl_now` object (`tbl.now::tbl_now()`).
 #' @param metric Selection criterion. `"wis"` (default, lowest Weighted Interval
@@ -64,7 +74,13 @@
 #'   500 -- kept small for speed).
 #' @param n_draws Posterior draws for the final fit of the winning model
 #'   (default 2000).
-#' @param K Delay imputations for two-stage fits (default 25).
+#' @param K Delay imputations for the **final** two-stage fit of the winning
+#'   model (default 25).
+#' @param K_select Delay imputations during the **selection** backtest (default
+#'   10 -- kept small for speed, like `n_draws_select`).  The selection backtest
+#'   fits the whole grid over many dates, so its cost scales with `K_select`;
+#'   ranking the candidates is robust to a coarser imputation than the final fit.
+#'   Lower it (e.g. `5`) for a long series where selection dominates the runtime.
 #' @param min_ar,min_hsgp Series-length thresholds (in event-times) at which
 #'   AR(1) and HSGP become candidates (defaults 15 and 30).
 #' @param now As-of date for the final fit (default: the `tbl_now`'s `now`).
@@ -113,7 +129,7 @@ auto_nowcast <- function(data,
                          delays = NULL, likelihood = nb_likelihood(),
                          models = NULL,
                          n_dates = 6L, n_draws_select = 500L,
-                         n_draws = 2000L, K = 25L,
+                         n_draws = 2000L, K = 25L, K_select = 10L,
                          min_ar = 15L, min_hsgp = 30L,
                          now = NULL, seed = sample.int(.Machine$integer.max, 1),
                          verbose = TRUE, ...) {
@@ -122,19 +138,19 @@ auto_nowcast <- function(data,
   if (!is.null(seed)) set.seed(seed)
 
   # -- 1. candidate epidemic processes, sized to the series length -------------
+  # Lower-bound gating: a process becomes a candidate as soon as the series is
+  # long enough to support it (SIR needs the least data, HSGP the most) and is
+  # never dropped for being *too* long.  This way the comparison always spans
+  # every process the data can support, so auto_nowcast can pick the genuine
+  # best and -- crucially -- can always fall back to a process (e.g. HSGP) that a
+  # plain nowcast() of the same length would have fit.
   max_time <- prepare_from_tbl_now(data, diseasenowcasting::model(), now = now)$max_time
   epis <- list()
-  if (max_time < min_ar) {
-    epis[["SIR"]]  <- sir  %||% sir_epidemic()
-  } else if (max_time < min_hsgp) {
-    epis[["SIR"]]  <- sir  %||% sir_epidemic()
-    epis[["AR1"]]  <- ar   %||% ar1_epidemic()
-  } else {
-    epis[["AR1"]]  <- ar   %||% ar1_epidemic()
-    epis[["HSGP"]] <- hsgp %||% hsgp_epidemic()
-  }
-  # Any explicitly supplied process is forced in (so its priors compete).
-  if (!is.null(sir)  && is.null(epis[["SIR"]]))  epis[["SIR"]]  <- sir
+  epis[["SIR"]] <- sir %||% sir_epidemic()                 # least data-hungry: always in
+  if (max_time >= min_ar)   epis[["AR1"]]  <- ar   %||% ar1_epidemic()
+  if (max_time >= min_hsgp) epis[["HSGP"]] <- hsgp %||% hsgp_epidemic()
+  # A process supplied explicitly is forced in even on a short series (so its
+  # priors compete regardless of length).
   if (!is.null(ar)   && is.null(epis[["AR1"]]))  epis[["AR1"]]  <- ar
   if (!is.null(hsgp) && is.null(epis[["HSGP"]])) epis[["HSGP"]] <- hsgp
 
@@ -169,36 +185,99 @@ auto_nowcast <- function(data,
       ") over {n_dates} backtest date{?s}; max_time = {max_time}.")))
 
   # -- 4. backtest the grid (fast config) and score ----------------------------
-  bt <- backtest(data, models = grid, type = type, n_dates = n_dates,
-                 n_draws = n_draws_select, K = K, seed = seed, ...)
-  # score() returns one row per model with wis, ape, mse, coverage_50/90.
-  scores <- score(bt, metric = "wis", report = FALSE)
+  # backtest() already swallows per-cell fit failures (a candidate that fails to
+  # converge on a given as-of date simply contributes no row there), so one bad
+  # combination never aborts the search.  It *can* abort outright, though, when
+  # the series is too short to offer any complete-truth backtest date -- so we
+  # wrap it: a failed backtest just means "no scores", and we refit the grid
+  # directly below rather than erroring out.
+  # Selection backtest dates are spread across the observed history (backtest()'s
+  # default).  Spreading beats biasing to the most recent dates: the recent dates
+  # are consecutive (little diversity) and tend to favour reactive models (AR1 /
+  # SIR) that then lose to a smoother process at the censored d*=0 target.  Pass
+  # `recent = TRUE` through `...` to override.
+  bt <- tryCatch(
+    backtest(data, models = grid, type = type, n_dates = n_dates,
+             n_draws = n_draws_select, K = K_select, seed = seed, ...),
+    error = function(e) NULL)
 
-  # -- 5. pick the winner ------------------------------------------------------
+  # Fair comparison: score every candidate on the SAME as-of dates.  Because a
+  # candidate that failed on some date has no row there, averaging each model
+  # over only the dates it happened to survive would reward a model that got
+  # lucky on an easy subset.  So we restrict scoring to the dates where ALL
+  # converged candidates produced a forecast (the intersection -- the same fair
+  # set the package's own benchmark uses).  If that set is empty (candidates
+  # converged on disjoint dates), keep every date and let score() average per
+  # model.
+  scores <- NULL
+  if (!is.null(bt)) {
+    res <- bt@results
+    if (!is.null(res) && nrow(res) > 0) {
+      ok       <- res[is.finite(res$final), , drop = FALSE]
+      by_model <- split(as.character(ok$date_run), ok$model)
+      common   <- if (length(by_model)) Reduce(intersect, by_model) else character(0)
+      if (length(common) > 0)
+        bt@results <- res[as.character(res$date_run) %in% common, , drop = FALSE]
+    }
+    # score() returns one row per model with wis, ape, mse, coverage_50/90.  Guard
+    # the pathological case where every cell failed (nothing to score).
+    scores <- tryCatch(score(bt, metric = "wis", report = FALSE),
+                       error = function(e) NULL)
+  }
+
+  # -- 5. rank the candidates by the chosen metric -----------------------------
   # wis / ape / mse: smaller is better.  Coverage metrics: smallest miss from the
   # nominal level -- coverage_50 |0.50 - cov50|, coverage_90 |0.90 - cov90|, and
-  # coverage the combined |0.50 - cov50| + |0.90 - cov90|.
-  pick <- switch(metric,
-    wis         = which.min(scores$wis),
-    ape         = which.min(scores$ape),
-    mse         = which.min(scores$mse),
-    coverage_50 = which.min(abs(scores$coverage_50 - 0.50)),
-    coverage_90 = which.min(abs(scores$coverage_90 - 0.90)),
-    coverage    = which.min(abs(scores$coverage_50 - 0.50) +
-                            abs(scores$coverage_90 - 0.90)))
-  winner_label <- if (length(pick) == 1L && !is.na(pick)) scores$model[pick] else NA_character_
-  idx <- match(winner_label, grid_labels)
-  if (is.na(idx)) {                       # scoring inconclusive -> safe fallback
-    idx <- 1L; winner_label <- grid_labels[1L]
-    cli::cli_warn("auto_nowcast: scoring was inconclusive; falling back to {.val {winner_label}}.")
+  # coverage the combined |0.50 - cov50| + |0.90 - cov90|.  `order()` keeps the
+  # full ranking (best first) so we can fall through to the next-best model if
+  # the top pick fails to refit.
+  if (is.null(scores) || nrow(scores) == 0) {
+    ranked_labels <- character(0)
+  } else {
+    ord <- switch(metric,
+      wis         = order(scores$wis),
+      ape         = order(scores$ape),
+      mse         = order(scores$mse),
+      coverage_50 = order(abs(scores$coverage_50 - 0.50)),
+      coverage_90 = order(abs(scores$coverage_90 - 0.90)),
+      coverage    = order(abs(scores$coverage_50 - 0.50) +
+                          abs(scores$coverage_90 - 0.90)))
+    ranked_labels <- scores$model[ord]
   }
-  winner_model <- grid[[idx]]
-  if (verbose)
-    cli::cli_inform(c("v" = "auto_nowcast: selected {.strong {winner_label}} (best {metric})."))
 
-  # -- 6. refit the winner on the full data, full draws ------------------------
-  nc <- nowcast(data, model = winner_model, type = type, n_draws = n_draws,
-                now = now, seed = seed, ...)
+  # -- 6. refit the best-ranked candidate that converges on the full data ------
+  # Try candidates best-first and fall through on ANY fit failure, so
+  # auto_nowcast converges whenever any candidate does (its grid contains the
+  # plain models, so it is at least as robust as fitting them individually).
+  # Candidates the scoreboard could not rank (e.g. scoring was inconclusive) are
+  # appended in grid order as a last resort.
+  ranked_idx <- match(ranked_labels, grid_labels)
+  ranked_idx <- c(ranked_idx, setdiff(seq_along(grid), ranked_idx))
+  ranked_idx <- ranked_idx[!is.na(ranked_idx)]
+
+  nc <- NULL; chosen_idx <- NA_integer_
+  for (i in ranked_idx) {
+    nc <- tryCatch(
+      nowcast(data, model = grid[[i]], type = type, n_draws = n_draws,
+              K = K, now = now, seed = seed, ...),
+      error = function(e) NULL)
+    if (!is.null(nc)) { chosen_idx <- i; break }
+  }
+  if (is.null(nc))
+    cli::cli_abort(c(
+      "auto_nowcast: every candidate model failed to fit on the full data.",
+      "i" = "Try a different {.arg type}, longer/cleaner data, or a smaller grid."))
+
+  winner_label <- grid_labels[chosen_idx]
+  top_label    <- if (length(ranked_labels)) ranked_labels[[1L]] else winner_label
+  if (verbose) {
+    if (!identical(winner_label, top_label))
+      cli::cli_warn(c("!" = paste0(
+        "auto_nowcast: best-scoring model {.val {top_label}} failed to refit on ",
+        "the full data; using next-best {.val {winner_label}}.")))
+    cli::cli_inform(c("v" = "auto_nowcast: selected {.strong {winner_label}} (best {metric})."))
+  }
+
   nc@comparison <- list(scores = scores, chosen = winner_label,
                         metric = metric, max_time = max_time)
   nc

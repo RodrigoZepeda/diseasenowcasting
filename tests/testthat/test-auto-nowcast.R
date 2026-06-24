@@ -36,10 +36,10 @@ test_that("auto_nowcast selects a model and returns a nowcast with a scoreboard"
 
 test_that("auto_nowcast force-includes an explicitly supplied epidemic process", {
   skip_on_cran()
-  tn <- .make_synth_tblnow(Tn = 60L, seed = 7)   # long -> default {AR1, HSGP}
+  tn <- .make_synth_tblnow(Tn = 60L, seed = 7)   # long -> default {SIR, AR1, HSGP}
 
-  # Pass a SIR with a custom R0 prior; it must appear in the compared grid even
-  # though the series is long enough that SIR is not a default candidate.
+  # Pass a SIR carrying a custom R0 prior; that prior must flow into the compared
+  # grid (the SIR candidate is fit with it, not the plain constructor).
   nc <- auto_nowcast(tn, n_dates = 2L, n_draws_select = 120L, n_draws = 200L,
                      sir = sir_epidemic(R0 = lognormal_prior(log(2), 0.3)),
                      delays = list(lognormal_delay()), temporal_effects = "none",
@@ -125,6 +125,40 @@ test_that("auto_nowcast rejects an unknown metric", {
   tn <- .make_synth_tblnow(Tn = 40L, seed = 15)
   expect_error(auto_nowcast(tn, metric = "coverage_95", verbose = FALSE),
                "should be one of")
+})
+
+test_that("auto_nowcast falls back to the next-best model when the winner fails to refit", {
+  skip_on_cran()
+  tn <- .make_synth_tblnow(Tn = 50L, seed = 23)
+
+  # Mock nowcast() so the FIRST full-data refit (the top-ranked candidate) throws.
+  # backtest() always passes a concrete `now`; only the final refit leaves it
+  # NULL, so we can target the refit and let every backtest fit run normally.
+  real_nowcast <- get("nowcast", asNamespace("diseasenowcasting"))
+  refit_calls  <- 0L
+  fail_first_refit <- function(data, model, ..., now = NULL) {
+    if (is.null(now)) {
+      refit_calls <<- refit_calls + 1L
+      if (refit_calls == 1L) stop("simulated refit failure")
+    }
+    real_nowcast(data, model, ..., now = now)
+  }
+
+  nc <- testthat::with_mocked_bindings(
+    auto_nowcast(tn, delays = list(lognormal_delay()),
+                 n_dates = 2L, n_draws_select = 100L, n_draws = 150L,
+                 temporal_effects = "none", verbose = FALSE),
+    nowcast = fail_first_refit,
+    .package = "diseasenowcasting"
+  )
+
+  # The top pick failed but auto_nowcast still returned a usable nowcast from the
+  # next-best candidate (the refit was retried at least once).
+  expect_gte(refit_calls, 2L)
+  expect_true(S7::S7_inherits(nc, diseasenowcasting:::nowcast_class))
+  expect_true(nc@comparison$chosen %in% nc@comparison$scores$model)
+  expect_s3_class(tryCatch(predict(nc, summary = TRUE), error = function(e) e),
+                  "data.frame")
 })
 
 test_that("printing an auto_nowcast result shows the scoreboard", {

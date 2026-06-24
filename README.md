@@ -169,12 +169,12 @@ summary(pred)
     #> # A tibble: 6 × 16
     #>    mean median    sd   mad  q2.5    q5   q10   q25   q50   q75   q90   q95 q97.5
     #>   <dbl>  <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
-    #> 1 109.     108  2.09  1.48   107   107   107   107   108   110 112     113 114  
-    #> 2  89.3     89  3.10  2.97    86    86    86    87    89    90  93      95  97  
-    #> 3  69.0     68  5.74  4.45    62    63    64    65    68    71  76      79  82.0
-    #> 4  48.7     45 13.7   8.90    35    36    37    40    45    53  65      73  83.0
-    #> 5  47.8     41 26.3  17.8     22    23    26    31    41    56  77.1    95 111. 
-    #> 6  43.1     35 29.3  22.2     11    13    17    23    35    55  79.1    98 116  
+    #> 1 109.     108  1.53  1.48   107   107   107   107   108 109     110 111   112  
+    #> 2  89.1     89  2.56  1.48    86    86    87    87    89  90      92  94    95  
+    #> 3  68.2     67  4.79  2.97    63    63    64    65    67  70      73  75    78  
+    #> 4  45.6     44  9.11  5.93    36    36    38    40    44  49      55  59    65.0
+    #> 5  41.6     39 15.8  11.9     23    24    27    32    39  47      59  68    74.0
+    #> 6  37.6     33 19.8  16.3     13    16    18    24    33  45.2    61  72.0  85.0
     #> # ℹ 3 more variables: .event_num <int>, stratum <chr>, event_date <date>
 
 You can choose a different epidemic process, delay family or likelihood
@@ -218,11 +218,11 @@ You can access these quantities directly with `score`
 ``` r
 score(bt)
 #>                     model      wis overprediction underprediction dispersion
-#> 1 AR1/nb/GeneralizedGamma 12.10694              0        8.592593   3.514352
-#> 2       HSGP/nb/LogNormal 12.30653              0        6.777778   5.528750
-#>   coverage_50 coverage_90       ape  mse n
-#> 1   0.0000000           1 0.7404989 1342 3
-#> 2   0.3333333           1 0.7030839 1089 3
+#> 1       HSGP/nb/LogNormal 11.05991              0        6.722222   4.337685
+#> 2 AR1/nb/GeneralizedGamma 11.54056              0        8.203704   3.336852
+#>   coverage_50 coverage_90       ape      mse n
+#> 1           0           1 0.7115873 1139.417 3
+#> 2           0           1 0.7336961 1290.000 3
 ```
 
 ## Automatic model selection
@@ -247,23 +247,23 @@ auto_ncast <- auto_nowcast(dengue_tbl, n_dates = 10)
 
 # Get the chosen model
 best_model_name(auto_ncast)
-#> [1] "HSGP/nb/GeneralizedGamma"
+#> [1] "HSGP/nb/Dirichlet"
 
 # Get the scores for all the models
 comparison_scores(auto_ncast)
 #>                      model      wis overprediction underprediction dispersion
-#> 1 HSGP/nb/GeneralizedGamma 8.234750     0.06666667        4.348333   3.819750
-#> 2        HSGP/nb/Dirichlet 8.388472     0.06666667        5.168889   3.152917
-#> 3  AR1/nb/GeneralizedGamma 8.540056     0.06666667        5.455556   3.017833
-#> 4         AR1/nb/LogNormal 8.637097     0.06666667        5.730000   2.840431
-#> 5         AR1/nb/Dirichlet 8.800778     0.06666667        6.055000   2.679111
-#>   coverage_50 coverage_90       ape     mse  n
-#> 1         0.3         0.9 0.7755133 650.025 10
-#> 2         0.4         0.9 0.7806480 667.800 10
-#> 3         0.2         0.8 0.8099661 694.300 10
-#> 4         0.0         0.8 0.8043512 680.900 10
-#> 5         0.0         0.8 0.7968068 659.700 10
-#>  [ reached 'max' / getOption("max.print") -- omitted 1 rows ]
+#> 1        HSGP/nb/Dirichlet 8.295708     0.06666667        5.147778   3.081264
+#> 2        HSGP/nb/LogNormal 8.448542     0.06666667        5.220000   3.161875
+#> 3         AR1/nb/Dirichlet 8.512125     0.06666667        5.819444   2.626014
+#> 4 HSGP/nb/GeneralizedGamma 8.624472     0.06666667        5.330000   3.227806
+#> 5         AR1/nb/LogNormal 8.916250     0.05555556        5.916111   2.944583
+#>   coverage_50 coverage_90       ape   mse  n
+#> 1         0.3         0.9 0.7641435 676.1 10
+#> 2         0.2         0.9 0.7904566 664.6 10
+#> 3         0.0         0.8 0.7887334 650.7 10
+#> 4         0.1         0.9 0.7989751 738.0 10
+#> 5         0.1         0.8 0.7658455 714.1 10
+#>  [ reached 'max' / getOption("max.print") -- omitted 4 rows ]
 
 autoplot(auto_ncast)
 ```
@@ -299,8 +299,8 @@ nc_updated <- update(ncast, new_data = dengue_update, level = 0.99)
 # them or to censor them. 
 extreme_values(nc_updated)  
 #>   delay weight mean_tail_prob cdf_prob     lpd relative_surprise direction
-#> 1     9      1       0.007545 0.992455 -5.3454            0.0149      long
-#> 2    10      1       0.004104 0.995896 -5.9928            0.0078      long
+#> 1     9      1       0.002823 0.997177 -6.2021            0.0054      long
+#> 2    10      1       0.001422 0.998578 -6.9318            0.0026      long
 #>   surprise level
 #> 1    delay  0.99
 #> 2    delay  0.99
@@ -326,6 +326,46 @@ restored <- load_nowcast("dengue_nowcast.rds")
 predict(restored)               # predict() / autoplot() / coef() / tidy() all work
 nowcast(restored@data, restored@model)   # or re-fit from the bundled data
 ```
+
+## How it works ?
+
+Any `model()` completely separates the **epidemic** and the **delay**
+processes allowing the user to specify the process governing each of
+them. When one specifies
+
+``` r
+model(
+  epidemic = hsgp_epidemic(),
+  delay    = generalized_gamma_delay() 
+)
+```
+
+what is being assigned to the model are the specific **delay** and
+**epidemic** processes.
+
+The image below explains the main idea: what is observed are the
+outcomes at a certain `event_date` reported (with delay) in a
+`report_date`. The processes can be analyzed separately: the epidemic
+process and the delay process each on their own result in a combined
+(coupled) observation process:
+
+<a><img src="man/figures/nowcasting_panels_resized.svg" align="center" alt="Image showing how a nowcast can be decomposed into the epidemic and delay processes"/></a>
+
+In `diseasenowcasting`, the `nowcast_diagnostic()` function plots these
+processes separately so you can see the reconstructed epidemic and delay
+processes fitted to the data:
+
+``` r
+nowcast_diagnostic(ncast)
+```
+
+<img src="man/figures/README-unnamed-chunk-7-1.png" alt="" width="100%" />
+
+As a user, you can construct your own models within the
+`diseasenowcasting` framework via the `custom_delay()` and
+`custom_epidemic()` functions. You can see more in the [Custom delays
+and epidemic processes
+vignette](https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.html)
 
 ## See also
 

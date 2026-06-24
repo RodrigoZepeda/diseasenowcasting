@@ -15,6 +15,7 @@ backtest(
   n_draws = 1000L,
   K = 25L,
   np_spread = 1,
+  recent = FALSE,
   seed = sample.int(.Machine$integer.max, 1),
   ...
 )
@@ -46,6 +47,12 @@ every date regardless of completeness.}
 \item{n_draws}{Posterior draws per nowcast.}
 
 \item{K, np_spread}{Two-stage controls passed through.}
+
+\item{recent}{When \code{dates} is \code{NULL}, choose the \strong{most recent} \code{n_dates}
+complete-truth as-of dates rather than spreading them across the whole
+history (default \code{FALSE}).  Useful when the backtest is meant to judge how a
+model does on \emph{recent} dynamics (e.g. for model selection ahead of a
+present-day nowcast).}
 
 \item{seed}{Optional base RNG seed.}
 

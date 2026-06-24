@@ -18,6 +18,7 @@ auto_nowcast(
   n_draws_select = 500L,
   n_draws = 2000L,
   K = 25L,
+  K_select = 10L,
   min_ar = 15L,
   min_hsgp = 30L,
   now = NULL,
@@ -64,7 +65,14 @@ they compete in the same backtest.}
 \item{n_draws}{Posterior draws for the final fit of the winning model
 (default 2000).}
 
-\item{K}{Delay imputations for two-stage fits (default 25).}
+\item{K}{Delay imputations for the \strong{final} two-stage fit of the winning
+model (default 25).}
+
+\item{K_select}{Delay imputations during the \strong{selection} backtest (default
+10 -- kept small for speed, like \code{n_draws_select}).  The selection backtest
+fits the whole grid over many dates, so its cost scales with \code{K_select};
+ranking the candidates is robust to a coarser imputation than the final fit.
+Lower it (e.g. \code{5}) for a long series where selection dominates the runtime.}
 
 \item{min_ar, min_hsgp}{Series-length thresholds (in event-times) at which
 AR(1) and HSGP become candidates (defaults 15 and 30).}
@@ -93,25 +101,35 @@ with the ranked scoreboard attached in its \code{comparison} slot.
 }
 \details{
 \strong{Candidate epidemic processes are chosen by series length} (\code{max_time}, the
-number of event-times): the SIR process needs the least data, the HSGP the
-most.  With the default thresholds:
+number of event-times): a process becomes a candidate as soon as the series is
+long enough to support it (SIR needs the least data, the HSGP the most) and is
+never dropped for being \emph{too} long, so the comparison always spans every
+process the data can support.  With the default thresholds:
 \itemize{
-\item \code{max_time < min_ar}         -> compares \code{{SIR}};
+\item \code{max_time < min_ar}             -> compares \code{{SIR}};
 \item \verb{min_ar <= max_time < min_hsgp} -> compares \verb{\{SIR, AR(1)\}};
-\item \code{max_time >= min_hsgp}      -> compares \verb{\{AR(1), HSGP\}}.
+\item \code{max_time >= min_hsgp}          -> compares \verb{\{SIR, AR(1), HSGP\}}.
 }
 Any process you pass explicitly via \code{sir} / \code{ar} / \code{hsgp} is \emph{always} included
 (regardless of length), which is how you make a prior compete: e.g. pass
 \code{sir = sir_epidemic(R0 = lognormal_prior(log(3), 0.2))} and the SIR candidate
 will use that R0 prior throughout the comparison.
 
+\strong{Robustness.} A candidate that fails to converge on a backtest date simply
+drops out of the comparison there (it never aborts the search), and candidates
+are scored on the common set of dates where they all produced a forecast so a
+model cannot "win" on a lucky subset.  The winner is then refit on the full
+data; if that refit fails, \code{auto_nowcast()} falls through to the next-best
+candidate (and so on), so it converges whenever any candidate would.
+
 \strong{Candidate delays} default to LogNormal, Generalized-Gamma and Dirichlet;
 override with \code{delays}.
 
 \strong{Speed.} The grid is backtested with a fast configuration
-(\code{n_draws_select} posterior draws over \code{n_dates} dates); only the winning model
-is refit with the full \code{n_draws}.  Backtesting is the expensive step -- set a
-\code{future::plan()} (e.g. \code{future::plan(multisession)}) for parallel speed-up.
+(\code{n_draws_select} posterior draws over \code{n_dates} dates spread across the
+history); only the winning model is refit with the full \code{n_draws}.  Backtesting
+is the expensive step -- set a \code{future::plan()} (e.g.
+\code{future::plan(multisession)}) for parallel speed-up.
 }
 \examples{
 \donttest{

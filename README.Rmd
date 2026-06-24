@@ -264,6 +264,32 @@ predict(restored)               # predict() / autoplot() / coef() / tidy() all w
 nowcast(restored@data, restored@model)   # or re-fit from the bundled data
 ```
 
+## How it works ?
+
+Any `model()` completely separates the **epidemic** and the **delay** processes allowing the user to specify the process governing each of them. When one specifies
+
+```{r, eval = FALSE}
+model(
+  epidemic = hsgp_epidemic(),
+  delay    = generalized_gamma_delay() 
+)
+```
+
+what is being assigned to the model are the specific **delay** and **epidemic** processes. 
+
+The image below explains the main idea: what is observed are the outcomes at a certain `event_date` reported (with delay) in a `report_date`. The processes can be analyzed separately: the epidemic process and the delay process each on their own result in a combined (coupled) observation process:
+
+<a><img src="man/figures/nowcasting_panels_resized.svg" align="center" alt="Image showing how a nowcast can be decomposed into the epidemic and delay processes"/></a>
+ 
+In `diseasenowcasting`, the `nowcast_diagnostic()` function plots these processes separately so you can see the reconstructed epidemic and delay processes fitted to the data:
+
+```{r, fig.height=8}
+nowcast_diagnostic(ncast)
+```
+
+As a user, you can construct your own models within the `diseasenowcasting` framework via the `custom_delay()` and `custom_epidemic()` functions. You can see more in the [Custom delays and epidemic processes vignette](https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.html)
+
+
 ## See also
 
 A good place to start is the
