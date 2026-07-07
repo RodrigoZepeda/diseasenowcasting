@@ -10,17 +10,20 @@ model_class <- S7::new_class(
     likelihood      = likelihood_class,
     epidemic        = epidemic_process_class,
     delay           = delay_process_class,
+    confirmation    = confirmation_process_class,   # retraction layer (inert by default)
     covariate_prior = prior_class,
     strata_pooling  = S7::class_character   # "independent" | "hierarchical"
   ),
   constructor = function(likelihood      = nb_likelihood(),
                          epidemic        = hsgp_epidemic(),
                          delay           = dirichlet_delay(),
+                         confirmation    = no_confirmation(),
                          covariate_prior = std_normal_prior(),
                          strata_pooling  = "independent") {
     S7::new_object(S7::S7_object(),
                    likelihood = likelihood, epidemic = epidemic,
-                   delay = delay, covariate_prior = covariate_prior,
+                   delay = delay, confirmation = confirmation,
+                   covariate_prior = covariate_prior,
                    strata_pooling = strata_pooling)
   },
   validator = function(self) {
@@ -40,6 +43,11 @@ model_class <- S7::new_class(
 #'   [nb_likelihood()]).  Default: [nb_likelihood()].
 #' @param epidemic        An `epidemic_process_class`.  Default: [hsgp_epidemic()].
 #' @param delay           A `delay_process_class`.  Default: [lognormal_delay()].
+#' @param confirmation    A `confirmation_process_class` ([confirmation_process()])
+#'   describing the retraction (down-revision) structure of a count-cumulative
+#'   stream.  Default: inert ([no_confirmation()], `p = 1`).  [nowcast()] switches
+#'   to the signed-increment Skellam / SkNB likelihood automatically when the data
+#'   are count-cumulative; supply a `confirmation_process()` to configure it.
 #' @param covariate_prior A `prior_class` applied to all covariate coefficients.
 #'   Default: [std_normal_prior()].
 #' @param strata_pooling  `"independent"` (default) fits fully separate intercepts
@@ -63,9 +71,11 @@ model_class <- S7::new_class(
 model <- function(likelihood      = nb_likelihood(),
                   epidemic        = hsgp_epidemic(),
                   delay           = lognormal_delay(),
+                  confirmation    = no_confirmation(),
                   covariate_prior = std_normal_prior(),
                   strata_pooling  = "independent") {
   model_class(likelihood = likelihood, epidemic = epidemic,
-              delay = delay, covariate_prior = covariate_prior,
+              delay = delay, confirmation = confirmation,
+              covariate_prior = covariate_prior,
               strata_pooling = strata_pooling)
 }

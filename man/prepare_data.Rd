@@ -16,6 +16,7 @@ prepare_data(
   gp_L = 1.5,
   gp_boundary_frac = 0.62,
   ar_sigma_max = 1,
+  is_confirmation = FALSE,
   ...
 )
 }

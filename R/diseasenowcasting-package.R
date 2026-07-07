@@ -6,7 +6,7 @@
 #' @importFrom ggplot2 autoplot
 #' @importFrom lifecycle deprecated
 #' @importFrom methods as
-#' @importFrom RTMB pnorm dnorm dgamma pgamma dbeta dexp dweibull dchisq dnbinom plogis
+#' @importFrom RTMB pnorm dnorm dgamma pgamma dbeta dexp dweibull dchisq dnbinom plogis dpois besselI
 #' @importFrom rlang .data
 #' @importFrom stats nlminb optim median sd quantile approx setNames coef predict
 #' @importFrom stats rnbinom rpois rnorm rcauchy rt runif rgamma rweibull rlnorm rchisq rexp rlogis rbeta

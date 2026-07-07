@@ -61,7 +61,7 @@ How `diseasenowcasting` compares with other R nowcasting packages:
 | Pure R — no external engine (Stan/JAGS) <sup>‡</sup> | ✅ | ✅ | ❌ | ✅ | ❌ |
 | Arbitrary delay distributions <sup>†</sup> | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Arbitrary epidemic processes <sup>†</sup> | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Counts that can decrease (suspected cases later un-confirmed) | 🚧 | ✅ | ❌ | ❌ | ❌ |
+| Counts that can decrease (suspected cases later un-confirmed) | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Nowcasts can be extended into forecasts or scenario-modeling | 🚧 | ❌ | ❌ | ❌ | ✅ |
 | Effective reproductive number (Rₜ) | ❌ | ❌ | ❌ | ❌ | ✅ |
 
@@ -77,9 +77,11 @@ Stan toolchain); `nowcaster` runs entirely in R but depends on the
 (non-CRAN) `INLA` package. <sup><b>§</b></sup> `nowcaster` stratifies by
 age/region structure only, not arbitrary user-defined strata;
 `diseasenowcasting` allows any combination of strata columns.
-<sup>🚧</sup> In development for `diseasenowcasting` (counts that revise
-*downward*, e.g. a positive later re-classified as negative);
-`baselinenowcast` already supports this. </sub>
+<sup>🚧</sup> In development for `diseasenowcasting` (extending a
+nowcast into a forward forecast / scenario projection). Counts that
+revise *downward* (e.g. a positive later re-classified as negative) are
+supported from version 2.0.0 via `confirmation_process()` — see below.
+</sub>
 
 ## Installing
 
@@ -166,7 +168,7 @@ pred <- predict(ncast)   # full posterior-predictive nowcast at every event-time
 summary(pred)
 ```
 
-    #> # A tibble: 6 × 16
+    #> # A tibble: 6 x 16
     #>    mean median    sd   mad  q2.5    q5   q10   q25   q50   q75   q90   q95 q97.5
     #>   <dbl>  <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
     #> 1 109.     108  1.53  1.48   107   107   107   107   108 109     110 111   112  
@@ -175,7 +177,7 @@ summary(pred)
     #> 4  45.6     44  9.11  5.93    36    36    38    40    44  49      55  59    65.0
     #> 5  41.6     39 15.8  11.9     23    24    27    32    39  47      59  68    74.0
     #> 6  37.6     33 19.8  16.3     13    16    18    24    33  45.2    61  72.0  85.0
-    #> # ℹ 3 more variables: .event_num <int>, stratum <chr>, event_date <date>
+    #> # i 3 more variables: .event_num <int>, stratum <chr>, event_date <date>
 
 You can choose a different epidemic process, delay family or likelihood
 by passing a `model()` to `nowcast()`:
@@ -251,19 +253,26 @@ best_model_name(auto_ncast)
 
 # Get the scores for all the models
 comparison_scores(auto_ncast)
-#>                      model      wis overprediction underprediction dispersion
-#> 1        HSGP/nb/Dirichlet 8.295708     0.06666667        5.147778   3.081264
-#> 2        HSGP/nb/LogNormal 8.448542     0.06666667        5.220000   3.161875
-#> 3         AR1/nb/Dirichlet 8.512125     0.06666667        5.819444   2.626014
-#> 4 HSGP/nb/GeneralizedGamma 8.624472     0.06666667        5.330000   3.227806
-#> 5         AR1/nb/LogNormal 8.916250     0.05555556        5.916111   2.944583
-#>   coverage_50 coverage_90       ape   mse  n
-#> 1         0.3         0.9 0.7641435 676.1 10
-#> 2         0.2         0.9 0.7904566 664.6 10
-#> 3         0.0         0.8 0.7887334 650.7 10
-#> 4         0.1         0.9 0.7989751 738.0 10
-#> 5         0.1         0.8 0.7658455 714.1 10
-#>  [ reached 'max' / getOption("max.print") -- omitted 4 rows ]
+#>                      model       wis overprediction underprediction dispersion
+#> 1        HSGP/nb/Dirichlet  8.295708     0.06666667        5.147778   3.081264
+#> 2        HSGP/nb/LogNormal  8.448542     0.06666667        5.220000   3.161875
+#> 3         AR1/nb/Dirichlet  8.512125     0.06666667        5.819444   2.626014
+#> 4 HSGP/nb/GeneralizedGamma  8.624472     0.06666667        5.330000   3.227806
+#> 5         AR1/nb/LogNormal  8.916250     0.05555556        5.916111   2.944583
+#> 6  AR1/nb/GeneralizedGamma  8.919347     0.06666667        6.077778   2.774903
+#> 7         SIR/nb/LogNormal 16.660708     0.01111111       13.270000   3.379597
+#> 8         SIR/nb/Dirichlet 17.512181     0.01111111       14.362222   3.138847
+#> 9  SIR/nb/GeneralizedGamma 18.083403     0.01111111       14.682778   3.389514
+#>   coverage_50 coverage_90       ape      mse  n
+#> 1         0.3         0.9 0.7641435  676.100 10
+#> 2         0.2         0.9 0.7904566  664.600 10
+#> 3         0.0         0.8 0.7887334  650.700 10
+#> 4         0.1         0.9 0.7989751  738.000 10
+#> 5         0.1         0.8 0.7658455  714.100 10
+#> 6         0.1         0.8 0.8019557  709.425 10
+#> 7         0.3         0.5 0.7541397 1467.925 10
+#> 8         0.3         0.5 0.7465948 1506.100 10
+#> 9         0.3         0.5 0.7537398 1514.675 10
 
 autoplot(auto_ncast)
 ```
@@ -277,6 +286,66 @@ your own `custom_delay()` / `custom_epidemic()` models via `models =`.
 See the
 [Introduction](https://rodrigozepeda.github.io/diseasenowcasting/articles/introduction.html)
 vignette for a more complete example.
+
+## Counts that can revise downward (count-cumulative data)
+
+Some surveillance streams report a **running cumulative total** for each
+event-time that is re-reported over time and can be revised **downward**
+as well as upward — for example when a suspected case is later
+re-classified as negative. The
+[FluSight](https://github.com/cdcepi/FluSight-forecast-hub) influenza
+hospitalisation data shipped with `tbl.now` is one such stream.
+`diseasenowcasting` handles these with a **confirmation process**:
+attach `confirmation_process()` to your `model()` and `nowcast()`
+automatically switches to the signed-increment (Skellam / SkNB)
+likelihood when the data are `"count-cumulative"`.
+
+``` r
+data(flusight, package = "tbl.now")
+
+# Cumulative influenza hospitalisations for California, re-reported week by week
+california <- flusight |>
+  filter(location_name == "California", target_end_date >= as.Date("2023-10-01"))
+
+flu_tbl <- tbl_now(
+  california,
+  event_date  = target_end_date,  # the epiweek being counted
+  report_date = as_of,            # when that cumulative count was known
+  case_count  = observation,      # cumulative admissions (can revise up OR down)
+  data_type   = "count-cumulative",
+  now         = as.Date("2024-01-27")
+)
+
+flu_model <- model(
+  likelihood   = nb_likelihood(),
+  epidemic     = ar1_epidemic(),
+  delay        = lognormal_delay(),
+  confirmation = confirmation_process()   # <- models the up- and down-revisions
+)
+
+flu_ncast <- nowcast(flu_tbl, flu_model, n_draws = 1000)
+autoplot(flu_ncast)
+```
+
+<div class="figure">
+
+<img src="man/figures/README-flusight-1.png" alt="_Confirmation nowcast for cumulative influenza hospitalisations in California._" width="100%" />
+<p class="caption">
+
+*Confirmation nowcast for cumulative influenza hospitalisations in
+California.*
+</p>
+
+</div>
+
+The confirmation probability `p` — the chance a report is genuine and
+never retracted — is estimated with a strong data-informed prior by
+default; pass `confirmation_process(p = 0.98)` to hold it fixed, or your
+own `beta_prior()` to change the prior. For several locations at once,
+declare the location column as `strata`: a single stratified `nowcast()`
+then shares the delay and confirmation structure across locations (which
+is both faster and, on FluSight, sharper than a separate fit per
+location).
 
 ## Handling extreme delays
 

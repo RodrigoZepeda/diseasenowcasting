@@ -171,14 +171,46 @@ summarise_nowcast_matrix <- function(draws_matrix) {
   lambda_draws  <- matrix(NA_real_, n_draws, n_time)                   # latent incidence, total
   nowcast_strata <- array(NA_real_, c(n_draws, n_time, n_strata))
   lambda_strata  <- array(NA_real_, c(n_draws, n_time, n_strata))
+  is_confirmation <- isTRUE(data$is_confirmation == 1L)
   for (draw_index in seq_len(n_draws)) {
     parlist <- .split_named_vector(setNames(parameter_draws[, draw_index], parameter_names))
     reconstructed <- .joint_reconstruct(data, priors, parlist, fit$Bmat, fit$freq)
     lambda_mat <- matrix(reconstructed$lambda, n_time, n_strata)
-    gstar_mat  <- matrix(reconstructed$Gstar,  n_time, n_strata)
-    lambda_future <- as.numeric(lambda_mat * (1 - gstar_mat)) + 1e-8   # flattened [T*S]
     phi_nb <- if (is_negbin) reconstructed$phi_nb else NA_real_
-    pred_cells <- matrix(.epidemic_rng(is_negbin, lambda_future, phi_nb), n_time, n_strata) + case_counts_mat
+    if (is_confirmation) {
+      # Final settled count = observed cumulative + future genuine additions -
+      # still-standing erroneous mass.  Under NB the additions and retractions of
+      # one origin share a SINGLE gamma frailty Lambda ~ Gamma(r, r) (they are
+      # thinnings of the same overdispersed report cloud), so draw one Lambda per
+      # (time, stratum) and make both terms Poisson(mean * Lambda) -- drawing them
+      # as two independent NBs would double-count and inflate the frailty noise.
+      confirmation_means <- reconstructed$confirmation
+      shared_frailty <- if (is_negbin) {
+        matrix(stats::rgamma(n_time * n_strata, shape = 1 / phi_nb, rate = 1 / phi_nb),
+               n_time, n_strata)
+      } else {
+        matrix(1, n_time, n_strata)
+      }
+      future_additions <- matrix(
+        stats::rpois(
+          n_time * n_strata,
+          pmax(as.numeric(confirmation_means$addition_mean), 0) * as.numeric(shared_frailty)
+        ),
+        n_time, n_strata
+      )
+      standing_retractions <- matrix(
+        stats::rpois(
+          n_time * n_strata,
+          pmax(as.numeric(confirmation_means$retraction_mean), 0) * as.numeric(shared_frailty)
+        ),
+        n_time, n_strata
+      )
+      pred_cells <- case_counts_mat + future_additions - standing_retractions
+    } else {
+      gstar_mat  <- matrix(reconstructed$Gstar,  n_time, n_strata)
+      lambda_future <- as.numeric(lambda_mat * (1 - gstar_mat)) + 1e-8   # flattened [T*S]
+      pred_cells <- matrix(.epidemic_rng(is_negbin, lambda_future, phi_nb), n_time, n_strata) + case_counts_mat
+    }
     nowcast_strata[draw_index, , ] <- pred_cells
     lambda_strata[draw_index, , ]  <- lambda_mat
     nowcast_draws[draw_index, ] <- rowSums(pred_cells)

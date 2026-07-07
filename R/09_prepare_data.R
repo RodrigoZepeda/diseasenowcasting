@@ -32,7 +32,7 @@
 prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
                          delay_only = FALSE, max_time = NULL, num_strata = NULL,
                          gp_L = 1.5, gp_boundary_frac = 0.62,
-                         ar_sigma_max = 1, ...) {
+                         ar_sigma_max = 1, is_confirmation = FALSE, ...) {
   if (!S7::S7_inherits(model, model_class))
     cli::cli_abort("`model` must be a model_class object (use model()).")
   if (!is.matrix(m) || ncol(m) < 3L)
@@ -110,7 +110,30 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     mat
   }
   case_counts <- count_matrix(m) + count_matrix(m_censored)
-  casemax <- max(case_counts, na.rm = TRUE)
+  casemax <- max(abs(case_counts), na.rm = TRUE)
+
+  # -- confirmation (count-cumulative) increment array --------------------------
+  # For the signed-increment Skellam / SkNB likelihood, reshape the (signed) `m`
+  # rows into a [max_time x (max_delay + 1) x num_strata] array of increments
+  # m_t^d (0 where a (time, delay, stratum) cell is unobserved within the horizon).
+  # `case_counts` (the sum over delays) is then the observed cumulative C_t(d*),
+  # which the predictive completes to the final count.  Off unless the data are
+  # count-cumulative.
+  increment_array   <- NULL
+  max_conf_delay    <- 0L
+  if (isTRUE(is_confirmation) && nrow(m) > 0) {
+    max_conf_delay  <- as.integer(max(m[, 3]))            # 1-indexed max delay observed
+    increment_array <- array(0.0, dim = c(max_time, max_conf_delay, num_strata))
+    # Columns of `m` are (1) 1-indexed event-time, (2) signed increment m_t^d,
+    # (3) 1-indexed delay, (4) stratum cell.
+    for (row_index in seq_len(nrow(m))) {
+      time_index      <- as.integer(m[row_index, 1])
+      delay_index     <- as.integer(m[row_index, 3])
+      strata_index    <- if (ncol(m) >= 4L) as.integer(m[row_index, 4]) else 1L
+      increment_value <- m[row_index, 2]
+      increment_array[time_index, delay_index, strata_index] <- increment_value
+    }
+  }
 
   # -- num_basis (auto) ---------------------------------------------------------
   nb_model <- if (S7::S7_inherits(epi, hsgp_epidemic_class)) epi@num_basis else 0L
@@ -139,6 +162,9 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     num_delay_seasons = as.integer(dly@num_delay_seasons),
     np_model_length = np_len,
     m = m,
+    # confirmation (count-cumulative) signed-increment likelihood
+    is_confirmation = as.integer(isTRUE(is_confirmation)),
+    increment_array = increment_array, max_conf_delay = max_conf_delay,
     # delay aggregation (per-time censoring)
     obs_delays = exact_agg$obs_delays, row_sums_exact = exact_agg$row_sums, col_sums_exact = exact_agg$col_sums,
     obs_delays_cens = censored_agg$obs_delays, row_sums_cens = censored_agg$row_sums, col_sums_cens = censored_agg$col_sums,

@@ -8,6 +8,7 @@ model(
   likelihood = nb_likelihood(),
   epidemic = hsgp_epidemic(),
   delay = lognormal_delay(),
+  confirmation = no_confirmation(),
   covariate_prior = std_normal_prior(),
   strata_pooling = "independent"
 )
@@ -19,6 +20,12 @@ model(
 \item{epidemic}{An \code{epidemic_process_class}.  Default: \code{\link[=hsgp_epidemic]{hsgp_epidemic()}}.}
 
 \item{delay}{A \code{delay_process_class}.  Default: \code{\link[=lognormal_delay]{lognormal_delay()}}.}
+
+\item{confirmation}{A \code{confirmation_process_class} (\code{\link[=confirmation_process]{confirmation_process()}})
+describing the retraction (down-revision) structure of a count-cumulative
+stream.  Default: inert (\code{\link[=no_confirmation]{no_confirmation()}}, \code{p = 1}).  \code{\link[=nowcast]{nowcast()}} switches
+to the signed-increment Skellam / SkNB likelihood automatically when the data
+are count-cumulative; supply a \code{confirmation_process()} to configure it.}
 
 \item{covariate_prior}{A \code{prior_class} applied to all covariate coefficients.
 Default: \code{\link[=std_normal_prior]{std_normal_prior()}}.}
