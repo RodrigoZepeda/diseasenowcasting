@@ -16,6 +16,7 @@ prepare_data(
   gp_L = 1.5,
   gp_boundary_frac = 0.62,
   ar_sigma_max = 1,
+  is_confirmation = FALSE,
   ...
 )
 }
@@ -46,6 +47,10 @@ over all \verb{max_time x num_strata} (time, stratum) cells; \code{1} is unstrat
 Default 0.62.}
 
 \item{ar_sigma_max}{Upper bound on the AR/beta RW innovation SD. Default 1.}
+
+\item{is_confirmation}{If TRUE, the data are count-cumulative signed increments
+and the engine is built for the confirmation (Skellam / SkNB) likelihood
+instead of the standard count likelihood. Default FALSE.}
 
 \item{...}{Reserved.}
 }

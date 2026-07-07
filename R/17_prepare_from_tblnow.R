@@ -46,7 +46,18 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE, ..
   # from the calendar dates below, so it does not need completed rows either.
   keep_rows <- which(data[[event_col]] <= now & data[[report_col]] <= now)
   as_of <- data[keep_rows, , drop = FALSE]
-  incidence <- tbl.now::to_count(as_of, to = "count-incidence")
+
+  # Count-cumulative streams (which revise DOWN as well as up) de-accumulate to
+  # SIGNED delay increments and use the confirmation / Skellam likelihood.  Every
+  # other data type gives non-negative incidence counts and the ordinary count
+  # model.  Detection is automatic from the tbl_now data type.
+  strata_cols   <- tbl.now::get_strata(data)
+  is_cumulative <- identical(tbl.now::get_data_type(data), "count-cumulative")
+  incidence <- if (is_cumulative) {
+    .deaccumulate_to_increments(as_of, event_col, report_col, event_unit, min_event, strata_cols)
+  } else {
+    as.data.frame(tbl.now::to_count(as_of, to = "count-incidence"))
+  }
 
   max_time <- as.integer(unit_steps(now) + 1L)
   event_num <- as.integer(unit_steps(incidence[[event_col]]))            # 0-indexed time
@@ -56,8 +67,8 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE, ..
   # -- strata cell index (1..num_strata) ---------------------------------------
   # The cell levels are fixed from the FULL data (a stable K-way product of the
   # strata columns), so a cell means the same thing across as-of dates and lines
-  # up with the eventual truth.  Unstratified -> a single cell.
-  strata_cols <- tbl.now::get_strata(data)
+  # up with the eventual truth.  Unstratified -> a single cell.  (`strata_cols`
+  # was resolved above for the de-accumulation step.)
   if (length(strata_cols) > 0) {
     # A missing (NA / "") stratum value becomes an explicit "missing" level, so
     # rows with unknown strata form their OWN category rather than being dropped.
@@ -101,12 +112,22 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE, ..
   # 1..max_time grid -- including event-times with no observed cases and event-
   # times AFTER the last observation but before `now`.  Computing them from the
   # observed data alone would (incorrectly) leave those rows at zero.
-  X <- .temporal_effect_matrix(data, min_event, event_unit, max_time, effect_cols)
+  X_temporal  <- .temporal_effect_matrix(data, min_event, event_unit, max_time, effect_cols)
+  # User covariates (attached via `tbl_now(covariates = ...)` / add_covariates())
+  # are event-level values placed on the same 1..max_time grid, then column-bound
+  # to the temporal effects.  Both feed the epidemic mean as X %*% gamma, shared
+  # by the count and the confirmation (Skellam/SkNB) observation models alike.
+  X_covariate <- .covariate_matrix(data, event_col, min_event, unit_steps, max_time)
+  X <- if (is.null(X_temporal) && is.null(X_covariate)) NULL
+       else cbind(X_temporal %||% matrix(0.0, max_time, 0L),
+                  X_covariate %||% matrix(0.0, max_time, 0L))
+  if (!is.null(X) && ncol(X) == 0L) X <- NULL
 
   engine <- prepare_data(model, m,
                          m_censored = if (nrow(m_censored) > 0) m_censored else NULL,
                          X = X, d_star = d_star, max_time = max_time,
-                         num_strata = num_strata, delay_only = delay_only, ...)
+                         num_strata = num_strata, delay_only = delay_only,
+                         is_confirmation = is_cumulative, ...)
   list(data = engine, now = now, event_col = event_col, min_event = min_event,
        event_unit = event_unit, max_time = max_time,
        strata_cols = strata_cols, strata_levels = cell_levels)
@@ -185,4 +206,39 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE, ..
     div <- if (unit %in% c("week", "weeks")) 7 else 1
     round(as.numeric(difftime(to, from, units = "days")) / div)
   }
+}
+
+#' Event-level covariate matrix over the full event grid.
+#'
+#' User covariates attached to a `tbl_now` (via `covariates =` / add_covariates())
+#' are values carried on each observation row.  This places them on the complete
+#' `1..max_time` event-time grid: for each covariate column the value is taken per
+#' event date (they are event-level, so constant within an event date), matched to
+#' the grid, and event-times with no observation are filled with 0.  Returns `NULL`
+#' when the data carry no covariates.
+#' @param data A `tbl_now`.
+#' @param event_col Event-date column name.
+#' @param min_event Grid origin (earliest event date).
+#' @param unit_steps Closure mapping a date to its 0-indexed grid position.
+#' @param max_time Grid length.
+#' @keywords internal
+#' @noRd
+.covariate_matrix <- function(data, event_col, min_event, unit_steps, max_time) {
+  covariate_cols <- tryCatch(tbl.now::get_covariates(data), error = function(e) character(0))
+  covariate_cols <- intersect(covariate_cols, names(as.data.frame(data)))
+  if (length(covariate_cols) == 0L) return(NULL)
+
+  observations <- as.data.frame(data)
+  grid_index   <- as.integer(unit_steps(observations[[event_col]])) + 1L      # 1-indexed event-time
+  X <- matrix(0.0, max_time, length(covariate_cols), dimnames = list(NULL, covariate_cols))
+  for (covariate_col in covariate_cols) {
+    covariate_values <- suppressWarnings(as.numeric(observations[[covariate_col]]))
+    valid_rows <- !is.na(covariate_values) & !is.na(grid_index) &
+      grid_index >= 1L & grid_index <= max_time
+    # One value per event-time (covariates are event-level, so constant within an
+    # event date): the last matching row wins.
+    X[grid_index[valid_rows], covariate_col] <- covariate_values[valid_rows]
+  }
+  storage.mode(X) <- "double"
+  X
 }

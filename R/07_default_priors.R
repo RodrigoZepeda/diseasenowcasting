@@ -211,6 +211,33 @@ default_priors <- function(mod, data = NULL, ...) {
     pr$custom_delay_inits            <- dly@inits
   }
 
+  # -- Confirmation / retraction priors (count-cumulative streams) --------------
+  # Active only when the model carries a confirmation_process().  `confirm_p` is
+  # the confirmation probability p (Beta prior favouring high p); the retraction
+  # delay g_C reuses a delay family (default lognormal) parametrised by
+  # retract_mu / retract_sigma.
+  confirmation <- tryCatch(mod@confirmation, error = function(e) NULL)
+  if (!is.null(confirmation) && isTRUE(confirmation@active)) {
+    # Data-informed strong default prior on p: centre a highly-concentrated Beta
+    # at the empirical retraction rate (1 - retracted/appeared from the signed
+    # increments).  The strength is deliberate -- a weak prior lets the Skellam
+    # variance abuse the retraction stream as an overdispersion knob and p
+    # collapses.  Overridden if the user supplied a prior or a fixed p.
+    appeared  <- if (!is.null(m_mat)) sum(pmax(m_mat[, 2], 0)) else 1
+    retracted <- if (!is.null(m_mat)) sum(pmax(-m_mat[, 2], 0)) else 0
+    p_hat <- max(0.9, min(1 - retracted / max(appeared, 1), 0.995))
+    concentration <- 300
+    default_p_prior <- beta_prior(p_hat * concentration, (1 - p_hat) * concentration)
+    pr$confirm_p      <- .res(confirmation@p, default_p_prior, key = "confirm_p")
+    pr$retract_family <- as.integer(confirmation@retract_delay@num_id)
+
+    retract_delay       <- confirmation@retract_delay
+    retract_delay_mu    <- tryCatch(retract_delay@mu,    error = function(e) numeric(0))
+    retract_delay_sigma <- tryCatch(retract_delay@sigma, error = function(e) numeric(0))
+    pr$retract_mu    <- .res(retract_delay_mu,    normal_prior(log(1.5), 0.5), key = "retract_mu")
+    pr$retract_sigma <- .res(retract_delay_sigma, gamma_prior(2, 2),          key = "retract_sigma")
+  }
+
   pr
 }
 

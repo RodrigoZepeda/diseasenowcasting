@@ -89,6 +89,18 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
 
   is_hierarchical <- isTRUE(hierarchical_strata) && n_strata > 1L
 
+  # -- confirmation (count-cumulative) configuration ---------------------------
+  # When the data are count-cumulative, the observation model is the signed-
+  # increment Skellam / SkNB likelihood: the epidemic mean is log lambda_t (final
+  # genuine count), a fraction (1 - p) of reports are retracted after a retraction
+  # delay g_C, and each weekly increment m_t^d is Skellam/SkNB(alpha_d, beta_d).
+  is_confirmation <- isTRUE(data$is_confirmation == 1L)
+  conf_D <- if (is_confirmation) as.integer(min(data$max_conf_delay - 1L, 15L)) else 0L  # modelled max delay (0-indexed)
+  retract_family <- if (is_confirmation) as.integer(priors$retract_family %||% 1L) else 0L
+  confirm_p_fixed  <- is_confirmation && isTRUE(priors$confirm_p$is_constant == 1L)
+  retract_mu_fixed <- is_confirmation && isTRUE(priors$retract_mu$is_constant == 1L)
+  retract_sd_fixed <- is_confirmation && isTRUE(priors$retract_sigma$is_constant == 1L)
+
   objective_data <- list(
     family = family, is_gengamma = as.integer(is_gengamma),
     is_nonparametric = as.integer(is_nonparametric), n_bins = n_bins,
@@ -138,7 +150,19 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     prior_n_eff_dist = if (is_sir) priors$N_eff$dist else 0L, prior_n_eff_params = if (is_sir) .pad3(priors$N_eff$params) else c(0, 0, 0),
     delay_mu_is_fixed = as.integer(delay_mu_is_fixed), delay_mu_fixed = if (delay_mu_is_fixed) priors$delay_mu$fixed else 0,
     delay_sigma_is_fixed = as.integer(delay_sigma_is_fixed), delay_sigma_fixed = if (delay_sigma_is_fixed) priors$delay_sigma$fixed else 0,
-    shape_Q_is_fixed = as.integer(shape_Q_is_fixed), shape_Q_fixed = if (shape_Q_is_fixed) priors$delay_Q$fixed else 0
+    shape_Q_is_fixed = as.integer(shape_Q_is_fixed), shape_Q_fixed = if (shape_Q_is_fixed) priors$delay_Q$fixed else 0,
+    # confirmation / retraction
+    is_confirmation = as.integer(is_confirmation), conf_D = conf_D, retract_family = retract_family,
+    increment_array = if (is_confirmation) data$increment_array else array(0.0, c(0L, 0L, 0L)),
+    confirm_p_fixed = as.integer(confirm_p_fixed), confirm_p_val = if (confirm_p_fixed) priors$confirm_p$fixed else 0,
+    prior_confirm_p_dist = if (is_confirmation && !confirm_p_fixed) priors$confirm_p$dist else 0L,
+    prior_confirm_p_params = if (is_confirmation && !confirm_p_fixed) .pad3(priors$confirm_p$params) else c(0, 0, 0),
+    retract_mu_fixed = as.integer(retract_mu_fixed), retract_mu_val = if (retract_mu_fixed) priors$retract_mu$fixed else 0,
+    retract_sd_fixed = as.integer(retract_sd_fixed), retract_sd_val = if (retract_sd_fixed) priors$retract_sigma$fixed else 0,
+    prior_retract_mu_dist = if (is_confirmation && !retract_mu_fixed) priors$retract_mu$dist else 0L,
+    prior_retract_mu_params = if (is_confirmation && !retract_mu_fixed) .pad3(priors$retract_mu$params) else c(0, 0, 0),
+    prior_retract_sd_dist = if (is_confirmation && !retract_sd_fixed) priors$retract_sigma$dist else 0L,
+    prior_retract_sd_params = if (is_confirmation && !retract_sd_fixed) .pad3(priors$retract_sigma$params) else c(0, 0, 0)
   )
 
   # -- parameter initial values (per-stratum where applicable) ------------------
@@ -147,9 +171,37 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     if (length(positive)) log(stats::median(positive)) else 0 }
   intercept_init <- init$mu_intercept %||% apply(data$case_counts, 2, positive_col_log_median)
   if (length(intercept_init) != n_strata) intercept_init <- rep_len(intercept_init, n_strata)
-  delay_mu_init  <- init$delay_mu %||% log(max(.wtd_median(data$m[, 3], data$m[, 2]), 1.5))
+  # For confirmation the delay is the APPEARANCE delay, NOT the revision-delay
+  # aggregate of `m` (which is polluted by old weeks first seen at large delays).
+  # Seed it from the empirical appearance profile of the positive increments: the
+  # mean and spread of the delay at which cumulative mass is added.  A too-short
+  # init (e.g. the old fixed log(1)) makes g_D(0) ~ 1 and the later-delay
+  # appearances impossible (-Inf) whenever the stream builds up slowly (e.g. daily
+  # covid, mean appearance delay ~7 days), so estimate the delay scale from data.
+  conf_appearance_moments <- if (is_confirmation) {
+    positive_by_delay <- apply(pmax(data$increment_array, 0), 2, sum)  # 0-indexed delay
+    delays_grid <- seq_along(positive_by_delay) - 1
+    total_mass  <- sum(positive_by_delay)
+    if (total_mass > 0) {
+      mean_delay <- sum(delays_grid * positive_by_delay) / total_mass
+      var_delay  <- sum((delays_grid - mean_delay)^2 * positive_by_delay) / total_mass
+      list(mean = mean_delay, var = var_delay)
+    } else {
+      list(mean = 1, var = 1)
+    }
+  } else NULL
+
+  delay_mu_init  <- init$delay_mu %||%
+    (if (is_confirmation) log(max(conf_appearance_moments$mean, 1))
+     else log(max(.wtd_median(data$m[, 3], data$m[, 2]), 1.5)))
   delay_sigma_init <- init$delay_sigma %||% {
-    if (is_gengamma) 0.6 else { empirical_sd <- sqrt(.wtd_var(data$m[, 3], data$m[, 2]))
+    if (is_confirmation) {
+      # Lognormal shape implied by the empirical delay mean/variance, clamped to a
+      # numerically safe band.
+      mu_hat <- max(conf_appearance_moments$mean, 0.5)
+      max(0.5, min(sqrt(log(1 + conf_appearance_moments$var / mu_hat^2)), 2))
+    }
+    else if (is_gengamma) 0.6 else { empirical_sd <- sqrt(.wtd_var(data$m[, 3], data$m[, 2]))
       if (is.finite(empirical_sd) && empirical_sd > 0) max(2, min(empirical_sd, 60)) else 5 } }
 
   parameters <- if (is_sir || is_custom_epidemic) list()
@@ -188,6 +240,12 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     if (is_gengamma) parameters$delay_Q <- if (shape_Q_is_fixed) 0 else (init$delay_Q %||% -2)
   }
   if (is_negbin) parameters$log_phi_nb <- init$log_phi_nb %||% log(20)
+  # confirmation / retraction parameters (only estimated when free)
+  if (is_confirmation) {
+    if (!confirm_p_fixed)  parameters$logit_confirm_p    <- init$logit_confirm_p    %||% stats::qlogis(0.95)
+    if (!retract_mu_fixed) parameters$retract_mu         <- init$retract_mu         %||% log(1.5)
+    if (!retract_sd_fixed) parameters$log_retract_sd_exc <- init$log_retract_sd_exc %||% log(1.0)
+  }
   if (epidemic_model == 1L) {
     parameters$log_gp_alpha <- init$log_gp_alpha %||% log(1)
     parameters$log_gp_ell   <- init$log_gp_ell   %||% log(1)
@@ -283,6 +341,28 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     upper_bound <- mu_log_upper_bound
     nb_size <- if (is_negbin == 1L) 1.0 / exp(log_phi_nb) else 0
 
+    # -- confirmation delay algebra (shared across strata) -------------------
+    # g_D = appearance-delay pmf on 0..conf_D (from the main delay cdf); g_C =
+    # retraction-delay pmf (g_C(0) = 0); g_W = g_D * g_C; p = confirmation prob.
+    if (is_confirmation == 1L) {
+      confirm_p <- if (confirm_p_fixed == 1L) confirm_p_val else plogis(logit_confirm_p)
+      appearance_cdf <- cdf_fn(seq_len(conf_D + 1L))                 # cdf at 1..conf_D+1
+      g_D_conf <- c(appearance_cdf[1], appearance_cdf[-1] - appearance_cdf[-length(appearance_cdf)])
+      retract_mu_v <- if (retract_mu_fixed == 1L) retract_mu_val else retract_mu
+      retract_sd_v <- if (retract_sd_fixed == 1L) retract_sd_val else 0.01 + exp(log_retract_sd_exc)
+      retract_fns  <- .delay_distribution_functions(retract_family, retract_mu_v, retract_sd_v)
+      # cdf at delays 1..conf_D (cdf(0) = 0 by definition, set explicitly to avoid
+      # log(0) = -Inf corrupting the AD tape); g_C(0) = 0 (retraction after report).
+      # NB: lead every c() with an ADVECTOR zero (`x[1] * 0`) -- a plain-numeric
+      # first argument makes c() dispatch to base and strips the advector class.
+      retract_cdf_pos <- retract_fns$cdf(seq_len(conf_D))
+      retract_cdf     <- c(retract_cdf_pos[1] * 0, retract_cdf_pos)
+      g_C_body <- retract_cdf[-1] - retract_cdf[-length(retract_cdf)]
+      g_C_conf <- c(g_C_body[1] * 0, g_C_body)
+      g_W_conf <- .convolve_delays(g_D_conf, g_C_conf)
+      if (retract_sd_fixed == 0L) log_jacobian <- log_jacobian + log_retract_sd_exc
+    }
+
     # -- per-stratum epidemic mean + S_k accumulation -----------------------
     # Accumulate the count log-likelihood cell-by-cell.  For HSGP/AR1 each
     # stratum is independent (column loop); SIR and custom epidemic produce the
@@ -357,24 +437,49 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
           log_mean_col <- log_mean_col + ar1_trend(ar_innov[, s], ar_phi[s], ar_sigma[s])
       }
       log_mean_capped <- upper_bound - log1p(exp(upper_bound - log_mean_col))
-      lambda <- exp(log_mean_capped)
-      gstar  <- if (delay_fully_fixed == 1L) gstar_precomputed[, s] else cdf_fn(d_star[, s] + 1)
-      counts_col <- case_counts[, s]
-      if (is_negbin == 1L) {
-        success_prob <- nb_size / (nb_size + lambda)
-        loglik_counts <- loglik_counts +
-          sum(counts_col * log1p(-success_prob)) + sum(nb_size * log(success_prob)) +
-          sum(lgamma(counts_col + nb_size) - lgamma(nb_size) - lgamma(counts_col + 1)) -
-          sum((counts_col + nb_size) * log(success_prob + gstar * (1 - success_prob)))
+      lambda <- exp(log_mean_capped)                          # lambda_t (final genuine mean)
+      if (is_confirmation == 1L) {
+        # -- signed-increment Skellam / SkNB likelihood ---------------------
+        # lambda_t is the confirmed (final) mean; mu_t = lambda_t/p is the gross
+        # report rate, eta_t = (1-p) lambda_t the retracted rate.  Each week's
+        # observed increment path m_t^0..m_t^{d*} is Skellam (Poisson) or SkNB
+        # (NB, shared gamma frailty) with alpha_d = mu_t g_D(d), beta_d = eta_t g_W(d).
+        mu_stream  <- lambda / confirm_p
+        eta_stream <- (1 - confirm_p) * lambda
+        stratum_increments <- increment_array[, , s]
+        for (t in seq_len(n_time)) {
+          horizon_t <- min(as.integer(d_star[t, s]), conf_D)   # 0-indexed observed delays
+          if (horizon_t < 0L) next
+          delay_seq  <- 0:horizon_t
+          increments <- stratum_increments[t, delay_seq + 1L]
+          alpha_path <- mu_stream[t]  * g_D_conf[delay_seq + 1L]
+          beta_path  <- eta_stream[t] * g_W_conf[delay_seq + 1L]
+          bin_type   <- ifelse(delay_seq == 0L, 0L, 1L)        # d=0 pure addition, d>=1 mixed
+          loglik_counts <- loglik_counts +
+            if (is_negbin == 1L) .loglik_sknb_path(increments, alpha_path, beta_path, bin_type, nb_size)
+            else                 .loglik_skellam_path(increments, alpha_path, beta_path, bin_type)
+        }
       } else {
-        loglik_counts <- loglik_counts + sum(counts_col * log_mean_capped) - sum(gstar * lambda)
+        gstar  <- if (delay_fully_fixed == 1L) gstar_precomputed[, s] else cdf_fn(d_star[, s] + 1)
+        counts_col <- case_counts[, s]
+        if (is_negbin == 1L) {
+          success_prob <- nb_size / (nb_size + lambda)
+          loglik_counts <- loglik_counts +
+            sum(counts_col * log1p(-success_prob)) + sum(nb_size * log(success_prob)) +
+            sum(lgamma(counts_col + nb_size) - lgamma(nb_size) - lgamma(counts_col + 1)) -
+            sum((counts_col + nb_size) * log(success_prob + gstar * (1 - success_prob)))
+        } else {
+          loglik_counts <- loglik_counts + sum(counts_col * log_mean_capped) - sum(gstar * lambda)
+        }
       }
     }
     if (is_negbin == 1L) log_jacobian <- log_jacobian + log_phi_nb
 
     # -- shared delay PMF likelihood (pooled over strata) --------------------
+    # Skipped for confirmation: there are no individual delay observations -- the
+    # appearance delay is informed by the signed-increment likelihood directly.
     loglik_delay <- 0
-    if (delay_fully_fixed == 0L && length(obs_delays) > 0) {
+    if (is_confirmation == 0L && delay_fully_fixed == 0L && length(obs_delays) > 0) {
       loglik_delay <- if (is_nonparametric == 1L)
         sum(row_sums * np_fns$log_pmf_raw(obs_delays))
       else
@@ -383,7 +488,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     }
     # Right-censored delays: we only know the delay is <= j, contributing
     # log G_D(j) (the article's m_j^* term). G_D = CDF of the delay process.
-    if (delay_fully_fixed == 0L && length(obs_delays_cens) > 0) {
+    if (is_confirmation == 0L && delay_fully_fixed == 0L && length(obs_delays_cens) > 0) {
       log_cdf_cens <- if (is_nonparametric == 1L) np_fns$log_cdf(obs_delays_cens)
                       else delay_fns$log_cdf(obs_delays_cens)
       loglik_delay <- loglik_delay + sum(row_sums_cens * log_cdf_cens)
@@ -420,6 +525,15 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     if (is_sir == 0L && is_custom_epidemic == 0L && n_covariates > 0)
       log_prior <- log_prior + prior_lpdf(as.vector(gamma), prior_gamma_dist, prior_gamma_params)
     if (is_negbin == 1L) log_prior <- log_prior + prior_lpdf(1.0 / nb_size, prior_phi_dist, prior_phi_params)
+    # confirmation / retraction priors (p on the natural scale, retraction delay)
+    if (is_confirmation == 1L) {
+      if (confirm_p_fixed == 0L) {
+        log_prior <- log_prior + prior_lpdf(confirm_p, prior_confirm_p_dist, prior_confirm_p_params) +
+          log(confirm_p) + log(1 - confirm_p)                # logit Jacobian
+      }
+      if (retract_mu_fixed == 0L) log_prior <- log_prior + prior_lpdf(retract_mu, prior_retract_mu_dist, prior_retract_mu_params)
+      if (retract_sd_fixed == 0L) log_prior <- log_prior + prior_lpdf(retract_sd_v, prior_retract_sd_dist, prior_retract_sd_params)
+    }
     if (epidemic_model == 1L) {
       log_prior <- log_prior + prior_lpdf(gp_alpha, prior_gp_alpha_dist, prior_gp_alpha_params)
       log_prior <- log_prior + prior_lpdf(gp_ell,   prior_gp_ell_dist,   prior_gp_ell_params)
@@ -557,8 +671,37 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   for (s in seq_len(n_strata)) Gstar[, s] <- as.numeric(delay_fns$cdf(d_star[, s] + 1))
   phi_nb  <- if (data$is_negative_binomial == 1L) exp(parlist$log_phi_nb) else NA_real_
 
+  # -- confirmation completion (count-cumulative) -----------------------------
+  # The final settled count is C_obs(d*) + future genuine additions - still-
+  # standing erroneous mass.  Reconstruct the per-(time, stratum) means of those
+  # two completion terms from lambda, p, the appearance delay g_D and the
+  # retraction delay g_C; predict() draws them and adds to the observed cumulative.
+  confirmation <- NULL
+  if (isTRUE(data$is_confirmation == 1L)) {
+    conf_D <- min(as.integer(data$max_conf_delay) - 1L, 15L)
+    p <- if (isTRUE(priors$confirm_p$is_constant == 1L)) priors$confirm_p$fixed
+         else stats::plogis(as.numeric(parlist$logit_confirm_p))
+    appearance_cdf <- as.numeric(delay_fns$cdf(seq_len(conf_D + 1L)))
+    g_D_conf <- c(appearance_cdf[1], diff(appearance_cdf)); G_D_conf <- cumsum(g_D_conf)
+    retract_mu_v <- if (isTRUE(priors$retract_mu$is_constant == 1L)) priors$retract_mu$fixed else as.numeric(parlist$retract_mu)
+    retract_sd_v <- if (isTRUE(priors$retract_sigma$is_constant == 1L)) priors$retract_sigma$fixed else 0.01 + exp(as.numeric(parlist$log_retract_sd_exc))
+    retract_fns  <- .delay_distribution_functions(as.integer(priors$retract_family), retract_mu_v, retract_sd_v)
+    retract_cdf  <- c(0, as.numeric(retract_fns$cdf(seq_len(conf_D))))
+    g_C_conf <- c(0, diff(retract_cdf)); g_W_conf <- .convolve_delays(g_D_conf, g_C_conf); G_W_conf <- cumsum(g_W_conf)
+    addition_mean <- retraction_mean <- matrix(0.0, n_time, n_strata)
+    for (s in seq_len(n_strata)) for (t in seq_len(n_time)) {
+      horizon <- min(as.integer(d_star[t, s]), conf_D)
+      appeared    <- G_D_conf[horizon + 1L]
+      not_retract <- G_D_conf[horizon + 1L] - G_W_conf[horizon + 1L]
+      addition_mean[t, s]   <- lambda[t, s] * (1 - appeared)          # future genuine additions
+      retraction_mean[t, s] <- (1 - p) * lambda[t, s] * not_retract   # still-standing erroneous mass
+    }
+    confirmation <- list(p = p, addition_mean = addition_mean, retraction_mean = retraction_mean)
+  }
+
   list(mu = log_mean, mu_safe = mu_safe, lambda = lambda, Gstar = Gstar,
        log_loc = if (!is.null(delay_fns$log_location)) delay_fns$log_location else NA_real_,
        log_scale = if (!is.null(delay_fns$log_scale)) delay_fns$log_scale else NA_real_,
-       delay_mu = delay_log_mean, delay_sigma = delay_sd, phi_nb = phi_nb)
+       delay_mu = delay_log_mean, delay_sigma = delay_sd, phi_nb = phi_nb,
+       confirmation = confirmation)
 }

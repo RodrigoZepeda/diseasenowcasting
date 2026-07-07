@@ -42,6 +42,12 @@
   # estimated jointly), regardless of the requested `type`.
   if (model@delay@num_id == 5L) type <- "one_stage"
 
+  # Confirmation (count-cumulative) models are fit one-stage: the two-stage
+  # delay-only Stage 1 uses the ordinary count delay likelihood, which does not
+  # apply to signed increments.  The appearance delay + retraction structure are
+  # estimated jointly with the epidemic mean instead.
+  if (isTRUE(engine$is_confirmation == 1L)) type <- "one_stage"
+
   if (type == "one_stage") {
     return(list(fits = list(fit(model, engine, priors = priors, init = warm_inits)),
                 rung = "onestage", target = target))

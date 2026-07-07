@@ -1,3 +1,38 @@
+# 2.0.0
+
+## Count-cumulative data: counts that can revise *up and down*
+
+`diseasenowcasting` now nowcasts **count-cumulative** surveillance streams — the
+running cumulative total for each event-time, re-reported over time, where later
+reports may revise a total **downward** as well as upward (e.g. a suspected case
+later re-classified as negative, as in the FluSight hospitalisation forecasts).
+
+* New `confirmation_process()` model component describes the down-revision
+  (retraction) side of the stream. Attach it to a `model()` via the
+  `confirmation` argument. It carries a retraction delay (`retract_delay`, any
+  `delay_process()`) and a confirmation probability `p` (the probability a report
+  is genuine and never retracted). `p` is specified exactly like a delay
+  parameter: leave it unset for a strong **data-informed** default prior, pass a
+  `beta_prior()` to estimate it, or pass a single numeric in `(0, 1]` to hold it
+  fixed.
+* `nowcast()` **auto-detects** count-cumulative data (via
+  `tbl.now::get_data_type()`) and switches the observation model to the
+  signed-increment **Skellam** (Poisson) / **SkNB** (negative-binomial, gamma
+  frailty) likelihood. The same `model()` → `nowcast()` → `predict()` /
+  `autoplot()` workflow applies; every epidemic process (HSGP, AR(1), SIR,
+  custom), delay family, covariate, temporal effect and stratum works as before.
+* At `p = 1` the confirmation layer is inert and the model reduces exactly to the
+  standard right-censored count model, so nothing changes for ordinary
+  count-incidence / linelist data.
+* The mathematics are derived in the
+  [Mathematical Foundations](https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.html)
+  vignette (new §8), and a worked FluSight example is in the
+  [Introduction](https://rodrigozepeda.github.io/diseasenowcasting/articles/introduction.html)
+  vignette and the README.
+
+This is a major feature addition; the version is bumped to `2.0.0`. Existing code
+is unaffected.
+
 # 1.3.2
 
 * Lowered the two-stage delay-imputation spread floors `floor_mu` and
