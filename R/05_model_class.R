@@ -45,7 +45,7 @@ model_class <- S7::new_class(
 #' @param delay           A `delay_process_class`.  Default: [lognormal_delay()].
 #' @param confirmation    A `confirmation_process_class` ([confirmation_process()])
 #'   describing the retraction (down-revision) structure of a count-cumulative
-#'   stream.  Default: inert ([no_confirmation()], `p = 1`).  [nowcast()] switches
+#'   stream.  Default: inert (`p = 1`, no retractions).  [nowcast()] switches
 #'   to the signed-increment Skellam / SkNB likelihood automatically when the data
 #'   are count-cumulative; supply a `confirmation_process()` to configure it.
 #' @param covariate_prior A `prior_class` applied to all covariate coefficients.

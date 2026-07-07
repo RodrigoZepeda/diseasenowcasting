@@ -21,6 +21,34 @@
 
 # --- numeric constants -------------------------------------------------------
 
+#' Gauss-Legendre quadrature rule on `[-1, 1]` via the Golub-Welsch algorithm.
+#'
+#' Returns `n` nodes and weights (weights sum to 2) for integrating against the
+#' constant weight on `[-1, 1]`.  The nodes are the eigenvalues of the symmetric
+#' tridiagonal Jacobi matrix of the Legendre three-term recurrence, and the weights
+#' are `2 * (first component of each eigenvector)^2` (Golub & Welsch, 1969).  This
+#' is a base-R replacement for `statmod::gauss.quad(n, "legendre")` -- it matches it
+#' to machine precision -- so the package needs no extra dependency for the single
+#' fixed rule the SkNB frailty integral uses.
+#' @param n Number of quadrature points.
+#' @keywords internal
+#' @noRd
+.gauss_legendre_rule <- function(n) {
+  # Off-diagonal entries of the Jacobi matrix for the Legendre recurrence.
+  off_diagonal_indices <- seq_len(n - 1L)
+  off_diagonal <- off_diagonal_indices / sqrt(4 * off_diagonal_indices^2 - 1)
+
+  jacobi_matrix <- matrix(0, n, n)
+  for (index in off_diagonal_indices) {
+    jacobi_matrix[index, index + 1L] <- off_diagonal[index]
+    jacobi_matrix[index + 1L, index] <- off_diagonal[index]
+  }
+
+  decomposition <- eigen(jacobi_matrix, symmetric = TRUE)
+  list(nodes   = decomposition$values,                 # eigenvalues are the nodes
+       weights = 2 * decomposition$vectors[1, ]^2)      # Golub-Welsch weights
+}
+
 # Gamma-frailty quadrature nodes for the SkNB likelihood.  The NB increment law
 # is a gamma mixture of Skellams: SkNB(a, b, r) = E_u[Skellam(a*u, b*u)] with
 # u ~ Gamma(r, r).  With r floored (see the confirmation prior) the mixing density
@@ -30,7 +58,7 @@
 .confirmation_gl_nodes <- local({
   lower_bound <- 1e-3
   upper_bound <- 4.5
-  gauss_rule  <- statmod::gauss.quad(24L, kind = "legendre")     # nodes on [-1, 1]
+  gauss_rule  <- .gauss_legendre_rule(24L)                       # nodes on [-1, 1]
   nodes   <- (upper_bound - lower_bound) / 2 * gauss_rule$nodes +
              (upper_bound + lower_bound) / 2
   log_weights <- log(gauss_rule$weights) + log((upper_bound - lower_bound) / 2)

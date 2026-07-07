@@ -48,7 +48,6 @@ Imports:
     RTMBdist,
     S7,
     scoringutils,
-    statmod,
     stats,
     utils
 Suggests:

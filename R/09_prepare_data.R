@@ -26,6 +26,9 @@
 #' @param gp_boundary_frac Fraction of the HSGP domain placed left of the data.
 #'   Default 0.62.
 #' @param ar_sigma_max Upper bound on the AR/beta RW innovation SD. Default 1.
+#' @param is_confirmation If TRUE, the data are count-cumulative signed increments
+#'   and the engine is built for the confirmation (Skellam / SkNB) likelihood
+#'   instead of the standard count likelihood. Default FALSE.
 #' @param ... Reserved.
 #' @returns A named list of engine inputs.
 #' @export

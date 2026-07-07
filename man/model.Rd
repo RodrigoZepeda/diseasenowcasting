@@ -23,7 +23,7 @@ model(
 
 \item{confirmation}{A \code{confirmation_process_class} (\code{\link[=confirmation_process]{confirmation_process()}})
 describing the retraction (down-revision) structure of a count-cumulative
-stream.  Default: inert (\code{\link[=no_confirmation]{no_confirmation()}}, \code{p = 1}).  \code{\link[=nowcast]{nowcast()}} switches
+stream.  Default: inert (\code{p = 1}, no retractions).  \code{\link[=nowcast]{nowcast()}} switches
 to the signed-increment Skellam / SkNB likelihood automatically when the data
 are count-cumulative; supply a \code{confirmation_process()} to configure it.}
 

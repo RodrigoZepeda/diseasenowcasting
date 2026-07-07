@@ -70,5 +70,13 @@ utils::globalVariables(c(
   "custom_epidemic_params", "is_custom_epidemic", "n_params_custom_epi",
   "epi_prior_dists", "epi_prior_params", "epi_is_free",
   # validate_custom_epidemic() RTMB tape parameter
-  "custom_validate_theta_epi"
+  "custom_validate_theta_epi",
+  # RTMB getAll() closure variables (confirmation / count-cumulative objective)
+  "logit_confirm_p", "retract_mu", "log_retract_sd_exc",
+  "increment_array", "conf_D", "retract_family", "is_confirmation",
+  "confirm_p_fixed", "confirm_p_val", "retract_mu_fixed", "retract_mu_val",
+  "retract_sd_fixed", "retract_sd_val",
+  "prior_confirm_p_dist", "prior_confirm_p_params",
+  "prior_retract_mu_dist", "prior_retract_mu_params",
+  "prior_retract_sd_dist", "prior_retract_sd_params"
 ))
