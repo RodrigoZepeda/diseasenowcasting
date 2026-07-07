@@ -12,6 +12,7 @@ model(
   likelihood = nb_likelihood(),
   epidemic = hsgp_epidemic(),
   delay = lognormal_delay(),
+  confirmation = no_confirmation(),
   covariate_prior = std_normal_prior(),
   strata_pooling = "independent"
 )
@@ -37,6 +38,18 @@ model(
 
   A `delay_process_class`. Default:
   [`lognormal_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/delay_process.md).
+
+- confirmation:
+
+  A `confirmation_process_class`
+  ([`confirmation_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.md))
+  describing the retraction (down-revision) structure of a
+  count-cumulative stream. Default: inert (`p = 1`, no retractions).
+  [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
+  switches to the signed-increment Skellam / SkNB likelihood
+  automatically when the data are count-cumulative; supply a
+  [`confirmation_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.md)
+  to configure it.
 
 - covariate_prior:
 

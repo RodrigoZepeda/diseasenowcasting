@@ -565,6 +565,118 @@ See the vignette on [Handling Outlier Delays with
 Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.md)
 for what to do when a delay *is* flagged.
 
+## Example 5 – Count-cumulative data that revises up *and* down (FluSight)
+
+So far every example has used **incident** data: each case is counted
+once, and counts only ever grow as late reports arrive. Some
+surveillance systems instead publish a **running cumulative total** for
+each event-time that is *re-reported* week after week – and those totals
+can be revised **downward** as well as upward (for example when a
+suspected case is later re-classified as negative). The
+[FluSight](https://github.com/cdcepi/FluSight-forecast-hub) influenza
+hospitalisation data shipped with `tbl.now` is exactly this kind of
+stream: for each `target_end_date` (the epiweek being counted), the
+reported cumulative `observation` changes across `as_of` report dates.
+
+``` r
+
+data(flusight, package = "tbl.now")
+head(flusight)
+#> # A tibble: 6 × 4
+#>   as_of      target_end_date location_name observation
+#>   <date>     <date>          <chr>               <dbl>
+#> 1 2023-09-23 2022-02-12      Alabama                10
+#> 2 2023-09-23 2022-02-12      Alaska                  0
+#> 3 2023-09-23 2022-02-12      Arizona                64
+#> 4 2023-09-23 2022-02-12      Arkansas               29
+#> 5 2023-09-23 2022-02-12      California             36
+#> 6 2023-09-23 2022-02-12      Colorado               29
+```
+
+We tell
+[`tbl_now()`](https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html)
+that these are cumulative counts with `data_type = "count-cumulative"`.
+Here we nowcast a single location (California), keeping a recent window
+of the season:
+
+``` r
+
+california <- flusight |>
+  filter(location_name == "California", target_end_date >= as.Date("2023-10-01"))
+
+flu_tbl <- tbl_now(
+  california,
+  event_date  = target_end_date,  # the epiweek being counted
+  report_date = as_of,            # when that cumulative count was known
+  case_count  = observation,      # cumulative admissions (can go up OR down)
+  data_type   = "count-cumulative",
+  now         = as.Date("2024-01-27")
+)
+```
+
+To model the down-revisions we attach a **confirmation process** to the
+model.
+[`confirmation_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.md)
+describes the retraction side of the stream through a retraction delay
+and a *confirmation probability* `p` – the probability that a report is
+genuine and never retracted. Left unset, `p` gets a strong data-informed
+prior (just like the lognormal delay’s mean); pass
+`confirmation_process(p = 0.98)` to hold it fixed, or a
+[`beta_prior()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/priors.md)
+to set your own. When the data are count-cumulative,
+[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
+automatically switches from the censored count likelihood to the
+**signed-increment Skellam / SkNB** likelihood that the confirmation
+process needs:
+
+``` r
+
+flu_model <- model(
+  likelihood   = nb_likelihood(),
+  epidemic     = ar1_epidemic(),
+  delay        = lognormal_delay(),
+  confirmation = confirmation_process()   # models the up- and down-revisions
+)
+
+flu_ncast <- nowcast(flu_tbl, flu_model, n_draws = 1000)
+autoplot(flu_ncast)
+```
+
+![\_Confirmation nowcast for cumulative influenza hospitalisations in
+California.\_](introduction_files/figure-html/flusight-nowcast-1.png)
+
+*Confirmation nowcast for cumulative influenza hospitalisations in
+California.*
+
+Everything else works exactly as before –
+[`predict()`](https://rdrr.io/r/stats/predict.html),
+[`summary()`](https://rdrr.io/r/base/summary.html),
+[`coef()`](https://rdrr.io/r/stats/coef.html) and the different epidemic
+processes, delay families, covariates and temporal effects are all
+available for count-cumulative data too:
+
+``` r
+
+summary(predict(flu_ncast)) |> dplyr::as_tibble() |> tail(4)
+#> # A tibble: 4 × 15
+#>    mean median    sd   mad  q2.5    q5   q10   q25   q50   q75   q90   q95 q97.5
+#>   <dbl>  <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
+#> 1 1425.   1421  9.69  2.97 1417   1418  1419  1420  1421  1426  1433 1441. 1451.
+#> 2 1029.   1026  8.74  2.97 1020   1022  1023  1025  1026  1030  1040 1046. 1056 
+#> 3 1046.   1044  8.70  2.97 1031.  1035  1039  1043  1044  1047  1054 1061  1066.
+#> 4  703.    694 25.3   4.45  685.   688   691   692   694   705   724  744   764 
+#> # ℹ 2 more variables: .event_num <int>, event_date <date>
+```
+
+To nowcast **several locations at once**, declare the location column as
+`strata` in
+[`tbl_now()`](https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html).
+A single stratified
+[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
+then shares the delay and confirmation structure across locations, which
+is both faster than a separate fit per location and – on FluSight –
+sharper (lower Weighted Interval Score).
+
 ## Saving and loading a fitted nowcast
 
 Fitting can take a while, so you will often want to **save** a fitted

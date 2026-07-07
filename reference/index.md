@@ -34,6 +34,9 @@
   The model-selection scoreboard from
   [`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
 
+- [`confirmation_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.md)
+  : Confirmation / retraction process
+
 - [`covid_colombia`](https://rodrigozepeda.github.io/diseasenowcasting/reference/covid_colombia.md)
   : COVID-19 Notifications – Colombia 2020-2023
 

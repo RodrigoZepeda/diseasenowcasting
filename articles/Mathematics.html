@@ -41,7 +41,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -418,6 +418,138 @@ across imputations: <span class="math display">\text{Pooled}_{t}^{(i)} =
 \text{Nowcast}_{t,\,k(i)}\!\left(\theta_D^{(k(i))}\right),</span> where
 <span class="math inline">k(i)</span> cycles over imputations.</p></li>
 </ol>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="count-cumulative-data-the-confirmation-model-skellam-sknb">8. Count-cumulative data: the confirmation model (Skellam /
+SkNB)<a class="anchor" aria-label="anchor" href="#count-cumulative-data-the-confirmation-model-skellam-sknb"></a>
+</h2>
+<p>Sections 2–7 assume <strong>incident</strong> data: each case is
+counted once and the observed count only ever grows. Some surveillance
+systems instead publish, for each event-time <span class="math inline">t</span>, a <strong>running cumulative
+total</strong> <span class="math inline">C_t(d)</span> known <span class="math inline">d</span> periods after <span class="math inline">t</span>, and that total may be revised
+<strong>downward</strong> as well as upward — a suspected case is later
+re-classified as negative and <em>removed</em>.
+<code>diseasenowcasting</code> handles such
+<strong>count-cumulative</strong> streams with a <em>confirmation
+process</em>, which replaces the censored count likelihood of §2 with a
+signed-increment likelihood.</p>
+<div class="section level3">
+<h3 id="signed-increments-and-the-two-streams">8.1 Signed increments and the two streams<a class="anchor" aria-label="anchor" href="#signed-increments-and-the-two-streams"></a>
+</h3>
+<p>Work with the <strong>signed increments</strong> of the cumulative
+curve, <span class="math display">m_t^d = C_t(d) - C_t(d-1), \qquad
+C_t(-1) \equiv 0,</span> which are positive when net reports are added
+at delay <span class="math inline">d</span> and
+<strong>negative</strong> when net reports are retracted. Each increment
+is the difference of two latent counting streams:</p>
+<ul>
+<li>
+<strong>Appearances</strong> <span class="math inline">A_t^d</span>
+— reports (genuine or erroneous) first entering the system at delay
+<span class="math inline">d</span>, with mean <span class="math display">\alpha_t^d = \mu_t\, g_D(d),</span> where <span class="math inline">g_D</span> is the appearance-delay pmf (the delay
+families of §4) and <span class="math inline">\mu_t</span> is the gross
+report intensity.</li>
+<li>
+<strong>Retractions</strong> <span class="math inline">W_t^d</span>
+— erroneous reports being removed at delay <span class="math inline">d</span>. An erroneous report first appears at delay
+<span class="math inline">a</span> (via <span class="math inline">g_D</span>) and is retracted a further <span class="math inline">c</span> periods later (via a <strong>retraction
+delay</strong> <span class="math inline">g_C</span>), so retractions
+land at delay <span class="math inline">d = a + c</span> with pmf given
+by the convolution <span class="math display">g_W = g_D * g_C, \qquad
+g_W(d) = \sum_{a=0}^{d} g_D(a)\, g_C(d-a),</span> and mean <span class="math inline">\beta_t^d = \eta_t\, g_W(d)</span>.</li>
+</ul>
+<p>The two intensities are tied together by the <strong>confirmation
+probability</strong> <span class="math inline">p \in (0, 1]</span> — the
+probability that a report is genuine and never retracted. Writing <span class="math inline">\lambda_t</span> for the mean of the final
+<em>settled</em> (genuine) count, as produced by the epidemic process of
+§3 (<span class="math inline">\lambda_t =
+\exp(\text{cap}(\mu_t^{(s)}))</span>), <span class="math display">\mu_t
+= \frac{\lambda_t}{p} \quad\text{(gross appearances)}, \qquad
+  \eta_t = (1-p)\,\lambda_t \quad\text{(retractions)}.</span> At <span class="math inline">p = 1</span> there are no retractions (<span class="math inline">\eta_t = 0</span>, <span class="math inline">\beta_t^d = 0</span>), every increment is a pure
+appearance, and the model collapses back to the ordinary right-censored
+count model of §2.</p>
+</div>
+<div class="section level3">
+<h3 id="the-increment-likelihood">8.2 The increment likelihood<a class="anchor" aria-label="anchor" href="#the-increment-likelihood"></a>
+</h3>
+<p><strong>Poisson case.</strong> If the appearance and retraction
+streams are independent Poisson processes, <span class="math inline">A_t^d \sim \mathrm{Poisson}(\alpha_t^d)</span> and
+<span class="math inline">W_t^d \sim \mathrm{Poisson}(\beta_t^d)</span>,
+then the increment <span class="math inline">m_t^d = A_t^d -
+W_t^d</span> follows a <strong>Skellam</strong> distribution, <span class="math display">m_t^d \sim \mathrm{Skellam}(\alpha_t^d,\,
+\beta_t^d), \qquad
+  P(m) = e^{-(\alpha+\beta)} \left(\tfrac{\alpha}{\beta}\right)^{m/2}
+         I_{|m|}\!\bigl(2\sqrt{\alpha\beta}\bigr),</span> where <span class="math inline">I_\nu</span> is the modified Bessel function of the
+first kind. Equivalently — and this is the identity the package
+evaluates, in log-space, for automatic-differentiation safety — <span class="math inline">P(m)</span> is the Poisson-difference convolution
+<span class="math display">P(m) = \sum_{k \ge \max(0,\,-m)}
+\mathrm{Poisson}(k+m;\, \alpha)\,\mathrm{Poisson}(k;\, \beta).</span>
+The log-pmf is computed with a numerically stable ascending series for
+<span class="math inline">\log I_{|m|}</span> (never R’s
+<code><a href="https://rdrr.io/r/base/Bessel.html" class="external-link">besselI()</a></code>, which underflows to <span class="math inline">0</span> for the small arguments typical here and
+would return <span class="math inline">-\infty</span>). Pure-addition
+(<span class="math inline">\beta = 0</span>, delay <span class="math inline">0</span>) and pure-retraction bins reduce to a
+single Poisson term.</p>
+<p><strong>Negative-binomial case.</strong> Real streams are
+over-dispersed, so under <code><a href="../reference/likelihood.html">nb_likelihood()</a></code> the two streams
+share a single <strong>gamma frailty</strong> per origin, <span class="math inline">\Lambda_t \sim \mathrm{Gamma}(r, r)</span> (mean
+<span class="math inline">1</span>, variance <span class="math inline">1/r</span>, with <span class="math inline">r =
+1/\phi</span>), and are conditionally Poisson given <span class="math inline">\Lambda_t</span>. The increment is then a
+gamma-mixed Skellam, the <strong>SkNB</strong> law. Because <em>all</em>
+delays of one origin are thinnings of the <em>same</em> over-dispersed
+report cloud, the frailty is shared <strong>across delays</strong> — it
+must sit outside the product — so the one-origin likelihood is the
+one-dimensional integral <span class="math display">P\bigl(m_t^0,
+\ldots, m_t^{d^*_t}\bigr)
+  = \int_0^\infty \Biggl[\prod_{d=0}^{d^*_t}
+      \mathrm{Skellam}\bigl(m_t^d;\, \alpha_t^d\, u,\; \beta_t^d\,
+u\bigr)\Biggr]
+    \mathrm{Gamma}(u;\, r, r)\, \mathrm{d}u,</span> evaluated by fixed
+<strong>Gauss–Legendre quadrature</strong>. Treating the delay bins as
+independent negative binomials (a separate frailty each) would
+double-count the over-dispersion and is <em>not</em> the <span class="math inline">p = 1</span> limit of the count model. The increment
+moments are <span class="math display">\mathbb{E}\,m_t^d = \alpha_t^d -
+\beta_t^d, \qquad
+  \operatorname{Var} m_t^d = \alpha_t^d + \beta_t^d + \frac{(\alpha_t^d
+- \beta_t^d)^2}{r}.</span></p>
+<p>The full log-likelihood again sums over event-times and strata (§5),
+with <span class="math inline">g_D</span>, <span class="math inline">g_C</span>, <span class="math inline">p</span> and
+<span class="math inline">\phi</span> shared across strata and the
+epidemic mean <span class="math inline">\lambda_t^{(s)}</span> per
+stratum.</p>
+</div>
+<div class="section level3">
+<h3 id="reconstruction">8.3 Reconstruction<a class="anchor" aria-label="anchor" href="#reconstruction"></a>
+</h3>
+<p>For a partially observed origin <span class="math inline">t</span>
+(observed up to delay <span class="math inline">d^*_t</span>, current
+cumulative <span class="math inline">C_t(d^*_t)</span>), the settled
+total adds the genuine reports still to arrive and removes the erroneous
+mass still standing, sharing one frailty draw <span class="math inline">\Lambda_t \sim \mathrm{Gamma}(r, r)</span>: <span class="math display">\widehat{N}_t = C_t(d^*_t)
+  + \underbrace{\lambda_t\bigl[1 -
+G_D(d^*_t)\bigr]\,\Lambda_t}_{\text{future genuine additions}}
+  - \underbrace{(1-p)\,\lambda_t\bigl[1 -
+G_W(d^*_t)\bigr]\,\Lambda_t}_{\text{still-standing retractions}},</span>
+with the two terms drawn as <span class="math inline">\mathrm{Poisson}(\text{mean}\cdot\Lambda_t)</span>.
+The posterior-predictive nowcast is summarised from these draws, exactly
+as in §6.</p>
+</div>
+<div class="section level3">
+<h3 id="identifiability">8.4 Identifiability<a class="anchor" aria-label="anchor" href="#identifiability"></a>
+</h3>
+<p>The confirmation probability <span class="math inline">p</span> and
+the tail of the retraction delay <span class="math inline">g_C</span>
+are only weakly separated by the data: a lower <span class="math inline">p</span> with faster retractions can mimic a higher
+<span class="math inline">p</span> with slower ones. Two restrictions
+identify the model in practice: the retraction delay <span class="math inline">g_C</span> is a <strong>proper</strong>
+distribution, and <span class="math inline">p</span> carries a
+<strong>strong, data-informed prior</strong> (a Beta centred at the
+empirical retraction rate; see <code><a href="../reference/confirmation_process.html">?confirmation_process</a></code>).
+Without the strong prior the Skellam variance abuses the retraction
+stream as an overdispersion knob and <span class="math inline">p</span>
+collapses.</p>
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

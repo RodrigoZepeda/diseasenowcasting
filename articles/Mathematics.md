@@ -272,3 +272,114 @@ delay and epidemic processess. The two-stage cascade addresses this via
     imputations: \text{Pooled}\_{t}^{(i)} =
     \text{Nowcast}\_{t,\\k(i)}\\\left(\theta_D^{(k(i))}\right), where
     k(i) cycles over imputations.
+
+------------------------------------------------------------------------
+
+## 8. Count-cumulative data: the confirmation model (Skellam / SkNB)
+
+Sections 2–7 assume **incident** data: each case is counted once and the
+observed count only ever grows. Some surveillance systems instead
+publish, for each event-time t, a **running cumulative total** C_t(d)
+known d periods after t, and that total may be revised **downward** as
+well as upward — a suspected case is later re-classified as negative and
+*removed*. `diseasenowcasting` handles such **count-cumulative** streams
+with a *confirmation process*, which replaces the censored count
+likelihood of §2 with a signed-increment likelihood.
+
+### 8.1 Signed increments and the two streams
+
+Work with the **signed increments** of the cumulative curve, m_t^d =
+C_t(d) - C_t(d-1), \qquad C_t(-1) \equiv 0, which are positive when net
+reports are added at delay d and **negative** when net reports are
+retracted. Each increment is the difference of two latent counting
+streams:
+
+- **Appearances** A_t^d — reports (genuine or erroneous) first entering
+  the system at delay d, with mean \alpha_t^d = \mu_t\\ g_D(d), where
+  g_D is the appearance-delay pmf (the delay families of §4) and \mu_t
+  is the gross report intensity.
+- **Retractions** W_t^d — erroneous reports being removed at delay d. An
+  erroneous report first appears at delay a (via g_D) and is retracted a
+  further c periods later (via a **retraction delay** g_C), so
+  retractions land at delay d = a + c with pmf given by the convolution
+  g_W = g_D \* g_C, \qquad g_W(d) = \sum\_{a=0}^{d} g_D(a)\\ g_C(d-a),
+  and mean \beta_t^d = \eta_t\\ g_W(d).
+
+The two intensities are tied together by the **confirmation
+probability** p \in (0, 1\] — the probability that a report is genuine
+and never retracted. Writing \lambda_t for the mean of the final
+*settled* (genuine) count, as produced by the epidemic process of §3
+(\lambda_t = \exp(\text{cap}(\mu_t^{(s)}))), \mu_t = \frac{\lambda_t}{p}
+\quad\text{(gross appearances)}, \qquad \eta_t = (1-p)\\\lambda_t
+\quad\text{(retractions)}. At p = 1 there are no retractions (\eta_t =
+0, \beta_t^d = 0), every increment is a pure appearance, and the model
+collapses back to the ordinary right-censored count model of §2.
+
+### 8.2 The increment likelihood
+
+**Poisson case.** If the appearance and retraction streams are
+independent Poisson processes, A_t^d \sim \mathrm{Poisson}(\alpha_t^d)
+and W_t^d \sim \mathrm{Poisson}(\beta_t^d), then the increment m_t^d =
+A_t^d - W_t^d follows a **Skellam** distribution, m_t^d \sim
+\mathrm{Skellam}(\alpha_t^d,\\ \beta_t^d), \qquad P(m) =
+e^{-(\alpha+\beta)} \left(\tfrac{\alpha}{\beta}\right)^{m/2}
+I\_{\|m\|}\\\bigl(2\sqrt{\alpha\beta}\bigr), where I\_\nu is the
+modified Bessel function of the first kind. Equivalently — and this is
+the identity the package evaluates, in log-space, for
+automatic-differentiation safety — P(m) is the Poisson-difference
+convolution P(m) = \sum\_{k \ge \max(0,\\-m)} \mathrm{Poisson}(k+m;\\
+\alpha)\\\mathrm{Poisson}(k;\\ \beta). The log-pmf is computed with a
+numerically stable ascending series for \log I\_{\|m\|} (never R’s
+[`besselI()`](https://rdrr.io/r/base/Bessel.html), which underflows to 0
+for the small arguments typical here and would return -\infty).
+Pure-addition (\beta = 0, delay 0) and pure-retraction bins reduce to a
+single Poisson term.
+
+**Negative-binomial case.** Real streams are over-dispersed, so under
+[`nb_likelihood()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/likelihood.md)
+the two streams share a single **gamma frailty** per origin, \Lambda_t
+\sim \mathrm{Gamma}(r, r) (mean 1, variance 1/r, with r = 1/\phi), and
+are conditionally Poisson given \Lambda_t. The increment is then a
+gamma-mixed Skellam, the **SkNB** law. Because *all* delays of one
+origin are thinnings of the *same* over-dispersed report cloud, the
+frailty is shared **across delays** — it must sit outside the product —
+so the one-origin likelihood is the one-dimensional integral
+P\bigl(m_t^0, \ldots, m_t^{d^\*\_t}\bigr) = \int_0^\infty
+\Biggl\[\prod\_{d=0}^{d^\*\_t} \mathrm{Skellam}\bigl(m_t^d;\\
+\alpha_t^d\\ u,\\ \beta_t^d\\ u\bigr)\Biggr\] \mathrm{Gamma}(u;\\ r,
+r)\\ \mathrm{d}u, evaluated by fixed **Gauss–Legendre quadrature**.
+Treating the delay bins as independent negative binomials (a separate
+frailty each) would double-count the over-dispersion and is *not* the p
+= 1 limit of the count model. The increment moments are
+\mathbb{E}\\m_t^d = \alpha_t^d - \beta_t^d, \qquad \operatorname{Var}
+m_t^d = \alpha_t^d + \beta_t^d + \frac{(\alpha_t^d - \beta_t^d)^2}{r}.
+
+The full log-likelihood again sums over event-times and strata (§5),
+with g_D, g_C, p and \phi shared across strata and the epidemic mean
+\lambda_t^{(s)} per stratum.
+
+### 8.3 Reconstruction
+
+For a partially observed origin t (observed up to delay d^\*\_t, current
+cumulative C_t(d^\*\_t)), the settled total adds the genuine reports
+still to arrive and removes the erroneous mass still standing, sharing
+one frailty draw \Lambda_t \sim \mathrm{Gamma}(r, r): \widehat{N}\_t =
+C_t(d^\*\_t) + \underbrace{\lambda_t\bigl\[1 -
+G_D(d^\*\_t)\bigr\]\\\Lambda_t}\_{\text{future genuine additions}} -
+\underbrace{(1-p)\\\lambda_t\bigl\[1 -
+G_W(d^\*\_t)\bigr\]\\\Lambda_t}\_{\text{still-standing retractions}},
+with the two terms drawn as \mathrm{Poisson}(\text{mean}\cdot\Lambda_t).
+The posterior-predictive nowcast is summarised from these draws, exactly
+as in §6.
+
+### 8.4 Identifiability
+
+The confirmation probability p and the tail of the retraction delay g_C
+are only weakly separated by the data: a lower p with faster retractions
+can mimic a higher p with slower ones. Two restrictions identify the
+model in practice: the retraction delay g_C is a **proper**
+distribution, and p carries a **strong, data-informed prior** (a Beta
+centred at the empirical retraction rate; see
+[`?confirmation_process`](https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.md)).
+Without the strong prior the Skellam variance abuses the retraction
+stream as an overdispersion knob and p collapses.

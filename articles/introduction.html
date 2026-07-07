@@ -41,7 +41,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -542,6 +542,96 @@ flagged.</p>
 </div>
 </div>
 <div class="section level2">
+<h2 id="example-5-count-cumulative-data-that-revises-up-and-down-flusight">Example 5 – Count-cumulative data that revises up <em>and</em> down
+(FluSight)<a class="anchor" aria-label="anchor" href="#example-5-count-cumulative-data-that-revises-up-and-down-flusight"></a>
+</h2>
+<p>So far every example has used <strong>incident</strong> data: each
+case is counted once, and counts only ever grow as late reports arrive.
+Some surveillance systems instead publish a <strong>running cumulative
+total</strong> for each event-time that is <em>re-reported</em> week
+after week – and those totals can be revised <strong>downward</strong>
+as well as upward (for example when a suspected case is later
+re-classified as negative). The <a href="https://github.com/cdcepi/FluSight-forecast-hub" class="external-link">FluSight</a>
+influenza hospitalisation data shipped with <code>tbl.now</code> is
+exactly this kind of stream: for each <code>target_end_date</code> (the
+epiweek being counted), the reported cumulative <code>observation</code>
+changes across <code>as_of</code> report dates.</p>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">flusight</span>, package <span class="op">=</span> <span class="st">"tbl.now"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">flusight</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 4</span></span></span>
+<span><span class="co">#&gt;   as_of      target_end_date location_name observation</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> 2023-09-23 2022-02-12      Alabama                10</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> 2023-09-23 2022-02-12      Alaska                  0</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> 2023-09-23 2022-02-12      Arizona                64</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> 2023-09-23 2022-02-12      Arkansas               29</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> 2023-09-23 2022-02-12      California             36</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> 2023-09-23 2022-02-12      Colorado               29</span></span></code></pre></div>
+<p>We tell <code><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html" class="external-link">tbl_now()</a></code> that these are cumulative counts with
+<code>data_type = "count-cumulative"</code>. Here we nowcast a single
+location (California), keeping a recent window of the season:</p>
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">california</span> <span class="op">&lt;-</span> <span class="va">flusight</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">location_name</span> <span class="op">==</span> <span class="st">"California"</span>, <span class="va">target_end_date</span> <span class="op">&gt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2023-10-01"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">flu_tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html" class="external-link">tbl_now</a></span><span class="op">(</span></span>
+<span>  <span class="va">california</span>,</span>
+<span>  event_date  <span class="op">=</span> <span class="va">target_end_date</span>,  <span class="co"># the epiweek being counted</span></span>
+<span>  report_date <span class="op">=</span> <span class="va">as_of</span>,            <span class="co"># when that cumulative count was known</span></span>
+<span>  case_count  <span class="op">=</span> <span class="va">observation</span>,      <span class="co"># cumulative admissions (can go up OR down)</span></span>
+<span>  data_type   <span class="op">=</span> <span class="st">"count-cumulative"</span>,</span>
+<span>  now         <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2024-01-27"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>To model the down-revisions we attach a <strong>confirmation
+process</strong> to the model. <code><a href="../reference/confirmation_process.html">confirmation_process()</a></code>
+describes the retraction side of the stream through a retraction delay
+and a <em>confirmation probability</em> <code>p</code> – the probability
+that a report is genuine and never retracted. Left unset, <code>p</code>
+gets a strong data-informed prior (just like the lognormal delay’s
+mean); pass <code>confirmation_process(p = 0.98)</code> to hold it
+fixed, or a <code><a href="../reference/priors.html">beta_prior()</a></code> to set your own. When the data are
+count-cumulative, <code><a href="../reference/nowcast.html">nowcast()</a></code> automatically switches from the
+censored count likelihood to the <strong>signed-increment Skellam /
+SkNB</strong> likelihood that the confirmation process needs:</p>
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">flu_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/model.html">model</a></span><span class="op">(</span></span>
+<span>  likelihood   <span class="op">=</span> <span class="fu"><a href="../reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  epidemic     <span class="op">=</span> <span class="fu"><a href="../reference/epidemic_process.html">ar1_epidemic</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  delay        <span class="op">=</span> <span class="fu"><a href="../reference/delay_process.html">lognormal_delay</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  confirmation <span class="op">=</span> <span class="fu"><a href="../reference/confirmation_process.html">confirmation_process</a></span><span class="op">(</span><span class="op">)</span>   <span class="co"># models the up- and down-revisions</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">flu_ncast</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">flu_tbl</span>, <span class="va">flu_model</span>, n_draws <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">flu_ncast</span><span class="op">)</span></span></code></pre></div>
+<div class="figure" style="text-align: center">
+<img src="introduction_files/figure-html/flusight-nowcast-1.png" class="r-plt" alt="_Confirmation nowcast for cumulative influenza hospitalisations in California._" width="672"><p class="caption">
+<em>Confirmation nowcast for cumulative influenza hospitalisations in
+California.</em>
+</p>
+</div>
+<p>Everything else works exactly as before – <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>,
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, <code><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef()</a></code> and the different epidemic
+processes, delay families, covariates and temporal effects are all
+available for count-cumulative data too:</p>
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">flu_ncast</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/as_tibble.html" class="external-link">as_tibble</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">tail</a></span><span class="op">(</span><span class="fl">4</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 15</span></span></span>
+<span><span class="co">#&gt;    mean median    sd   mad  q2.5    q5   q10   q25   q50   q75   q90   q95 q97.5</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="text-decoration: underline;">1</span>425.   <span style="text-decoration: underline;">1</span>421  9.69  2.97 <span style="text-decoration: underline;">1</span>417   <span style="text-decoration: underline;">1</span>418  <span style="text-decoration: underline;">1</span>419  <span style="text-decoration: underline;">1</span>420  <span style="text-decoration: underline;">1</span>421  <span style="text-decoration: underline;">1</span>426  <span style="text-decoration: underline;">1</span>433 <span style="text-decoration: underline;">1</span>441. <span style="text-decoration: underline;">1</span>451.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="text-decoration: underline;">1</span>029.   <span style="text-decoration: underline;">1</span>026  8.74  2.97 <span style="text-decoration: underline;">1</span>020   <span style="text-decoration: underline;">1</span>022  <span style="text-decoration: underline;">1</span>023  <span style="text-decoration: underline;">1</span>025  <span style="text-decoration: underline;">1</span>026  <span style="text-decoration: underline;">1</span>030  <span style="text-decoration: underline;">1</span>040 <span style="text-decoration: underline;">1</span>046. <span style="text-decoration: underline;">1</span>056 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> <span style="text-decoration: underline;">1</span>046.   <span style="text-decoration: underline;">1</span>044  8.70  2.97 <span style="text-decoration: underline;">1</span>031.  <span style="text-decoration: underline;">1</span>035  <span style="text-decoration: underline;">1</span>039  <span style="text-decoration: underline;">1</span>043  <span style="text-decoration: underline;">1</span>044  <span style="text-decoration: underline;">1</span>047  <span style="text-decoration: underline;">1</span>054 <span style="text-decoration: underline;">1</span>061  <span style="text-decoration: underline;">1</span>066.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>  703.    694 25.3   4.45  685.   688   691   692   694   705   724  744   764 </span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 more variables: .event_num &lt;int&gt;, event_date &lt;date&gt;</span></span></span></code></pre></div>
+<p>To nowcast <strong>several locations at once</strong>, declare the
+location column as <code>strata</code> in <code><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html" class="external-link">tbl_now()</a></code>. A
+single stratified <code><a href="../reference/nowcast.html">nowcast()</a></code> then shares the delay and
+confirmation structure across locations, which is both faster than a
+separate fit per location and – on FluSight – sharper (lower Weighted
+Interval Score).</p>
+</div>
+<div class="section level2">
 <h2 id="saving-and-loading-a-fitted-nowcast">Saving and loading a fitted nowcast<a class="anchor" aria-label="anchor" href="#saving-and-loading-a-fitted-nowcast"></a>
 </h2>
 <p>Fitting can take a while, so you will often want to
@@ -555,7 +645,7 @@ the <code><a href="../reference/model.html">model()</a></code> specification, th
 and each fit’s parameters together with its Laplace mode and precision.
 That is all <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> needs, so a reloaded nowcast behaves
 exactly like the original (any number of draws, no re-fitting):</p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">saved</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rds"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/save_nowcast.html">save_nowcast</a></span><span class="op">(</span><span class="va">auto_ncast</span>, <span class="va">saved</span><span class="op">)</span></span>
 <span></span>
@@ -566,7 +656,7 @@ exactly like the original (any number of draws, no re-fitting):</p>
 <p>Because the input data travels in the bundle, you can also
 <strong>re-fit</strong> the saved model later (on the original data, or
 on a newer extract):</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">restored</span><span class="op">@</span><span class="va">data</span>, <span class="va">restored</span><span class="op">@</span><span class="va">model</span><span class="op">)</span>   <span class="co"># re-runs the optimisation</span></span></code></pre></div>
 </div>
 <div class="section level2">

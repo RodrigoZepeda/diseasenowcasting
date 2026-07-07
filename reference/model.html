@@ -27,7 +27,7 @@ omitted to use its default."><meta property="og:image" content="https://rodrigoz
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -67,6 +67,7 @@ omitted to use its default.</p>
 <span>  likelihood <span class="op">=</span> <span class="fu"><a href="likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  epidemic <span class="op">=</span> <span class="fu"><a href="epidemic_process.html">hsgp_epidemic</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  delay <span class="op">=</span> <span class="fu"><a href="delay_process.html">lognormal_delay</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  confirmation <span class="op">=</span> <span class="fu">no_confirmation</span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  covariate_prior <span class="op">=</span> <span class="fu"><a href="priors.html">std_normal_prior</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  strata_pooling <span class="op">=</span> <span class="st">"independent"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -87,6 +88,14 @@ omitted to use its default.</p>
 
 <dt id="arg-delay">delay<a class="anchor" aria-label="anchor" href="#arg-delay"></a></dt>
 <dd><p>A <code>delay_process_class</code>.  Default: <code><a href="delay_process.html">lognormal_delay()</a></code>.</p></dd>
+
+
+<dt id="arg-confirmation">confirmation<a class="anchor" aria-label="anchor" href="#arg-confirmation"></a></dt>
+<dd><p>A <code>confirmation_process_class</code> (<code><a href="confirmation_process.html">confirmation_process()</a></code>)
+describing the retraction (down-revision) structure of a count-cumulative
+stream.  Default: inert (<code>p = 1</code>, no retractions).  <code><a href="nowcast.html">nowcast()</a></code> switches
+to the signed-increment Skellam / SkNB likelihood automatically when the data
+are count-cumulative; supply a <code><a href="confirmation_process.html">confirmation_process()</a></code> to configure it.</p></dd>
 
 
 <dt id="arg-covariate-prior">covariate_prior<a class="anchor" aria-label="anchor" href="#arg-covariate-prior"></a></dt>
