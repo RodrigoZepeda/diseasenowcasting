@@ -1,3 +1,35 @@
+# 2.1.0
+
+## `tidy()` now returns the nowcast, and uses the shared `generics` generic
+
+**Breaking change.** `tidy()` on a fitted nowcast used to return one row per
+estimated *parameter*. It now returns the **nowcast** — one row per event date
+per stratum — matching the contract every other nowcasting engine returns, so
+downstream code (plotting, scoring, cross-engine comparison via `tbl.now`) does
+not have to special-case this package.
+
+* `tidy()` is now **re-exported from `generics`** instead of being a generic
+  defined here. The old package-local generic masked `generics::tidy` after
+  `library(diseasenowcasting)`, which made every method other packages register
+  on the shared generic invisible — including `tbl.now`'s.
+* `tidy()` works on both a fitted `nowcast()` and on `predict(fit)`. On a fit it
+  draws the posterior predictive first (pass `n_draws` / `seed` through `...`).
+  It returns a tibble sorted by `stratum` then `event_date`, with columns
+  `event_date`, `stratum` (`"all"` when unstratified), `estimate` (posterior
+  **median**), `conf.low`, `conf.high`, `level` (the width the interval actually
+  has) and `engine`. Event dates are reported on the model's own grid — never
+  re-gridded.
+* A `probs` argument appends one exact quantile column per probability, named
+  `q5`, `q50`, `q95` (`probs * 100`, so `0.025` gives `q2.5`).
+* Stratified fits get one block of rows per stratum, read from the per-stratum
+  draws rather than the pooled ones.
+* **New `model_parameters()`** returns the old `tidy()` table (`term`,
+  `estimate`, `std.error`, `conf.low`, `conf.high`, `type`). Calling `tidy()` on
+  a fit warns once per session and names `model_parameters()`.
+* `tidy.default` is gone: registering a default method on the shared generic
+  would have changed `tidy()`'s behaviour for every other package in the
+  session. `model_parameters()` keeps a default method that errors clearly.
+
 # 2.0.0
 
 ## Count-cumulative data: counts that can revise *up and down*

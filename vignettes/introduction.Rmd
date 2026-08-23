@@ -460,7 +460,7 @@ saved <- tempfile(fileext = ".rds")
 save_nowcast(auto_ncast, saved)
 
 restored <- load_nowcast(saved)
-# predict() / autoplot() / coef() / tidy() all work just as before:
+# predict() / autoplot() / coef() / tidy() / model_parameters() all work just as before:
 autoplot(restored)
 ```
 

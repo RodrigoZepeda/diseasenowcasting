@@ -76,7 +76,7 @@ save_nowcast <- function(object, file) {
 #' Load a nowcast saved with [save_nowcast()]
 #'
 #' Restores a `nowcast_class` from a bundle written by [save_nowcast()].  The
-#' result works with [predict()], [autoplot()], [coef()], [tidy()],
+#' result works with [predict()], [autoplot()], [coef()], [tidy()], [model_parameters()],
 #' [mean()]/[median()]/[quantile()] straight away (sampling from the stored
 #' Laplace mode + precision).  To re-fit it -- on the same or new data -- pass the
 #' loaded object's `model` to [nowcast()] (the saved `tbl_now` is in the `data`
