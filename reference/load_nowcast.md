@@ -6,7 +6,8 @@ The result works with
 [`predict()`](https://rdrr.io/r/stats/predict.html),
 [`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html),
 [`coef()`](https://rdrr.io/r/stats/coef.html),
-[`tidy()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/tidy.md),
+[`tidy()`](https://generics.r-lib.org/reference/tidy.html),
+[`model_parameters()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model_parameters.md),
 [`mean()`](https://rdrr.io/r/base/mean.html)/[`median()`](https://rdrr.io/r/stats/median.html)/[`quantile()`](https://rdrr.io/r/stats/quantile.html)
 straight away (sampling from the stored Laplace mode + precision). To
 re-fit it – on the same or new data – pass the loaded object's `model`

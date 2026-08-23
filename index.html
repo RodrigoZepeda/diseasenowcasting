@@ -47,7 +47,7 @@
 
     <a class="navbar-brand me-2" href="index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -272,7 +272,7 @@
 <code class="sourceCode R"><span><span class="va">pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">ncast</span><span class="op">)</span>   <span class="co"># full posterior-predictive nowcast at every event-time</span></span></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">pred</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb8"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co">#&gt; # A tibble: 6 x 16</span></span>
+<div class="sourceCode" id="cb8"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co">#&gt; # A tibble: 6 × 16</span></span>
 <span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt;    mean median    sd   mad  q2.5    q5   q10   q25   q50   q75   q90   q95 q97.5</span></span>
 <span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt;   &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;</span></span>
 <span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; 1 109.     108  1.53  1.48   107   107   107   107   108 109     110 111   112  </span></span>
@@ -281,7 +281,7 @@
 <span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; 4  45.6     44  9.11  5.93    36    36    38    40    44  49      55  59    65.0</span></span>
 <span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; 5  41.6     39 15.8  11.9     23    24    27    32    39  47      59  68    74.0</span></span>
 <span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; 6  37.6     33 19.8  16.3     13    16    18    24    33  45.2    61  72.0  85.0</span></span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; # i 3 more variables: .event_num &lt;int&gt;, stratum &lt;chr&gt;, event_date &lt;date&gt;</span></span></code></pre></div>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; # ℹ 3 more variables: .event_num &lt;int&gt;, stratum &lt;chr&gt;, event_date &lt;date&gt;</span></span></code></pre></div>
 <p>You can choose a different epidemic process, delay family or likelihood by passing a <code><a href="reference/model.html">model()</a></code> to <code><a href="reference/nowcast.html">nowcast()</a></code>:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_1</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/model.html">model</a></span><span class="op">(</span></span>
@@ -336,26 +336,19 @@
 <span></span>
 <span><span class="co"># Get the scores for all the models</span></span>
 <span><span class="fu"><a href="reference/comparison_scores.html">comparison_scores</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                      model       wis overprediction underprediction dispersion</span></span>
-<span><span class="co">#&gt; 1        HSGP/nb/Dirichlet  8.295708     0.06666667        5.147778   3.081264</span></span>
-<span><span class="co">#&gt; 2        HSGP/nb/LogNormal  8.448542     0.06666667        5.220000   3.161875</span></span>
-<span><span class="co">#&gt; 3         AR1/nb/Dirichlet  8.512125     0.06666667        5.819444   2.626014</span></span>
-<span><span class="co">#&gt; 4 HSGP/nb/GeneralizedGamma  8.624472     0.06666667        5.330000   3.227806</span></span>
-<span><span class="co">#&gt; 5         AR1/nb/LogNormal  8.916250     0.05555556        5.916111   2.944583</span></span>
-<span><span class="co">#&gt; 6  AR1/nb/GeneralizedGamma  8.919347     0.06666667        6.077778   2.774903</span></span>
-<span><span class="co">#&gt; 7         SIR/nb/LogNormal 16.660708     0.01111111       13.270000   3.379597</span></span>
-<span><span class="co">#&gt; 8         SIR/nb/Dirichlet 17.512181     0.01111111       14.362222   3.138847</span></span>
-<span><span class="co">#&gt; 9  SIR/nb/GeneralizedGamma 18.083403     0.01111111       14.682778   3.389514</span></span>
-<span><span class="co">#&gt;   coverage_50 coverage_90       ape      mse  n</span></span>
-<span><span class="co">#&gt; 1         0.3         0.9 0.7641435  676.100 10</span></span>
-<span><span class="co">#&gt; 2         0.2         0.9 0.7904566  664.600 10</span></span>
-<span><span class="co">#&gt; 3         0.0         0.8 0.7887334  650.700 10</span></span>
-<span><span class="co">#&gt; 4         0.1         0.9 0.7989751  738.000 10</span></span>
-<span><span class="co">#&gt; 5         0.1         0.8 0.7658455  714.100 10</span></span>
-<span><span class="co">#&gt; 6         0.1         0.8 0.8019557  709.425 10</span></span>
-<span><span class="co">#&gt; 7         0.3         0.5 0.7541397 1467.925 10</span></span>
-<span><span class="co">#&gt; 8         0.3         0.5 0.7465948 1506.100 10</span></span>
-<span><span class="co">#&gt; 9         0.3         0.5 0.7537398 1514.675 10</span></span>
+<span><span class="co">#&gt;                      model      wis overprediction underprediction dispersion</span></span>
+<span><span class="co">#&gt; 1        HSGP/nb/Dirichlet 8.295708     0.06666667        5.147778   3.081264</span></span>
+<span><span class="co">#&gt; 2        HSGP/nb/LogNormal 8.448542     0.06666667        5.220000   3.161875</span></span>
+<span><span class="co">#&gt; 3         AR1/nb/Dirichlet 8.512125     0.06666667        5.819444   2.626014</span></span>
+<span><span class="co">#&gt; 4 HSGP/nb/GeneralizedGamma 8.624472     0.06666667        5.330000   3.227806</span></span>
+<span><span class="co">#&gt; 5         AR1/nb/LogNormal 8.916250     0.05555556        5.916111   2.944583</span></span>
+<span><span class="co">#&gt;   coverage_50 coverage_90       ape   mse  n</span></span>
+<span><span class="co">#&gt; 1         0.3         0.9 0.7641435 676.1 10</span></span>
+<span><span class="co">#&gt; 2         0.2         0.9 0.7904566 664.6 10</span></span>
+<span><span class="co">#&gt; 3         0.0         0.8 0.7887334 650.7 10</span></span>
+<span><span class="co">#&gt; 4         0.1         0.9 0.7989751 738.0 10</span></span>
+<span><span class="co">#&gt; 5         0.1         0.8 0.7658455 714.1 10</span></span>
+<span><span class="co">#&gt;  [ reached 'max' / getOption("max.print") -- omitted 4 rows ]</span></span>
 <span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span></span></code></pre></div>
 <p><img src="reference/figures/README-auto-1.png" alt="" width="100%"></p>
@@ -430,7 +423,7 @@
 <code class="sourceCode R"><span><span class="fu"><a href="reference/save_nowcast.html">save_nowcast</a></span><span class="op">(</span><span class="va">ncast</span>, <span class="st">"dengue_nowcast.rds"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">restored</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_nowcast.html">load_nowcast</a></span><span class="op">(</span><span class="st">"dengue_nowcast.rds"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">restored</span><span class="op">)</span>               <span class="co"># predict() / autoplot() / coef() / tidy() all work</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">restored</span><span class="op">)</span>               <span class="co"># predict() / autoplot() / coef() / tidy() / model_parameters() all work</span></span>
 <span><span class="fu"><a href="reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">restored</span><span class="op">@</span><span class="va">data</span>, <span class="va">restored</span><span class="op">@</span><span class="va">model</span><span class="op">)</span>   <span class="co"># or re-fit from the bundled data</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -523,7 +516,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

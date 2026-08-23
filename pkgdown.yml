@@ -1,5 +1,5 @@
 pandoc: 3.8.3
-pkgdown: 2.2.0
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   Benchmark: Benchmark.html
@@ -10,7 +10,7 @@ articles:
   Mathematics: Mathematics.html
   Nowcasting_at_the_start_of_an_Epidemic: Nowcasting_at_the_start_of_an_Epidemic.html
   Understanding_Priors: Understanding_Priors.html
-last_built: 2026-07-07T19:48Z
+last_built: 2026-08-23T07:12Z
 urls:
   reference: https://rodrigozepeda.github.io/diseasenowcasting/reference
   article: https://rodrigozepeda.github.io/diseasenowcasting/articles

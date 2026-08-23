@@ -13,6 +13,7 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/articles/index.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/articles/introduction.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/authors.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/diseasenowcasting-tidy-spec.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/index.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/news/index.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.html</loc></url>
@@ -38,6 +39,7 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/likelihood.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/load_nowcast.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/model.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/model_parameters.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_diagnostic.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_twostage.html</loc></url>
@@ -52,7 +54,7 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/surprise.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/surprise.list.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/theme_diseasenowcasting.html</loc></url>
-<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/tidy.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/tidy.nowcast.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_delay.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_epidemic.html</loc></url>
 </urlset>

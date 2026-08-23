@@ -94,6 +94,9 @@
 - [`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
   : Bayesian Nowcast Model
 
+- [`model_parameters()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model_parameters.md)
+  : Parameter estimates from a fitted nowcast
+
 - [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
   : Fit a nowcast model to censored reporting data
 
@@ -159,8 +162,8 @@
 - [`theme_diseasenowcasting()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/theme_diseasenowcasting.md)
   : ggplot2 theme matching the diseasenowcasting visual identity
 
-- [`tidy()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/tidy.md)
-  : Tidy parameter estimates from a fitted nowcast
+- [`tidy.nowcast`](https://rodrigozepeda.github.io/diseasenowcasting/reference/tidy.nowcast.md)
+  : Tidy a nowcast into the cross-package nowcast table
 
 - [`validate_custom_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_delay.md)
   **\[experimental\]** : Validate a custom delay distribution for RTMB
