@@ -65,7 +65,7 @@ Suggests:
 Additional_repositories:
     https://kaskr.r-universe.dev
 Remotes:
-    DavisVaughan/almanac
+    DavisVaughan/almanac,
     RodrigoZepeda/tbl.now
 VignetteBuilder: knitr
 Config/testthat/edition: 3
