@@ -19,7 +19,7 @@ A \code{nowcast_class} object.
 }
 \description{
 Restores a \code{nowcast_class} from a bundle written by \code{\link[=save_nowcast]{save_nowcast()}}.  The
-result works with \code{\link[=predict]{predict()}}, \code{\link[=autoplot]{autoplot()}}, \code{\link[=coef]{coef()}}, \code{\link[=tidy]{tidy()}},
+result works with \code{\link[=predict]{predict()}}, \code{\link[=autoplot]{autoplot()}}, \code{\link[=coef]{coef()}}, \code{\link[=tidy]{tidy()}}, \code{\link[=model_parameters]{model_parameters()}},
 \code{\link[=mean]{mean()}}/\code{\link[=median]{median()}}/\code{\link[=quantile]{quantile()}} straight away (sampling from the stored
 Laplace mode + precision).  To re-fit it -- on the same or new data -- pass the
 loaded object's \code{model} to \code{\link[=nowcast]{nowcast()}} (the saved \code{tbl_now} is in the \code{data}

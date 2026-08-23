@@ -1,6 +1,6 @@
 Package: diseasenowcasting
 Title: Nowcast Time Series of Epidemiological Cases
-Version: 2.0.0
+Version: 2.1.0
 Authors@R:
     c(person("Rodrigo", "Zepeda-Tello", role = c("aut", "cre"),
              email = "rzepeda17@gmail.com",
@@ -39,6 +39,7 @@ Imports:
     dplyr,
     future,
     future.apply,
+    generics,
     ggplot2,
     lifecycle,
     Matrix,
@@ -49,6 +50,7 @@ Imports:
     S7,
     scoringutils,
     stats,
+    tibble,
     utils
 Suggests:
     testthat (>= 3.0.0),

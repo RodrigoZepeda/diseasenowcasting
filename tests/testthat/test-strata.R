@@ -1,25 +1,6 @@
 # Stratified nowcasting: per-stratum epidemic means with a shared delay / phi /
 # kernel, the coupled-SIR force of infection, and the "missing" category.
 
-# Two strata with distinct peaks; shared lognormal delay.
-.make_strata_tblnow <- function(Tn = 70L, seed = 1, na_frac = 0) {
-  set.seed(seed)
-  ln <- lognormal_native(log(4), 3); start <- as.Date("2023-01-01"); rows <- list()
-  gen <- function(grp, peak, amp) for (t in 1:Tn) {
-    n <- rpois(1, amp * exp(-0.5 * ((t - peak) / 14)^2) + 3)
-    if (n > 0) for (i in seq_len(n)) {
-      d <- max(0L, round(rlnorm(1, ln$log_location, ln$log_scale)))
-      rows[[length(rows) + 1]] <<- data.frame(onset = start + (t - 1),
-                                              reported = start + (t - 1) + d, grp = grp)
-    }
-  }
-  gen("A", 35, 35); gen("B", 45, 20)
-  d <- do.call(rbind, rows); d <- d[d$reported <= start + Tn - 1, ]
-  if (na_frac > 0) d$grp[sample(nrow(d), floor(na_frac * nrow(d)))] <- NA
-  tbl.now::tbl_now(d, event_date = onset, report_date = reported, strata = grp,
-                   data_type = "linelist", verbose = FALSE)
-}
-
 test_that("stratified one-stage nowcast converges and totals are finite", {
   tn  <- .make_strata_tblnow(seed = 1)
   mdl <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
