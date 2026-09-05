@@ -227,11 +227,11 @@ test_that("infer_max_time returns the model's event-time span", {
 
 # ── 27_tidy.R (0% → target high) ────────────────────────────────────────────
 
-test_that("tidy() returns a long parameter table with credible intervals", {
+test_that("parameters() returns a long parameter table with credible intervals", {
   tn <- .make_synth_tblnow(Tn = 45L, seed = 51)
   nc <- nowcast(tn, model(nb_likelihood(), ar1_epidemic(), lognormal_delay()),
                 type = "one_stage", n_draws = 80, seed = 1)
-  td <- tidy(nc)
+  td <- parameters(nc)
 
   expect_s3_class(td, "data.frame")
   expect_true(all(c("term", "estimate", "std.error", "conf.low", "conf.high", "type")
@@ -244,36 +244,36 @@ test_that("tidy() returns a long parameter table with credible intervals", {
                   td$estimate[ok] <= td$conf.high[ok]))
 
   # a higher credible level widens every interval
-  td99 <- tidy(nc, conf.level = 0.99)
+  td99 <- parameters(nc, conf.level = 0.99)
   expect_true(all((td99$conf.high - td99$conf.low)[ok] >=
                   (td$conf.high  - td$conf.low )[ok]))
 })
 
-test_that("tidy() default method errors on a non-nowcast object", {
-  expect_error(tidy(1:10), "No.+method")
+test_that("parameters() default method errors on a non-nowcast object", {
+  expect_error(parameters(1:10), "No.+method")
 })
 
-test_that("tidy() runs on a multi-imputation two-stage fit", {
+test_that("parameters() runs on a multi-imputation two-stage fit", {
   tn <- .make_synth_tblnow(Tn = 50L, seed = 52)
   nc <- nowcast(tn, model(nb_likelihood(), ar1_epidemic(), lognormal_delay()),
                 type = "two_stage", K = 3, n_draws = 80, seed = 1)
   expect_gt(length(nc@fits), 1L)              # delay imputed K > 1 times
-  td <- tidy(nc)
+  td <- parameters(nc)
   expect_s3_class(td, "data.frame")
   expect_gt(nrow(td), 0L)
 })
 
-test_that("tidy() classifies HSGP and SIR parameters into the right groups", {
+test_that("parameters() classifies HSGP and SIR parameters into the right groups", {
   tn <- .make_synth_tblnow(Tn = 50L, seed = 71)
 
   # HSGP exercises the epidemic_hsgp classify arm (log_gp_*, basis_coefs)
-  th <- tidy(nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
+  th <- parameters(nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                      type = "one_stage", n_draws = 60, seed = 1))
   expect_true("epidemic_hsgp" %in% th$type)
   expect_true(all(c("delay", "likelihood") %in% th$type))
 
   # SIR exercises the epidemic_sir classify arm (log_R0, u_gamma, u_neff)
-  ts <- tidy(nowcast(tn, model(nb_likelihood(), sir_epidemic(N_pop = 5000), lognormal_delay()),
+  ts <- parameters(nowcast(tn, model(nb_likelihood(), sir_epidemic(N_pop = 5000), lognormal_delay()),
                      type = "one_stage", n_draws = 60, seed = 1))
   expect_true("epidemic_sir" %in% ts$type)
 })
@@ -374,7 +374,7 @@ test_that("custom_epidemic_class validator checks slot-length consistency", {
                "priors")
 })
 
-# (censor_delays_above() moved to tbl.now; its unit tests live there now.)
+# (censor_reporting_delays_above() lives in tbl.now; its unit tests live there.)
 
 # ── 03_delay_class.R (73% → target high) ────────────────────────────────────
 

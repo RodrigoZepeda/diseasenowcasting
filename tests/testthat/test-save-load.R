@@ -20,7 +20,7 @@ test_that("a one-stage nowcast round-trips: predict/coef/tidy match", {
   expect_equal(predict(nc,  summary = TRUE, seed = 7)$median,
                predict(nc2, summary = TRUE, seed = 7)$median)
   expect_equal(unname(coef(nc)), unname(coef(nc2)))
-  td <- tidy(nc2)
+  td <- parameters(nc2)
   expect_s3_class(td, "data.frame")
   ok <- is.finite(td$std.error)
   expect_true(all(is.finite(td$estimate[ok])))

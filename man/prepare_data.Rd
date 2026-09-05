@@ -17,6 +17,11 @@ prepare_data(
   gp_boundary_frac = 0.62,
   ar_sigma_max = 1,
   is_confirmation = FALSE,
+  cumulative_levels = NULL,
+  cumulative_previous_nonzero = NULL,
+  cumulative_settlement = NULL,
+  retraction = NULL,
+  resolution_mode = 0L,
   ...
 )
 }
@@ -48,9 +53,25 @@ Default 0.62.}
 
 \item{ar_sigma_max}{Upper bound on the AR/beta RW innovation SD. Default 1.}
 
-\item{is_confirmation}{If TRUE, the data are count-cumulative signed increments
-and the engine is built for the confirmation (Skellam / SkNB) likelihood
-instead of the standard count likelihood. Default FALSE.}
+\item{is_confirmation}{Deprecated legacy switch.  \code{TRUE} now errors; use the
+dedicated \code{count_cumulative} model component and cumulative arguments.}
+
+\item{cumulative_levels}{Optional cumulative levels aligned row-for-row with
+\code{m}; used only by the dedicated count-cumulative composites.}
+
+\item{cumulative_previous_nonzero}{Optional indicators, aligned with \code{m},
+that the preceding signed update was non-zero.}
+
+\item{cumulative_settlement}{Optional positive integer settlement horizon
+\code{H}. It is required for count-cumulative preparation.}
+
+\item{retraction}{Optional list of linelist-retraction sufficient statistics
+from \code{.linelist_retraction_stats()}. When supplied, the engine carries the
+cure-model observation block (see 31_retraction_likelihood.R). Default NULL.}
+
+\item{resolution_mode}{\code{0L} when the resolution observed is a RETRACTION (the
+default), \code{1L} when it is a CONFIRMATION. Sets the support of the resolution
+lag and what a resolved row means for the nowcast target.}
 
 \item{...}{Reserved.}
 }

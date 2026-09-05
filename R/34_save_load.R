@@ -51,7 +51,7 @@ save_nowcast <- function(object, file) {
     cli::cli_abort("{.arg file} must be a single file path.")
 
   bundle <- list(
-    dcast_save_version = 1L,
+    dcast_save_version = 2L,
     saved_with         = as.character(utils::packageVersion("diseasenowcasting")),
     saved_at           = Sys.time(),
     model      = object@model,
@@ -64,6 +64,8 @@ save_nowcast <- function(object, file) {
     priors     = object@priors,
     phi        = object@phi,
     n_draws    = object@n_draws,
+    validation_mode = object@validation_mode,
+    validation_censored = object@validation_censored,
     comparison = object@comparison,   # auto_nowcast() scoreboard, or NULL
     fits       = lapply(object@fits, .serialize_fit)
   )
@@ -76,7 +78,7 @@ save_nowcast <- function(object, file) {
 #' Load a nowcast saved with [save_nowcast()]
 #'
 #' Restores a `nowcast_class` from a bundle written by [save_nowcast()].  The
-#' result works with [predict()], [autoplot()], [coef()], [tidy()],
+#' result works with [predict()], [autoplot()], [coef()], [parameters()],
 #' [mean()]/[median()]/[quantile()] straight away (sampling from the stored
 #' Laplace mode + precision).  To re-fit it -- on the same or new data -- pass the
 #' loaded object's `model` to [nowcast()] (the saved `tbl_now` is in the `data`
@@ -105,13 +107,15 @@ load_nowcast <- function(file, rebuild = FALSE) {
     model = bundle$model, data = bundle$data, now = bundle$now,
     type = bundle$type, fits = fits, rung = bundle$rung, target = bundle$target,
     engine = bundle$engine, priors = bundle$priors, phi = bundle$phi,
-    n_draws = as.integer(bundle$n_draws), comparison = bundle$comparison)
+    n_draws = as.integer(bundle$n_draws), comparison = bundle$comparison,
+    validation_mode = bundle$validation_mode %||% "none",
+    validation_censored = bundle$validation_censored)
 }
 
 # -- internals ----------------------------------------------------------------
 
 #' Strip the RTMB tape from a fit, keeping the Laplace mode + precision so
-#' predict()/tidy() still work after a save/load round-trip.
+#' predict()/parameters() still work after a save/load round-trip.
 #' @keywords internal
 #' @noRd
 .serialize_fit <- function(fit) {

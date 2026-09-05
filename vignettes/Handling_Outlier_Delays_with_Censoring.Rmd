@@ -36,7 +36,7 @@ In general the workflow is:
 3. A human with domain-knowledge identifies which ones correspond to outliers and which correspond
 to true values. 
 
-4. The `censor_delays_above()` function turns extreme delays into upper bounds. 
+4. The `censor_reporting_delays_above()` function turns extreme delays into upper bounds.
 
 5. Model is re-updated using the censored data consequently improving the delay distribution.
 
@@ -156,21 +156,22 @@ The `mean_tail_prob` expressess the probability of observing such a value, The `
 ## 3) Censor the outliers and re-fit
 
 We follow the warning's advice: we **flag as censored** every report whose delay exceeds a sensible
-bound (here 99 days as reported by `extreme_values()`). The function `censor_delays_above()` works  by setting `.is_censored = TRUE` in the `tbl_now` for 
+bound (here 99 days as reported by `extreme_values()`). The function `censor_reporting_delays_above()` works by setting the report-censoring flag in the `tbl_now` for
 reports greater than the `max_delay`. Extreme delays are thus turned into upper bounds. The `nowcast()` then reads
-the `.is_censored` flag automatically.
+the `.is_censored_report` flag automatically.
 
 ```{r censor, eval = FALSE}
-new_data_tbl_censored <- censor_delays_above(new_data_tbl, max_delay = 99)
+new_data_tbl_censored <- tbl.now::censor_reporting_delays_above(new_data_tbl, max_delay = 99)
 
-#Adds column `.is_censored`:
+# Adds column `.is_censored_report`:
 new_data_tbl_censored
 ```
 
 ```{r, echo = FALSE}
-new_data_tbl_censored <- censor_delays_above(new_data_tbl, max_delay = 99)
+new_data_tbl_censored <- tbl.now::censor_reporting_delays_above(new_data_tbl, max_delay = 99)
 
-new_data_tbl_censored |> dplyr::select(.is_censored, dplyr::everything())
+new_data_tbl_censored |>
+  dplyr::select(.is_censored_report, dplyr::everything())
 ```
 
 
@@ -241,10 +242,9 @@ outliers.
 to true values. This has to be done by a human as no automated system will know
 when something flagged as noise is real. 
 
-4. Use `censor_delays_above(tn, bound)` turning the delays into an upper bound. Or
+4. Use `tbl.now::censor_reporting_delays_above(tn, bound)` to turn the delays into an upper bound. Or
 modify the `tbl_now` directly (column `is_censored`)
 
 5. Re-fit -> the delay distribution is no longer distorted.
 
 6. Backtest to verify the fit improved. 
-

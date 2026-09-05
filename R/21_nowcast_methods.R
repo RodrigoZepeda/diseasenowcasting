@@ -35,6 +35,16 @@ S7::method(coef, nowcast_class) <- function(object, ...) {
   out <- c(delay_mu = delay_mu, delay_sigma = delay_sigma)
   if (!is.na(representative_fit$phi_nb %||% NA_real_))
     out["phi_nb"] <- representative_fit$phi_nb
+  cumulative <- representative_fit$reconstruct$count_cumulative
+  if (!is.null(cumulative)) {
+    out["retraction_mass"] <- cumulative$retraction_mass
+    out["terminal_retention"] <- cumulative$terminal_retention
+    if (!is.null(cumulative$movement))
+      out[paste0("movement_", names(cumulative$movement))] <-
+        cumulative$movement
+    if (!is.null(cumulative$magnitude_size))
+      out["magnitude_size"] <- cumulative$magnitude_size
+  }
 
   # Append whichever epidemic-process hyperparameters this model actually has
   # (HSGP, AR(1) or SIR populate different entries of the parameter list).
@@ -75,7 +85,24 @@ S7::method(predict, nowcast_class) <- function(object, n_draws = NULL,
     if (!is.null(min_ev)) seq(as.Date(min_ev), by = as.character(eu), length.out = n_time) else NULL
   }, error = function(e) NULL)
 
-  cc <- object@engine$case_counts
+  # Observed series: under a retraction model the cases currently ON THE BOOKS are
+  # the standing ones -- `case_counts` also holds rows already retracted, which the
+  # count block needs but which are not part of what has been observed to stand.
+  cc <- if (isTRUE(object@engine$is_count_cumulative == 1L)) {
+    anchored <- matrix(
+      0.0, object@engine$max_time,
+      as.integer(object@engine$num_strata %||% 1L)
+    )
+    for (s in seq_len(ncol(anchored))) for (t in seq_len(nrow(anchored))) {
+      observed_delays <- which(object@engine$observation_mask[t, , s])
+      if (length(observed_delays))
+        anchored[t, s] <- object@engine$cumulative_level_array[
+          t, max(observed_delays), s
+        ]
+    }
+    anchored
+  } else if (isTRUE(object@engine$is_linelist_retraction == 1L))
+    object@engine$standing_counts else object@engine$case_counts
   cc_mat <- if (is.matrix(cc)) cc else matrix(cc, n_time, 1L)
   pred <- nowcast_prediction_class(
     draws        = draws_matrix, target = object@target,
@@ -85,7 +112,10 @@ S7::method(predict, nowcast_class) <- function(object, n_draws = NULL,
     strata_levels = strata_lvls,
     event_dates  = event_dates,
     observed_series = rowSums(cc_mat),
-    observed_strata = if (ncol(cc_mat) > 1L) cc_mat else NULL
+    observed_strata = if (ncol(cc_mat) > 1L) cc_mat else NULL,
+    estimand = pooled$estimand,
+    cumulative_reconstruction = pooled$cumulative_reconstruction,
+    negative_projection_count = pooled$negative_projection_count
   )
   if (summary) return(summary(pred))
   pred
@@ -122,6 +152,11 @@ S7::method(summary, nowcast_prediction_class) <- function(object, ...) {
 #' @noRd
 S7::method(print, nowcast_prediction_class) <- function(x, ...) {
   cli::cli_text("<nowcast_prediction> {nrow(x@draws)} draws x {ncol(x@draws)} event-times")
+  if (!is.null(x@estimand)) {
+    cli::cli_text("estimand: {x@estimand}")
+    cli::cli_text("reconstruction: {x@cumulative_reconstruction}")
+    cli::cli_text("negative terminal projections to zero: {x@negative_projection_count}")
+  }
   newest <- x@draws[, x@target]
   cli::cli_text("newest event (target {x@target}): observed {x@observed}, ",
                 "median {round(stats::median(newest))} ",
@@ -193,6 +228,49 @@ S7::method(print, nowcast_class) <- function(x, ...) {
   cli::cli_text("{.strong Model}: ", .model_oneline(x@model))
   cli::cli_text(cli::col_grey(
     "{x@type} ({x@target} event-time{?s}{strata_txt}; {length(x@fits)} fit{?s}, rung '{x@rung}')"))
+  if (isTRUE(x@engine$is_count_cumulative == 1L)) {
+    cc <- x@fits[[1]]$reconstruct$count_cumulative
+    observation_name <- switch(
+      as.character(x@engine$count_cumulative_observation),
+      "1" = "cumulative-level composite",
+      "2" = "signed hurdle--ZTNB update composite",
+      "3" = "signed hurdle--ZTPoisson update composite"
+    )
+    horizon <- cc$settlement_horizon %||% x@engine$settlement_horizon
+    cli::cli_text("{.strong Estimand}: C_t({horizon}), finite-horizon settled retention.")
+    if (!is.null(cc)) {
+      cli::cli_text(cli::col_grey(
+        "{observation_name}; retraction mass = {sprintf('%.3f', cc$retraction_mass)}, terminal retention = {sprintf('%.3f', cc$terminal_retention)}."))
+    } else {
+      cli::cli_text(cli::col_grey("{observation_name}; prior-predictive simulation."))
+    }
+    fit_gradient <- x@fits[[1]]$max_gradient %||% NA_real_
+    if (is.finite(fit_gradient))
+      cli::cli_text(cli::col_grey(
+        "maximum absolute gradient = {signif(fit_gradient, 3)} ({x@fits[[1]]$gradient_status %||% 'not classified'})."))
+  }
+  # What the resolution layer is doing, in words, with `p` on the natural scale --
+  # the two things a practitioner most wants to see at a glance.
+  resolution_label <- x@engine$resolution_label %||% "none"
+  if (!identical(resolution_label, "none") &&
+      isTRUE(x@engine$is_linelist_retraction == 1L)) {
+    fitted_p <- tryCatch(x@fits[[1]]$reconstruct$retraction$p_by_stratum,
+                         error = function(e) NULL)
+    target_txt <- switch(resolution_label,
+      "retractions"   = "cases reported and never retracted",
+      "confirmations" = "cases that will eventually be confirmed",
+      "cases whose result comes back positive")
+    cli::cli_text("{.strong Resolution}: modelling {resolution_label}; ",
+                  "nowcasting {target_txt}.")
+    if (!is.null(fitted_p)) {
+      probability_name <- if (identical(resolution_label, "retractions"))
+        "P(not retracted)" else "P(confirmed)"
+      cli::cli_text(cli::col_grey(
+        "{probability_name} = {paste(sprintf('%.3f', fitted_p), collapse = ', ')}",
+        " -- see {.fn parameters} for its interval."))
+    }
+  }
+
   # NB: printing deliberately does NOT draw the posterior-predictive nowcast --
   # that can be expensive on long/stratified series.  Use predict()/autoplot().
   cli::cli_text(cli::col_grey(

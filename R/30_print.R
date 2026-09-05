@@ -44,6 +44,31 @@ S7::method(print, nb_likelihood_class) <- function(x, ..., digits = 4) {
   invisible(x)
 }
 
+#' @noRd
+S7::method(print, count_cumulative_process_class) <- function(x, ..., digits = 4) {
+  label <- switch(
+    x@observation,
+    cumulative = "Cumulative-level composite",
+    hurdle_ztnb = "Signed hurdle--ZTNB update composite",
+    hurdle_ztpoisson = "Signed hurdle--ZTPoisson update composite"
+  )
+  cli::cli_text("{.emph Observation}: {label}")
+  cli::cli_text("{.emph Settlement horizon}: H = {as.integer(x@settlement)} model steps")
+  cli::cli_text("{.emph Retraction kernel}: h_R(l) = mass * {x@retraction_delay@name}(l)")
+  cli::cli_text(paste0("{.emph Retraction mass}: ", .fmt_slot("mass", x@retraction_mass)))
+  if (x@observation %in% c("hurdle_ztnb", "hurdle_ztpoisson")) {
+    cli::cli_text(paste0("{.emph Movement}: ",
+      .fmt_slot("intercept", x@movement_intercept), ", ",
+      .fmt_slot("age", x@movement_age), ", ",
+      .fmt_slot("previous", x@movement_previous)))
+  }
+  if (identical(x@observation, "hurdle_ztnb")) {
+    cli::cli_text(paste0("{.emph Magnitude size}: ",
+                         .fmt_slot("size", x@magnitude_size)))
+  }
+  invisible(x)
+}
+
 # ── Priors ────────────────────────────────────────────────────────────────────
 
 #' @noRd
@@ -158,6 +183,22 @@ S7::method(print, model_class) <- function(x, ..., digits = 4) {
   print(x@epidemic, digits = digits)
   cli::cli_h3("Delay process")
   print(x@delay, digits = digits)
+  if (isTRUE(x@validation@active)) {
+    cli::cli_h3("Resolution process")
+    competing <- S7::S7_inherits(x@validation@negative_delay, delay_process_class)
+    cli::cli_text(paste0(cli::col_yellow("Resolution"), "(",
+      .fmt_slot("p", x@validation@p), ")"))
+    cli::cli_text("{.emph Resolution delay}: {x@validation@validation_delay@name}",
+                  if (competing) " (positive outcomes)" else "")
+    if (competing)
+      cli::cli_text("{.emph Negative-outcome delay}: {x@validation@negative_delay@name} {.emph (competing risks)}")
+    if (isTRUE(x@validation@stratified_p))
+      cli::cli_text("{.emph p}: estimated separately per stratum")
+  }
+  if (isTRUE(x@count_cumulative@active)) {
+    cli::cli_h3("Count-cumulative process")
+    print(x@count_cumulative, digits = digits)
+  }
   cli::cli_h3("Covariate prior")
   print(x@covariate_prior, digits = digits)
   pool <- x@strata_pooling

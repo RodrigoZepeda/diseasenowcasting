@@ -17,24 +17,39 @@
 #' @noRd
 .adapt_init <- function(old_parlist, new_engine, model) {
   n_strata <- as.integer(new_engine$num_strata %||% 1L)
+  old_n_strata <- length(old_parlist$mu_intercept %||% numeric(0))
+  if (old_n_strata < 1L && !is.null(old_parlist$ar_innov))
+    old_n_strata <- ncol(as.matrix(old_parlist$ar_innov))
+  if (old_n_strata < 1L) old_n_strata <- n_strata
   resize <- function(vec, n) {                      # plain vector resize (zero-pad / truncate)
     if (is.null(vec)) return(rep(0, n))
     if (length(vec) >= n) vec[seq_len(n)] else c(vec, rep(0, n - length(vec)))
   }
-  # Resize a per-stratum latent block to `n_rows` x num_strata, preserving columns
-  # (num_strata is fixed by the data, so column count carries over unchanged).
+  # Resize a per-stratum latent block to `n_rows` x num_strata, preserving every
+  # overlapping row and stratum and zero-initialising genuinely new dimensions.
   resize_strata <- function(block, n_rows) {
-    mat <- matrix(as.numeric(block), ncol = n_strata)
+    mat <- matrix(as.numeric(block), ncol = old_n_strata)
     out <- matrix(0, n_rows, n_strata)
     keep <- min(nrow(mat), n_rows)
-    out[seq_len(keep), ] <- mat[seq_len(keep), , drop = FALSE]
+    keep_strata <- min(ncol(mat), n_strata)
+    out[seq_len(keep), seq_len(keep_strata)] <-
+      mat[seq_len(keep), seq_len(keep_strata), drop = FALSE]
     out
   }
   init <- list()
-  # Per-stratum vectors (length num_strata) and scalars carry over unchanged.
-  for (nm in intersect(c("mu_intercept", "delay_mu", "log_delay_sigma_excess", "delay_Q",
+  per_stratum <- c("mu_intercept", "ar_phi_unc", "log_ar_sigma_unc",
+                   "log_R0", "u_gamma", "u_neff")
+  for (nm in intersect(per_stratum, names(old_parlist)))
+    init[[nm]] <- resize(old_parlist[[nm]], n_strata)
+  # Shared scalar parameters carry over unchanged.
+  for (nm in intersect(c("delay_mu", "log_delay_sigma_excess", "delay_Q",
                          "log_phi_nb", "log_gp_alpha", "log_gp_ell",
-                         "ar_phi_unc", "log_ar_sigma_unc", "log_R0", "u_gamma", "u_neff"),
+                         "cumulative_retraction_mass_raw",
+                         "cumulative_retraction_mu",
+                         "log_cumulative_retraction_sigma_excess",
+                         "cumulative_retraction_Q",
+                         "movement_intercept", "movement_age",
+                         "movement_previous", "log_magnitude_size"),
                        names(old_parlist)))
     init[[nm]] <- old_parlist[[nm]]
   if (!is.null(old_parlist$gamma) && new_engine$P > 0)
@@ -81,7 +96,11 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
   orig_spec   <- tryCatch(tbl.now::get_temporal_effects(object@data), error = function(e) NULL)
   had_effects <- !is.null(orig_spec) && length(orig_spec) > 0L
   strip_te <- function(d) {
-    if (!tbl.now::is_tbl_now(d)) return(d)
+    # Avoid calling remove_temporal_effects() when there is nothing to remove.
+    # In particular, tbl.now warns for count-cumulative inputs even though this
+    # no-op does not change the merge.  Only strip when the fitted data actually
+    # carried an effect specification that must be reconciled.
+    if (!had_effects || !tbl.now::is_tbl_now(d)) return(d)
     tryCatch(tbl.now::remove_temporal_effects(d), error = function(e) d)
   }
 
@@ -95,8 +114,13 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
     }
     m
   })
-  prepared <- prepare_from_tbl_now(merged, object@model, now = now, delay_only = FALSE)
+  prepared <- prepare_from_tbl_now(merged, object@model, now = now, delay_only = FALSE,
+                                   validation_mode = object@validation_mode,
+                                   validation_censored = object@validation_censored)
   engine   <- prepared$data
+  engine$min_event <- prepared$min_event
+  engine$event_unit <- as.character(prepared$event_unit)
+  engine$strata_levels <- prepared$strata_levels
   priors   <- default_priors(object@model, engine, phi = object@phi)
   warm     <- .adapt_init(object@fits[[1]]$parList, engine, object@model)
 
@@ -126,7 +150,9 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
 
   new_nc <- nowcast_class(model = object@model, data = merged, now = prepared$now, type = object@type,
                           fits = collected$fits, rung = collected$rung, target = collected$target,
-                          engine = engine, priors = priors, phi = object@phi, n_draws = object@n_draws)
+                          engine = engine, priors = priors, phi = object@phi, n_draws = object@n_draws,
+                          validation_mode = object@validation_mode,
+                          validation_censored = object@validation_censored)
   if (!is.null(extreme_values)) attr(new_nc, "surprise") <- extreme_values
   new_nc
 }
@@ -221,7 +247,7 @@ extreme_values <- function(nc) {
 
   msg <- stats::setNames(
     c(bullets,
-      "If these are outliers, treat them as censored with `censor_delays_above()` and re-fit.",
+      "If these are outliers, treat them as censored with `tbl.now::censor_reporting_delays_above()` and re-fit.",
       "See all flagged delays with `extreme_values(nc)`."),
     c(rep("!", length(bullets)), "i", "i"))
   cli::cli_warn(msg)

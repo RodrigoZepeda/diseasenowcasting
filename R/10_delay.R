@@ -233,5 +233,18 @@
     result
   }
 
-  list(cdf = cdf, log_cdf = log_cdf, log_pmf_raw = log_pmf_raw)
+  # Survival on the NATURAL scale, written directly rather than as `1 - cdf()`:
+  # in the geometric tail the complement is `tail * exp(...)` exactly, so this form
+  # keeps the small tail probabilities the retraction block relies on (see
+  # 31_retraction_likelihood.R) from being lost to cancellation.
+  survival <- function(delay) {
+    result  <- 0 * tail_mass + numeric(length(delay))
+    in_grid <- delay >= 1 & delay < n_bins
+    in_tail <- delay >= n_bins
+    if (any(in_grid)) result[in_grid] <- 1 - cumulative_probs[delay[in_grid]]
+    if (any(in_tail)) result[in_tail] <- tail_mass * exp(-(delay[in_tail] - n_bins))
+    result
+  }
+
+  list(cdf = cdf, log_cdf = log_cdf, log_pmf_raw = log_pmf_raw, survival = survival)
 }

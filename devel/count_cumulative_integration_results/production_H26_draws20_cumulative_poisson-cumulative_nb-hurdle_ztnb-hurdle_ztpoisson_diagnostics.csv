@@ -1,0 +1,12 @@
+"location","origin","clock","model","nll","convergence","max_gradient","gradient_status","finite_fit","finite_prediction","leakage_ok","use_random","retraction_mass","q_terminal","reconstruction","negative_projection_count","n_cells","fit_seconds","warnings"
+"Texas",2025-05-31,"calendar","cumulative_poisson",14610.4385680418,0,0.00673872299654504,"pass",TRUE,TRUE,TRUE,TRUE,0.00193349664470774,0.9980665033553,"anchored independent signed-Poisson update approximation",0,2133,5.056,""
+"Texas",2025-05-31,"calendar","cumulative_nb",10322.1207569054,0,0.000463913746332534,"pass",TRUE,TRUE,TRUE,TRUE,0.0245462162865395,0.975456584819339,"anchored independent signed-Poisson update approximation",0,2133,9.809,"NA/NaN function evaluation"
+"Texas",2025-05-31,"calendar","hurdle_ztnb",2089.02559102887,0,9.66403839155472e-05,"pass",TRUE,TRUE,TRUE,FALSE,0.0592576273501539,0.940755026770235,"anchored sequential hurdle updates",2,2133,5.945,""
+"Texas",2025-05-31,"calendar","hurdle_ztpoisson",5082.47152583258,0,0.0959962711380673,"pass",TRUE,TRUE,TRUE,FALSE,0.0798918524383467,0.92011169999593,"anchored sequential hurdle updates",0,2133,6.526,""
+"Texas",2025-05-31,"compressed","cumulative_poisson",9523.91120355047,0,0.00436553009466012,"pass",TRUE,TRUE,TRUE,TRUE,0.0096481173000979,0.990357837534909,"anchored independent signed-Poisson update approximation",0,1188,2.542,""
+"Texas",2025-05-31,"compressed","cumulative_nb",6789.97138254958,0,0.00270466688082011,"pass",TRUE,TRUE,TRUE,TRUE,0.0143705137706637,0.985631850406647,"anchored independent signed-Poisson update approximation",0,1188,3.36499999999999,""
+"Texas",2025-05-31,"compressed","hurdle_ztnb",1860.62771498012,0,0.000744780303114645,"pass",TRUE,TRUE,TRUE,FALSE,0.0703836961428569,0.929719235288353,"anchored sequential hurdle updates",3,1188,4.92599999999999,""
+"Texas",2025-05-31,"compressed","hurdle_ztpoisson",9762.81860266492,0,0.152805506346347,"warning",TRUE,TRUE,TRUE,FALSE,0.0339691360366257,0.966031344104224,"anchored sequential hurdle updates",0,1188,19.725,"The fit is finite but did not pass the gradient stability gate.
+✖ Maximum absolute gradient: 0.1528.
+ℹ Inspect `fit$gradient_status`, `fit$max_gradient`, and `fit$opt` before using
+  predictions."

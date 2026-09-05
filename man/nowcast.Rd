@@ -16,6 +16,7 @@ nowcast(
   floor_mu = 0.08,
   floor_sig_frac = 0.08,
   temporal_effects = "auto",
+  validation_censored = NULL,
   prior_only = FALSE,
   seed = sample.int(.Machine$integer.max, 1),
   ...
@@ -52,6 +53,16 @@ does not already carry computed temporal effects}.  Use \code{"none"} (or
 \code{"None"}) to disable, or pre-attach your own effects to the \code{tbl_now} with
 \code{tbl.now::add_temporal_effects()} + \code{tbl.now::compute_temporal_effects()}.}
 
+\item{validation_censored}{Name of a logical column marking rows whose
+validation date is an \strong{upper bound} rather than the exact date (the report
+is known to have resolved, but only that it happened by then).  Combines
+freely with \code{tbl.now}'s \code{is_censored_report}, so all four
+observation patterns are supported: exact report + exact validation, censored
+report + exact validation (the validation then also bounds the report, since a
+report cannot resolve before it is filed), exact report + censored validation,
+and both censored.  \code{tbl_now} has no validation-censoring attribute of its
+own, which is why this is an argument rather than being detected.}
+
 \item{prior_only}{If \code{TRUE}, ignore the likelihood and draw the epidemic
 parameters from their \strong{priors} only, returning the prior-predictive latent
 incidence.  Useful for understanding what a prior implies \emph{before} seeing
@@ -75,6 +86,22 @@ posterior-predictive nowcast is produced lazily by \code{\link[=predict]{predict
 incidence by \code{\link[=mean]{mean()}}/\code{\link[=median]{median()}}/\code{\link[=quantile]{quantile()}}; the parameter estimates by
 \code{\link[=coef]{coef()}}.
 }
+\section{Validation processes}{
+
+A validation process -- reports that are later \strong{confirmed} or \strong{retracted} --
+is a row-level mechanism for linelist and count-incidence data. It is detected
+from the data, not requested by an argument. \code{nowcast()} attaches one when the
+\code{tbl_now} carries \code{validation_date} / \code{validation_type} (see
+\code{tbl.now::add_validation_date()}).  The mode
+(\code{confirmation_only} / \code{retraction_only} / \code{both}) is read from
+\code{unique(validation_type)} over the full data, so it is stable across as-of
+dates.  Configure \code{p} and the lag with
+\code{model(validation = validation_process(...))}, which always wins over the
+detected default; assert the mode with \code{validation_process(mode = )}.
+Count-cumulative revisions instead use \code{\link[=count_cumulative_process]{count_cumulative_process()}} and do
+not estimate a separate validation probability \code{p}.
+}
+
 \section{Overdispersion (\code{phi})}{
 
 The negative-binomial overdispersion prior is \strong{not} an argument of

@@ -295,10 +295,9 @@ as well as upward — for example when a suspected case is later
 re-classified as negative. The
 [FluSight](https://github.com/cdcepi/FluSight-forecast-hub) influenza
 hospitalisation data shipped with `tbl.now` is one such stream.
-`diseasenowcasting` handles these with a **confirmation process**:
-attach `confirmation_process()` to your `model()` and `nowcast()`
-automatically switches to the signed-increment (Skellam / SkNB)
-likelihood when the data are `"count-cumulative"`.
+`diseasenowcasting` handles these with a dedicated finite-horizon
+`count_cumulative_process()`. The estimand is retained database count
+`C_t(H)`, not biological truth unless non-withdrawal is assumed to imply truth.
 
 ``` r
 data(flusight, package = "tbl.now")
@@ -320,7 +319,10 @@ flu_model <- model(
   likelihood   = nb_likelihood(),
   epidemic     = ar1_epidemic(),
   delay        = lognormal_delay(),
-  confirmation = confirmation_process()   # <- models the up- and down-revisions
+  count_cumulative = count_cumulative_process(
+    observation = "hurdle_ztpoisson",
+    settlement = 26L
+  )
 )
 
 flu_ncast <- nowcast(flu_tbl, flu_model, n_draws = 1000)
@@ -329,23 +331,20 @@ autoplot(flu_ncast)
 
 <div class="figure">
 
-<img src="man/figures/README-flusight-1.png" alt="_Confirmation nowcast for cumulative influenza hospitalisations in California._" width="100%" />
+<img src="man/figures/README-flusight-1.png" alt="_Finite-horizon nowcast for cumulative influenza hospitalisations in California._" width="100%" />
 <p class="caption">
 
-*Confirmation nowcast for cumulative influenza hospitalisations in
+*Finite-horizon nowcast for cumulative influenza hospitalisations in
 California.*
 </p>
 
 </div>
 
-The confirmation probability `p` — the chance a report is genuine and
-never retracted — is estimated with a strong data-informed prior by
-default; pass `confirmation_process(p = 0.98)` to hold it fixed, or your
-own `beta_prior()` to change the prior. For several locations at once,
-declare the location column as `strata`: a single stratified `nowcast()`
-then shares the delay and confirmation structure across locations (which
-is both faster and, on FluSight, sharper than a separate fit per
-location).
+The cumulative stream identifies the collapsed finite-age retraction kernel
+`h_R`, not a separate confirmation probability `p`. Choose `"cumulative"`,
+`"hurdle_ztnb"`, or `"hurdle_ztpoisson"`; the last has no magnitude
+dispersion. For several locations at once, declare the location column as
+`strata`, so one fit shares the report-delay and retraction-kernel structure.
 
 ## Handling extreme delays
 

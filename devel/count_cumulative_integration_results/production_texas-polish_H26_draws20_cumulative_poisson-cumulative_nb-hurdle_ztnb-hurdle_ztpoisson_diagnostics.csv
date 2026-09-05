@@ -1,0 +1,5 @@
+"location","origin","clock","model","nll","convergence","max_gradient","gradient_status","finite_fit","finite_prediction","leakage_ok","use_random","retraction_mass","q_terminal","reconstruction","negative_projection_count","n_cells","fit_seconds","warnings"
+"Texas",2025-05-31,"compressed","cumulative_poisson",9523.91120355047,0,0.00436553009466012,"pass",TRUE,TRUE,TRUE,TRUE,0.0096481173000979,0.990357837534909,"anchored independent signed-Poisson update approximation",0,1188,3.851,""
+"Texas",2025-05-31,"compressed","cumulative_nb",6789.97138254958,0,0.00270466688082011,"pass",TRUE,TRUE,TRUE,TRUE,0.0143705137706637,0.985631850406647,"anchored independent signed-Poisson update approximation",0,1188,5.78,""
+"Texas",2025-05-31,"compressed","hurdle_ztnb",1860.62771498012,0,0.000744780303114645,"pass",TRUE,TRUE,TRUE,FALSE,0.0703836961428569,0.929719235288353,"anchored sequential hurdle updates",4,1188,5.003,""
+"Texas",2025-05-31,"compressed","hurdle_ztpoisson",9762.81860220663,0,0.00551214087596796,"pass",TRUE,TRUE,TRUE,FALSE,0.0339691182638786,0.96603136187684,"anchored sequential hurdle updates",0,1188,5.158,""

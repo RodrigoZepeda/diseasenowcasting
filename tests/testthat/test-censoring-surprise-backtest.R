@@ -36,7 +36,7 @@ test_that("backtest with max_delay = Inf keeps user-supplied recent dates", {
 })
 
 # ── TASK 3: censored delays (m_censored) ─────────────────────────────────────
-# `censor_delays_above()` itself now lives in tbl.now; here we only check that a
+# `censor_reporting_delays_above()` lives in tbl.now; here we only check that a
 # censored tbl_now flows correctly through diseasenowcasting's engine.
 
 test_that("a censored tbl_now feeds m_censored through to the engine", {
@@ -47,7 +47,9 @@ test_that("a censored tbl_now feeds m_censored through to the engine", {
   df$reported[1] <- df$onset[1] + 200                     # outlier
   tn  <- tbl_now(df, event_date = onset, report_date = reported,
                  data_type = "linelist", verbose = FALSE)
-  tn_c <- censor_delays_above(tn, max_delay = 30, quiet = TRUE)
+  tn_c <- tbl.now::censor_reporting_delays_above(
+    tn, max_delay = 30, verbose = FALSE
+  )
   mdl  <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
   prep <- prepare_from_tbl_now(tn_c, mdl)
   expect_true(length(prep$data$obs_delays_cens) >= 1L)    # censored delays present
@@ -62,7 +64,9 @@ test_that("censoring an outlier delay changes the fitted delay distribution", {
   df$reported[1] <- df$onset[1] + 250                     # extreme outlier delay
   tn   <- tbl_now(df, event_date = onset, report_date = reported,
                   data_type = "linelist", verbose = FALSE)
-  tn_c <- censor_delays_above(tn, max_delay = 30, quiet = TRUE)
+  tn_c <- tbl.now::censor_reporting_delays_above(
+    tn, max_delay = 30, verbose = FALSE
+  )
   mdl  <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
   nc_plain <- nowcast(tn,   mdl, type = "one_stage", n_draws = 150,
                       temporal_effects = "none", seed = 1)

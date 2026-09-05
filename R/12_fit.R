@@ -21,6 +21,21 @@ fit <- function(model, data, priors = NULL, init = NULL,
   priors <- priors %||% default_priors(model, data)
   hier   <- S7::S7_inherits(model, model_class) && model@strata_pooling == "hierarchical"
 
+  # Checked here, not inside build_joint_obj(): `.fit_joint()` runs an init ladder
+  # that swallows build errors, so a configuration mistake would surface as an
+  # unhelpful "failed to converge for all init attempts".
+  if (isTRUE(data$is_linelist_retraction == 1L) && is.null(priors$confirm_p))
+    cli::cli_abort(c("The engine carries linelist retractions but the priors have no confirmation block.",
+                     "i" = "Build the model with {.code model(validation = validation_process())}, or go through {.fn nowcast}, which attaches one automatically."))
+  if (!is.null(priors$negative_family) && isTRUE(data$is_linelist_retraction == 1L) &&
+      !identical(as.integer(data$resolution_mode %||% 0L), 2L))
+    cli::cli_abort(c("A `negative_delay` needs data recording BOTH confirmations and retractions.",
+                     "i" = "With only one outcome recorded the second lag law is not identified; drop `negative_delay` to share one law."))
+  if (isTRUE(data$is_linelist_retraction == 1L) && isTRUE(priors$confirm_p$is_constant == 1L) &&
+      isTRUE(priors$confirm_p$fixed >= 1) && data$n_retracted > 0)
+    cli::cli_abort(c("`p = 1` says no report is ever retracted, but {data$n_retracted} retraction{?s} {?is/are} observed.",
+                     "i" = "Leave `p` free (the default) or give it a prior, so the observed retractions have positive probability."))
+
   if (isTRUE(data$delay_only)) {
     return(.fit_delay_only(model, data, priors, init = init, control = control))
   }
@@ -36,10 +51,44 @@ fit <- function(model, data, priors = NULL, init = NULL,
 #' intercept and (HSGP) the GP amplitude / (AR1) the innovation SD.
 #' @keywords internal
 #' @noRd
+.joint_parameter_bounds <- function(par, settlement_horizon = 26L) {
+  parameter_names <- names(par)
+  lower <- rep(-Inf, length(par))
+  upper <- rep(Inf, length(par))
+  set_bounds <- function(pattern, lower_value, upper_value) {
+    selected <- grepl(pattern, parameter_names)
+    lower[selected] <<- lower_value
+    upper[selected] <<- upper_value
+  }
+  delay_upper <- log(max(as.integer(settlement_horizon), 2L)) + 2
+  set_bounds("^mu_intercept$|^mu_global$", -10, 16)
+  set_bounds("^delay_mu$|^cumulative_retraction_mu$", -6, delay_upper)
+  set_bounds("sigma_excess$|sigma_exc$", -8, delay_upper)
+  set_bounds("^delay_Q$|^cumulative_retraction_Q$", -10, 10)
+  set_bounds("cumulative_retraction_mass_raw$", -12, 12)
+  set_bounds("^ar_phi_unc$|^log_ar_sigma_unc$", -10, 10)
+  set_bounds("^log_gp_alpha$|^log_gp_ell$", -8, 8)
+  set_bounds("^log_R0$", -6, 6)
+  set_bounds("^u_gamma$|^u_neff$", -10, 10)
+  set_bounds("^log_phi_nb$", -12, 8)
+  set_bounds("^log_magnitude_size$", -8, 12)
+  set_bounds("^movement_", -12, 12)
+  list(lower = lower, upper = upper)
+}
+
+#' @keywords internal
+#' @noRd
 .fit_joint <- function(model, data, priors, init = NULL, n_tries = 6L,
-                       use_random = getOption("diseasenowcasting.use_random", FALSE),
+                       use_random = NULL,
                        control = list(iter.max = 1000, eval.max = 2000, rel.tol = 1e-9),
                        hierarchical_strata = FALSE) {
+  if (is.null(use_random)) {
+    use_random <- if (isTRUE(data$is_count_cumulative == 1L)) {
+      identical(as.integer(data$count_cumulative_observation), 1L)
+    } else {
+      getOption("diseasenowcasting.use_random", FALSE)
+    }
+  }
   base_init <- init %||% list()
   mu_offsets <- c(0, 0.5, -0.5, 1.0, 1.5, -1.0)
   n_strata <- as.integer(data$num_strata %||% 1L)
@@ -47,6 +96,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
   intercept_base <- apply(cc_mat, 2, function(col) { positive <- col[col > 0]
     if (length(positive)) log(stats::median(positive)) else 0 })   # one per stratum
   best <- NULL
+  fit_started <- proc.time()[["elapsed"]]
   for (j in seq_len(n_tries)) {
     ini <- base_init
     off <- mu_offsets[((j - 1) %% length(mu_offsets)) + 1]
@@ -68,14 +118,50 @@ fit <- function(model, data, priors = NULL, init = NULL,
       built <- build_joint_obj(data, priors, init = ini, use_random = use_random,
                                hierarchical_strata = hierarchical_strata)
       obj <- built$obj
-      opt <- nlminb(obj$par, obj$fn, obj$gr, control = control)
+      bounds <- .joint_parameter_bounds(
+        obj$par, data$settlement_horizon %||% 26L
+      )
+      opt <- nlminb(
+        obj$par, obj$fn, obj$gr,
+        lower = bounds$lower, upper = bounds$upper, control = control
+      )
       if (!is.finite(opt$objective)) stop("non-finite objective")
+      max_gradient <- max(abs(obj$gr(opt$par)))
+      polished <- FALSE
+      # A nominal nlminb convergence code is not enough for either inference
+      # strategy.  Hurdle fits are joint MAP fits (use_random = FALSE), and can
+      # need the same bounded quasi-Newton polish as Laplace-marginal fits.
+      if (!is.finite(max_gradient) || max_gradient > 0.05) {
+        polish <- optim(
+          opt$par, obj$fn, obj$gr, method = "L-BFGS-B",
+          lower = bounds$lower, upper = bounds$upper,
+          control = list(maxit = 2000L, factr = 1e4, pgtol = 1e-8)
+        )
+        polish_gradient <- max(abs(obj$gr(polish$par)))
+        objective_tolerance <- 1e-8 * (1 + abs(opt$objective))
+        if (is.finite(polish$value) && is.finite(polish_gradient) &&
+            polish$value <= opt$objective + objective_tolerance &&
+            polish_gradient < max_gradient) {
+          opt$par <- polish$par
+          opt$objective <- polish$value
+          opt$convergence <- polish$convergence
+          opt$message <- paste("L-BFGS-B polish:", polish$message %||% "")
+          max_gradient <- polish_gradient
+          polished <- TRUE
+        }
+      }
+      obj$fn(opt$par)
       pl  <- obj$env$parList()
       rc  <- .joint_reconstruct(data, priors, pl, built$Bmat, built$freq)
       if (any(!is.finite(rc$lambda))) stop("non-finite lambda")
       list(
         par = opt$par, parList = pl, nll = opt$objective, convergence = opt$convergence,
         obj = obj, opt = opt, random = built$random, use_random = use_random,
+        max_gradient = max_gradient,
+        gradient_status = if (!is.finite(max_gradient)) "nonfinite"
+          else if (max_gradient > 0.1) "warning" else "pass",
+        polished = polished,
+        elapsed = proc.time()[["elapsed"]] - fit_started,
         epi_model = built$epi_model, is_nb = built$is_nb,
         lambda = rc$lambda, mu = rc$mu, mu_safe = rc$mu_safe, Gstar = rc$Gstar,
         log_loc = rc$log_loc, log_scale = rc$log_scale,
@@ -85,10 +171,25 @@ fit <- function(model, data, priors = NULL, init = NULL,
       )
     }, error = function(e) NULL)
 
-    if (!is.null(res) && res$convergence == 0L) return(res)
-    if (!is.null(res) && is.null(best)) best <- res   # keep a non-converged fallback
+    if (!is.null(res) && res$convergence == 0L &&
+        is.finite(res$max_gradient) && res$max_gradient <= 0.1) return(res)
+    res_gradient <- if (!is.null(res) && is.finite(res$max_gradient))
+      res$max_gradient else Inf
+    best_gradient <- if (!is.null(best) && is.finite(best$max_gradient))
+      best$max_gradient else Inf
+    if (!is.null(res) && (is.null(best) || res_gradient < best_gradient))
+      best <- res
   }
-  if (!is.null(best)) return(best)
+  if (!is.null(best)) {
+    if (!is.finite(best$max_gradient) || best$max_gradient > 0.1) {
+      cli::cli_warn(c(
+        "The fit is finite but did not pass the gradient stability gate.",
+        "x" = "Maximum absolute gradient: {format(best$max_gradient, digits = 4)}.",
+        "i" = "Inspect `fit$gradient_status`, `fit$max_gradient`, and `fit$opt` before using predictions."
+      ))
+    }
+    return(best)
+  }
   cli::cli_abort("Joint fit failed to converge for all init attempts.")
 }
 

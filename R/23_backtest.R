@@ -49,6 +49,11 @@ backtest_class <- S7::new_class(
 #'   present-day nowcast).
 #' @param seed Optional base RNG seed.
 #' @param ... Passed to [nowcast()].
+#'
+#'   A `tbl_now` carrying a validation process needs nothing extra: the validation
+#'   model is fitted at each as-of date, and the truth is built from the cases that
+#'   settle POSITIVE (confirmed, or never retracted) -- the settled count the model
+#'   actually targets.
 #' @returns A `backtest_class` object.
 #'
 #' @details
@@ -92,6 +97,22 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
   event_unit <- tbl.now::get_event_units(data)
   min_event  <- min(data[[event_col]], na.rm = TRUE)
   report_col <- tbl.now::get_report_date(data)
+  is_count_cumulative <- identical(
+    tbl.now::get_data_type(data), "count-cumulative"
+  )
+  cumulative_horizon <- NULL
+  if (is_count_cumulative) {
+    horizons <- vapply(models, function(candidate) {
+      if (!isTRUE(candidate@count_cumulative@active)) 26L
+      else as.integer(candidate@count_cumulative@settlement)
+    }, integer(1L))
+    if (length(unique(horizons)) != 1L) {
+      cli::cli_abort(
+        "Count-cumulative models in one backtest must use the same settlement horizon."
+      )
+    }
+    cumulative_horizon <- horizons[[1L]]
+  }
 
   # ── Truth-completeness horizon ───────────────────────────────────────────
   # An event date only has a complete eventual count once enough time has passed
@@ -100,7 +121,9 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
   ev_report <- .unit_steps(min_event, data[[report_col]], event_unit)
   delays_u  <- ev_report - ev_event
   delays_u  <- delays_u[is.finite(delays_u) & delays_u >= 0]
-  if (is.null(max_delay)) {
+  if (is.null(max_delay) && is_count_cumulative) {
+    max_delay <- cumulative_horizon
+  } else if (is.null(max_delay)) {
     max_delay <- if (length(delays_u) > 0)
       ceiling(stats::quantile(delays_u, 0.99, names = FALSE)) else 0
   }
@@ -141,9 +164,33 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
   }
 
   # Eventual truth: total incidence per event-time over ALL reports in `data`.
-  truth_inc  <- tbl.now::to_count(data, to = "count-incidence")
+  # Under a retraction model the target is the SETTLED count, so cases that are
+  # ultimately retracted must not be counted -- scoring against every reported row
+  # would make an unbiased model look biased low by the retraction rate.
+  # A retracted case is not part of the settled count, so it must be dropped from
+  # the truth; a case still pending is kept, because "not resolved yet" is not
+  # "not a case".  Detected from the tbl_now, exactly as nowcast() detects it.
+  truth_source <- if (!isTRUE(tbl.now::has_validation(data))) data else {
+    outcomes <- as.character(as.data.frame(data)[[tbl.now::get_validation_type(data)]])
+    data[which(is.na(outcomes) | outcomes != "retracted"), , drop = FALSE]
+  }
+  truth_inc <- if (is_count_cumulative) {
+    full_origin <- max(truth_source[[report_col]], na.rm = TRUE)
+    completed <- .prepare_count_cumulative_as_of(
+      truth_source, now = full_origin, settlement = cumulative_horizon
+    )
+    completed <- completed[completed$.delay == cumulative_horizon, , drop = FALSE]
+    as.data.frame(completed)
+  } else {
+    as.data.frame(tbl.now::to_count(truth_source, to = "count-incidence"))
+  }
   truth_evnum <- .unit_steps(min_event, truth_inc[[event_col]], event_unit)
-  truth_count <- as.numeric(truth_inc[[tbl.now::get_case_count(data) %||% "n"]] %||% truth_inc[["n"]])
+  truth_count <- if (is_count_cumulative) {
+    as.numeric(truth_inc[[tbl.now::get_case_count(data)]])
+  } else {
+    as.numeric(truth_inc[[tbl.now::get_case_count(data) %||% "n"]] %||%
+                 truth_inc[["n"]])
+  }
   truth_final <- tapply(truth_count, truth_evnum, sum)
   truth_by_evnum <- setNames(as.numeric(truth_final), as.integer(names(truth_final)))
 
@@ -196,7 +243,12 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
 #' @keywords internal
 #' @noRd
 .model_label <- function(model) {
-  paste(model@epidemic@name, model@likelihood@name, model@delay@name, sep = "/")
+  base <- paste(model@epidemic@name, model@likelihood@name,
+                model@delay@name, sep = "/")
+  if (isTRUE(model@count_cumulative@active)) {
+    paste(base, model@count_cumulative@observation,
+          paste0("H", model@count_cumulative@settlement), sep = "/")
+  } else base
 }
 
 #' Predictions table from a backtest (the per-(date, model, event) summaries)

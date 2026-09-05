@@ -10,21 +10,24 @@ model_class <- S7::new_class(
     likelihood      = likelihood_class,
     epidemic        = epidemic_process_class,
     delay           = delay_process_class,
-    confirmation    = confirmation_process_class,   # retraction layer (inert by default)
+    validation      = validation_process_class,     # validation layer (inert by default)
     covariate_prior = prior_class,
-    strata_pooling  = S7::class_character   # "independent" | "hierarchical"
+    strata_pooling  = S7::class_character,  # "independent" | "hierarchical"
+    count_cumulative = count_cumulative_process_class
   ),
   constructor = function(likelihood      = nb_likelihood(),
                          epidemic        = hsgp_epidemic(),
                          delay           = dirichlet_delay(),
-                         confirmation    = no_confirmation(),
+                         validation      = no_validation(),
                          covariate_prior = std_normal_prior(),
-                         strata_pooling  = "independent") {
+                         strata_pooling  = "independent",
+                         count_cumulative = no_count_cumulative()) {
     S7::new_object(S7::S7_object(),
                    likelihood = likelihood, epidemic = epidemic,
-                   delay = delay, confirmation = confirmation,
+                   delay = delay, validation = validation,
                    covariate_prior = covariate_prior,
-                   strata_pooling = strata_pooling)
+                   strata_pooling = strata_pooling,
+                   count_cumulative = count_cumulative)
   },
   validator = function(self) {
     if (!self@strata_pooling %in% c("independent", "hierarchical"))
@@ -43,11 +46,10 @@ model_class <- S7::new_class(
 #'   [nb_likelihood()]).  Default: [nb_likelihood()].
 #' @param epidemic        An `epidemic_process_class`.  Default: [hsgp_epidemic()].
 #' @param delay           A `delay_process_class`.  Default: [lognormal_delay()].
-#' @param confirmation    A `confirmation_process_class` ([confirmation_process()])
-#'   describing the retraction (down-revision) structure of a count-cumulative
-#'   stream.  Default: inert (`p = 1`, no retractions).  [nowcast()] switches
-#'   to the signed-increment Skellam / SkNB likelihood automatically when the data
-#'   are count-cumulative; supply a `confirmation_process()` to configure it.
+#' @param validation      A `validation_process_class` ([validation_process()])
+#'   for report-level confirmation/retraction outcomes in linelist or
+#'   count-incidence data. Default: inert. Count-cumulative revisions use the
+#'   separate `count_cumulative` component.
 #' @param covariate_prior A `prior_class` applied to all covariate coefficients.
 #'   Default: [std_normal_prior()].
 #' @param strata_pooling  `"independent"` (default) fits fully separate intercepts
@@ -57,6 +59,10 @@ model_class <- S7::new_class(
 #'   \eqn{\delta^{(s)} \sim \mathcal{N}(0,1)},
 #'   \eqn{\tau \sim \text{HalfNormal}(0,1)}.
 #'   Only relevant when `num_strata > 1`.
+#' @param count_cumulative Dedicated count-cumulative observation configuration
+#'   from [count_cumulative_process()]. It is inert by default for linelist and
+#'   count-incidence data; count-cumulative data use the hurdle--ZTNB default
+#'   unless configured explicitly.
 #'
 #' @returns A `model_class` object.
 #'
@@ -71,11 +77,13 @@ model_class <- S7::new_class(
 model <- function(likelihood      = nb_likelihood(),
                   epidemic        = hsgp_epidemic(),
                   delay           = lognormal_delay(),
-                  confirmation    = no_confirmation(),
+                  validation      = no_validation(),
                   covariate_prior = std_normal_prior(),
-                  strata_pooling  = "independent") {
+                  strata_pooling  = "independent",
+                  count_cumulative = no_count_cumulative()) {
   model_class(likelihood = likelihood, epidemic = epidemic,
-              delay = delay, confirmation = confirmation,
+              delay = delay, validation = validation,
               covariate_prior = covariate_prior,
-              strata_pooling = strata_pooling)
+              strata_pooling = strata_pooling,
+              count_cumulative = count_cumulative)
 }

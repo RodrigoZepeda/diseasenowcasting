@@ -56,7 +56,12 @@ present-day nowcast).}
 
 \item{seed}{Optional base RNG seed.}
 
-\item{...}{Passed to \code{\link[=nowcast]{nowcast()}}.}
+\item{...}{Passed to \code{\link[=nowcast]{nowcast()}}.
+
+A \code{tbl_now} carrying a validation process needs nothing extra: the validation
+model is fitted at each as-of date, and the truth is built from the cases that
+settle POSITIVE (confirmed, or never retracted) -- the settled count the model
+actually targets.}
 }
 \value{
 A \code{backtest_class} object.

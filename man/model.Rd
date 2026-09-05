@@ -8,9 +8,10 @@ model(
   likelihood = nb_likelihood(),
   epidemic = hsgp_epidemic(),
   delay = lognormal_delay(),
-  confirmation = no_confirmation(),
+  validation = no_validation(),
   covariate_prior = std_normal_prior(),
-  strata_pooling = "independent"
+  strata_pooling = "independent",
+  count_cumulative = no_count_cumulative()
 )
 }
 \arguments{
@@ -21,11 +22,10 @@ model(
 
 \item{delay}{A \code{delay_process_class}.  Default: \code{\link[=lognormal_delay]{lognormal_delay()}}.}
 
-\item{confirmation}{A \code{confirmation_process_class} (\code{\link[=confirmation_process]{confirmation_process()}})
-describing the retraction (down-revision) structure of a count-cumulative
-stream.  Default: inert (\code{p = 1}, no retractions).  \code{\link[=nowcast]{nowcast()}} switches
-to the signed-increment Skellam / SkNB likelihood automatically when the data
-are count-cumulative; supply a \code{confirmation_process()} to configure it.}
+\item{validation}{A \code{validation_process_class} (\code{\link[=validation_process]{validation_process()}})
+for report-level confirmation/retraction outcomes in linelist or
+count-incidence data. Default: inert. Count-cumulative revisions use the
+separate \code{count_cumulative} component.}
 
 \item{covariate_prior}{A \code{prior_class} applied to all covariate coefficients.
 Default: \code{\link[=std_normal_prior]{std_normal_prior()}}.}
@@ -37,6 +37,11 @@ half-normal prior on the between-stratum SD:
 \eqn{\delta^{(s)} \sim \mathcal{N}(0,1)},
 \eqn{\tau \sim \text{HalfNormal}(0,1)}.
 Only relevant when \code{num_strata > 1}.}
+
+\item{count_cumulative}{Dedicated count-cumulative observation configuration
+from \code{\link[=count_cumulative_process]{count_cumulative_process()}}. It is inert by default for linelist and
+count-incidence data; count-cumulative data use the hurdle--ZTNB default
+unless configured explicitly.}
 }
 \value{
 A \code{model_class} object.

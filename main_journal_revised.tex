@@ -1,0 +1,726 @@
+\documentclass{article}
+\usepackage{graphicx} 
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage[margin=1in]{geometry}
+\usepackage{mathtools}
+\title{Diseasenowcasting}
+\author{Rodrigo Zepeda}
+\date{August 2026}
+
+\setcounter{tocdepth}{4}
+\setcounter{secnumdepth}{4}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{lemma}{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\newcommand{\Pois}{\operatorname{Poisson}}
+\newcommand{\NB}{\operatorname{NB}}
+\newcommand{\Sk}{\operatorname{Skellam}}
+\newcommand{\E}{\operatorname{\mathbb{E}}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\Prb}{\operatorname{\mathbb{P}}}
+
+\begin{document}
+
+\maketitle
+
+\section{Methods}
+
+Our methods aim to nowcast the number of events that have yet to be recorded due to reporting delays. As an example consider an individual with influenza-like symptoms. 
+The event might correspond to symptom onset (the symptoms making it a \textit{suspected} case). The report date might correspond to the day the individual was seen by a medical professional for the first time and reported to the healthcare system. Finally the validation date might correspond to the date their influenza test results were registered in the same system. 
+
+\begin{figure}[!htb]
+    \centering    \includegraphics[width=0.7\linewidth]{diagram_confirmed.pdf}
+    \caption{We consider the evolution of a suspected case from the event (e.g. symptom onset) to the report (e.g. registry as suspected into the healthcare system) to the validation (e.g. negative test).}
+    \label{fig:placeholder}
+\end{figure}
+
+In general our models consider the workflow: event $\to$ report $\to$ validation. We  nowcast for scenarios where there is no validation as well as scenarios where the validation consists of only rejections (e.g. cases that lose eligibility), or only confirmations (e.g. systems that only keep the true positives). We also nowcast scenarios where only cumulative counts are available and the latest \textit{best estimate} of the total number of validated cases is reported.   
+
+\subsection{Notation}
+For each suspected case we consider the following notation:
+\begin{itemize}
+    \item \textbf{Now}, $\tau$, denotes the maximum observable time (\textit{i.e.} the most recent time where a case, a report, or a validation could have occurred). 
+    \item \textbf{Event date}, $t$, denotes the date a suspected case occurred with $t \geq 0$. 
+    \item \textbf{Report date}, $r$, denotes the date a suspected case was recorded with $r \geq t$. A case is reported by the now if and only if $r \leq \tau$. 
+    \item \textbf{Validation date}, $v$ denotes the date a reported suspected case was either confirmed as a true case or retracted. It is bounded by the report with $v \geq r$. We allow for $v = \infty$ for a case that is never validated.   
+    \item \textbf{Reporting delay}, $d^{\text{rpt}}$, is the difference between the reporting date and the event date (\textit{i.e.} $d^{\text{rpt}} = r - t$). The minimum delay possible is $d^{\text{rpt}} = 0$. 
+    \item \textbf{Validation delay}, $d^{\text{val}}$, is the difference between the validation date and the report date (\textit{i.e.} $d^{\text{val}} = v - r$). The minimum delay possible is $d^{\text{val}} = 0$. For $v = \infty$ we write $d^{\text{val}} = \infty$.
+    \item \textbf{Report's age,} $a$, denotes the difference between the now and the report date ($a = \tau - r$) for a report that is already observable ($r \leq \tau$).   
+    \item \textbf{Maximum observable delay}, $d^{\star}_t$, denotes the maximum observable delay for an event that occurred at time $t$. Specifically, for a now $\tau$, we define it as $d^{\star}_t = \tau - t$.
+    \item \textbf{Observed validation state}, $s$, is \texttt{confirmed} if the suspected case is observed to be a true case, \texttt{retracted} if it is observed not to be a true case, and \texttt{pending} if the validation has yet to be observed.
+\end{itemize}
+The nowcasting objective of the model is, at time $\tau \geq t$ (i.e. the \textit{now}), predict $N_t^+$ the overall number of true cases that happened at event time $t$ including those that have yet to be reported or whose validation is still pending. 
+
+
+\subsubsection{Assumptions}
+For a fixed event time $t$ we make the following assumptions:
+\begin{enumerate}    
+    \item \textbf{Temporal ordering:} 
+    All reports happen after the event and all the validations happen after the report: $0 \leq t \leq r \leq v$. This follows the scheme: event $\to$ report $\to$ validation.   
+    \item \textbf{Cases might never get validated:} The validation delay may take values in $\{0,1,2,\dots\} \cup \{\infty\}$.
+    \item \textbf{Observed validation states:} A reported case observed at the now, $\tau$, can be \texttt{confirmed}, \texttt{retracted} or \texttt{pending}. A \texttt{pending} record is one whose eventual status is still unknown.
+    \item \textbf{Parameters and Bayesian conditioning:} The vector $\theta_t$ contains all model parameters and has prior density $\pi(\theta_t)$. All probability distributions, probability masses, densities, expectations, and likelihood contributions below are understood to be conditional on $\theta_t$, even when this dependence is suppressed from the notation. In particular, $p$, $\mu_t$, $\kappa_t$, and the delay distributions may be components or functions of $\theta_t$. For any data contribution $\mathcal D_t$, we denote its unnormalized posterior kernel by
+    \begin{equation}
+        \mathcal K_t(\theta_t;\mathcal D_t)
+        :=
+        \pi(\theta_t)\,\mathcal L_t(\theta_t;\mathcal D_t).
+    \end{equation}
+\end{enumerate}
+
+
+\subsection{General process}
+
+\subsubsection{Linelist data}
+Let
+\begin{equation}
+    M_t \in \{0,1,2,\dots\}
+\end{equation}
+denote the \textbf{total number of events} that occurred at event time $t$. We refer to $\{M_t\}$ as the (latent) \textbf{epidemic process}. Conditional on $M_t = m$, let 
+\begin{equation}
+    X_{t,1}, X_{t,2}, \dots, X_{t,m}
+\end{equation}
+be i.i.d. marks with law $Q_t$ independent of $M_t$. A mark may contain as components, depending on the observation regime, the following:
+\begin{equation}
+X_{t,j} = (D^{\text{rpt}}_{t,j}, D^{\text{val}}_{t,j}, Y_{t,j}), 
+\end{equation}
+where $D^{\text{rpt}}$ is the \textbf{event-to-report delay}, $D^{\text{val}}$ the \textbf{report-to-validation delay}, and $Y$ is an \textbf{indicator with $Y = 1$ if it is a true case} and $0$ otherwise. We denote the probability of being a true positive as $p = \Prb(Y_{t,j} = 1\mid\theta_t)$. We refer to data where at least some of the records associated to each of the marks $X_{t,j}$ are available as line-list data. That is, datasets where each individual observation is available to the analyst. We discuss aggregated data in a later section.
+
+Conditional on $\theta_t$, we assume the components of a mark factorize as follows: $Y_{t,j}\sim\operatorname{Bernoulli}(p)$, the reporting delay is independent of the latent case indicator, $D_{t,j}^{\mathrm{rpt}}\perp Y_{t,j}$, and the validation delay is conditionally independent of the reporting delay given the latent case indicator, $D_{t,j}^{\mathrm{val}}\perp D_{t,j}^{\mathrm{rpt}}\mid Y_{t,j}$. Thus, for a finite validation delay $\ell$ and $y\in\{0,1\}$,
+\begin{equation}\label{markfactorization}
+\begin{split}
+&\Prb\left(D_{t,j}^{\mathrm{rpt}}=d,\,Y_{t,j}=y,\,D_{t,j}^{\mathrm{val}}=\ell\mid\theta_t\right)\\
+&\qquad= g_D^{\mathrm{rpt}}(d)\,p^y(1-p)^{1-y}\,g_{D,y}^{\mathrm{val}}(\ell),
+\end{split}
+\end{equation}
+where $g_{D,1}^{\mathrm{val}}=g_{D+}^{\mathrm{val}}$ and $g_{D,0}^{\mathrm{val}}=g_{D-}^{\mathrm{val}}$. The same factorization applies to probability mass at $D^{\mathrm{val}}=\infty$. This assumption is what permits the reporting and validation factors used below to be multiplied.
+
+For now, we assume the reporting delay has a probability mass function $g_D^{\text{rpt}}$ and denote its distribution function $G_D^{\text{rpt}}$. The survival function is $\bar{G}_D^{\text{rpt}} = 1 - G_D^{\text{rpt}}$. The validation delay is allowed to depend on the latent sign with
+\begin{equation}
+    g_{D+}^{\text{val}}(\ell) = \Prb(D^{\text{val}} = \ell \mid Y = 1) 
+    \quad \text{and} \quad 
+    g_{D-}^{\text{val}}(\ell) = \Prb(D^{\text{val}} = \ell \mid Y = 0)
+\end{equation}
+denoting the conditional probability mass functions for the confirmation and retraction delays for finite $\ell \in \{0,1,2,\dots\}$. Their corresponding distribution functions on the finite delays are $G_{D+}^{\text{val}}$ and $G_{D-}^{\text{val}}$. We define their survival functions by
+\begin{equation}
+    \bar G_{D+}^{\text{val}}(\ell)
+    = \Prb(D^{\text{val}} > \ell \mid Y=1),
+    \qquad
+    \bar G_{D-}^{\text{val}}(\ell)
+    = \Prb(D^{\text{val}} > \ell \mid Y=0),
+\end{equation}
+so that any probability mass at $D^{\text{val}}=\infty$ is included in the corresponding survival function.
+
+Finally, we define the true-case count as the total number of positive (true) cases at time $t$:
+\begin{equation}
+    N_t^{+} = \sum\limits_{j = 1}^{M_t} Y_{t,j}
+\end{equation}
+We denote the expected values of the gross reports and the positive cases as:
+\begin{equation}
+    \lambda_t^{+} = \E[N_t^{+}] \quad \text{and} \quad  \mu_t = \E[M_t].
+\end{equation}
+The total number of non-true cases is:
+\begin{equation}
+    N_t^{-} =  \sum\limits_{j = 1}^{M_t} (1 - Y_{t,j}).
+\end{equation}
+Because the marks are independent of $M_t$ and $Y_{t,j}\sim\operatorname{Bernoulli}(p)$,
+\begin{equation}
+    \lambda_t^{+}=p\mu_t,
+    \qquad
+    \lambda_t^{-}=(1-p)\mu_t.
+\end{equation}
+We emphasize that $N_t^{-}$ counts non-true cases, not necessarily observed retractions, because a non-true case is allowed to have $D^{\mathrm{val}}=\infty$ and therefore may never be retracted.
+
+We assume the distribution of $M_t$ is such that its expected value exists and is finite. 
+
+
+\subsubsection{The observation map}
+
+We define $\mathcal{O}_{\tau}(X_t)$ as the record generated by a latent point $X_t$ at the now $\tau$, with $\mathcal{O}_{\tau}(X_t)=\emptyset$ denoting a point completely unobserved at the analysis date. Otherwise $\mathcal{O}_{\tau}(X_t)$ contains the observable part of its mark. Define
+\begin{equation}
+    q_{\emptyset,t,\tau}=\Prb\{\mathcal{O}_{\tau}(X_t)=\emptyset\}.
+\end{equation}
+For an observable record $x$, let $q_{t,\tau}(x)$ denote its probability mass or density with respect to a dominating measure $\nu_t$ on the observable-record space. Thus,
+\begin{equation}
+    q_{\emptyset,t,\tau}
+    + \int q_{t,\tau}(x)\,\nu_t(dx)
+    =1.
+\end{equation}
+\subsection{The general likelihood}
+
+\begin{theorem}[General censored marked point-process likelihood] 
+Suppose that at the now, $\tau$, the observed line-list for event time $t$ contains $k_t$ visible records $\mathcal D_t=\{x_{t,1},\ldots,x_{t,k_t}\}$. Conditional on $\theta_t$, and up to factors independent of $\theta_t$, the likelihood contribution is
+\begin{equation}\label{glik}
+    \mathcal{L}_t(\theta_t;\mathcal D_t) 
+    \propto 
+    S_{k_t,t}\big(q_{\emptyset, t, \tau};\theta_t\big) 
+    \prod\limits_{i = 1}^{k_t} q_{t,\tau}(x_{t,i}),
+\end{equation}
+where
+\begin{equation}
+    S_{k,t}\big(q;\theta_t\big) = \sum\limits_{m=k}^{\infty} \binom{m}{k} q^{m-k} \Prb(M_t = m\mid\theta_t).
+\end{equation}
+The corresponding unnormalized posterior kernel is $\mathcal K_t(\theta_t;\mathcal D_t)=\pi(\theta_t)\mathcal L_t(\theta_t;\mathcal D_t)$.
+\begin{proof}
+Conditioning on $M_t=m\geq k_t$ one can choose which $k_t$ of the $m$ latent points produced the visible records. There are $\binom{m}{k_t}$ such choices up to the ordering of the observed rows, whose contribution is independent of $\theta_t$. Each visible record $x_{t,i}$ contributes $q_{t,\tau}(x_{t,i})$. The remaining $m-k_t$ unobserved records must each map to $\emptyset$ with probability $q_{\emptyset, t, \tau}$. Conditional independence of the marks gives
+\begin{equation}
+    \Prb(x_{t,1},\dots,x_{t,k_t}\mid M_t=m,\theta_t)
+    \propto    
+    q_{\emptyset,t,\tau}^{m-k_t} \binom{m}{k_t}
+    \prod_{i=1}^{k_t}q_{t,\tau}(x_{t,i}).
+\end{equation}
+Marginalizing over $m$ conditional on $\theta_t$ yields \eqref{glik}.
+\end{proof}
+\end{theorem}
+
+The following two expressions for $S_{k,t}$ have been derived elsewhere. For $M_t\mid\theta_t\sim\Pois(\mu_t)$, it yields
+\begin{equation}\label{poissonS}
+    S_{k,t}(q;\theta_t) = \dfrac{\mu_t^k}{k!} \exp\big(-\mu_t(1 - q)\big),
+\end{equation}
+while for $M_t\mid\theta_t$ following a Negative Binomial distribution parametrized by mean $\mu_t$ and size $\kappa_t$,
+\begin{equation}\label{negbinS}
+    S_{k,t}(q;\theta_t) 
+    = 
+    \dfrac{\Gamma(k + \kappa_t)}{\Gamma(\kappa_t)\, k!} 
+    \dfrac{\kappa_t^{\kappa_t}\mu_t^k}
+    {\big(\kappa_t + \mu_t (1 - q)\big)^{k + \kappa_t}}.
+\end{equation}
+
+We note that, given the previous result, in general, for any line-list scenario, we just need to identify the $q_{\cdot,\tau}$ elements. 
+
+\subsection{The general result for line-list data}
+
+For an observed row $j$ for event time $t$ with now $\tau$ that was reported at time $r_j$ denote the observed delay and the observed report's age as:
+\begin{equation}
+    d_j^{\text{rpt}} = r_j - t, \quad \text{and} \quad a_j = \tau - r_j.
+\end{equation}
+If the row has been resolved at time $v_j$ we also have the observed validation delay:
+\begin{equation}
+d_j^{\text{val}} = v_j - r_j.
+\end{equation}
+In every line-list scenario a latent point has not been observed if its report date has not appeared by $\tau$, therefore the probability of not being observed is the probability of being reported after the now:
+\begin{equation}
+    q_{\emptyset, t, \tau} 
+    = \Prb(D^{\text{rpt}} > d_t^{\star}) 
+    = \bar{G}_D^{\text{rpt}}(d_t^{\star}).
+\end{equation}
+For a row $j$ that has been observed there are three possible scenarios:
+\begin{enumerate}
+    \item \textbf{Confirmation:} After a delay $d_j^{\text{val}}$ the case has been confirmed as a true case. This happens with probability $p \cdot g_{D+}^{\text{val}}(d_j^{\text{val}})$.
+    \item \textbf{Retraction:} After a delay $d_j^{\text{val}}$ the case has been retracted. This happens with probability $(1 -p) \cdot g_{D-}^{\text{val}}(d_j^{\text{val}})$.
+    \item \textbf{Pending:} A case at the now $\tau$ is pending, meaning that it has neither been confirmed nor retracted. This happens with probability $p \cdot \bar{G}_{D+}^{\text{val}}(a_j) + (1 - p) \cdot \bar{G}_{D-}^{\text{val}}(a_j)$.
+\end{enumerate}
+For each row $j$ at time $t$ with now $\tau$, we define the validation-state factor as:
+\begin{equation}\label{chilinelist}
+    \chi_{t,\tau}(j) = \begin{cases}
+        p \cdot g_{D+}^{\text{val}}(d_j^{\text{val}}) & \text{ if row } j \text{ is confirmed,} \\
+        (1 -p) \cdot g_{D-}^{\text{val}}(d_j^{\text{val}}) & \text{ if row } j \text{ is retracted,} \\
+        p \cdot \bar{G}_{D+}^{\text{val}}(a_j) + (1 - p) \cdot \bar{G}_{D-}^{\text{val}}(a_j) & \text{ if row } j \text{ is pending.} 
+    \end{cases}
+\end{equation}
+We can then rewrite the probability of the observation associated to a specific mark $x_j$ as:
+\begin{equation}\label{qlinelist}
+    q_{t,\tau}(x_{t,j}) = g_{D}^{\text{rpt}} (d^{\text{rpt}}_j)  \cdot \chi_{t,\tau}(j)
+\end{equation}
+which combines the probability of the observed reporting delay, $g_{D}^{\text{rpt}} (d^{\text{rpt}}_j)$, with the probability associated with its validation state, $\chi_{t,\tau}(j)$. 
+
+Note that in the case of a model where no confirmations are registered (only retractions) $g_{D+}^{\text{val}}(d) = 0$ for all finite $d$ while the survival function is always equal to one: $\bar{G}_{D+}^{\text{val}}(d) = 1$. Analogously, a model with no retractions (confirmations only) has $g_{D-}^{\text{val}}(d) = 0$ and $\bar{G}_{D-}^{\text{val}}(d) = 1$ for any finite $d$. Finally, a model with no confirmations nor retractions has $\chi_{t,\tau}(j) = 1$ for all $j$, which recovers the ordinary event-to-report observation model. 
+
+Furthermore, in expressions \eqref{qlinelist} and \eqref{chilinelist} one can substitute $g_{D}^{\text{rpt}}(d)$ or any $g_{D\cdot}^{\text{val}}(d)$ for the probability of $D$ lying on an interval, $\mathcal{I}$, $\Prb(D \in \mathcal{I})$ if the delays are known only approximately. 
+
+We write the likelihood \eqref{glik} associated to the line-list data observed at the now $\tau$ corresponding to an event at time $t$ as:
+\begin{equation}\label{linelist}  
+    \mathcal{L}_t(\theta_t;\mathcal D_t) 
+    \propto 
+    S_{k_t,t}\big(\bar{G}_{D}^{\text{rpt}}(d_t^{\star});\theta_t\big) 
+    \prod\limits_{j = 1}^{k_t} 
+    \big[ g_{D}^{\text{rpt}} (d^{\text{rpt}}_j)  \cdot \chi_{t,\tau}(j)\big],
+\end{equation}
+where for the Poisson and Negative Binomial case $S_{k_t,t}$ can be written respectively as in \eqref{poissonS} or \eqref{negbinS}. The corresponding unnormalized posterior kernel is $\mathcal K_t(\theta_t;\mathcal D_t)=\pi(\theta_t)\mathcal L_t(\theta_t;\mathcal D_t)$.
+
+
+\subsection{Count-cumulative data}
+
+In some surveillance systems only cumulative counts are available. In the cumulative-only observation regime considered here, retractions are observed but confirmations are not separately registered. Equivalently, for this observation regime we set
+\begin{equation}\label{noconfirmcum}
+    g_{D+}^{\mathrm{val}}(\ell)=0,
+    \qquad
+    \bar G_{D+}^{\mathrm{val}}(\ell)=1,
+    \qquad \ell<\infty.
+\end{equation}
+Thus, once a true case is reported it remains in the cumulative count, whereas a non-true case remains until a retraction is observed. Without this restriction, a cumulative unretracted-count stream alone contains no information about the confirmation-delay distribution, because confirmation does not change the count. Consequently, confirmation-delay parameters are not identifiable from cumulative-only data and require line-list validation data or external information.
+
+For event time $t$, the running total number of unretracted cases by reporting delay $d$ is
+\begin{equation}\label{cumdef}
+    C_t(d) := \#\left(
+    \{j : Y_{t,j} = 1 \text{ and } D_{t,j}^{\text{rpt}} \leq d\}
+    \cup
+    \{j : Y_{t,j} = 0,\, D_{t,j}^{\text{rpt}} \leq d \text{ and } D_{t,j}^{\text{rpt}} + D_{t,j}^{\text{val}} > d\}
+    \right).
+\end{equation}
+Thus $C_t(d)$ counts every event that has been reported by delay $d$ and has not been retracted by that delay. A true case ($Y=1$) remains in the count after it is reported. A non-true case ($Y=0$) remains in the count until its retraction is observed.
+
+Because non-true cases are allowed to have $D^{\mathrm{val}}=\infty$, this cumulative observation process does not necessarily settle to the true-case count $N_t^+$. Indeed,
+\begin{equation}\label{cumlimit}
+    \lim_{d\to\infty} C_t(d)
+    =
+    N_t^+
+    +
+    \sum_{j=1}^{M_t}
+    (1-Y_{t,j})\,
+    \mathbb I\{D_{t,j}^{\mathrm{val}}=\infty\}.
+\end{equation}
+Hence $\lim_{d\to\infty}C_t(d)=N_t^+$ only when $\Prb(D^{\mathrm{val}}=\infty\mid Y=0)=0$. More generally, if this probability is unknown and positive, the cumulative likelihood alone cannot separately identify $p$ from the probability that a non-true case is never retracted: the finite retraction probabilities enter through $(1-p)g_{D-}^{\mathrm{val}}(\ell)$, while permanently unretracted reports enter through $p+(1-p)\Prb(D^{\mathrm{val}}=\infty\mid Y=0)$. Separating these quantities therefore requires a model constraint, informative prior information, or additional validation data.
+
+We assume all delays follow the same distributions as before, with the additional assumption that a case cannot be reported and removed at exactly the same moment:
+\begin{equation}\label{nozeroretraction}
+    g_{D-}^{\mathrm{val}}(0) = 0.
+\end{equation}
+This assumption ensures that a retracted trajectory contributes an observable addition at its reporting delay and a later observable withdrawal at its retraction delay.
+
+For our model, define the signed updates
+\begin{equation}\label{signedupdates}
+    \Delta^0_t = C_t(0),
+    \qquad
+    \Delta^d_t = C_t(d) - C_t(d-1), \qquad d\geq 1,
+\end{equation}
+where a positive $\Delta^d_t$ represents net additions and a negative value represents net withdrawals.
+
+We now rewrite the cumulative process in terms of latent report trajectories. Fix the now $\tau$ and write $d_t^{\star}=\tau-t$. At this horizon, every latent event that happened at time $t$ belongs to exactly one of the following classes:
+\begin{itemize}
+    \item \textbf{Not yet reported.} Define
+    \begin{equation}
+        Z_{t,\tau}
+        :=
+        \#\{j:D^{\mathrm{rpt}}_{t,j}>d_t^{\star}\}.
+    \end{equation}
+    Its trajectory probability is
+    \begin{equation}\label{qemptycum}
+        \tilde q_{\emptyset,t,\tau}
+        =
+        \bar G_D^{\mathrm{rpt}}(d_t^{\star}).
+    \end{equation}
+
+    \item \textbf{Reported at delay $d$ and still unretracted by the now.} For $0\leq d\leq d_t^{\star}$ define
+    \begin{equation}\label{Udef}
+        U_{t,\tau}^{d}
+        :=
+        \#\left\{
+        j:
+        D^{\mathrm{rpt}}_{t,j}=d,
+        \text{ and case }j\text{ is unretracted at }\tau
+        \right\}.
+    \end{equation}
+    Its trajectory probability is
+    \begin{equation}\label{qUcum}
+        \tilde q_{t,\tau}^{U}(d)
+        =
+        g_D^{\mathrm{rpt}}(d)
+        \left[
+        p
+        +(1-p)\bar G_{D-}^{\mathrm{val}}(d_t^{\star}-d)
+        \right].
+    \end{equation}
+
+    \item \textbf{Reported at delay $d_1$ and retracted at a later delay $d_2$.} For $0\leq d_1<d_2\leq d_t^{\star}$ define
+    \begin{equation}\label{Wdef}
+        W_{t,\tau}^{d_1,d_2}
+        :=
+        \#\left\{
+        j:
+        D^{\mathrm{rpt}}_{t,j}=d_1,
+        D^{\mathrm{rpt}}_{t,j}+D^{\mathrm{val}}_{t,j}=d_2,
+        Y_{t,j}=0
+        \right\}.
+    \end{equation}
+    Its trajectory probability is
+    \begin{equation}\label{qWcum}
+        \tilde q_{t,\tau}^{W}(d_1,d_2)
+        =
+        g_D^{\mathrm{rpt}}(d_1)
+        (1-p)
+        g_{D-}^{\mathrm{val}}(d_2-d_1).
+    \end{equation}
+\end{itemize}
+The probabilities of the trajectory classes satisfy
+\begin{equation}\label{trajectorypartition}
+    \tilde q_{\emptyset,t,\tau}
+    +
+    \sum_{d=0}^{d_t^{\star}}\tilde q_{t,\tau}^{U}(d)
+    +
+    \sum_{0\leq d_1<d_2\leq d_t^{\star}}
+    \tilde q_{t,\tau}^{W}(d_1,d_2)
+    =1.
+\end{equation}
+This follows because the three classes are mutually exclusive and exhaustive at the analysis time $\tau$.
+
+Using these trajectory counts, for every $d=0,\dots,d_t^{\star}$,
+\begin{equation}\label{deltadecomposition}
+    \Delta_t^d
+    =
+    U_{t,\tau}^{d}
+    +
+    \sum_{d_2=d+1}^{d_t^{\star}}W_{t,\tau}^{d,d_2}
+    -
+    \sum_{d_1=0}^{d-1}W_{t,\tau}^{d_1,d},
+\end{equation}
+where an empty sum is defined to be zero. The first term counts reports appearing at delay $d$ that remain unretracted at the now; the second counts reports appearing at delay $d$ that were subsequently retracted by the now and therefore contributed $+1$ when first reported; the final term counts earlier reports that are retracted at delay $d$ and therefore contribute $-1$ to that update.
+
+\subsubsection{Marginal distributions at a fixed $d$}
+
+For a fixed delay $d$, define the total number of additions and withdrawals at that delay by
+\begin{equation}\label{Adef}
+    \mathcal A_t^d
+    :=
+    U_{t,\tau}^{d}
+    +
+    \sum_{d_2=d+1}^{d_t^{\star}}W_{t,\tau}^{d,d_2},
+\end{equation}
+and
+\begin{equation}\label{withdrawalsdef}
+    \mathcal W_t^d
+    :=
+    \sum_{d_1=0}^{d-1}W_{t,\tau}^{d_1,d}.
+\end{equation}
+Then
+\begin{equation}\label{deltaAB}
+    \Delta_t^d=\mathcal A_t^d-\mathcal W_t^d.
+\end{equation}
+The trajectory classes contributing to $\mathcal A_t^d$ and $\mathcal W_t^d$ are disjoint.
+
+\paragraph{Poisson marginal}
+Suppose, conditional on $\theta_t$,
+\begin{equation}
+    M_t\mid\theta_t\sim\Pois(\mu_t).
+\end{equation}
+By Poisson thinning, the counts associated with mutually exclusive trajectory classes are independent Poisson random variables. Therefore $\mathcal A_t^d$ and $\mathcal W_t^d$ are independent Poisson random variables. Define their means
+\begin{equation}\label{alphadef}
+\begin{split}
+    \alpha_t^d
+    &:={}
+    \E[\mathcal A_t^d\mid\theta_t]\\
+    &=
+    \mu_t\left[
+    \tilde q_{t,\tau}^{U}(d)
+    +
+    \sum_{d_2=d+1}^{d_t^{\star}}
+    \tilde q_{t,\tau}^{W}(d,d_2)
+    \right].
+\end{split}
+\end{equation}
+Substituting \eqref{qUcum} and \eqref{qWcum} gives
+\begin{equation}\label{alphasteps}
+\begin{split}
+\frac{\alpha_t^d}{\mu_t}
+&=
+ g_D^{\mathrm{rpt}}(d)
+\left[
+ p+(1-p)\bar G_{D-}^{\mathrm{val}}(d_t^{\star}-d)
+\right]\\
+&\quad+
+ g_D^{\mathrm{rpt}}(d)(1-p)
+ \sum_{d_2=d+1}^{d_t^{\star}}
+ g_{D-}^{\mathrm{val}}(d_2-d)\\
+&=
+ g_D^{\mathrm{rpt}}(d)
+\left[
+ p+(1-p)\bar G_{D-}^{\mathrm{val}}(d_t^{\star}-d)
+ +(1-p)G_{D-}^{\mathrm{val}}(d_t^{\star}-d)
+\right]\\
+&=
+ g_D^{\mathrm{rpt}}(d).
+\end{split}
+\end{equation}
+The second equality uses $g_{D-}^{\mathrm{val}}(0)=0$, so that
+\begin{equation}
+\sum_{d_2=d+1}^{d_t^{\star}}g_{D-}^{\mathrm{val}}(d_2-d)
+=
+G_{D-}^{\mathrm{val}}(d_t^{\star}-d),
+\end{equation}
+and the final equality uses
+\begin{equation}
+    G_{D-}^{\mathrm{val}}(x)+\bar G_{D-}^{\mathrm{val}}(x)=1.
+\end{equation}
+Consequently,
+\begin{equation}\label{alphasimplified}
+    \alpha_t^d=\mu_t g_D^{\mathrm{rpt}}(d).
+\end{equation}
+This also has a direct interpretation: $\mathcal A_t^d$ counts every event whose report first appears at delay $d$, irrespective of whether it is retracted later.
+
+Similarly, define
+\begin{equation}\label{omegadef}
+\begin{split}
+    \omega_t^d
+    &:={}
+    \E[\mathcal W_t^d\mid\theta_t]\\
+    &=
+    \mu_t
+    \sum_{d_1=0}^{d-1}
+    \tilde q_{t,\tau}^{W}(d_1,d)\\
+    &=
+    \mu_t(1-p)
+    \sum_{d_1=0}^{d-1}
+    g_D^{\mathrm{rpt}}(d_1)
+    g_{D-}^{\mathrm{val}}(d-d_1).
+\end{split}
+\end{equation}
+
+\begin{proposition}[Skellam marginal under a Poisson epidemic process]\label{prop:poissonskellam}
+Conditional on $\theta_t$, for every $d=0,\dots,d_t^{\star}$,
+\begin{equation}\label{poissonskellam}
+    \Delta_t^d\mid\theta_t
+    \sim
+    \Sk(\alpha_t^d,\omega_t^d),
+\end{equation}
+where $\alpha_t^d$ and $\omega_t^d$ are defined in \eqref{alphasimplified} and \eqref{omegadef}. For an observed update $\Delta_t^d=z$, the corresponding unnormalized posterior kernel is
+\begin{equation}\label{poissonskellampost}
+    \mathcal K_t(\theta_t;\Delta_t^d=z)
+    =
+    \pi(\theta_t)\,
+    \Prb(\Delta_t^d=z\mid\theta_t).
+\end{equation}
+\begin{proof}
+Under Poisson thinning, all $U$ and $W$ trajectory counts are mutually independent Poisson variables with means equal to $\mu_t$ times their trajectory probabilities. The sum defining $\mathcal A_t^d$ is therefore Poisson with mean $\alpha_t^d$, and the sum defining $\mathcal W_t^d$ is Poisson with mean $\omega_t^d$. The two sums involve disjoint trajectory classes and are therefore independent. By \eqref{deltaAB}, $\Delta_t^d$ is the difference of two independent Poisson variables, which is a Skellam random variable with parameters $(\alpha_t^d,\omega_t^d)$. Multiplication of its likelihood contribution by the prior $\pi(\theta_t)$ gives \eqref{poissonskellampost}.
+\end{proof}
+\end{proposition}
+
+For $\alpha>0$ and $\omega>0$, the Skellam probability mass function is
+\begin{equation}\label{skellampmf}
+    \Prb\{\Sk(\alpha,\omega)=z\}
+    =
+    \exp[-(\alpha+\omega)]
+    \left(\frac{\alpha}{\omega}\right)^{z/2}
+    I_{|z|}\left(2\sqrt{\alpha\omega}\right),
+    \qquad z\in\mathbb Z,
+\end{equation}
+where $I_\nu$ denotes the modified Bessel function of the first kind. Boundary cases are defined by continuity. If $\omega=0$, the distribution is $\Pois(\alpha)$ on the non-negative integers; if $\alpha=0$, then $-\Delta_t^d$ is $\Pois(\omega)$ and $\Delta_t^d$ is supported on the non-positive integers.
+
+\paragraph{Negative Binomial marginal}
+Suppose, conditional on $\theta_t$,
+\begin{equation}
+    M_t\mid\theta_t\sim\NB(\mu_t,\kappa_t),
+\end{equation}
+where the Negative Binomial is parametrized by mean $\mu_t$ and size $\kappa_t$. Introduce the standard Gamma--Poisson representation
+\begin{equation}\label{xidef}
+    \Xi_t\mid\theta_t\sim\operatorname{Gamma}(\kappa_t,\kappa_t),
+\end{equation}
+using a shape--rate parametrization, with density
+\begin{equation}\label{xidensity}
+    f_{\Xi_t}(\xi\mid\theta_t)
+    =
+    \frac{\kappa_t^{\kappa_t}}{\Gamma(\kappa_t)}
+    \xi^{\kappa_t-1}e^{-\kappa_t\xi},
+    \qquad \xi>0.
+\end{equation}
+Then
+\begin{equation}
+    \E[\Xi_t\mid\theta_t]=1,
+    \qquad
+    \Var(\Xi_t\mid\theta_t)=\frac{1}{\kappa_t},
+\end{equation}
+and
+\begin{equation}\label{nbmixture}
+    M_t\mid(\Xi_t=\xi,\theta_t)
+    \sim
+    \Pois(\xi\mu_t).
+\end{equation}
+Integrating out $\Xi_t$ gives
+\begin{equation}\label{nbmixturecheck}
+\begin{split}
+\Prb(M_t=m\mid\theta_t)
+&=
+\int_0^\infty
+\frac{e^{-\xi\mu_t}(\xi\mu_t)^m}{m!}
+\frac{\kappa_t^{\kappa_t}}{\Gamma(\kappa_t)}
+\xi^{\kappa_t-1}e^{-\kappa_t\xi}\,d\xi\\
+&=
+\frac{\Gamma(m+\kappa_t)}{\Gamma(\kappa_t)m!}
+\frac{\kappa_t^{\kappa_t}\mu_t^m}
+{(\kappa_t+\mu_t)^{m+\kappa_t}},
+\end{split}
+\end{equation}
+which is the Negative Binomial distribution with mean $\mu_t$ and size $\kappa_t$ used above.
+
+Conditional on $\Xi_t=\xi$, the same Poisson splitting argument applies, with every Poisson trajectory mean multiplied by $\xi$:
+\begin{equation}
+    \mathcal A_t^d\mid(\Xi_t=\xi,\theta_t)
+    \sim
+    \Pois(\xi\alpha_t^d),
+    \qquad
+    \mathcal W_t^d\mid(\Xi_t=\xi,\theta_t)
+    \sim
+    \Pois(\xi\omega_t^d),
+\end{equation}
+and these variables are conditionally independent.
+
+\begin{proposition}[Gamma-mixed Skellam marginal under a Negative Binomial epidemic process]\label{prop:nbskellam}
+Conditional on $\theta_t$, for every $d=0,\dots,d_t^{\star}$,
+\begin{equation}\label{conditionalnbskellam}
+    \Delta_t^d\mid(\Xi_t=\xi,\theta_t)
+    \sim
+    \Sk(\xi\alpha_t^d,\xi\omega_t^d).
+\end{equation}
+Consequently,
+\begin{equation}\label{gammamixedskellam}
+    \Prb(\Delta_t^d=z\mid\theta_t)
+    =
+    \int_0^\infty
+    \Prb\{\Sk(\xi\alpha_t^d,\xi\omega_t^d)=z\}
+    f_{\Xi_t}(\xi\mid\theta_t)\,d\xi,
+    \qquad z\in\mathbb Z.
+\end{equation}
+For an observed update $\Delta_t^d=z$, the corresponding unnormalized posterior kernel is
+\begin{equation}\label{nbskellampost}
+    \mathcal K_t(\theta_t;\Delta_t^d=z)
+    =
+    \pi(\theta_t)\,
+    \Prb(\Delta_t^d=z\mid\theta_t).
+\end{equation}
+\begin{proof}
+Conditional on $(\Xi_t=\xi,\theta_t)$, $\mathcal A_t^d$ and $\mathcal W_t^d$ are independent Poisson variables with means $\xi\alpha_t^d$ and $\xi\omega_t^d$. Their difference is therefore Skellam, proving \eqref{conditionalnbskellam}. The law of total probability gives \eqref{gammamixedskellam} by integrating the conditional Skellam mass over the Gamma density in \eqref{xidensity}. Multiplying this marginal likelihood contribution by $\pi(\theta_t)$ gives \eqref{nbskellampost}.
+\end{proof}
+\end{proposition}
+
+The results in Propositions~\ref{prop:poissonskellam} and \ref{prop:nbskellam} are one-delay marginal distributions. Updates at different delays are generally dependent because a single trajectory $W_{t,\tau}^{d_1,d_2}$ contributes $+1$ at $d_1$ and $-1$ at $d_2$. Consequently, multiplying the delay-specific Skellam or Gamma-mixed Skellam masses across $d$ gives a composite likelihood, not the exact joint likelihood for the full update vector.
+
+\subsubsection{The general likelihood for count-cumulative data}
+
+Let
+\begin{equation}
+    \boldsymbol{\Delta}_t
+    =
+    \left(
+    \Delta_t^0,\Delta_t^1,\dots,\Delta_t^{d_t^{\star}}
+    \right)
+\end{equation}
+denote the observed signed-update vector, and let
+\begin{equation}
+    \boldsymbol{\delta}_t
+    = \left(\delta^0_t,\delta^1_t,\dots,\delta^{d_t^{\star}}_t\right)
+\end{equation}
+denote one possible observed value. Define $\mathfrak C_{t,\tau}(\boldsymbol\delta_t)$ as the collection of all non-negative integer arrays
+\begin{equation}
+    \left(
+    \{u_d\}_{d=0}^{d_t^{\star}},
+    \{w_{d_1,d_2}\}_{0\leq d_1<d_2\leq d_t^{\star}}
+    \right)
+\end{equation}
+that satisfy
+\begin{equation}\label{compatibility}
+    \delta^d_t
+    =
+    u_d
+    +
+    \sum_{d_2=d+1}^{d_t^{\star}}w_{d,d_2}
+    -
+    \sum_{d_1=0}^{d-1}w_{d_1,d},
+    \qquad
+    d=0,\dots,d_t^{\star},
+\end{equation}
+with empty sums defined as zero. Thus $\mathfrak C_{t,\tau}(\boldsymbol\delta_t)$ contains every possible collection of individual report and retraction trajectories that produces the observed vector $\boldsymbol\delta_t$.
+
+For a particular compatible allocation $(\boldsymbol u,\boldsymbol w)$ define
+\begin{equation}\label{Kcum}
+    K(\boldsymbol u,\boldsymbol w)
+    =
+    \sum_{d=0}^{d_t^{\star}}u_d
+    +
+    \sum_{0\leq d_1<d_2\leq d_t^{\star}}w_{d_1,d_2}.
+\end{equation}
+This is the number of events that have been reported by the now under that trajectory allocation.
+
+\begin{theorem}[General count-cumulative likelihood]\label{thm:generalcum}
+Conditional on $\theta_t$, suppose that the observed count-cumulative data at now $\tau$ for event time $t$ are summarized by $\boldsymbol\Delta_t=\boldsymbol\delta_t$. Then the exact likelihood contribution is
+\begin{equation}\label{generalcumlik}
+\begin{split}
+    \mathcal L_t^{\mathrm{cum}}(\theta_t;\boldsymbol\delta_t)
+    &:={}
+    \Prb(\boldsymbol\Delta_t=\boldsymbol\delta_t\mid\theta_t)\\
+    &=
+    \sum_{(\boldsymbol u,\boldsymbol w)\in
+    \mathfrak C_{t,\tau}(\boldsymbol\delta_t)}
+    \frac{K(\boldsymbol u,\boldsymbol w)!}
+    {
+    \displaystyle\prod_{d=0}^{d_t^{\star}}u_d!
+    \displaystyle\prod_{0\leq d_1<d_2\leq d_t^{\star}}w_{d_1,d_2}!}
+    \,
+    S_{K(\boldsymbol u,\boldsymbol w),t}
+    \left(\tilde q_{\emptyset,t,\tau};\theta_t\right)\\
+    &\qquad\times
+    \prod_{d=0}^{d_t^{\star}}
+    \left[\tilde q_{t,\tau}^{U}(d)\right]^{u_d}
+    \prod_{0\leq d_1<d_2\leq d_t^{\star}}
+    \left[\tilde q_{t,\tau}^{W}(d_1,d_2)\right]^{w_{d_1,d_2}}.
+\end{split}
+\end{equation}
+If $\mathfrak C_{t,\tau}(\boldsymbol\delta_t)$ is empty, the likelihood is zero. The corresponding unnormalized posterior kernel is
+\begin{equation}\label{generalcumpost}
+    \mathcal K_t(\theta_t;\boldsymbol\delta_t)
+    =
+    \pi(\theta_t)\,
+    \mathcal L_t^{\mathrm{cum}}(\theta_t;\boldsymbol\delta_t).
+\end{equation}
+
+\begin{proof}
+Fix one compatible trajectory allocation $(\boldsymbol u,\boldsymbol w)\in\mathfrak C_{t,\tau}(\boldsymbol\delta_t)$ and write
+\begin{equation}
+    K=K(\boldsymbol u,\boldsymbol w).
+\end{equation}
+Conditional on $(M_t=m,\theta_t)$ with $m\geq K$, exactly $K$ latent events have been reported by the now and $m-K$ have not yet been reported. By conditional independence of the marks and the trajectory partition \eqref{trajectorypartition}, the vector consisting of the unreported count, the $U$ counts, and the $W$ counts is multinomial:
+\begin{equation}
+\begin{split}
+    &\Prb\left(
+    Z_{t,\tau}=m-K,
+    \{U_{t,\tau}^{d}=u_d\},
+    \{W_{t,\tau}^{d_1,d_2}=w_{d_1,d_2}\}
+    \mid M_t=m,\theta_t
+    \right)\\
+    &\quad=
+    \frac{m!}
+    {(m-K)!
+    \displaystyle\prod_d u_d!
+    \displaystyle\prod_{d_1<d_2}w_{d_1,d_2}!}
+    \left(\tilde q_{\emptyset,t,\tau}\right)^{m-K}
+    \prod_d
+    \left[\tilde q_{t,\tau}^{U}(d)\right]^{u_d}
+    \prod_{d_1<d_2}
+    \left[\tilde q_{t,\tau}^{W}(d_1,d_2)\right]^{w_{d_1,d_2}}.
+\end{split}
+\end{equation}
+Using
+\begin{equation}
+    \frac{m!}{(m-K)!}
+    =
+    K!\binom{m}{K},
+\end{equation}
+and marginalizing over $M_t$ conditional on $\theta_t$ gives the probability of that particular trajectory allocation:
+\begin{equation}
+\begin{split}
+    &\frac{K!}
+    {\displaystyle\prod_d u_d!
+    \displaystyle\prod_{d_1<d_2}w_{d_1,d_2}!}
+    S_{K,t}\left(\tilde q_{\emptyset,t,\tau};\theta_t\right)
+    \prod_d
+    \left[\tilde q_{t,\tau}^{U}(d)\right]^{u_d}
+    \prod_{d_1<d_2}
+    \left[\tilde q_{t,\tau}^{W}(d_1,d_2)\right]^{w_{d_1,d_2}}.
+\end{split}
+\end{equation}
+The observed vector $\boldsymbol\delta_t$ does not identify which compatible trajectory allocation occurred. Because the allocations in $\mathfrak C_{t,\tau}(\boldsymbol\delta_t)$ are mutually exclusive, their probabilities must be summed. This yields \eqref{generalcumlik}. Multiplying the exact likelihood by the prior gives the posterior kernel \eqref{generalcumpost}.
+\end{proof}
+\end{theorem}
+
+Direct evaluation of \eqref{generalcumlik} requires enumeration of all compatible trajectory allocations in $\mathfrak C_{t,\tau}(\boldsymbol\delta_t)$ and may become computationally prohibitive as the observable horizon and counts increase. The one-delay marginal models above avoid this enumeration, but a product of their marginal masses should be interpreted as a composite likelihood because it does not retain the cross-delay dependence induced by matched report--retraction trajectories.
+
+\end{document}

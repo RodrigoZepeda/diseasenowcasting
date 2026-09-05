@@ -69,6 +69,98 @@ mdl <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
 
 ---
 
+## 2a. Validation processes — confirmations and retractions
+
+Use when a report is **provisional** and later resolved: confirmed (a real case)
+or retracted (struck from the register). The nowcast target becomes the settled
+count rather than the raw report count.
+
+A missing outcome means **not resolved yet**, NOT "genuine". The lag is
+right-censored at the report's age, so the model is a mixture-cure likelihood, not
+a flat multiplication by a confirmed fraction.
+
+**It is detected, not requested.** There are no `retraction_date=` /
+`confirmation_date=` arguments — `nowcast()` reads the process off the data:
+
+```r
+# Record the outcome on the tbl_now, then just fit:
+tn <- tbl.now::tbl_now(df, event_date = onset, report_date = reported,
+                       validation_date = result, validation_type = outcome,
+                       data_type = "linelist")
+nowcast(tn, model())        # attaches a validation_process() and says so
+```
+
+`validation_type` values are `"confirmed"`, `"retracted"`, `"pending"`. A
+**validation date with an `NA` type is an error** — the report resolved but its
+sign is unknown, so it cannot enter either lag law.
+
+| Mode | Lag support | rho(j) = P(counts \| pending, age j) |
+|---|---|---|
+| retraction only | `{1,2,...}` (same-period rows dropped) | rises with age |
+| confirmation only | `{0,1,...}` (same-day is normal) | falls with age |
+| both | `{0,1,...}` | flat at `p` (shared lag) |
+
+**Mode inference.** From `unique(validation_type)` over the **full** data, not the
+as-of view, so it is a stable property of the data source and cannot flip between
+backtest dates. `validation_process(mode = )` asserts instead: an assertion the
+data cannot support is an error, while inference with no resolved rows falls back
+to the ordinary count model.
+
+**Configuring** — via `validation_process()`, passed as `model(validation = )`:
+
+```r
+model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
+      validation = validation_process(
+        validation_delay = dirichlet_validation(bins = 10),  # any delay family
+        p                = beta_prior(20, 3),   # or a number to fix it
+        stratified_p     = TRUE,                # one p per stratum
+        mode             = "auto",              # or assert one
+        negative_delay   = lognormal_validation()  # COMPETING RISKS, see below
+      ))
+```
+
+Lag constructors: `lognormal_validation()`, `gamma_validation()`,
+`generalized_gamma_validation()`, `dirichlet_validation()`. Prefer Dirichlet at
+high counts — the correction applies to every pending report, so a wrong lag
+*shape* biases more than noise.
+
+**Competing risks** (`negative_delay`): positives and negatives come back on
+different timescales, so a pending report's age becomes informative. Requires
+`mode = "both"` — one outcome cannot identify two lag laws. Errors otherwise.
+
+**Censored validation dates**: `nowcast(validation_censored = )` names a logical
+column marking rows whose validation date is an upper bound. This is the **only**
+surviving validation argument, because a `tbl_now` has no validation-censoring
+attribute. Combines with `tbl.now`'s `is_censored` on the report side; all four
+patterns are supported.
+
+**Other data types**: `count-incidence` works identically (one row per distinct
+`(event, report, validation)` with a case count) and gives bit-identical results
+to the linelist form.
+
+**`count-cumulative`** may carry a validation process — its down-revisions *are*
+the retractions — but **confirmations there are an error**: a confirmation does
+not change a cumulative count, so its delay parameters are unidentifiable. On a
+cumulative stream `p` is **fixed** at the empirical down-revision rate by default,
+because the stream cannot identify it (see `devel/P_IDENTIFIABILITY.md`); pass
+`p = beta_prior(...)` to estimate it anyway.
+
+**Reading the output**: `print()` states the mode and the fitted probability;
+`parameters()` (NOT `tidy()` — that is tbl.now's, and returns the nowcast) has
+`type == "resolution"` rows, with `prob_confirmed` / `prob_not_retracted` on the
+natural scale. `backtest()` builds truth from the cases that settle positive,
+automatically, with pending cases kept.
+
+Gotchas:
+- A `tbl_now` refuses to hold a validation dated after its own `now`, so let it
+  infer `now` from the data and pass the analysis date to `nowcast(now = )`.
+- Retractions dated after `now` are masked to "not yet retracted" automatically.
+- `p = 1` with observed retractions errors — it says retractions are impossible.
+- Nothing resolved at all -> falls back to the ordinary count model.
+
+Full treatment: `vignette("Validation_processes")`; derivation in
+`vignette("Mathematics")` section 8.
+
 ## 2b. Custom components (user-defined delays & epidemic processes)
 
 Users can supply their **own** delay distribution or epidemic process as an
@@ -389,13 +481,13 @@ selection_metric(nc)   # the metric used (= @comparison$metric)
 # crashes R). save_nowcast() drops the tape and stores: model() spec, input
 # tbl_now, priors, engine, and per-fit params + Laplace MODE + PRECISION.
 save_nowcast(nc, "fit.rds")          # works on a nowcast() or auto_nowcast() result
-nc2 <- load_nowcast("fit.rds")       # predict()/coef()/tidy()/autoplot() all work
+nc2 <- load_nowcast("fit.rds")       # predict()/coef()/parameters()/autoplot() all work
 predict(nc2, n_draws = 500)          # any n_draws (re-sampled from stored precision; NOT frozen)
 nowcast(nc2@data, nc2@model)         # re-fit from the loaded model + bundled data
 nc3 <- load_nowcast("fit.rds", rebuild = TRUE)  # also re-tape obj (no re-opt); needs RTMB for custom
 # predict() works with NO RTMB attached, even for custom delays/epidemics (cdf_factory/
 # intensity_fn are plain R; only the Laplace mode+precision are needed -- see .nowcast_draws
-# obj==NULL branch in R/15_nowcast.R, and the tidy() obj==NULL fallback in R/27_tidy.R).
+# obj==NULL branch in R/15_nowcast.R, and the parameters() obj==NULL fallback in R/27_parameters.R).
 ```
 
 ### fit() — lower-level
