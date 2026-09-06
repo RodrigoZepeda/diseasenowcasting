@@ -314,9 +314,8 @@ parameters(nc) |> filter(type == "resolution")
 ```
 
 See `vignette("Validation_processes")` for the full treatment, including
-per-stratum probabilities, censored resolution dates, count-incidence data, and
-the competing-risks case where positive and negative results come back at
-different speeds.
+per-stratum probabilities, censored validation dates, count-incidence data, and
+the shared validation-delay assumption used when both outcomes are recorded.
 
 ## Example 4 -- Letting the package choose the model (`auto_nowcast()`)
 

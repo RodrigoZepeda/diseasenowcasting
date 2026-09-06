@@ -79,6 +79,61 @@
   )
 }
 
+#' Stable numeric finite-horizon discretisation of a delay law
+#'
+#' Posterior Laplace draws are not confined to the optimiser box.  A drawn
+#' delay distribution can therefore put essentially all of its mass beyond the
+#' finite horizon.  Differencing natural-scale CDF values then gives an all-zero
+#' vector and normalising it produces NaNs.  Prediction and prior simulation are
+#' ordinary numeric reconstruction (not tape construction), so choose the
+#' numerically stable CDF or survival representation for each bin and normalise
+#' on the log scale.
+#'
+#' @keywords internal
+#' @noRd
+.finite_horizon_delay_pmf_numeric <- function(delay_functions, number_of_bins) {
+  number_of_bins <- as.integer(number_of_bins)
+  if (number_of_bins < 1L)
+    cli::cli_abort("`number_of_bins` must be positive.")
+
+  upper_bounds <- seq_len(number_of_bins)
+  log_cdf <- as.numeric(delay_functions$log_cdf(upper_bounds))
+  log_survival <- as.numeric(delay_functions$log_survival(upper_bounds))
+  log_mass <- numeric(number_of_bins)
+
+  log_difference <- function(log_larger, log_smaller) {
+    if (!is.finite(log_smaller)) return(log_larger)
+    difference <- min(log_smaller - log_larger, 0)
+    log_larger + log(-expm1(difference))
+  }
+
+  for (bin in seq_len(number_of_bins)) {
+    # In the lower half of the distribution, differences of log CDFs are
+    # stable even when both natural CDF values underflow to zero.  In the upper
+    # half, differences of log survivals avoid CDF saturation at one.
+    use_lower_tail <- is.finite(log_cdf[bin]) && log_cdf[bin] <= log(0.5)
+    if (bin == 1L && use_lower_tail) {
+      log_mass[bin] <- log_cdf[bin]
+    } else if (use_lower_tail) {
+      log_mass[bin] <- log_difference(log_cdf[bin], log_cdf[bin - 1L])
+    } else {
+      previous_log_survival <- if (bin == 1L) 0 else log_survival[bin - 1L]
+      log_mass[bin] <- log_difference(
+        previous_log_survival, log_survival[bin]
+      )
+    }
+  }
+
+  finite_mass <- is.finite(log_mass)
+  if (!any(finite_mass)) {
+    cli::cli_abort("The delay law has no numerically resolvable mass inside the finite horizon.")
+  }
+  maximum_log_mass <- max(log_mass[finite_mass])
+  mass <- numeric(number_of_bins)
+  mass[finite_mass] <- exp(log_mass[finite_mass] - maximum_log_mass)
+  mass / sum(mass)
+}
+
 #' Cumulative-level composite log mass
 #' @keywords internal
 #' @noRd

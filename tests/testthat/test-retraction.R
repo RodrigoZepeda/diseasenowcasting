@@ -264,16 +264,41 @@ censor_linelist <- function(linelist, now, report_frac = 0, retract_frac = 0, se
 }
 
 fit_censored <- function(linelist, now, ...) {
-  # The validation process comes off the object; only the CENSORING flag is still
-  # an argument, because a tbl_now has no validation-censoring attribute of its own
-  # (tbl.now#52 tracks the dataset gap; there is no attribute for this at all).
-  tn <- as_validation_tbl_now(linelist, now, is_censored_report = is_censored)
+  tn <- as_validation_tbl_now(
+    linelist, now, is_censored_report = is_censored,
+    is_censored_validation = q_bound
+  )
   suppressMessages(suppressWarnings(nowcast(tn,
     model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
           validation = validation_process(validation_delay = dirichlet_validation(bins = 8))),
-    now = now, validation_censored = "q_bound",
+    now = now,
     type = "one_stage", temporal_effects = "none", n_draws = 100, seed = 6, ...)))
 }
+
+test_that("validation censoring is read only from tbl_now metadata", {
+  simulated <- simulate_retraction_linelist(n_days = 45, seed = 16)
+  rows <- simulated$linelist
+  rows$q_bound <- !is.na(rows$retracted)
+  data <- as_validation_tbl_now(
+    rows, simulated$now, is_censored_validation = q_bound
+  )
+  specification <- model(
+    nb_likelihood(), ar1_epidemic(), lognormal_delay(), validation_process()
+  )
+
+  expect_identical(tbl.now::get_is_censored_validation(data), "q_bound")
+  expect_false("validation_censored" %in% names(formals(nowcast)))
+  expect_error(
+    nowcast(data, specification, validation_censored = "q_bound"),
+    "not a.*nowcast.*argument"
+  )
+
+  engine <- suppressMessages(prepare_from_tbl_now(
+    data, specification, now = simulated$now,
+    validation_mode = "retraction_only"
+  ))$data
+  expect_gt(engine$n_censored, 0)
+})
 
 test_that("a point-valued censoring interval reproduces the exact-row likelihood", {
   # `is_censored` means the delay is known only to lie in [0, j], so marking a row
@@ -300,10 +325,13 @@ test_that("a point-valued censoring interval reproduces the exact-row likelihood
   engine_for <- function(is_censored) {
     rows <- linelist
     rows$is_censored <- is_censored
-    tn <- as_validation_tbl_now(rows, simulated$now, is_censored_report = is_censored)
+    tn <- as_validation_tbl_now(
+      rows, simulated$now, is_censored_report = is_censored,
+      is_censored_validation = q_bound
+    )
     suppressMessages(suppressWarnings(diseasenowcasting:::prepare_from_tbl_now(
-      tn, retraction_model, now = simulated$now, validation_mode = "retraction_only",
-      validation_censored = "q_bound")))$data
+      tn, retraction_model, now = simulated$now,
+      validation_mode = "retraction_only")))$data
   }
   exact_engine <- engine_for(rep(FALSE, nrow(linelist)))
   point_engine <- engine_for(linelist$reported == linelist$onset)

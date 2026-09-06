@@ -27,10 +27,6 @@ fit <- function(model, data, priors = NULL, init = NULL,
   if (isTRUE(data$is_linelist_retraction == 1L) && is.null(priors$confirm_p))
     cli::cli_abort(c("The engine carries linelist retractions but the priors have no confirmation block.",
                      "i" = "Build the model with {.code model(validation = validation_process())}, or go through {.fn nowcast}, which attaches one automatically."))
-  if (!is.null(priors$negative_family) && isTRUE(data$is_linelist_retraction == 1L) &&
-      !identical(as.integer(data$resolution_mode %||% 0L), 2L))
-    cli::cli_abort(c("A `negative_delay` needs data recording BOTH confirmations and retractions.",
-                     "i" = "With only one outcome recorded the second lag law is not identified; drop `negative_delay` to share one law."))
   if (isTRUE(data$is_linelist_retraction == 1L) && isTRUE(priors$confirm_p$is_constant == 1L) &&
       isTRUE(priors$confirm_p$fixed >= 1) && data$n_retracted > 0)
     cli::cli_abort(c("`p = 1` says no report is ever retracted, but {data$n_retracted} retraction{?s} {?is/are} observed.",
@@ -96,6 +92,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
   intercept_base <- apply(cc_mat, 2, function(col) { positive <- col[col > 0]
     if (length(positive)) log(stats::median(positive)) else 0 })   # one per stratum
   best <- NULL
+  attempt_errors <- character()
   fit_started <- proc.time()[["elapsed"]]
   for (j in seq_len(n_tries)) {
     ini <- base_init
@@ -169,7 +166,10 @@ fit <- function(model, data, priors = NULL, init = NULL,
         reconstruct = rc, Bmat = built$Bmat, freq = built$freq,
         data = data, priors = priors, model = model
       )
-    }, error = function(e) NULL)
+    }, error = function(e) {
+      attempt_errors <<- unique(c(attempt_errors, conditionMessage(e)))
+      NULL
+    })
 
     if (!is.null(res) && res$convergence == 0L &&
         is.finite(res$max_gradient) && res$max_gradient <= 0.1) return(res)
@@ -182,13 +182,38 @@ fit <- function(model, data, priors = NULL, init = NULL,
   }
   if (!is.null(best)) {
     if (!is.finite(best$max_gradient) || best$max_gradient > 0.1) {
-      cli::cli_warn(c(
-        "The fit is finite but did not pass the gradient stability gate.",
-        "x" = "Maximum absolute gradient: {format(best$max_gradient, digits = 4)}.",
-        "i" = "Inspect `fit$gradient_status`, `fit$max_gradient`, and `fit$opt` before using predictions."
-      ))
+      if (isTRUE(data$is_count_cumulative == 1L) &&
+          identical(as.integer(data$count_cumulative_observation), 3L)) {
+        optimizer_message <- best$opt$message %||% "no optimizer message"
+        cli::cli_warn(c(
+          "The `hurdle_ztpoisson` optimizer did not pass the stability gate.",
+          "x" = "Optimizer code {best$convergence}: {optimizer_message}",
+          "x" = "Maximum absolute gradient: {format(best$max_gradient, digits = 4)}.",
+          "i" = "Try `count_cumulative_process(observation = \"hurdle_ztnb\")`; the ZTNB magnitude law was stable in the package-wide sweep.",
+          "i" = "This finite fit is returned with `gradient_status = \"warning\"`; inspect `fit$opt` before using it."
+        ))
+      } else {
+        cli::cli_warn(c(
+          "The fit is finite but did not pass the gradient stability gate.",
+          "x" = "Maximum absolute gradient: {format(best$max_gradient, digits = 4)}.",
+          "i" = "Inspect `fit$gradient_status`, `fit$max_gradient`, and `fit$opt` before using predictions."
+        ))
+      }
     }
     return(best)
+  }
+  if (isTRUE(data$is_count_cumulative == 1L) &&
+      identical(as.integer(data$count_cumulative_observation), 3L)) {
+    optimizer_error <- if (length(attempt_errors)) {
+      attempt_errors[length(attempt_errors)]
+    } else {
+      "no optimizer result was returned"
+    }
+    cli::cli_warn(c(
+      "The `hurdle_ztpoisson` optimizer failed for every initialization.",
+      "x" = "Last optimizer error: {optimizer_error}",
+      "i" = "Try `count_cumulative_process(observation = \"hurdle_ztnb\")`; the ZTNB magnitude law was stable in the package-wide sweep."
+    ))
   }
   cli::cli_abort("Joint fit failed to converge for all init attempts.")
 }

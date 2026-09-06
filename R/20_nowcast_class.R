@@ -28,9 +28,6 @@ nowcast_class <- S7::new_class(
     # "retraction_only" or "both".  Recorded rather than re-derived so a saved fit
     # reports the mode it was FITTED under, even if its data are later subset.
     validation_mode = S7::new_property(S7::class_character, default = "none"),
-    # Name of the logical column marking validation dates that are upper bounds
-    # (NULL otherwise); kept so update() re-prepares the data the same way.
-    validation_censored = S7::new_property(S7::class_any, default = NULL),
     # Model-selection scoreboard, set by auto_nowcast() (NULL for a plain fit):
     # list(scores = <ranked data.frame>, chosen = <label>, metric = <chr>).
     comparison = S7::new_property(S7::class_any, default = NULL)
@@ -70,6 +67,9 @@ nowcast_class <- S7::new_class(
 #' dates.  Configure `p` and the lag with
 #' `model(validation = validation_process(...))`, which always wins over the
 #' detected default; assert the mode with `validation_process(mode = )`.
+#' Validation-date censoring is likewise data metadata: set
+#' `is_censored_validation` when constructing the `tbl_now`. There is no
+#' `nowcast()` column-name argument for it.
 #' Count-cumulative revisions instead use [count_cumulative_process()] and do
 #' not estimate a separate validation probability `p`.
 #'
@@ -80,15 +80,6 @@ nowcast_class <- S7::new_class(
 #'   does not already carry computed temporal effects**.  Use `"none"` (or
 #'   `"None"`) to disable, or pre-attach your own effects to the `tbl_now` with
 #'   `tbl.now::add_temporal_effects()` + `tbl.now::compute_temporal_effects()`.
-#' @param validation_censored Name of a logical column marking rows whose
-#'   validation date is an **upper bound** rather than the exact date (the report
-#'   is known to have resolved, but only that it happened by then).  Combines
-#'   freely with `tbl.now`'s `is_censored_report`, so all four
-#'   observation patterns are supported: exact report + exact validation, censored
-#'   report + exact validation (the validation then also bounds the report, since a
-#'   report cannot resolve before it is filed), exact report + censored validation,
-#'   and both censored.  `tbl_now` has no validation-censoring attribute of its
-#'   own, which is why this is an argument rather than being detected.
 #' @param prior_only If `TRUE`, ignore the likelihood and draw the epidemic
 #'   parameters from their **priors** only, returning the prior-predictive latent
 #'   incidence.  Useful for understanding what a prior implies *before* seeing
@@ -117,9 +108,15 @@ nowcast <- function(data, model = diseasenowcasting::model(),
                     type = c("two_stage", "one_stage", "auto"), now = NULL,
                     K = 25L, n_draws = 2000L, delay_window = 120L, np_spread = 1,
                     floor_mu = 0.08, floor_sig_frac = 0.08,
-                    temporal_effects = "auto", validation_censored = NULL,
+                    temporal_effects = "auto",
                     prior_only = FALSE,
                     seed = sample.int(.Machine$integer.max, 1), ...) {
+  if ("validation_censored" %in% names(list(...))) {
+    cli::cli_abort(c(
+      "{.arg validation_censored} is not a {.fn nowcast} argument.",
+      "i" = "Attach the censoring column to the {.cls tbl_now} with {.arg is_censored_validation}."
+    ))
+  }
   type <- match.arg(type)
   if (!is.null(seed)) set.seed(seed)
   # The NB overdispersion prior lives on the likelihood, not on nowcast().
@@ -215,8 +212,7 @@ nowcast <- function(data, model = diseasenowcasting::model(),
   # prior_only: don't auto-add temporal effects (keep the prior epidemic clean).
   data <- .apply_default_temporal_effects(data, if (isTRUE(prior_only)) "none" else temporal_effects)
   prepared <- prepare_from_tbl_now(data, model, now = now, delay_only = FALSE,
-                                   validation_mode = validation_mode,
-                                   validation_censored = validation_censored, ...)
+                                   validation_mode = validation_mode, ...)
   engine   <- prepared$data
   priors   <- default_priors(model, engine)
 
@@ -245,8 +241,7 @@ nowcast <- function(data, model = diseasenowcasting::model(),
                 type = if (isTRUE(prior_only)) "prior_only" else type,
                 fits = collected$fits, rung = collected$rung, target = collected$target,
                 engine = engine, priors = priors, phi = phi, n_draws = as.integer(n_draws),
-                validation_mode = validation_mode,
-                validation_censored = validation_censored)
+                validation_mode = validation_mode)
 }
 
 #' The NB overdispersion prior carried by a model's likelihood (or `NULL`).

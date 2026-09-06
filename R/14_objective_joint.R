@@ -178,15 +178,6 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   if (is_retraction && retract_family == 5L)
     cli::cli_abort("Custom retraction delays are not supported; use lognormal, gamma, generalized gamma or Dirichlet.")
 
-  # Competing risks: a second lag law for the negative resolutions.  Only usable
-  # when both signs are recorded -- one sign cannot identify two laws.
-  is_competing <- has_confirm && !is.null(priors$negative_family)
-  negative_family      <- if (is_competing) as.integer(priors$negative_family) else 0L
-  negative_is_gengamma <- negative_family == 3L
-  negative_mu_fixed    <- is_competing && isTRUE(priors$negative_mu$is_constant == 1L)
-  negative_sd_fixed    <- is_competing && isTRUE(priors$negative_sigma$is_constant == 1L)
-  negative_Q_fixed     <- negative_is_gengamma && isTRUE(priors$negative_Q$is_constant == 1L)
-
   confirm_p_fixed     <- has_confirm && isTRUE(priors$confirm_p$is_constant == 1L)
   retract_mu_fixed    <- has_confirm && !retract_is_np && isTRUE(priors$retract_mu$is_constant == 1L)
   retract_sd_fixed    <- has_confirm && !retract_is_np && isTRUE(priors$retract_sigma$is_constant == 1L)
@@ -208,8 +199,6 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   # today": h(0) = 1 contributes exactly zero, and dropping those rows also keeps a
   # delay CDF from being evaluated at 0, which would put a log(0) on the tape.
   retract_table  <- data$retract_table
-  retract_table_positive <- data$retract_table_positive
-  retract_table_negative <- data$retract_table_negative
   standing_table <- data$standing_table
   # An unresolved row of age 0 is uninformative ONLY under retraction, where
   # h(0) = 1: nothing could have been retracted yet.  Under confirmation, a case
@@ -220,8 +209,6 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   censored_patterns <- data$censored_patterns
 
   retract_rows_of_stratum  <- .split_rows_by_stratum(retract_table, n_strata)
-  positive_rows_of_stratum <- .split_rows_by_stratum(retract_table_positive, n_strata)
-  negative_rows_of_stratum <- .split_rows_by_stratum(retract_table_negative, n_strata)
   standing_rows_of_stratum <- .split_rows_by_stratum(standing_table, n_strata)
   censored_rows_of_stratum <- .split_rows_by_stratum(censored_patterns, n_strata)
   n_retracted_by_stratum   <- if (is_retraction) as.numeric(data$n_retracted_by_stratum)
@@ -376,20 +363,6 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     retract_probs_fixed = as.integer(retract_probs_fixed),
     retract_probs_val = if (retract_probs_fixed) priors$retract_probs$fixed else numeric(0),
     lag_offset = lag_offset, resolution_mode = resolution_mode, legacy_eta = legacy_eta,
-    is_competing = as.integer(is_competing), negative_family = negative_family,
-    negative_is_gengamma = as.integer(negative_is_gengamma),
-    negative_mu_fixed = as.integer(negative_mu_fixed),
-    negative_mu_val = if (negative_mu_fixed) priors$negative_mu$fixed else 0,
-    negative_sd_fixed = as.integer(negative_sd_fixed),
-    negative_sd_val = if (negative_sd_fixed) priors$negative_sigma$fixed else 0,
-    negative_Q_fixed = as.integer(negative_Q_fixed),
-    negative_Q_val = if (negative_Q_fixed) priors$negative_Q$fixed else 0,
-    prior_negative_mu_dist = if (is_competing && !negative_mu_fixed) priors$negative_mu$dist else 0L,
-    prior_negative_mu_params = if (is_competing && !negative_mu_fixed) .pad3(priors$negative_mu$params) else c(0, 0, 0),
-    prior_negative_sd_dist = if (is_competing && !negative_sd_fixed) priors$negative_sigma$dist else 0L,
-    prior_negative_sd_params = if (is_competing && !negative_sd_fixed) .pad3(priors$negative_sigma$params) else c(0, 0, 0),
-    prior_negative_Q_dist = if (negative_is_gengamma && !negative_Q_fixed) priors$negative_Q$dist else 0L,
-    prior_negative_Q_params = if (negative_is_gengamma && !negative_Q_fixed) .pad3(priors$negative_Q$params) else c(0, 0, 0),
     n_positive_by_stratum = if (is_retraction) as.numeric(data$n_positive_by_stratum) else numeric(0),
     n_negative_by_stratum = if (is_retraction) as.numeric(data$n_negative_by_stratum) else numeric(0),
     # NOTE: the cure-block tables, their per-stratum row indices, `n_confirm_p`,
@@ -544,16 +517,6 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       if (!retract_sd_fixed) parameters$log_retract_sd_exc <- init$log_retract_sd_exc %||% log(1.0)
       if (retract_is_gengamma && !retract_Q_fixed)
         parameters$retract_Q <- init$retract_Q %||% -2
-    }
-    if (is_competing) {
-      negative_lag_init <- if (!is.null(retract_table_negative) &&
-                               sum(retract_table_negative[, "count"]) > 0)
-        sum(retract_table_negative[, "lag"] * retract_table_negative[, "count"]) /
-          sum(retract_table_negative[, "count"]) else mean_lag_init
-      if (!negative_mu_fixed) parameters$negative_mu <- init$negative_mu %||% log(max(negative_lag_init, 1))
-      if (!negative_sd_fixed) parameters$log_negative_sd_exc <- init$log_negative_sd_exc %||% log(1.0)
-      if (negative_is_gengamma && !negative_Q_fixed)
-        parameters$negative_Q <- init$negative_Q %||% -2
     }
   }
   if (epidemic_model == 1L) {
@@ -814,26 +777,6 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
           retract_fns <- .delay_distribution_functions(retract_family, retract_mu_v, retract_sd_v)
         }
       }
-      # Competing risks: the NEGATIVE resolutions get their own lag law, so an
-      # unresolved row's age becomes informative about which way it will go.
-      if (is_competing == 1L) {
-        negative_mu_v <- if (negative_mu_fixed == 1L) negative_mu_val else negative_mu
-        negative_sd_v <- if (negative_sd_fixed == 1L) negative_sd_val else 0.01 + exp(log_negative_sd_exc)
-        if (negative_sd_fixed == 0L) log_jacobian <- log_jacobian + log_negative_sd_exc
-        if (negative_is_gengamma == 1L) {
-          if (negative_Q_fixed == 1L) {
-            negative_shape_Q <- negative_Q_val
-          } else {
-            negative_shape_transform <- .gengamma_shape_transform(negative_Q)
-            negative_shape_Q <- negative_shape_transform$shape_Q
-            log_jacobian     <- log_jacobian + negative_shape_transform$log_jacobian
-          }
-          negative_fns <- .delay_distribution_functions(3L, negative_mu_v, negative_shape_Q, negative_sd_v)
-        } else {
-          negative_fns <- .delay_distribution_functions(negative_family, negative_mu_v, negative_sd_v)
-        }
-      }
-
       # Grids g_D(a), g_C(c), G_C(c) indexed from delay 0 -- built once and shared
       # by every censoring pattern, so the kernels are plain vector lookups.  Only
       # needed when some row is partially observed.
@@ -847,20 +790,6 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         confirm_p_s   <- confirm_p_vec[confirm_p_of_stratum[stratum]]
         retract_slice <- retract_rows_of_stratum[[stratum]]
         standing_slice <- standing_rows_of_stratum[[stratum]]
-        if (is_competing == 1L) {
-          positive_slice <- positive_rows_of_stratum[[stratum]]
-          negative_slice <- negative_rows_of_stratum[[stratum]]
-          loglik_retraction <- loglik_retraction +
-            .loglik_competing_risks(retract_fns, negative_fns, retract_is_np,
-              if (length(positive_slice)) retract_table_positive[positive_slice, "lag"] else numeric(0),
-              if (length(positive_slice)) retract_table_positive[positive_slice, "count"] else numeric(0),
-              if (length(negative_slice)) retract_table_negative[negative_slice, "lag"] else numeric(0),
-              if (length(negative_slice)) retract_table_negative[negative_slice, "count"] else numeric(0),
-              if (length(standing_slice)) standing_table[standing_slice, "age"] else numeric(0),
-              if (length(standing_slice)) standing_table[standing_slice, "count"] else numeric(0),
-              confirm_p_s, retract_split, lag_offset)
-          next
-        }
         loglik_retraction <- loglik_retraction +
           .loglik_retraction(retract_fns, retract_is_np,
                              if (length(retract_slice)) retract_table[retract_slice, "lag"] else numeric(0),
@@ -1189,12 +1118,6 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         if (retract_is_gengamma == 1L && retract_Q_fixed == 0L)
           log_prior <- log_prior + prior_lpdf(retract_shape_Q, prior_retract_Q_dist, prior_retract_Q_params)
       }
-      if (is_competing == 1L) {
-        if (negative_mu_fixed == 0L) log_prior <- log_prior + prior_lpdf(negative_mu, prior_negative_mu_dist, prior_negative_mu_params)
-        if (negative_sd_fixed == 0L) log_prior <- log_prior + prior_lpdf(negative_sd_v, prior_negative_sd_dist, prior_negative_sd_params)
-        if (negative_is_gengamma == 1L && negative_Q_fixed == 0L)
-          log_prior <- log_prior + prior_lpdf(negative_shape_Q, prior_negative_Q_dist, prior_negative_Q_params)
-      }
     }
     if (epidemic_model == 1L) {
       log_prior <- log_prior + prior_lpdf(gp_alpha, prior_gp_alpha_dist, prior_gp_alpha_params)
@@ -1341,9 +1264,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   count_cumulative <- NULL
   if (isTRUE(data$is_count_cumulative == 1L)) {
     H <- as.integer(data$settlement_horizon)
-    report_cdf <- as.numeric(delay_fns$cdf(seq_len(H + 1L)))
-    report_pmf <- c(report_cdf[1L], diff(report_cdf))
-    report_pmf <- report_pmf / sum(report_pmf)
+    report_pmf <- .finite_horizon_delay_pmf_numeric(delay_fns, H + 1L)
 
     retract_family <- as.integer(priors$count_cumulative_retraction_family)
     retract_mu <- if (isTRUE(priors$count_cumulative_retraction_mu$is_constant == 1L))
@@ -1362,9 +1283,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     } else {
       .delay_distribution_functions(retract_family, retract_mu, retract_sigma)
     }
-    retract_cdf <- as.numeric(retract_fns$cdf(seq_len(H)))
-    retract_pmf <- c(retract_cdf[1L], diff(retract_cdf))
-    retract_pmf <- retract_pmf / sum(retract_pmf)
+    retract_pmf <- .finite_horizon_delay_pmf_numeric(retract_fns, H)
     retract_mass <- if (isTRUE(priors$retraction_mass$is_constant == 1L))
       priors$retraction_mass$fixed else
         stats::plogis(as.numeric(parlist$cumulative_retraction_mass_raw))
@@ -1489,27 +1408,10 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     lag_offset <- if (resolution_mode == 0L) 0L else 1L
     # rho[age + 1, stratum]: the exact-row lookup used by the predictive thinning.
     report_ages <- 0:max(as.integer(data$max_report_age %||% 0L), 0L)
-    negative_survival_fn <- NULL
-    if (!is.null(priors$negative_family)) {
-      negative_family <- as.integer(priors$negative_family)
-      negative_mu_v <- if (isTRUE(priors$negative_mu$is_constant == 1L)) priors$negative_mu$fixed
-                       else as.numeric(parlist$negative_mu)
-      negative_sd_v <- if (isTRUE(priors$negative_sigma$is_constant == 1L)) priors$negative_sigma$fixed
-                       else 0.01 + exp(as.numeric(parlist$log_negative_sd_exc))
-      negative_fns <- if (negative_family == 3L) {
-        negative_shape_Q <- if (isTRUE(priors$negative_Q$is_constant == 1L)) priors$negative_Q$fixed
-                            else .gengamma_shape_transform(as.numeric(parlist$negative_Q))$shape_Q
-        .delay_distribution_functions(3L, negative_mu_v, negative_shape_Q, negative_sd_v)
-      } else .delay_distribution_functions(negative_family, negative_mu_v, negative_sd_v)
-      negative_survival_fn <- function(age) exp(as.numeric(negative_fns$log_survival(age)))
-    }
     rho <- vapply(confirm_p_by_stratum,
-                  function(p_s) if (is.null(negative_survival_fn))
-                    .retraction_genuine_probability(report_ages, p_s, survival_fn,
-                                                    lag_offset, resolution_mode)
-                  else
-                    .competing_risks_genuine_probability(report_ages, p_s, survival_fn,
-                                                         negative_survival_fn, lag_offset),
+                  function(p_s) .retraction_genuine_probability(
+                    report_ages, p_s, survival_fn, lag_offset, resolution_mode
+                  ),
                   numeric(length(report_ages)))
     rho <- matrix(rho, length(report_ages), n_strata)
 

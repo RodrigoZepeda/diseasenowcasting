@@ -22,6 +22,24 @@ test_that("finite-horizon retraction and cumulative kernels satisfy their contra
   }
 })
 
+test_that("numeric finite-horizon delay discretisation survives tail-only draws", {
+  # This parameter draw reproduced the production prediction failures: the
+  # natural CDF is exactly zero throughout 1:26 even though relative conditional
+  # mass within that horizon remains well defined on the log scale.
+  functions <- diseasenowcasting:::.delay_distribution_functions(
+    1L, parameter_1 = 5.05107710, parameter_2 = 1.942549
+  )
+  expect_true(all(functions$cdf(seq_len(26L)) == 0))
+  probability <- diseasenowcasting:::.finite_horizon_delay_pmf_numeric(
+    functions, 26L
+  )
+  expect_length(probability, 26L)
+  expect_true(all(is.finite(probability)))
+  expect_true(all(probability >= 0))
+  expect_equal(sum(probability), 1, tolerance = 1e-12)
+  expect_gt(probability[26L], 0)
+})
+
 test_that("signed updates telescope back to cumulative levels", {
   cumulative <- c(4, 9, 9, 7, 12, 11)
   updates <- c(cumulative[1L], diff(cumulative))

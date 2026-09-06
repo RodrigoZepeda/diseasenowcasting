@@ -165,13 +165,6 @@
   exact_standing  <- is_exact & !is_retracted
   retract_table <- tally(stratum = cell_index, lag = withdraw - appear_upper,
                          mask = exact_retracted)
-  # The same table split by the sign of the resolution.  A COMPETING-RISKS fit
-  # gives the positive and negative resolutions different lag laws, so it needs the
-  # two apart; the shared-lag fit just uses `retract_table`.
-  retract_table_positive <- tally(stratum = cell_index, lag = withdraw - appear_upper,
-                                  mask = exact_retracted &  resolution_positive)
-  retract_table_negative <- tally(stratum = cell_index, lag = withdraw - appear_upper,
-                                  mask = exact_retracted & !resolution_positive)
   standing_table <- tally(stratum = cell_index, age = horizon - appear_upper,
                           mask = exact_standing)
   # `rowsum()` on an empty selection returns a ZERO-ROW matrix, not a vector of
@@ -246,8 +239,6 @@
   }
 
   list(retract_table          = retract_table,
-       retract_table_positive = retract_table_positive,
-       retract_table_negative = retract_table_negative,
        standing_table         = standing_table,
        censored_patterns      = censored_patterns,
        n_retracted_by_stratum = n_retracted_by_stratum,
@@ -329,83 +320,6 @@
     list(cdf = lower,                                          # P(R <= j) = F(j)
          pmf = c(lower[1] * 0, (upper - lower)[-length(upper)]))
   }
-}
-
-#' Resolution log-likelihood when the two signs have DIFFERENT lag laws
-#'
-#' The competing-risks form.  A report resolves once, positive with probability `p`
-#' after a lag drawn from `g_plus`, negative otherwise after a lag from `g_minus`:
-#'
-#'   resolved +, lag c : p       * g_plus(c)
-#'   resolved -, lag c : (1 - p) * g_minus(c)
-#'   unresolved at j   : p * Sbar_plus(j) + (1 - p) * Sbar_minus(j)
-#'
-#' Only usable when BOTH signs are recorded -- with one sign visible the second lag
-#' law is not identified.  Setting `g_plus = g_minus` recovers the shared-lag form
-#' exactly, and the unresolved term collapses to `Sbar(j)`, free of `p`.
-#'
-#' @param positive_fns,negative_fns Delay closures for the two lag laws.
-#' @param is_nonparametric `1L` when the closures are Dirichlet bundles.
-#' @param positive_lags,positive_counts Resolved-positive lag table.
-#' @param negative_lags,negative_counts Resolved-negative lag table.
-#' @param standing_ages,standing_age_counts Unresolved rows by report age.
-#' @param confirm_p The probability a resolution is positive (AD).
-#' @param split_lag Lower-tail / survival-tail split for the parametric pmf.
-#' @param lag_offset Always `1L` here: both signs may resolve the period of report.
-#' @keywords internal
-#' @noRd
-.loglik_competing_risks <- function(positive_fns, negative_fns, is_nonparametric,
-                                    positive_lags, positive_counts,
-                                    negative_lags, negative_counts,
-                                    standing_ages, standing_age_counts,
-                                    confirm_p, split_lag, lag_offset = 1L) {
-  loglik <- 0 * confirm_p
-  if (sum(positive_counts) > 0) loglik <- loglik + sum(positive_counts) * log(confirm_p)
-  if (sum(negative_counts) > 0) loglik <- loglik + sum(negative_counts) * log1p(-confirm_p)
-
-  lag_term <- function(fns, lags, counts) {
-    if (!length(lags)) return(0 * confirm_p)
-    shifted <- lags + lag_offset
-    if (is_nonparametric == 1L) sum(counts * fns$log_pmf_raw(shifted))
-    else .discretised_delay_loglik(shifted, counts, split_lag + lag_offset,
-                                   fns$log_cdf, fns$log_survival)
-  }
-  loglik <- loglik + lag_term(positive_fns, positive_lags, positive_counts) +
-                     lag_term(negative_fns, negative_lags, negative_counts)
-
-  if (length(standing_ages) > 0) {
-    shifted <- standing_ages + lag_offset
-    survival_of <- function(fns) if (is_nonparametric == 1L) fns$survival(shifted)
-                                 else exp(fns$log_survival(shifted))
-    # The mixture is what makes the age informative again: if positives resolve
-    # faster, an old unresolved report is more likely to be heading negative.
-    loglik <- loglik + sum(standing_age_counts *
-      log(confirm_p * survival_of(positive_fns) +
-          (1 - confirm_p) * survival_of(negative_fns)))
-  }
-  loglik
-}
-
-#' Probability an unresolved row of age `j` will resolve POSITIVE, competing risks
-#'
-#' `rho(j) = p Sbar_+(j) / [p Sbar_+(j) + (1 - p) Sbar_-(j)]`.  Flat at `p` when the
-#' two survival curves coincide, which is the shared-lag case.
-#' @keywords internal
-#' @noRd
-.competing_risks_genuine_probability <- function(ages, confirm_p,
-                                                 positive_survival_fn, negative_survival_fn,
-                                                 lag_offset = 1L) {
-  shifted <- ages + lag_offset
-  evaluate <- function(survival_fn) {
-    out <- rep(1.0, length(ages))
-    usable <- shifted >= 1
-    if (any(usable)) out[usable] <- as.numeric(survival_fn(shifted[usable]))
-    pmin(pmax(out, 0), 1)
-  }
-  positive_mass <- confirm_p * evaluate(positive_survival_fn)
-  negative_mass <- (1 - confirm_p) * evaluate(negative_survival_fn)
-  denominator <- positive_mass + negative_mass
-  ifelse(denominator > 0, positive_mass / denominator, confirm_p)
 }
 
 #' Plain-English name for what the resolution model is doing
@@ -609,8 +523,7 @@
   if (resolution_mode == 2L) {
     # BOTH SIGNS RECORDED: an unresolved row will resolve one way or the other, and
     # because the lag law is shared its age says nothing about which -- so
-    # rho(j) = p exactly, flat in the age.  (That flatness is precisely what a
-    # competing-risks version with two different lag laws would break.)
+    # rho(j) = p exactly, flat in the age under the prototype's shared lag law.
     rep(confirm_p, length(ages))
   } else if (lag_offset == 1L) {
     # CONFIRMATION: an unresolved row is one not yet confirmed.  It still counts

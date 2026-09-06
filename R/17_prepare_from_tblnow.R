@@ -19,16 +19,19 @@
 #'   `"both"`, as resolved by [nowcast()] from the `tbl_now`'s `validation_type`
 #'   column.  Anything but `"none"` switches on the validation (cure-model)
 #'   observation block; see 31_retraction_likelihood.R.
-#' @param validation_censored Optional name of a logical column marking rows whose
-#'   validation date is an upper BOUND rather than the exact date.
 #' @param ... Passed to [prepare_data()] (e.g. `gp_boundary_frac`).
 #' @returns A list: `data` (the prepare_data() engine list), `now`,
 #'   `event_col`, `min_event`, `event_unit`, `max_time`.
 #' @keywords internal
 #' @noRd
 prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
-                                 validation_mode = "none",
-                                 validation_censored = NULL, ...) {
+                                 validation_mode = "none", ...) {
+  if ("validation_censored" %in% names(list(...))) {
+    cli::cli_abort(c(
+      "{.arg validation_censored} is not accepted here.",
+      "i" = "The validation-censoring column is read from the {.cls tbl_now} attribute {.field is_censored_validation}."
+    ))
+  }
   if (!tbl.now::is_tbl_now(data)) cli::cli_abort("`data` must be a tbl_now (see tbl.now::tbl_now()).")
   event_col   <- tbl.now::get_event_date(data)
   report_col  <- tbl.now::get_report_date(data)
@@ -103,6 +106,9 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
   has_validation  <- !identical(validation_mode, "none") &&
                      isTRUE(tbl.now::has_validation(data))
   resolution_name <- if (resolution_mode == 1L) "confirmation" else "retraction"
+  validation_censor_col <- if (has_validation) {
+    tbl.now::get_is_censored_validation(data)
+  } else NULL
 
   if (has_validation && is_cumulative && resolution_mode != 0L) {
     # Eq. `noconfirmcum`: a confirmation does not change a cumulative count, so
@@ -143,8 +149,9 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
       wanted <- if (resolution_mode == 1L) "confirmed" else "retracted"
       resolution_values[!is.na(resolution_values) & outcomes != wanted] <- NA
     }
-    retract_censored <- .resolve_logical_column(as_of_frame, validation_censored,
-                                                "validation_censored")
+    retract_censored <- .resolve_logical_column(
+      as_of_frame, validation_censor_col, "is_censored_validation"
+    )
 
     # Modes 1 and 2 both allow a same-period resolution (a test can come back the
     # day it is ordered); only retraction-only mode forbids it.

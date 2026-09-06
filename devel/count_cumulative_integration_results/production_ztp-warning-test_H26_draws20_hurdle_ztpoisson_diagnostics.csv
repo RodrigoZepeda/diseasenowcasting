@@ -1,0 +1,8 @@
+"location","origin","clock","model","nll","convergence","max_gradient","gradient_status","finite_fit","finite_prediction","leakage_ok","use_random","retraction_mass","q_C_min","q_C_max","q_terminal","reconstruction","negative_projection_count","n_cells","fit_seconds","warnings"
+"US",2025-01-02,"calendar","hurdle_ztpoisson",13513.4564357422,1,0.551624503157768,"warning",TRUE,TRUE,TRUE,FALSE,0.101380055743561,0.899956469001564,0.997123650106,0.899956469001564,"anchored sequential hurdle updates",277,1539,91.435,"The `hurdle_ztpoisson` optimizer did not pass the stability gate.
+✖ Optimizer code 1: L-BFGS-B polish: NEW_X
+✖ Maximum absolute gradient: 0.5516.
+ℹ Try `count_cumulative_process(observation = ""hurdle_ztnb"")`; the ZTNB
+  magnitude law was stable in the package-wide sweep.
+ℹ This finite fit is returned with `gradient_status = ""warning""`; inspect
+  `fit$opt` before using it."

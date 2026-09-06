@@ -60,7 +60,8 @@ column holds the validation date and which holds the outcome:
 
 ```r
 tbl_now(df, event_date = onset, report_date = reported,
-        validation_date = result, validation_type = outcome)
+        validation_date = result, validation_type = outcome,
+        is_censored_validation = result_is_upper_bound)
 ```
 
 `validation_type` takes `"confirmed"`, `"retracted"` or `"pending"`. From those
@@ -79,6 +80,11 @@ report rather than having to infer it from how long the report has stood.
 The mode is read from the **whole** dataset, not from the as-of view, so it is a
 stable property of your data source and does not change as you move `now` back
 through a backtest.
+
+`is_censored_validation` is optional. When supplied, it names a logical column
+whose `TRUE` rows record an upper bound on the validation date rather than an
+exact date. Like all three date columns and `validation_type`, this is attached
+to the `tbl_now`; `nowcast()` does not accept a duplicate column-name argument.
 
 **A validation date with no outcome is an error.** The report has resolved, but
 its sign is unknown, so it cannot enter either lag law. Leave the date `NA` and
@@ -243,37 +249,19 @@ A report resolves **once**, and the `tbl_now` representation enforces that by
 construction: one date, one outcome. There is no way to say "confirmed and
 retracted" any more.
 
-## When positives and negatives come back at different speeds
+## One validation-delay law in the first prototype
 
-The models above assume the result arrives on one timescale, whatever the answer.
-Often that is wrong: a negative screen may clear in a day while a positive needs
-confirmatory testing that takes a week. Then the *age* of a pending report tells
-you something — an old unresolved case is probably heading positive.
+`validation_process()` takes one `validation_delay`. In
+`mode = "confirmation_only"` it is the report-to-confirmation lag; in
+`mode = "retraction_only"` it is the report-to-retraction lag. When both outcomes
+are recorded, the same law is used for both signs. Thus a pending report's age
+tells us that its result has not arrived, but—conditional on the shared-law
+assumption—does not favour confirmation over retraction.
 
-Turn this on with `negative_delay`, giving the negative outcomes their own lag
-distribution:
-
-```{r competing, eval = FALSE}
-nowcast(
-  both_dat,
-  model = model(validation = validation_process(
-    lognormal_validation(),                       # positives
-    negative_delay = lognormal_validation())),    # negatives, own timescale
-  now = now)
-```
-
-This is a **competing-risks** model, and it needs both outcomes recorded: with only one
-outcome recorded the second lag distribution is not identifiable, and
-`nowcast()` says so rather than fitting something meaningless.
-
-It matters when it applies. On data where negatives resolve in a day and
-positives in five, the shared-lag model is forced to give every pending report
-the same probability and covers 20% of its own 50% intervals; the competing-risks
-model recovers the true age-dependent curve and covers 70%.
-
-Use it when you have reason to think the two outcomes differ in speed, and check
-it earns its keep by comparing fits — `nowcast()` on both and a `backtest()` is
-the honest test.
+This restriction is deliberate for the first prototype. Separate positive and
+negative lag laws would form a competing-risks extension and would require enough
+resolved observations of both signs to identify two distributions. That extension
+is not part of the current public API.
 
 ## Configuring the model
 

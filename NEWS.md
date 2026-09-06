@@ -37,8 +37,10 @@ data <- tbl.now::add_validation_date(data, retracted, validation_type = outcome)
 nowcast(data, model())
 ```
 
-`validation_censored = ` survives as the single exception, because a `tbl_now`
-has no validation-censoring attribute to read it from.
+Validation censoring is also read from the `tbl_now` object's
+`is_censored_validation` attribute. There is no parallel column-name argument in
+`nowcast()`; event, report, validation, outcome, and censoring metadata all have
+one source of truth.
 
 **The mode is inferred from the data.** `unique(validation_type)` over the
 **full** data -- not the as-of view -- decides between `confirmation_only`,
@@ -55,10 +57,9 @@ has resolved but its sign is unknown, so it cannot enter either lag law.
 settle positive (confirmed, or never retracted), with pending cases kept --
 "not resolved yet" is not "not a case".
 
-The `nowcast_class` slots `@retraction_date` / `@confirmation_date` /
-`@retraction_censored` / `@confirmation_censored` are replaced by
-`@validation_mode` (`"none"`, `"confirmation_only"`, `"retraction_only"`,
-`"both"`) and `@validation_censored`.
+The `nowcast_class` stores the resolved `@validation_mode` (`"none"`,
+`"confirmation_only"`, `"retraction_only"`, or `"both"`). Date and censoring
+column metadata remain on its `tbl_now` data.
 
 ## Documentation
 
@@ -151,30 +152,18 @@ back the day it was ordered is ordinary.
 * **`count-cumulative` data are not row-level validation data.** As of 2.2.0
   they use `count_cumulative_process()` and the collapsed finite-age retraction
   kernel described above.
-* **Both columns at once** fits the full process: a report is resolved exactly
-  once and the resolution is either positive (confirmed) or negative (retracted),
+* **Both outcome values in one validation column** fit the full process: a report
+  is resolved exactly once and the resolution is either positive (confirmed) or negative (retracted),
   as when a test comes back. Seeing the sign is strictly more informative than
   inferring it from the censoring: `p` collapses to a plain binomial on the
   resolved rows (`N+ / (N+ + N-)`, no censoring correction), an unresolved row
   contributes only `1 - G_C(j)`, free of `p`, and it enters the nowcast with
   probability `p` **flat in its age** — with a shared lag law the age says nothing
-  about which way a pending test will go. A row carrying both dates is an error.
-* **Competing risks** via `resolution_process(negative_delay = )`: positive and
-  negative outcomes get *different* lag distributions, for when a negative screen
-  clears in a day but a positive needs a week of confirmatory testing. Then the
-  age of a pending report is informative — an old unresolved case is probably
-  heading positive — and `rho(j)` becomes age-dependent again. Needs both date
-  columns, since one outcome cannot identify two lag laws. On data where negatives
-  resolve in 1 day and positives in 5, the shared-lag model is forced to a flat
-  `rho` and covers 20% of its own 50% intervals; competing risks recovers the true
-  curve (0.701, 0.941, 0.988 against 0.702, 0.942, 0.999) and covers 70%. Setting
-  both laws the same recovers the shared-lag fit, which is nested inside it.
-* **Friendlier names.** `resolution_process()` is a clearer alias of
-  `confirmation_process()`, taking `resolution_delay` / `p` / `stratified_p` /
-  `negative_delay`; the lag constructors gain neutral `*_resolution()` aliases.
-  `print()` now states in words what is being modelled and the fitted probability;
-  `tidy()` reports it as `prob_confirmed` / `prob_not_retracted` under
-  `type == "resolution"`.
+  about which way a pending test will go.
+* The first prototype uses one validation-delay law. In a single-outcome mode it
+  is the lag of that outcome; with both outcomes recorded it is shared by positive
+  and negative resolutions. Separate competing-risk lag laws are outside this
+  prototype.
 * Not implemented, and named as such in the vignette: the **two published
   streams** count-cumulative model (a source publishing the reported *and*
   confirmed cumulatives, which does identify `p` and `g_K` apart).

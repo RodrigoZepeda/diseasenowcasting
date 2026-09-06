@@ -442,29 +442,6 @@ default_priors <- function(mod, data = NULL, ...) {
                        "i" = "`validation_delay` must be lognormal, gamma, generalized-gamma or Dirichlet."))
     }
 
-    # -- competing risks: a second lag law for the NEGATIVE resolutions ---------
-    negative_delay <- tryCatch(confirmation@negative_delay, error = function(e) list())
-    if (S7::S7_inherits(negative_delay, delay_process_class)) {
-      pr$negative_family <- as.integer(negative_delay@num_id)
-      negative_lags   <- data$retract_table_negative
-      mean_negative   <- if (!is.null(negative_lags) && sum(negative_lags[, "count"]) > 0)
-        sum(negative_lags[, "lag"] * negative_lags[, "count"]) / sum(negative_lags[, "count"])
-        else mean_observed_lag
-      default_negative_mu <- normal_prior(log(max(mean_negative, 1)), 0.5)
-      if (S7::S7_inherits(negative_delay, dirichlet_delay_class)) {
-        cli::cli_abort("A Dirichlet `negative_delay` is not supported yet; use a parametric family.")
-      } else if (S7::S7_inherits(negative_delay, gamma_delay_class)) {
-        pr$negative_mu    <- .res(negative_delay@shape, default_negative_mu, key = "negative_mu")
-        pr$negative_sigma <- .res(negative_delay@rate,  gamma_prior(2, 2),   key = "negative_sigma")
-      } else if (S7::S7_inherits(negative_delay, generalized_gamma_delay_class)) {
-        pr$negative_mu    <- .res(negative_delay@mu,    default_negative_mu,  key = "negative_mu")
-        pr$negative_Q     <- .res(negative_delay@Q,     normal_prior(0, 0.5), key = "negative_Q")
-        pr$negative_sigma <- .res(negative_delay@sigma, gamma_prior(2, 0.1),  key = "negative_sigma")
-      } else {
-        pr$negative_mu    <- .res(negative_delay@mu,    default_negative_mu, key = "negative_mu")
-        pr$negative_sigma <- .res(negative_delay@sigma, gamma_prior(2, 2),   key = "negative_sigma")
-      }
-    }
   }
 
   pr

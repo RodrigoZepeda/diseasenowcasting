@@ -81,12 +81,7 @@ utils::globalVariables(c(
   "prior_retract_sd_dist", "prior_retract_sd_params",
   "retract_logits", "retract_Q", "retract_Q_val",
   "prior_retract_Q_dist", "prior_retract_Q_params",
-  "negative_mu", "negative_mu_val", "log_negative_sd_exc",
-  "negative_sd_val", "negative_Q", "negative_Q_val",
   "n_positive_by_stratum", "n_negative_by_stratum",
-  "prior_negative_mu_dist", "prior_negative_mu_params",
-  "prior_negative_sd_dist", "prior_negative_sd_params",
-  "prior_negative_Q_dist", "prior_negative_Q_params",
   # RTMB getAll() closure variables (revised count-cumulative objective)
   "cumulative_retraction_mass_raw", "cumulative_retraction_mass_value",
   "cumulative_retraction_mu", "cumulative_retraction_mu_value",

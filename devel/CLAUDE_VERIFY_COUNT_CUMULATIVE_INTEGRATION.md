@@ -202,13 +202,16 @@ This defaults to all 53 locations (including US), five origins, both clocks,
 `H=26`, 250 draws and all four observation variants, with per-job checkpoints,
 monotonic ETAs, and a nonzero exit if any gate condition fails.
 
-**Required evidence still missing:** the default 530-job/2,120-fit production
-run was not executed in this integration session. The historical prototype
-artifacts under `devel/skellam_prototypes/results/` cover 1,590 old prototype
-fits and a later 1,060 cumulative-only prototype rerun, but they do not include
-the integrated package or hurdle-ZTPoisson and therefore do not satisfy the
-post-integration gate. The definition of done is not met until the default
-runner completes successfully.
+The default 530-job/2,120-fit production run subsequently completed after the
+log-scale PMF repair. All 2,120 fits and predictions were finite and all 2,120
+leakage assertions passed. Cumulative Poisson/NB and hurdle-ZTNB passed the
+optimizer/gradient gate in all 1,590 cases. Compressed-clock hurdle-ZTPoisson
+passed 265/265 (maximum gradient 0.0632). Calendar hurdle-ZTPoisson passed
+260/265; the five warning fits were US at every historical origin, optimizer
+code one, with maximum gradients 0.552, 1.749, 2.877, 9.676, and 4.837. The user
+chose to proceed with explicit warnings and the stable hurdle-ZTNB alternative.
+Accordingly, this is complete execution evidence but not an unconditional
+optimizer-gate pass for hurdle-ZTPoisson.
 
 ## 6. Test, vignette and package-check evidence
 
@@ -305,9 +308,10 @@ Coverage is descriptive pseudo-posterior coverage, not a calibration claim.
   an independent signed-Poisson update approximation; it is not the direct
   unconditioned terminal marginal.
 - Dead legacy fixed-`p` code remains physically present behind hard aborts.
-- Most importantly, the required all-location production sweep remains to be
-  run. The current evidence supports implementation and a small production
-  subset, not full empirical stability.
+- The all-location production sweep is complete, but five US/calendar
+  hurdle-ZTPoisson fits failed the optimizer/gradient gate. They are returned
+  only with a targeted warning that reports the optimizer code/message and
+  recommends hurdle-ZTNB; they must not be described as stable fits.
 
 ## 10. Instructions to Claude
 
@@ -318,12 +322,15 @@ Verify the two hard aborts really make the old count-cumulative fixed-`p` path
 unreachable while leaving linelist/count-incidence validation functional.
 Specifically verify that `hurdle_ztpoisson` uses conditional magnitude own mean
 `(alpha + omega)/pi`, performs the truncated-Poisson parent-mean inversion on
-the RTMB tape, and carries no magnitude dispersion. Run the full default
-production gate before granting an unconditional pass.
+the RTMB tape, and carries no magnitude dispersion. Inspect the five
+US/calendar hurdle-ZTPoisson optimizer/gradient warnings before granting an
+unconditional pass.
 
 Return exactly one of `PASS`, `PASS WITH REQUIRED CHANGES`, or `FAIL`, followed
 by file/line references and reproducible evidence for every objection. Given
-the missing full sweep, `PASS` is not currently justified.
+the five hurdle-ZTPoisson fits that failed the optimizer/gradient gate, `PASS`
+is not justified unless the documented model-specific warning limitation is
+explicitly accepted.
 
 [ ] No post-now data leakage
 [ ] h_R is primitive in the cumulative likelihood

@@ -8,7 +8,6 @@ validation_process(
   validation_delay = lognormal_delay(),
   p = numeric(0),
   stratified_p = FALSE,
-  negative_delay = NULL,
   mode = c("auto", "confirmation_only", "retraction_only", "both")
 )
 }
@@ -36,13 +35,6 @@ more than one stratum; the validation lag \code{g_C} stays shared either way (it
 is usually a property of the verification workflow, whereas \code{p} reflects how
 often a given group is misclassified).  Each stratum's \code{p} gets the same
 prior.  Default \code{FALSE} -- with sparse strata the shared \code{p} is safer.}
-
-\item{negative_delay}{Optional second lag distribution for the \strong{negative}
-resolutions, turning the model into a competing-risks fit in which positives
-and negatives come back on different timescales.  Needs data recording both
-outcomes (\code{mode = "both"}), since one sign alone cannot identify two lag
-laws.  Left \code{NULL} (the default) the two share one law, and the age of a
-pending report says nothing about which way it will go.}
 
 \item{mode}{Which outcomes the data record.  \code{"auto"} (the default) infers it
 from the \code{validation_type} column; the others assert it.  See \strong{Modes}.}
@@ -77,6 +69,11 @@ The lag support differs only because a \emph{retraction} in the same period as i
 report describes a case never visible in any data vintage, whereas a test
 coming back the day it was ordered is ordinary.
 
+In \code{mode = "both"}, \code{validation_delay} is one shared law for positive and
+negative resolutions. This first prototype deliberately does not fit separate
+competing-risk lag laws. In a one-outcome mode, the same argument denotes the
+lag for the outcome that is recorded: confirmation or retraction respectively.
+
 \code{"auto"} reads \code{unique(validation_type)} over the \strong{full} data, not the as-of
 view, so the mode is a stable property of the data source and does not flip
 between backtest dates.
@@ -108,11 +105,8 @@ validation layer is inert and the model is the ordinary count model.
 }
 
 \examples{
-# Results come back on one timescale, whatever the answer:
+# Results come back on one shared timescale, whatever the answer:
 validation_process(lognormal_validation())
-
-# Negatives come back faster than positives (competing risks):
-validation_process(lognormal_validation(), negative_delay = lognormal_validation())
 
 # Attach to a model:
 model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(),

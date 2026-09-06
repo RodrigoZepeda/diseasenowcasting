@@ -184,14 +184,10 @@ S7::method(print, model_class) <- function(x, ..., digits = 4) {
   cli::cli_h3("Delay process")
   print(x@delay, digits = digits)
   if (isTRUE(x@validation@active)) {
-    cli::cli_h3("Resolution process")
-    competing <- S7::S7_inherits(x@validation@negative_delay, delay_process_class)
-    cli::cli_text(paste0(cli::col_yellow("Resolution"), "(",
+    cli::cli_h3("Validation process")
+    cli::cli_text(paste0(cli::col_yellow("Validation"), "(",
       .fmt_slot("p", x@validation@p), ")"))
-    cli::cli_text("{.emph Resolution delay}: {x@validation@validation_delay@name}",
-                  if (competing) " (positive outcomes)" else "")
-    if (competing)
-      cli::cli_text("{.emph Negative-outcome delay}: {x@validation@negative_delay@name} {.emph (competing risks)}")
+    cli::cli_text("{.emph Shared validation delay}: {x@validation@validation_delay@name}")
     if (isTRUE(x@validation@stratified_p))
       cli::cli_text("{.emph p}: estimated separately per stratum")
   }

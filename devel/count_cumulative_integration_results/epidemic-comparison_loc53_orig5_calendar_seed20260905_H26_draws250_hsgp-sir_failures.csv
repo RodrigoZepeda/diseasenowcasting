@@ -1,0 +1,5 @@
+"location","origin","clock","epidemic","model","error","warnings"
+"Ohio",2025-04-26,"calendar","sir","hurdle_ztpoisson","Joint fit failed to converge for all init attempts.","NA/NaN function evaluation | The `hurdle_ztpoisson` optimizer failed for every initialization.
+✖ Last optimizer error: NA/NaN gradient evaluation
+ℹ Try `count_cumulative_process(observation = ""hurdle_ztnb"")`; the ZTNB
+  magnitude law was stable in the package-wide sweep."

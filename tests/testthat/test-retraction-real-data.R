@@ -123,11 +123,14 @@ test_that("dengue: censored reports and censored retractions still recover p", {
       ifelse(is.na(censored$retracted[bumped]), now, censored$retracted[bumped] - 7L))
     censored$retracted[censored$q_bound] <- pmin(censored$retracted[censored$q_bound] + 7L, now)
 
-    tn <- as_validation_tbl_now(censored, now, is_censored_report = is_censored)
+    tn <- as_validation_tbl_now(
+      censored, now, is_censored_report = is_censored,
+      is_censored_validation = q_bound
+    )
     fitted <- suppressMessages(suppressWarnings(nowcast(tn,
       model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
             validation = validation_process(validation_delay = dirichlet_validation(bins = 8))),
-      now = now, validation_censored = "q_bound",
+      now = now,
       type = "one_stage", temporal_effects = "none", n_draws = 50, seed = 8)))
     expect_gt(fitted@engine$n_censored, 0)
     fitted@fits[[1]]$reconstruct$retraction$p

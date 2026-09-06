@@ -48,12 +48,6 @@
 #'   is usually a property of the verification workflow, whereas `p` reflects how
 #'   often a given group is misclassified).  Each stratum's `p` gets the same
 #'   prior.  Default `FALSE` -- with sparse strata the shared `p` is safer.
-#' @param negative_delay Optional second lag distribution for the **negative**
-#'   resolutions, turning the model into a competing-risks fit in which positives
-#'   and negatives come back on different timescales.  Needs data recording both
-#'   outcomes (`mode = "both"`), since one sign alone cannot identify two lag
-#'   laws.  Left `NULL` (the default) the two share one law, and the age of a
-#'   pending report says nothing about which way it will go.
 #' @param mode Which outcomes the data record.  `"auto"` (the default) infers it
 #'   from the `validation_type` column; the others assert it.  See **Modes**.
 #'
@@ -71,6 +65,11 @@
 #' The lag support differs only because a *retraction* in the same period as its
 #' report describes a case never visible in any data vintage, whereas a test
 #' coming back the day it was ordered is ordinary.
+#'
+#' In `mode = "both"`, `validation_delay` is one shared law for positive and
+#' negative resolutions. This first prototype deliberately does not fit separate
+#' competing-risk lag laws. In a one-outcome mode, the same argument denotes the
+#' lag for the outcome that is recorded: confirmation or retraction respectively.
 #'
 #' `"auto"` reads `unique(validation_type)` over the **full** data, not the as-of
 #' view, so the mode is a stable property of the data source and does not flip
@@ -98,11 +97,8 @@
 #' @returns A `validation_process_class` object, for `model(validation = )`.
 #'
 #' @examples
-#' # Results come back on one timescale, whatever the answer:
+#' # Results come back on one shared timescale, whatever the answer:
 #' validation_process(lognormal_validation())
-#'
-#' # Negatives come back faster than positives (competing risks):
-#' validation_process(lognormal_validation(), negative_delay = lognormal_validation())
 #'
 #' # Attach to a model:
 #' model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
@@ -115,13 +111,11 @@
 #' @export
 validation_process <- function(validation_delay = lognormal_delay(),
                                p = numeric(0), stratified_p = FALSE,
-                               negative_delay = NULL,
                                mode = c("auto", "confirmation_only",
                                         "retraction_only", "both")) {
   mode <- match.arg(mode)
   validation_process_class(validation_delay = validation_delay, p = p,
                            stratified_p = isTRUE(stratified_p),
-                           negative_delay = negative_delay %||% list(),
                            mode = mode)
 }
 
@@ -134,20 +128,18 @@ validation_process_class <- S7::new_class(
     validation_delay = delay_process_class,
     p                = .valid_param_slot,   # prior_class or fixed numeric in (0, 1]
     stratified_p     = S7::class_logical,   # one p per stratum instead of a shared one
-    negative_delay   = S7::class_any,       # second lag law -> competing risks (or list())
     mode             = S7::class_character, # auto / confirmation_only / retraction_only / both
     active           = S7::class_logical    # FALSE for the inert (p = 1) default
   ),
   constructor = function(validation_delay = lognormal_delay(),
                          p                = numeric(0),
                          stratified_p     = FALSE,
-                         negative_delay   = list(),
                          mode             = "auto",
                          active           = TRUE) {
     S7::new_object(S7::S7_object(),
                    validation_delay = validation_delay, p = p,
                    stratified_p = isTRUE(stratified_p),
-                   negative_delay = negative_delay, mode = mode, active = active)
+                   mode = mode, active = active)
   },
   validator = function(self) {
     # `p` is unset (length-0 numeric -> data-dependent default), a fixed number in
@@ -250,7 +242,7 @@ dirichlet_validation <- function(alpha = numeric(0), bins = numeric(0)) {
 #' @noRd
 no_validation <- function() {
   validation_process_class(validation_delay = lognormal_delay(), p = 1,
-                           negative_delay = list(), mode = "auto", active = FALSE)
+                           mode = "auto", active = FALSE)
 }
 
 # =============================================================================
@@ -276,8 +268,8 @@ no_validation <- function() {
   dated    <- !is.na(validation_date)
 
   # A date without an outcome is unusable: the report resolved, but we cannot say
-  # into which lag law it goes.  tbl.now warns at construction; this is the second
-  # and final ask.
+  # into which lag law it goes. tbl.now warns at construction; this is the final
+  # defensive check before the values reach the likelihood.
   # A dated row must say WHICH way it resolved.  `NA` is the obvious failure, but an
   # unrecognised label is the dangerous one: it would fall through every
   # `== "confirmed"` test and be silently counted as a retraction in `both` mode.
@@ -302,8 +294,8 @@ no_validation <- function() {
   # the honest answer is that there is no validation process to fit.  `NA` rather
   # than an error, because under retraction that IS the documented reduction --
   # nothing retracted means p = 1, i.e. the ordinary count model.  An ASSERTED
-  # mode is still refused (see `.resolve_validation_mode()`); only inference falls
-  # back.
+  # mode can still retain the process under its prior (see
+  # `.resolve_validation_mode()`); only automatic inference falls back.
   if (has_confirmed && has_retracted) "both"
   else if (has_confirmed)             "confirmation_only"
   else if (has_retracted)             "retraction_only"

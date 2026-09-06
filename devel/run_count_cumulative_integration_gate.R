@@ -90,6 +90,59 @@ checkpoint <- if (file.exists(checkpoint_path)) readRDS(checkpoint_path) else
 if (!identical(checkpoint$config, new_checkpoint()$config)) {
   stop("Existing checkpoint configuration differs; move it or change the run configuration.")
 }
+
+# After a diagnosed prediction bug has been fixed and every recorded failure
+# has passed the targeted retry script, discard the affected jobs' partial
+# outputs and run those jobs again in full. The original checkpoint is copied
+# once before mutation so this repair is recoverable and auditable.
+retry_verified_jobs <- tolower(Sys.getenv(
+  "RETRY_VERIFIED_FAILURE_JOBS", "false"
+)) %in% c("true", "1", "yes")
+if (retry_verified_jobs && length(checkpoint$failures)) {
+  retry_path <- file.path(
+    result_dir, "retry_prediction_failures_after_log_pmf_fix.csv"
+  )
+  if (!file.exists(retry_path))
+    stop("Targeted retry results are missing: ", retry_path)
+  retry_results <- utils::read.csv(retry_path, stringsAsFactors = FALSE)
+  if (!nrow(retry_results) || !all(retry_results$passed))
+    stop("Not every targeted prediction retry passed; checkpoint was not changed.")
+
+  failure_rows <- dplyr::bind_rows(checkpoint$failures)
+  retry_job_ids <- unique(paste(
+    failure_rows$location, as.character(as.Date(failure_rows$origin,
+                                                 origin = "1970-01-01")),
+    failure_rows$clock, sep = "|"
+  ))
+  original_checkpoint <- paste0(checkpoint_path, ".before_log_pmf_retry")
+  if (!file.exists(original_checkpoint) &&
+      !file.copy(checkpoint_path, original_checkpoint)) {
+    stop("Could not preserve the original checkpoint before retry cleanup.")
+  }
+  keep_rows_outside_retry <- function(rows) {
+    if (!length(rows)) return(rows)
+    Filter(function(row) {
+      row_id <- paste(
+        row$location,
+        as.character(as.Date(row$origin, origin = "1970-01-01")),
+        row$clock, sep = "|"
+      )
+      !row_id %in% retry_job_ids
+    }, rows)
+  }
+  checkpoint$completed_jobs <- setdiff(
+    checkpoint$completed_jobs, retry_job_ids
+  )
+  checkpoint$diagnostics <- keep_rows_outside_retry(checkpoint$diagnostics)
+  checkpoint$scores <- keep_rows_outside_retry(checkpoint$scores)
+  checkpoint$failures <- keep_rows_outside_retry(checkpoint$failures)
+  checkpoint$updated_at <- Sys.time()
+  saveRDS(checkpoint, checkpoint_path)
+  cat(sprintf(
+    "Verified fix: reset %d affected jobs; original checkpoint saved as %s.\n",
+    length(retry_job_ids), original_checkpoint
+  ))
+}
 save_checkpoint <- function() {
   checkpoint$updated_at <<- Sys.time()
   saveRDS(checkpoint, checkpoint_path)

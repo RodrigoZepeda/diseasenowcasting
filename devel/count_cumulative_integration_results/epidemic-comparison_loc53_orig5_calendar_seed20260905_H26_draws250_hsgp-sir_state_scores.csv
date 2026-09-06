@@ -1,0 +1,213 @@
+"location","epidemic","model","targets","mean_wis","mean_absolute_error","median_absolute_error","median_signed_error","coverage90"
+"Alabama","hsgp","hurdle_ztnb",25,1.59708484848485,1.6,0,0,0.96
+"Alabama","hsgp","hurdle_ztpoisson",25,1.81807272727273,1.88,0,0,0.96
+"Alabama","sir","hurdle_ztnb",25,1.58874545454546,2,0,0,0.96
+"Alabama","sir","hurdle_ztpoisson",25,1.88934545454545,2.12,0,0,0.76
+"Alaska","hsgp","hurdle_ztnb",25,2.18498181818182,3.44,2,-2,0.88
+"Alaska","hsgp","hurdle_ztpoisson",25,1.9736303030303,3.04,2,-2,0.96
+"Alaska","sir","hurdle_ztnb",25,2.5972,3.66,2,-2,0.76
+"Alaska","sir","hurdle_ztpoisson",25,2.80635151515152,3.56,2,-2,0.6
+"Arizona","hsgp","hurdle_ztnb",25,15.9434242424242,18.3,16,-9,0.84
+"Arizona","hsgp","hurdle_ztpoisson",25,27.5995515151515,28.26,25,-17,0.56
+"Arizona","sir","hurdle_ztnb",25,14.6258787878788,19.08,17,-9,0.92
+"Arizona","sir","hurdle_ztpoisson",25,21.5405212121212,19,16,-11,0.68
+"Arkansas","hsgp","hurdle_ztnb",25,7.84046666666667,12.16,3,-1,0.88
+"Arkansas","hsgp","hurdle_ztpoisson",25,9.09348484848485,12.38,4,-1,0.72
+"Arkansas","sir","hurdle_ztnb",25,12.3742727272727,14.52,2,-2,0.8
+"Arkansas","sir","hurdle_ztpoisson",25,11.6922303030303,13.9,2,-1,0.64
+"California","hsgp","hurdle_ztnb",25,71.3538242424242,95.92,21,-21,0.76
+"California","hsgp","hurdle_ztpoisson",25,97.3307393939394,109.08,24,-24,0.36
+"California","sir","hurdle_ztnb",25,99.2802363636364,109.44,23,-23,0.52
+"California","sir","hurdle_ztpoisson",25,106.4026,109.84,24,-24,0
+"Colorado","hsgp","hurdle_ztnb",25,2.24993333333333,2.34,0,0,0.96
+"Colorado","hsgp","hurdle_ztpoisson",25,2.06006060606061,1.84,0,0,0.88
+"Colorado","sir","hurdle_ztnb",25,1.44574545454545,1.88,1,0,0.96
+"Colorado","sir","hurdle_ztpoisson",25,1.72086060606061,2.24,0,0,0.76
+"Connecticut","hsgp","hurdle_ztnb",25,2.55447272727273,3.18,0,0,0.96
+"Connecticut","hsgp","hurdle_ztpoisson",25,2.29202424242424,2.4,0,0,0.92
+"Connecticut","sir","hurdle_ztnb",25,1.99073333333333,2.4,0,0,0.92
+"Connecticut","sir","hurdle_ztpoisson",25,2.05539393939394,2.3,0,0,0.88
+"Delaware","hsgp","hurdle_ztnb",25,15.0557575757576,17.26,9,-9,0.36
+"Delaware","hsgp","hurdle_ztpoisson",25,13.546296969697,17.18,9,-9,0.44
+"Delaware","sir","hurdle_ztnb",25,17.72,17.72,9,-9,0.24
+"Delaware","sir","hurdle_ztpoisson",25,17.72,17.72,9,-9,0.24
+"District of Columbia","hsgp","hurdle_ztnb",25,2.79173333333333,3.6,2,0,0.72
+"District of Columbia","hsgp","hurdle_ztpoisson",25,2.91749090909091,3.64,1,0,0.76
+"District of Columbia","sir","hurdle_ztnb",25,3.84,3.84,1,0,0.48
+"District of Columbia","sir","hurdle_ztpoisson",25,3.84,3.84,1,0,0.48
+"Florida","hsgp","hurdle_ztnb",25,32.5689454545455,55.5,19,-19,0.92
+"Florida","hsgp","hurdle_ztpoisson",25,53.2947878787879,65.18,28,-28,0.56
+"Florida","sir","hurdle_ztnb",25,54.3495212121212,65.84,26,-26,0.68
+"Florida","sir","hurdle_ztpoisson",25,64.2713090909091,66.48,28,-28,0.08
+"Georgia","hsgp","hurdle_ztnb",25,12.8384848484849,19.38,2.5,-1,0.96
+"Georgia","hsgp","hurdle_ztpoisson",25,18.2030181818182,23.16,2,-2,0.84
+"Georgia","sir","hurdle_ztnb",25,21.9651090909091,24.22,2,-2,0.8
+"Georgia","sir","hurdle_ztpoisson",25,20.2942787878788,23.98,2,-2,0.76
+"Hawaii","hsgp","hurdle_ztnb",25,1.3184303030303,1.56,0,0,1
+"Hawaii","hsgp","hurdle_ztpoisson",25,1.65731515151515,1.52,0,0,1
+"Hawaii","sir","hurdle_ztnb",25,0.799345454545455,0.7,0,0,1
+"Hawaii","sir","hurdle_ztpoisson",25,0.763618181818182,0.92,0,0,1
+"Idaho","hsgp","hurdle_ztnb",25,2.1442303030303,2.98,0,0,0.88
+"Idaho","hsgp","hurdle_ztpoisson",25,2.34859393939394,3.36,0,0,0.88
+"Idaho","sir","hurdle_ztnb",25,3.24,3.24,0,0,0.56
+"Idaho","sir","hurdle_ztpoisson",25,3.24,3.24,0,0,0.56
+"Illinois","hsgp","hurdle_ztnb",25,18.2488060606061,26.56,5,-1,0.76
+"Illinois","hsgp","hurdle_ztpoisson",25,26.7276727272727,31.14,5,-3,0.76
+"Illinois","sir","hurdle_ztnb",25,26.9638545454545,30.78,3,-3,0.72
+"Illinois","sir","hurdle_ztpoisson",25,29.3847696969697,30.8,4,-4,0.36
+"Indiana","hsgp","hurdle_ztnb",25,16.3479151515152,21.5,1,-1,0.88
+"Indiana","hsgp","hurdle_ztpoisson",25,15.0448666666667,21.7,4,-0.5,0.88
+"Indiana","sir","hurdle_ztnb",25,17.1068484848485,19.76,1,-1,0.76
+"Indiana","sir","hurdle_ztpoisson",25,22.744296969697,26.04,1,-1,0.6
+"Iowa","hsgp","hurdle_ztnb",25,2.72693333333333,4.44,1,0,0.92
+"Iowa","hsgp","hurdle_ztpoisson",25,2.82430303030303,4.58,0,0,0.96
+"Iowa","sir","hurdle_ztnb",25,6.04198181818182,7.24,2,0,0.8
+"Iowa","sir","hurdle_ztpoisson",25,5.33240606060606,6.6,1,-1,0.72
+"Kansas","hsgp","hurdle_ztnb",25,2.91450909090909,4.66,1,0,0.96
+"Kansas","hsgp","hurdle_ztpoisson",25,3.92744242424242,5.38,1,0,0.92
+"Kansas","sir","hurdle_ztnb",25,3.86032121212121,5.42,1,-1,0.92
+"Kansas","sir","hurdle_ztpoisson",25,4.9351696969697,5.94,1,-1,0.72
+"Kentucky","hsgp","hurdle_ztnb",25,10.9446787878788,16.36,6,-6,0.72
+"Kentucky","hsgp","hurdle_ztpoisson",25,13.3326060606061,18.08,6,-6,0.72
+"Kentucky","sir","hurdle_ztnb",25,17.7852,20.64,8,-8,0.68
+"Kentucky","sir","hurdle_ztpoisson",25,18.9321151515152,20.42,7.5,-7.5,0.36
+"Louisiana","hsgp","hurdle_ztnb",25,12.7724727272727,15.78,9,0,0.56
+"Louisiana","hsgp","hurdle_ztpoisson",25,15.7538545454545,16.62,8,0,0.48
+"Louisiana","sir","hurdle_ztnb",25,15.7387454545455,17.08,9,0,0.44
+"Louisiana","sir","hurdle_ztpoisson",25,16.041296969697,17.06,9,1.5,0.32
+"Maine","hsgp","hurdle_ztnb",25,1.11173939393939,1.2,0,0,0.84
+"Maine","hsgp","hurdle_ztpoisson",25,1.34195757575758,1.6,1,0,0.84
+"Maine","sir","hurdle_ztnb",25,1.48,1.48,0,0,0.68
+"Maine","sir","hurdle_ztpoisson",25,1.48,1.48,0,0,0.68
+"Maryland","hsgp","hurdle_ztnb",25,11.5182181818182,16.3,1,-1,0.88
+"Maryland","hsgp","hurdle_ztpoisson",25,12.3674181818182,17.3,2,-1,0.8
+"Maryland","sir","hurdle_ztnb",25,16.639296969697,18.4,1,-1,0.76
+"Maryland","sir","hurdle_ztpoisson",25,17.4480787878788,18.28,1,-1,0.48
+"Massachusetts","hsgp","hurdle_ztnb",25,34.2072060606061,38.92,9,-9,0.48
+"Massachusetts","hsgp","hurdle_ztpoisson",25,39.4315212121212,49.14,12,-12,0.32
+"Massachusetts","sir","hurdle_ztnb",25,37.5153757575758,37.92,9,-9,0.36
+"Massachusetts","sir","hurdle_ztpoisson",25,42.0509575757576,44.08,9,-9,0.2
+"Michigan","hsgp","hurdle_ztnb",25,103.027393939394,116.52,59,-59,0.32
+"Michigan","hsgp","hurdle_ztpoisson",25,103.148133333333,115.08,59,-59,0.2
+"Michigan","sir","hurdle_ztnb",25,112.652272727273,116.64,59,-59,0.32
+"Michigan","sir","hurdle_ztpoisson",25,113.375145454545,116.64,59,-59,0.08
+"Minnesota","hsgp","hurdle_ztnb",25,14.7621272727273,15.04,0,0,0.76
+"Minnesota","hsgp","hurdle_ztpoisson",25,14.3734,15.08,0,0,0.64
+"Minnesota","sir","hurdle_ztnb",25,15.08,15.08,0,0,0.52
+"Minnesota","sir","hurdle_ztpoisson",25,15.08,15.08,0,0,0.52
+"Mississippi","hsgp","hurdle_ztnb",25,3.08569090909091,3.52,1,0,0.92
+"Mississippi","hsgp","hurdle_ztpoisson",25,2.92058787878788,3.78,1,0,0.92
+"Mississippi","sir","hurdle_ztnb",25,2.76785454545455,3.24,1,0,0.92
+"Mississippi","sir","hurdle_ztpoisson",25,2.95326060606061,3.32,0,0,0.88
+"Missouri","hsgp","hurdle_ztnb",25,24.1682545454545,32.92,8,1,0.92
+"Missouri","hsgp","hurdle_ztpoisson",25,25.9006121212121,33.14,4,0,0.76
+"Missouri","sir","hurdle_ztnb",25,31.1292787878788,35.22,4,0,0.88
+"Missouri","sir","hurdle_ztpoisson",25,31.2793090909091,34.82,3,0,0.72
+"Montana","hsgp","hurdle_ztnb",25,3.46755757575758,4.58,4,0,0.6
+"Montana","hsgp","hurdle_ztpoisson",25,3.3364303030303,4.5,3,0,0.64
+"Montana","sir","hurdle_ztnb",25,4.24,4.24,3,0,0.28
+"Montana","sir","hurdle_ztpoisson",25,4.24,4.24,3,0,0.28
+"Nebraska","hsgp","hurdle_ztnb",25,0.948824242424242,1.4,0,0,0.96
+"Nebraska","hsgp","hurdle_ztpoisson",25,1.13210909090909,1.12,0,0,0.96
+"Nebraska","sir","hurdle_ztnb",25,1.17855757575758,1.62,0,0,0.96
+"Nebraska","sir","hurdle_ztpoisson",25,1.24975151515152,1.64,0,0,0.96
+"Nevada","hsgp","hurdle_ztnb",25,2.49524848484848,3.08,0,0,0.92
+"Nevada","hsgp","hurdle_ztpoisson",25,2.48399393939394,3.46,1.5,0,0.92
+"Nevada","sir","hurdle_ztnb",25,2.8518303030303,3.76,0.5,0,0.92
+"Nevada","sir","hurdle_ztpoisson",25,3.24175151515152,4.04,0,0,0.68
+"New Hampshire","hsgp","hurdle_ztnb",25,11.6200484848485,12.92,0,0,0.68
+"New Hampshire","hsgp","hurdle_ztpoisson",25,12.6494606060606,13,0,0,0.68
+"New Hampshire","sir","hurdle_ztnb",25,12.1324060606061,12.64,0,0,0.72
+"New Hampshire","sir","hurdle_ztpoisson",25,12.1619151515152,12.64,0,0,0.68
+"New Jersey","hsgp","hurdle_ztnb",25,5.41560606060606,6.06,1,0,1
+"New Jersey","hsgp","hurdle_ztpoisson",25,4.03785454545455,2.04,0,0,0.96
+"New Jersey","sir","hurdle_ztnb",25,1.85239393939394,1.84,0,0,0.96
+"New Jersey","sir","hurdle_ztpoisson",25,2.04436363636364,1.84,0,0,0.72
+"New Mexico","hsgp","hurdle_ztnb",25,5.80127878787879,7.82,1.5,0,0.92
+"New Mexico","hsgp","hurdle_ztpoisson",25,7.21800606060606,8.68,1,-1,0.92
+"New Mexico","sir","hurdle_ztnb",25,6.87473939393939,8.6,1,-1,0.88
+"New Mexico","sir","hurdle_ztpoisson",25,8.11758181818182,9.08,2,-1,0.68
+"New York","hsgp","hurdle_ztnb",25,12.6078545454545,21.52,4,-4,1
+"New York","hsgp","hurdle_ztpoisson",25,23.7293696969697,29.36,8,-8,0.48
+"New York","sir","hurdle_ztnb",25,24.2017272727273,28.82,7,-7,0.72
+"New York","sir","hurdle_ztpoisson",25,28.5146848484849,29.48,8,-8,0.36
+"North Carolina","hsgp","hurdle_ztnb",25,14.3768666666667,21.42,1,-1,0.96
+"North Carolina","hsgp","hurdle_ztpoisson",25,17.8254545454545,22.12,1,-1,0.76
+"North Carolina","sir","hurdle_ztnb",25,19.9738484848485,22.12,1,-1,0.8
+"North Carolina","sir","hurdle_ztpoisson",25,21.9514363636364,22.12,1,-1,0.44
+"North Dakota","hsgp","hurdle_ztnb",25,0.669551515151515,0.72,0,0,0.96
+"North Dakota","hsgp","hurdle_ztpoisson",25,0.780230303030303,0.96,0,0,0.96
+"North Dakota","sir","hurdle_ztnb",25,0.76,0.76,0,0,0.8
+"North Dakota","sir","hurdle_ztpoisson",25,0.76,0.76,0,0,0.8
+"Ohio","hsgp","hurdle_ztnb",25,18.2476060606061,29.24,5.5,0,0.8
+"Ohio","hsgp","hurdle_ztpoisson",25,19.8986909090909,32.36,5,0,0.88
+"Ohio","sir","hurdle_ztnb",25,28.8329515151515,32.94,5,0,0.6
+"Ohio","sir","hurdle_ztpoisson",20,32.7714924242424,41,9.5,-1.5,0.55
+"Oklahoma","hsgp","hurdle_ztnb",25,12.4024787878788,18.8,4,0,0.88
+"Oklahoma","hsgp","hurdle_ztpoisson",25,14.9903272727273,19.9,4,0,0.76
+"Oklahoma","sir","hurdle_ztnb",25,18.0118787878788,19.96,1,0,0.84
+"Oklahoma","sir","hurdle_ztpoisson",25,18.4242424242424,20.4,2,0,0.6
+"Oregon","hsgp","hurdle_ztnb",25,5.81940606060606,8.42,2,-1,0.84
+"Oregon","hsgp","hurdle_ztpoisson",25,7.30752727272727,8.68,2,-2,0.84
+"Oregon","sir","hurdle_ztnb",25,7.25236363636364,10.28,2,-2,0.8
+"Oregon","sir","hurdle_ztpoisson",25,8.01063636363637,10.24,3,-2,0.72
+"Pennsylvania","hsgp","hurdle_ztnb",25,62.8367818181818,84.26,70,-70,0.56
+"Pennsylvania","hsgp","hurdle_ztpoisson",25,78.1244909090909,88.28,66,-66,0.28
+"Pennsylvania","sir","hurdle_ztnb",25,77.5100848484849,88.92,70,-70,0.36
+"Pennsylvania","sir","hurdle_ztpoisson",25,87.8944787878788,88.92,70,-70,0.08
+"Puerto Rico","hsgp","hurdle_ztnb",25,94.9499393939394,101.9,26,-26,0.48
+"Puerto Rico","hsgp","hurdle_ztpoisson",25,106.862393939394,121.02,64,-64,0.52
+"Puerto Rico","sir","hurdle_ztnb",25,92.3820121212121,102.06,26,-26,0.68
+"Puerto Rico","sir","hurdle_ztpoisson",25,97.0146787878788,101.88,26,-26,0.32
+"Rhode Island","hsgp","hurdle_ztnb",25,3.08610909090909,3.76,0,0,0.8
+"Rhode Island","hsgp","hurdle_ztpoisson",25,3.18802424242424,3.92,0,0,0.8
+"Rhode Island","sir","hurdle_ztnb",25,4.04,4.04,0,0,0.64
+"Rhode Island","sir","hurdle_ztpoisson",25,4.04,4.04,0,0,0.64
+"South Carolina","hsgp","hurdle_ztnb",25,4.78958181818182,7.48,3,-2,0.92
+"South Carolina","hsgp","hurdle_ztpoisson",25,5.14715757575758,7.08,2,-2,0.84
+"South Carolina","sir","hurdle_ztnb",25,6.0964,7.92,3,-3,0.88
+"South Carolina","sir","hurdle_ztpoisson",25,7.12327878787879,7.92,3,-3,0.48
+"South Dakota","hsgp","hurdle_ztnb",25,0.899218181818182,1.36,0,0,0.96
+"South Dakota","hsgp","hurdle_ztpoisson",25,1.00767878787879,1.4,0,0,0.88
+"South Dakota","sir","hurdle_ztnb",25,1.46947272727273,1.8,0,0,0.8
+"South Dakota","sir","hurdle_ztpoisson",25,1.04071515151515,1.48,0,0,0.88
+"Tennessee","hsgp","hurdle_ztnb",25,4.30908484848485,6.12,1,0,1
+"Tennessee","hsgp","hurdle_ztpoisson",25,5.44526666666667,6.5,1,0,0.96
+"Tennessee","sir","hurdle_ztnb",25,5.09295757575758,6.8,1,0,0.92
+"Tennessee","sir","hurdle_ztpoisson",25,5.18809090909091,6.56,0,0,0.84
+"Texas","hsgp","hurdle_ztnb",25,19.7954,32.42,9,-9,0.96
+"Texas","hsgp","hurdle_ztpoisson",25,27.3944787878788,34.6,9,-9,0.6
+"Texas","sir","hurdle_ztnb",25,29.2784545454545,34.38,9,-9,0.72
+"Texas","sir","hurdle_ztpoisson",25,32.4324848484849,34.6,9,-9,0.28
+"US","hsgp","hurdle_ztnb",25,594.688975757576,924,455,-455,0.72
+"US","hsgp","hurdle_ztpoisson",25,942.029078787879,986.98,456,-456,0
+"US","sir","hurdle_ztnb",25,950.593121212121,979.38,456,-456,0
+"US","sir","hurdle_ztpoisson",25,978.002636363636,978.72,456,-456,0
+"Utah","hsgp","hurdle_ztnb",25,2.74416363636364,3.42,0,0,0.92
+"Utah","hsgp","hurdle_ztpoisson",25,2.79961818181818,3.22,0,0,0.96
+"Utah","sir","hurdle_ztnb",25,2.91281212121212,3.56,0,0,0.92
+"Utah","sir","hurdle_ztpoisson",25,2.76193939393939,3.56,0,0,0.84
+"Vermont","hsgp","hurdle_ztnb",25,0.751545454545455,1.14,0,0,1
+"Vermont","hsgp","hurdle_ztpoisson",25,0.724175757575758,1.08,0,0,1
+"Vermont","sir","hurdle_ztnb",25,1.4,1.4,0,0,0.72
+"Vermont","sir","hurdle_ztpoisson",25,1.4,1.4,0,0,0.72
+"Virginia","hsgp","hurdle_ztnb",25,13.1824484848485,20.58,8,-8,0.76
+"Virginia","hsgp","hurdle_ztpoisson",25,17.3732121212121,21.62,8,-8,0.52
+"Virginia","sir","hurdle_ztnb",25,18.4262484848485,22.36,8,-8,0.76
+"Virginia","sir","hurdle_ztpoisson",25,19.6134181818182,22.44,8,-8,0.48
+"Washington","hsgp","hurdle_ztnb",25,4.62395151515152,6.34,2,0,0.96
+"Washington","hsgp","hurdle_ztpoisson",25,5.90069090909091,7,2,0,0.96
+"Washington","sir","hurdle_ztnb",25,5.18879393939394,6.92,2,0,1
+"Washington","sir","hurdle_ztpoisson",25,6.17490909090909,7,2,0,0.64
+"West Virginia","hsgp","hurdle_ztnb",25,0.866121212121212,0.86,0,0,1
+"West Virginia","hsgp","hurdle_ztpoisson",25,0.984593939393939,0.92,0,0,1
+"West Virginia","sir","hurdle_ztnb",25,0.861775757575758,0.92,0,0,0.92
+"West Virginia","sir","hurdle_ztpoisson",25,0.788109090909091,0.92,0,0,0.92
+"Wisconsin","hsgp","hurdle_ztnb",25,4.82766666666667,7.54,1,0,1
+"Wisconsin","hsgp","hurdle_ztpoisson",25,7.58902424242424,9.96,3,0,0.88
+"Wisconsin","sir","hurdle_ztnb",25,9.10751515151515,10.36,0,0,0.8
+"Wisconsin","sir","hurdle_ztpoisson",25,8.60293939393939,10.48,1,0,0.8
+"Wyoming","hsgp","hurdle_ztnb",25,2.11954545454545,2.44,1,0,0.72
+"Wyoming","hsgp","hurdle_ztpoisson",25,2.1428303030303,2.48,1,0,0.8
+"Wyoming","sir","hurdle_ztnb",25,2.52,2.52,1,0,0.44
+"Wyoming","sir","hurdle_ztpoisson",25,2.52,2.52,1,0,0.44

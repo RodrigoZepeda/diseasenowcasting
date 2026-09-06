@@ -146,45 +146,16 @@ simulate_both_signs_linelist <- function(n_days = 70, p_true = 0.65,
 
 # One fitting entry point for all three modes.
 fit_resolution <- function(linelist, now, likelihood = nb_likelihood(),
-                           n_draws = 200, negative_delay = NULL,
-                           validation_delay = NULL, .validation_mode = "auto", ...) {
+                           n_draws = 200, validation_delay = NULL,
+                           .validation_mode = "auto", ...) {
   tn <- as_validation_tbl_now(linelist, now)
-  # A parametric lag law when the two signs have different timescales (the
-  # competing-risks path does not take a Dirichlet), the Dirichlet otherwise.
-  validation_delay <- validation_delay %||%
-    (if (is.null(negative_delay)) dirichlet_validation(bins = 8) else lognormal_validation())
+  validation_delay <- validation_delay %||% dirichlet_validation(bins = 8)
   suppressMessages(suppressWarnings(nowcast(tn,
     model(likelihood, ar1_epidemic(), lognormal_delay(),
-          validation = validation_process(validation_delay, negative_delay = negative_delay,
+          validation = validation_process(validation_delay,
                                           mode = .validation_mode)),
     now = now, type = "one_stage", temporal_effects = "none",
     n_draws = n_draws, seed = 7, ...)))
-}
-
-# COMPETING RISKS: one resolution per report, but the two outcomes come back on
-# different timescales -- negatives fast, positives slow.  Then the age of a
-# pending report is informative about which way it will go.
-simulate_competing_risks_linelist <- function(n_days = 90, p_true = 0.6,
-                                              positive_lag_mean = 5,
-                                              negative_lag_mean = 1, seed = 91) {
-  set.seed(seed)
-  origin <- as.Date("2023-01-01")
-  lambda <- 45 * exp(0.8 * sin(2 * pi * seq_len(n_days) / 60))
-  per_day <- lapply(seq_len(n_days), function(day) {
-    n_gross <- stats::rpois(1, lambda[day] / p_true)
-    if (n_gross == 0) return(NULL)
-    appearance <- 1 + stats::rpois(n_gross, 3)
-    positive   <- stats::runif(n_gross) < p_true
-    lag <- ifelse(positive, stats::rpois(n_gross, positive_lag_mean),
-                            stats::rpois(n_gross, negative_lag_mean))
-    resolved <- origin + day - 1 + appearance + lag
-    data.frame(onset = origin + day - 1, reported = origin + day - 1 + appearance,
-      confirmed = as.Date(ifelse(positive,  as.numeric(resolved), NA), origin = "1970-01-01"),
-      retracted = as.Date(ifelse(!positive, as.numeric(resolved), NA), origin = "1970-01-01"))
-  })
-  list(linelist = do.call(rbind, per_day), now = origin + n_days - 1, origin = origin,
-       p_true = p_true, positive_lag_mean = positive_lag_mean,
-       negative_lag_mean = negative_lag_mean)
 }
 
 # The natural-scale resolution probability row of `parameters()`.  Its NAME depends on

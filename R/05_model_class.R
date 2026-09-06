@@ -37,11 +37,10 @@ model_class <- S7::new_class(
 
 #' Bayesian Nowcast Model
 #'
-#' Combines a likelihood, an epidemic process, and a delay distribution into a
-#' model object.  Arguments are positional: the first is the likelihood, the
-#' second the epidemic process, the third the delay.  Any argument can be
-#' omitted to use its default.
-#'
+#' Combines a likelihood, an epidemic process, a reporting-delay distribution,
+#' and an optional validation process into a model object. Arguments are
+#' positional: likelihood, epidemic process, reporting delay, then validation
+#' process. Any argument can be omitted by naming the later components.
 #' @param likelihood      A `likelihood_class` ([poisson_likelihood()] /
 #'   [nb_likelihood()]).  Default: [nb_likelihood()].
 #' @param epidemic        An `epidemic_process_class`.  Default: [hsgp_epidemic()].
@@ -70,6 +69,8 @@ model_class <- S7::new_class(
 #' model()
 #' model(poisson_likelihood(), hsgp_epidemic(gp_kernel = "matern52"))
 #' model(nb_likelihood(), ar1_epidemic(), lognormal_delay())
+#' model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
+#'       validation_process())
 #' model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
 #'       strata_pooling = "hierarchical")
 #'

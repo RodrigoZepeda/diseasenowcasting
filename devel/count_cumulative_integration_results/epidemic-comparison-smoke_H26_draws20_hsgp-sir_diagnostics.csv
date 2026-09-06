@@ -1,0 +1,5 @@
+"location","origin","clock","epidemic","model","nll","convergence","max_gradient","gradient_status","finite_fit","finite_prediction","leakage_ok","use_random","fit_seconds","warnings"
+"Alabama",2025-01-02,"calendar","hsgp","hurdle_ztnb",509.057978834346,0,0.00147635533554735,"pass",TRUE,TRUE,TRUE,FALSE,3.561,""
+"Alabama",2025-01-02,"calendar","hsgp","hurdle_ztpoisson",870.451838297391,0,0.0341163857443658,"pass",TRUE,TRUE,TRUE,FALSE,4.743,""
+"Alabama",2025-01-02,"calendar","sir","hurdle_ztnb",616.280055737232,0,0.00304877815583393,"pass",TRUE,TRUE,TRUE,FALSE,3.107,""
+"Alabama",2025-01-02,"calendar","sir","hurdle_ztpoisson",640.703571806613,0,0.00864654240352962,"pass",TRUE,TRUE,TRUE,FALSE,3.383,""

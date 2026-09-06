@@ -163,8 +163,47 @@ and prediction finiteness, `q_C` range, terminal retention, zero-projection
 counts, leakage assertions and origin-safe empirical comparison scores. It
 checkpoints after every job and exits nonzero if any hard gate fails.
 
-The sweep was still running when this summary was created. Its results must not
-be inferred from the smaller Texas subset or from the older prototype sweep.
+The sweep completed all 530 jobs and 2,120 fits after the recovery. All fits,
+predictions and leakage assertions were finite/passing. Every cumulative-level,
+hurdle-ZTNB and compressed-clock hurdle-ZTPoisson fit had optimizer code zero
+and maximum gradient below 0.1. Five calendar-clock hurdle-ZTPoisson fits, all
+for US at the five historical origins, remained finite but returned optimizer
+code one and maximum gradients from 0.552 to 9.676. The user chose to proceed
+with these as warning results because hurdle-ZTNB was stable. The production
+warning now displays the optimizer code/message and gradient and recommends
+`hurdle_ztnb`.
+
+### Prediction failure diagnosis and recovery
+
+The first full-sweep process later stopped after 428/530 jobs. Its checkpoint
+contained 36 prediction failures, all in cumulative Poisson/NB fits, with
+`missing value where TRUE/FALSE needed`. Reproduction with the original Alabama
+data and seeds localized the sequence:
+
+1. an unconstrained Gaussian Laplace draw placed the conditional retraction
+   delay almost entirely beyond `H=26`;
+2. every natural-scale CDF value on ages 1:26 underflowed to exactly zero;
+3. CDF differencing and normalization computed `0/0`, making the retraction PMF,
+   `h_R`, most of `S_R`, `q_C`, and `omega` non-finite;
+4. `rpois()` produced `NA`, after which `if (running_level < 0)` received `NA`.
+
+The reconstruction now forms finite-horizon bin probabilities from log CDF or
+log survival differences, selects the stable tail representation per numeric
+bin, and normalizes on the log scale. A regression test uses the exact
+tail-only parameter draw. All 36 recorded failures were then rerun with their
+original data, fit seed, prediction seed and 250 draws: 36/36 passed and zero
+failed. Results are in
+`devel/count_cumulative_integration_results/retry_prediction_failures_after_log_pmf_fix.csv`.
+
+The original checkpoint was preserved with suffix
+`.before_log_pmf_retry`. The 30 affected jobs' partial diagnostics and scores
+were removed recoverably, and the production runner resumed them in full before
+the remaining jobs. A ten-minute heartbeat watcher reports exact new failures
+or an unexpected stop. If the sweep completes cleanly it runs
+`devel/render_count_cumulative_state_results.R`, a separately checkpointed pass
+that uses `tbl.now::tidy()` to retain 90% prediction intervals, creates
+state-faceted plots for every model/clock, and reports per-state mean WIS, mean
+and median absolute error, median signed error, and 90% interval coverage.
 
 ## Independent review
 
@@ -173,3 +212,24 @@ equation-to-code-to-test map, dirty-diff caveats, old-path audit, exact test and
 optimization evidence, empirical subset table, known limitations and the
 required independent-review checklist.
 
+## Epidemic-process comparison
+
+The original full sweep and interval refits used `ar1_epidemic()`. A subsequent
+calendar-only comparison held all other settings fixed and crossed
+`hurdle_ztnb` and `hurdle_ztpoisson` with the package's default
+`hsgp_epidemic()` and `sir_epidemic()` constructors. The new runner is
+`devel/run_count_cumulative_epidemic_comparison.R`; it checkpoints every fit
+and retains `tbl.now::tidy()` 90% intervals in the same pass. The merger and
+plotter is `devel/render_count_cumulative_epidemic_comparison.R`.
+
+Of 1,060 HSGP/SIR fits, 1,059 completed. Ohio SIR hurdle-ZTPoisson at origin
+2025-04-26 failed every optimizer initialization with `NA/NaN function
+evaluation` / `NA/NaN gradient evaluation`; its state score therefore has 20
+targets rather than 25 and is visibly identified as incomplete. No target was
+imputed. All other state/process/model score rows have 25 targets.
+
+At the aggregate level, HSGP had the lowest mean WIS for both hurdle laws:
+25.182 for ZTNB and 34.591 for ZTPoisson. It was the lowest-WIS epidemic process
+in 42/53 state series for ZTNB and 36/53 for ZTPoisson. Full aggregate and
+per-state results, the incomplete-fit record, and plot links are in
+`devel/count_cumulative_integration_results/COUNT_CUMULATIVE_EPIDEMIC_COMPARISON.md`.

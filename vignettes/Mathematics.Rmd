@@ -318,6 +318,31 @@ test coming back the day it was ordered is ordinary. All three are the same
 generative object seen through different windows, so they share one likelihood;
 §8.2 gives the single parameter that switches between them.
 
+The software interface mirrors the three-axis data object. `tbl.now` supplies the
+event, report and validation date columns, the `validation_type` column, and the
+optional `is_censored_validation` column through attributes on the `tbl_now`.
+`nowcast()` reads those attributes directly; it has no parallel column-name
+arguments. In `tbl_now(..., is_censored_validation = result_is_upper_bound)`, the
+named logical column marks validation dates that are upper bounds rather than
+exact dates. The model is configured as
+
+```r
+model(
+  nb_likelihood(),
+  ar1_epidemic(),
+  lognormal_delay(),                 # event to report
+  validation = validation_process(
+    dirichlet_validation(),          # report to validation
+    mode = "auto")
+)
+```
+
+There is one validation-delay law in this first prototype. In either single-sign
+mode it is the lag for the sign that is recorded. In `mode = "both"` the same law
+is used for confirmations and retractions. Consequently, with both signs observed,
+the age of a pending report informs when it will resolve but not which sign it will
+have. Separate competing-risk lag laws are not fitted by this prototype.
+
 ### 8.1 What a missing resolution date means
 
 For case $i$ write $t_i$ for the event date, $r_i$ for the report date, $y_i$ for
@@ -660,6 +685,37 @@ $$\mathbb E[\Delta_t(d)]
 =\pi\frac{\alpha-\omega}{\alpha+\omega}
   \frac{\alpha+\omega}{\pi}
 =\alpha_t(d)-\omega_t(d).$$
+
+#### Skellam check and the role of confirmation
+
+Before adding the hurdle, the Poisson-process construction gives a useful exact
+one-age marginal. At a fixed age $d$, the reports entering the provisional count
+and the earlier reports withdrawn at that age are disjoint marked-Poisson classes:
+
+$$A_t(d)\sim\operatorname{Poisson}\{\alpha_t(d)\},\qquad
+  W_t(d)\sim\operatorname{Poisson}\{\omega_t(d)\},\qquad
+  A_t(d)\perp W_t(d).$$
+
+Therefore
+
+$$\Delta_t(d)=A_t(d)-W_t(d)
+  \sim\operatorname{Skellam}\{\alpha_t(d),\omega_t(d)\},$$
+
+with mean $\alpha_t(d)-\omega_t(d)$ and variance
+$\alpha_t(d)+\omega_t(d)$. This checks the signs and rates used by the hurdle
+construction. Under shared gamma frailty the corresponding marginal is the
+gamma-mixed Skellam (the package's SkNB calculation); additions and withdrawals
+are conditionally independent given that frailty.
+
+There is no third “confirmation update” in a count-cumulative provisional
+register. A report enters through $A_t(d)$ whether it will later be confirmed or
+retracted. Confirmation leaves that report in the level, while a negative
+validation produces the withdrawal counted by $W_t(d)$. Adding a separate
+confirmation intensity would count the same positive report twice. If a source
+publishes only confirmed totals, its confirmation date is the observation/report
+date and the ordinary event-to-observation delay model applies. When row-level
+reports and their positive/negative validation outcomes are both available, §8's
+marked validation likelihood is used instead of a Skellam likelihood.
 
 The product over ages is again a composite likelihood because updates from one
 event-time are dependent.
