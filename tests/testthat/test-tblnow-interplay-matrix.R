@@ -73,7 +73,9 @@ interplay_incidence <- function(data_type = "linelist",
   }
 
   if (identical(data_type, "linelist")) {
-    frame <- tidyr::uncount(frame, weights = n)
+    frame <- frame |>
+      dplyr::slice(rep(seq_len(nrow(frame)), times = frame$n)) |>
+      dplyr::select(-"n")
   }
 
   tbl.now::tbl_now(
