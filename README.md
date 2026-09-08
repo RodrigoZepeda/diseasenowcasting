@@ -12,6 +12,8 @@ coverage](https://codecov.io/gh/RodrigoZepeda/diseasenowcasting/graph/badge.svg)
 [![R-CMD-check](https://github.com/RodrigoZepeda/diseasenowcasting/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RodrigoZepeda/diseasenowcasting/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![R-universe
+version](https://RodrigoZepeda.r-universe.dev/diseasenowcasting/badges/version)](https://RodrigoZepeda.r-universe.dev/diseasenowcasting)
 <!-- badges: end -->
 
 `diseasenowcasting` is an R package for nowcasting time series of
@@ -80,7 +82,7 @@ age/region structure only, not arbitrary user-defined strata;
 <sup>🚧</sup> In development for `diseasenowcasting` (extending a
 nowcast into a forward forecast / scenario projection). Counts that
 revise *downward* (e.g. a positive later re-classified as negative) are
-supported from version 2.0.0 via `confirmation_process()` — see below.
+supported from version 2.0.0 via `revision_process()` — see below.
 </sub>
 
 ## Installing
@@ -220,7 +222,7 @@ You can access these quantities directly with `score`
 ``` r
 score(bt)
 #>                     model      wis overprediction underprediction dispersion
-#> 1       HSGP/nb/LogNormal 11.05991              0        6.722222   4.337685
+#> 1       HSGP/nb/LogNormal 11.40569              0        7.240741   4.164954
 #> 2 AR1/nb/GeneralizedGamma 11.54056              0        8.203704   3.336852
 #>   coverage_50 coverage_90       ape      mse n
 #> 1           0           1 0.7115873 1139.417 3
@@ -254,15 +256,15 @@ best_model_name(auto_ncast)
 # Get the scores for all the models
 comparison_scores(auto_ncast)
 #>                      model      wis overprediction underprediction dispersion
-#> 1        HSGP/nb/Dirichlet 8.295708     0.06666667        5.147778   3.081264
-#> 2        HSGP/nb/LogNormal 8.448542     0.06666667        5.220000   3.161875
-#> 3         AR1/nb/Dirichlet 8.512125     0.06666667        5.819444   2.626014
+#> 1        HSGP/nb/Dirichlet 8.256750     0.06666667        5.097778   3.092306
+#> 2        HSGP/nb/LogNormal 8.384931     0.06666667        5.236667   3.081597
+#> 3         AR1/nb/Dirichlet 8.580958     0.06666667        5.891667   2.622625
 #> 4 HSGP/nb/GeneralizedGamma 8.624472     0.06666667        5.330000   3.227806
 #> 5         AR1/nb/LogNormal 8.916250     0.05555556        5.916111   2.944583
 #>   coverage_50 coverage_90       ape   mse  n
-#> 1         0.3         0.9 0.7641435 676.1 10
+#> 1         0.3         0.9 0.7627546 667.4 10
 #> 2         0.2         0.9 0.7904566 664.6 10
-#> 3         0.0         0.8 0.7887334 650.7 10
+#> 3         0.0         0.8 0.7998651 666.8 10
 #> 4         0.1         0.9 0.7989751 738.0 10
 #> 5         0.1         0.8 0.7658455 714.1 10
 #>  [ reached 'max' / getOption("max.print") -- omitted 4 rows ]
@@ -288,10 +290,10 @@ as well as upward — for example when a suspected case is later
 re-classified as negative. The
 [FluSight](https://github.com/cdcepi/FluSight-forecast-hub) influenza
 hospitalisation data shipped with `tbl.now` is one such stream.
-`diseasenowcasting` handles these with a **confirmation process**:
-attach `confirmation_process()` to your `model()` and `nowcast()`
-automatically switches to the signed-increment (Skellam / SkNB)
-likelihood when the data are `"count-cumulative"`.
+`diseasenowcasting` handles these with a **revision process**: attach
+`revision_process()` to your `model()` and `nowcast()` automatically
+switches to the signed-increment (Skellam / SkNB) likelihood when the
+data are `"count-cumulative"`.
 
 ``` r
 data(flusight, package = "tbl.now")
@@ -313,7 +315,7 @@ flu_model <- model(
   likelihood   = nb_likelihood(),
   epidemic     = ar1_epidemic(),
   delay        = lognormal_delay(),
-  confirmation = confirmation_process()   # <- models the up- and down-revisions
+  cumulative = cumulative_process()   # <- models the up- and down-revisions
 )
 
 flu_ncast <- nowcast(flu_tbl, flu_model, n_draws = 1000)
@@ -333,8 +335,8 @@ California.*
 
 The confirmation probability `p` — the chance a report is genuine and
 never retracted — is estimated with a strong data-informed prior by
-default; pass `confirmation_process(p = 0.98)` to hold it fixed, or your
-own `beta_prior()` to change the prior. For several locations at once,
+default; pass `revision_process(p = 0.98)` to hold it fixed, or your own
+`beta_prior()` to change the prior. For several locations at once,
 declare the location column as `strata`: a single stratified `nowcast()`
 then shares the delay and confirmation structure across locations (which
 is both faster and, on FluSight, sharper than a separate fit per
@@ -385,7 +387,7 @@ each fit’s parameters plus its Laplace mode and precision — all
 save_nowcast(ncast, "dengue_nowcast.rds")
 
 restored <- load_nowcast("dengue_nowcast.rds")
-predict(restored)               # predict() / autoplot() / coef() / tidy() / model_parameters() all work
+predict(restored)               # predict() / autoplot() / coef() / parameters() all work
 nowcast(restored@data, restored@model)   # or re-fit from the bundled data
 ```
 

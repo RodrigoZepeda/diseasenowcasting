@@ -5,6 +5,7 @@
 *.o
 *.so
 logs/
+paper/
 *.log
 *.rds
 *.pdf
@@ -17,4 +18,11 @@ CUSTOM_COMPONENTS_PLAN.md
 CENSORED_POINT*.md
 SUPPLEMENT*.md
 Dockerfile
-devel/paper_sim
+
+# Development scratch: analysis scripts, diagnostics and their generated
+# results.  Kept on disk, never versioned -- `.Rbuildignore` already drops the
+# whole directory from the package build, so nothing here ships.
+devel/
+
+# Paper drafts live next to the code but are versioned in the manuscript repo.
+/*.tex

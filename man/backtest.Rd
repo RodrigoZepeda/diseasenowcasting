@@ -56,7 +56,12 @@ present-day nowcast).}
 
 \item{seed}{Optional base RNG seed.}
 
-\item{...}{Passed to \code{\link[=nowcast]{nowcast()}}.}
+\item{...}{Passed to \code{\link[=nowcast]{nowcast()}}.
+
+A \code{tbl_now} carrying a revision process needs nothing extra: the revision
+model is fitted at each as-of date, and the truth follows the inferred mode:
+confirmed records for \code{confirmation_only} / \code{both}, and records never
+retracted for \code{retraction_only} -- the settled count the model targets.}
 }
 \value{
 A \code{backtest_class} object.

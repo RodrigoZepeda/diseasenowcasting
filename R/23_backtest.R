@@ -49,6 +49,11 @@ backtest_class <- S7::new_class(
 #'   present-day nowcast).
 #' @param seed Optional base RNG seed.
 #' @param ... Passed to [nowcast()].
+#'
+#'   A `tbl_now` carrying a revision process needs nothing extra: the revision
+#'   model is fitted at each as-of date, and the truth follows the inferred mode:
+#'   confirmed records for `confirmation_only` / `both`, and records never
+#'   retracted for `retraction_only` -- the settled count the model targets.
 #' @returns A `backtest_class` object.
 #'
 #' @details
@@ -92,6 +97,22 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
   event_unit <- tbl.now::get_event_units(data)
   min_event  <- min(data[[event_col]], na.rm = TRUE)
   report_col <- tbl.now::get_report_date(data)
+  is_count_cumulative <- identical(
+    tbl.now::get_data_type(data), "count-cumulative"
+  )
+  cumulative_horizon <- NULL
+  if (is_count_cumulative) {
+    horizons <- vapply(models, function(candidate) {
+      if (!isTRUE(candidate@cumulative@active)) 26L
+      else as.integer(candidate@cumulative@settlement)
+    }, integer(1L))
+    if (length(unique(horizons)) != 1L) {
+      cli::cli_abort(
+        "Count-cumulative models in one backtest must use the same settlement horizon."
+      )
+    }
+    cumulative_horizon <- horizons[[1L]]
+  }
 
   # ── Truth-completeness horizon ───────────────────────────────────────────
   # An event date only has a complete eventual count once enough time has passed
@@ -100,7 +121,9 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
   ev_report <- .unit_steps(min_event, data[[report_col]], event_unit)
   delays_u  <- ev_report - ev_event
   delays_u  <- delays_u[is.finite(delays_u) & delays_u >= 0]
-  if (is.null(max_delay)) {
+  if (is.null(max_delay) && is_count_cumulative) {
+    max_delay <- cumulative_horizon
+  } else if (is.null(max_delay)) {
     max_delay <- if (length(delays_u) > 0)
       ceiling(stats::quantile(delays_u, 0.99, names = FALSE)) else 0
   }
@@ -141,9 +164,30 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
   }
 
   # Eventual truth: total incidence per event-time over ALL reports in `data`.
-  truth_inc  <- tbl.now::to_count(data, to = "count-incidence")
+  # Under a retraction model the target is the SETTLED count, so cases that are
+  # ultimately retracted must not be counted -- scoring against every reported row
+  # would make an unbiased model look biased low by the retraction rate.
+  # The full-data truth must match the revision estimand. Confirmation-only
+  # data can contain structurally unconfirmed rows (for example Probable cases),
+  # so treating every non-retracted row as truth would score the wrong target.
+  truth_source <- .revision_truth_source(data)
+  truth_inc <- if (is_count_cumulative) {
+    full_origin <- max(truth_source[[report_col]], na.rm = TRUE)
+    completed <- .prepare_count_cumulative_as_of(
+      truth_source, now = full_origin, settlement = cumulative_horizon
+    )
+    completed <- completed[completed$.delay == cumulative_horizon, , drop = FALSE]
+    as.data.frame(completed)
+  } else {
+    as.data.frame(tbl.now::to_count(truth_source, to = "count-incidence"))
+  }
   truth_evnum <- .unit_steps(min_event, truth_inc[[event_col]], event_unit)
-  truth_count <- as.numeric(truth_inc[[tbl.now::get_case_count(data) %||% "n"]] %||% truth_inc[["n"]])
+  truth_count <- if (is_count_cumulative) {
+    as.numeric(truth_inc[[tbl.now::get_case_count(data)]])
+  } else {
+    as.numeric(truth_inc[[tbl.now::get_case_count(data) %||% "n"]] %||%
+                 truth_inc[["n"]])
+  }
   truth_final <- tapply(truth_count, truth_evnum, sum)
   truth_by_evnum <- setNames(as.numeric(truth_final), as.integer(names(truth_final)))
 
@@ -177,6 +221,15 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
       pred_summary$date_run <- as_of
       pred_summary$final    <- truth_by_evnum[as.character(pred_summary$.event_num)]
       pred_summary$target   <- nc@target
+      pred_summary$inference_rung <- nc@rung
+      pred_summary$n_fits <- length(nc@fits)
+      gradient_values <- vapply(
+        nc@fits, function(candidate) candidate$max_gradient %||% NA_real_,
+        numeric(1L)
+      )
+      pred_summary$max_gradient <- if (any(is.finite(gradient_values))) {
+        max(gradient_values[is.finite(gradient_values)])
+      } else NA_real_
       list(summary = pred_summary,
            sims = if (return_simulations) predict(nc, n_draws = n_draws)@draws else NULL)
     }, error = function(e) NULL)   # a failed cell contributes nothing
@@ -192,11 +245,41 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
                  results = summaries, simulations = sims)
 }
 
+#' Full-data truth source for the revision mode carried by a tbl_now
+#'
+#' Confirmation-only and both-outcome models target positive resolutions, so
+#' only confirmed rows enter their observable final truth. Retraction-only data
+#' target reports that are never retracted, so unresolved rows remain included.
+#' @keywords internal
+#' @noRd
+.revision_truth_source <- function(data) {
+  if (!isTRUE(.tblnow_has_revision(data))) return(data)
+
+  type_col <- .tblnow_get_revision_type(data)
+  date_col <- .tblnow_get_revision_date(data)
+  frame <- as.data.frame(data)
+  outcomes <- as.character(frame[[type_col]])
+  mode <- .infer_revision_mode(outcomes, frame[[date_col]])
+
+  if (is.na(mode)) return(data)
+  keep <- if (mode %in% c("confirmation_only", "both")) {
+    !is.na(outcomes) & outcomes == "confirmed"
+  } else {
+    is.na(outcomes) | outcomes != "retracted"
+  }
+  data[which(keep), , drop = FALSE]
+}
+
 #' Human-readable label for a model (epidemic / likelihood / delay).
 #' @keywords internal
 #' @noRd
 .model_label <- function(model) {
-  paste(model@epidemic@name, model@likelihood@name, model@delay@name, sep = "/")
+  base <- paste(model@epidemic@name, model@likelihood@name,
+                model@delay@name, sep = "/")
+  if (isTRUE(model@cumulative@active)) {
+    paste(base, model@cumulative@observation,
+          paste0("H", model@cumulative@settlement), sep = "/")
+  } else base
 }
 
 #' Predictions table from a backtest (the per-(date, model, event) summaries)

@@ -28,7 +28,9 @@ jobs:
           use-public-rspm: true
           extra-repositories: >-
             https://epinowcast.r-universe.dev,
-            https://kaskr.r-universe.dev
+            https://kaskr.r-universe.dev,
+            https://davisvaughan.r-universe.dev,
+            https://rodrigozepeda.r-universe.dev
 
       - name: Setup pandoc
         uses: r-lib/actions/setup-pandoc@v2

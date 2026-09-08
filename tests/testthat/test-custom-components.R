@@ -113,7 +113,7 @@ test_that("validate_custom_* reject objects of the wrong class", {
 
 test_that("validate_custom_epidemic never crashes R and errors cleanly if taping fails", {
   # A well-formed intensity_fn using cumsum()/matrix() on an advector.  Under
-  # R CMD check (package attached) this tapes and validation succeeds; under
+  # R CMD check (package attached) this tapes and revision succeeds; under
   # covr / load_all the AD vector-op dispatch is inactive so MakeADFun fails --
   # but validate_custom_epidemic must catch it and raise a clean cli error, never
   # abort the R session.  This exercises the tape-failure branch under covr.

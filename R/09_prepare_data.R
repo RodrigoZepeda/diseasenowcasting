@@ -26,16 +26,38 @@
 #' @param gp_boundary_frac Fraction of the HSGP domain placed left of the data.
 #'   Default 0.62.
 #' @param ar_sigma_max Upper bound on the AR/beta RW innovation SD. Default 1.
-#' @param is_confirmation If TRUE, the data are count-cumulative signed increments
-#'   and the engine is built for the confirmation (Skellam / SkNB) likelihood
-#'   instead of the standard count likelihood. Default FALSE.
+#' @param is_confirmation Deprecated legacy switch.  `TRUE` now errors; use the
+#'   dedicated `count_cumulative` model component and cumulative arguments.
+#' @param cumulative_levels Optional cumulative levels aligned row-for-row with
+#'   `m`; used only by the dedicated count-cumulative composites.
+#' @param cumulative_previous_nonzero Optional indicators, aligned with `m`,
+#'   that the preceding signed update was non-zero.
+#' @param cumulative_settlement Optional positive integer settlement horizon
+#'   `H`. It is required for count-cumulative preparation.
+#' @param resolution_mode `0L` when the resolution observed is a RETRACTION (the
+#'   default), `1L` when it is a CONFIRMATION. Sets the support of the resolution
+#'   lag and what a resolved row means for the nowcast target.
+#' @param retraction Optional list of linelist-retraction sufficient statistics
+#'   from `.linelist_retraction_stats()`. When supplied, the engine carries the
+#'   cure-model observation block (see 31_retraction_likelihood.R). Default NULL.
 #' @param ... Reserved.
 #' @returns A named list of engine inputs.
 #' @export
 prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
                          delay_only = FALSE, max_time = NULL, num_strata = NULL,
                          gp_L = 1.5, gp_boundary_frac = 0.62,
-                         ar_sigma_max = 1, is_confirmation = FALSE, ...) {
+                         ar_sigma_max = 1, is_confirmation = FALSE,
+                         cumulative_levels = NULL,
+                         cumulative_previous_nonzero = NULL,
+                         cumulative_settlement = NULL,
+                         retraction = NULL, resolution_mode = 0L, ...) {
+  if (isTRUE(is_confirmation)) {
+    cli::cli_abort(c(
+      "The legacy count-cumulative `is_confirmation` engine has been removed.",
+      "x" = "It estimated a fixed-`p` Skellam/SkNB model that is not identified by cumulative streams.",
+      "i" = "Use `model(cumulative = cumulative_process(...))` and prepare through `nowcast()` or `prepare_from_tbl_now()`."
+    ))
+  }
   if (!S7::S7_inherits(model, model_class))
     cli::cli_abort("`model` must be a model_class object (use model()).")
   if (!is.matrix(m) || ncol(m) < 3L)
@@ -115,13 +137,8 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
   case_counts <- count_matrix(m) + count_matrix(m_censored)
   casemax <- max(abs(case_counts), na.rm = TRUE)
 
-  # -- confirmation (count-cumulative) increment array --------------------------
-  # For the signed-increment Skellam / SkNB likelihood, reshape the (signed) `m`
-  # rows into a [max_time x (max_delay + 1) x num_strata] array of increments
-  # m_t^d (0 where a (time, delay, stratum) cell is unobserved within the horizon).
-  # `case_counts` (the sum over delays) is then the observed cumulative C_t(d*),
-  # which the predictive completes to the final count.  Off unless the data are
-  # count-cumulative.
+  # Legacy storage remains inert for compatibility with old serialized engine
+  # lists.  New cumulative paths use the explicit arrays and mask below.
   increment_array   <- NULL
   max_conf_delay    <- 0L
   if (isTRUE(is_confirmation) && nrow(m) > 0) {
@@ -135,6 +152,43 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
       strata_index    <- if (ncol(m) >= 4L) as.integer(m[row_index, 4]) else 1L
       increment_value <- m[row_index, 2]
       increment_array[time_index, delay_index, strata_index] <- increment_value
+    }
+  }
+
+
+  # -- revised count-cumulative observation arrays -----------------------------
+  # Only rows explicitly completed inside the as-of triangle are marked observed.
+  # Every other array cell remains masked; its numeric zero is storage only and
+  # must never contribute to a likelihood.
+  is_count_cumulative <- !is.null(cumulative_levels)
+  settlement_horizon <- if (is_count_cumulative) {
+    .validate_settlement_horizon(cumulative_settlement)
+  } else 0L
+  cumulative_level_array <- signed_update_array <-
+    previous_nonzero_array <- age_array <- observation_mask <- NULL
+  if (is_count_cumulative) {
+    if (length(cumulative_levels) != nrow(m) ||
+        length(cumulative_previous_nonzero) != nrow(m)) {
+      cli::cli_abort("Count-cumulative level/update metadata must align one-to-one with `m` rows.")
+    }
+    array_dim <- c(max_time, settlement_horizon + 1L, num_strata)
+    cumulative_level_array <- array(0.0, dim = array_dim)
+    signed_update_array <- array(0.0, dim = array_dim)
+    previous_nonzero_array <- array(0.0, dim = array_dim)
+    age_array <- array(-1L, dim = array_dim)
+    observation_mask <- array(FALSE, dim = array_dim)
+    for (row_index in seq_len(nrow(m))) {
+      time_index <- as.integer(m[row_index, 1L])
+      delay_index <- as.integer(m[row_index, 3L])
+      strata_index <- if (ncol(m) >= 4L) as.integer(m[row_index, 4L]) else 1L
+      if (delay_index < 1L || delay_index > settlement_horizon + 1L) next
+      cumulative_level_array[time_index, delay_index, strata_index] <-
+        cumulative_levels[row_index]
+      signed_update_array[time_index, delay_index, strata_index] <- m[row_index, 2L]
+      previous_nonzero_array[time_index, delay_index, strata_index] <-
+        cumulative_previous_nonzero[row_index]
+      age_array[time_index, delay_index, strata_index] <- delay_index - 1L
+      observation_mask[time_index, delay_index, strata_index] <- TRUE
     }
   }
 
@@ -168,6 +222,41 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     # confirmation (count-cumulative) signed-increment likelihood
     is_confirmation = as.integer(isTRUE(is_confirmation)),
     increment_array = increment_array, max_conf_delay = max_conf_delay,
+    is_count_cumulative = as.integer(is_count_cumulative),
+    count_cumulative_observation = if (is_count_cumulative &&
+      isTRUE(model@cumulative@active)) switch(
+        model@cumulative@observation,
+        cumulative = 1L, hurdle_ztnb = 2L, hurdle_ztpoisson = 3L
+      ) else 0L,
+    settlement_horizon = settlement_horizon,
+    cumulative_level_array = cumulative_level_array,
+    signed_update_array = signed_update_array,
+    observation_mask = observation_mask,
+    age_array = age_array,
+    previous_nonzero_array = previous_nonzero_array,
+    # linelist retractions (cure-model block).  `case_counts` above already counts
+    # EVERY row -- standing and already-retracted alike -- which is exactly the
+    # k_t the count block models; `standing_counts` is the smaller, currently-on-
+    # the-books total that the posterior predictive starts from.
+    is_linelist_retraction = as.integer(!is.null(retraction)),
+    resolution_mode        = as.integer(resolution_mode),
+    retract_table          = retraction$retract_table,
+    standing_table         = retraction$standing_table,
+    censored_patterns      = retraction$censored_patterns,
+    n_retracted_by_stratum = retraction$n_retracted_by_stratum %||% numeric(0),
+    n_retracted            = retraction$n_retracted            %||% 0,
+    n_positive_by_stratum  = retraction$n_positive_by_stratum  %||% numeric(0),
+    n_negative_by_stratum  = retraction$n_negative_by_stratum  %||% numeric(0),
+    n_positive             = retraction$n_positive             %||% 0,
+    n_negative             = retraction$n_negative             %||% 0,
+    n_standing             = retraction$n_standing             %||% 0,
+    n_censored             = retraction$n_censored             %||% 0,
+    standing_rows          = retraction$standing_rows,
+    standing_censored_rows = retraction$standing_censored_rows,
+    standing_counts        = retraction$standing_counts,
+    resolved_counts        = retraction$resolved_counts,
+    max_report_age         = retraction$max_report_age         %||% 0L,
+    retract_grid_max       = retraction$max_grid               %||% 0L,
     # delay aggregation (per-time censoring)
     obs_delays = exact_agg$obs_delays, row_sums_exact = exact_agg$row_sums, col_sums_exact = exact_agg$col_sums,
     obs_delays_cens = censored_agg$obs_delays, row_sums_cens = censored_agg$row_sums, col_sums_cens = censored_agg$col_sums,

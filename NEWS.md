@@ -1,3 +1,171 @@
+# 2.3.0
+
+## Breaking: tbl.now revision vocabulary is now the package vocabulary
+
+The report-level post-report component is now called a revision process
+everywhere. The exported API is `revision_process()`, `model(revision = )`,
+`revision_delay =`, and the `*_revision()` delay aliases. Older spellings are
+removed rather than deprecated.
+
+`diseasenowcasting` now depends on `tbl.now (>= 0.35.0)` and reads the current
+tbl.now revision metadata directly: `revision_date`, `revision_type`, and
+`is_censored_revision`.
+
+## Breaking: `model_parameters()` is now `parameters()`, and `tidy()` belongs to tbl.now
+
+Version 2.1.0 moved the per-parameter table to `model_parameters()` and defined
+a `tidy()` here that returned the nowcast. Both halves of that are now revised.
+
+* `model_parameters()` is renamed **`parameters()`**. It is the same table
+  (`term`, `estimate`, `std.error`, `conf.low`, `conf.high`, `type`) and the
+  same `conf.level` argument; only the name changed. The old name is removed
+  rather than deprecated.
+* Standard errors are fixed. The interval was computed with `base::diag()` on
+  the sparse solve of the precision matrix, which errors out and left
+  `std.error` `NA` for **every** parameter. It now uses `Matrix::diag()`, and
+  falls back to marginal SDs estimated from Laplace draws when the precision
+  matrix is too large or too ill-conditioned to invert.
+* **`tidy()` is no longer defined in this package.** `tbl.now (>= 0.35.0)`
+  exports the shared generic and registers the `diseasenowcasting` method
+  itself, so `tidy()` on a fit still returns the cross-package nowcast table
+  described under 2.1.0 -- it is simply no longer our code, and we no longer
+  register a method on a generic we do not own.
+
+## Breaking: cumulative model configuration is now `cumulative_process()`
+
+The count-cumulative model component is now configured with
+`cumulative_process()` and passed as `model(cumulative = )`. Automatic
+count-cumulative model selection remains inside `nowcast()`: when a
+`tbl_now` has `data_type = "count-cumulative"` and no explicit cumulative
+component, `nowcast()` selects the default signed hurdle--ZTNB cumulative model.
+
+Count-cumulative data consume signed changes in the cumulative trajectory only.
+Any `revision_date` metadata on such objects is treated as data provenance, not
+as an individual report-level revision likelihood.
+
+## Default model selection
+
+`nowcast(type = "auto")` continues to select a fitting strategy automatically,
+but the user-facing default remains `type = "two_stage"`. All automatic
+selection for the diseasenowcasting backend lives in
+`diseasenowcasting::nowcast()`; `tbl.now::run_nowcast()` passes the `tbl_now`
+and engine arguments through without injecting model components.
+
+# 2.2.0
+
+## Breaking: the revision process is now the revision process
+
+The optional component describing what happens to a report *after* it is filed --
+a laboratory result comes back, and the report is either confirmed or retracted --
+is called a **revision** process throughout, matching `tbl.now` 0.28.0. The old
+spellings are gone, not deprecated.
+
+| was | is |
+|---|---|
+| `revision_process()`, `resolution_process()` | `revision_process()` |
+| `model(revision = )` | `model(revision = )` |
+| `retract_delay = `, `resolution_delay = ` | `revision_delay = ` |
+| `lognormal_retraction()` / `_confirmation()` / `_resolution()` | `lognormal_revision()` |
+| `gamma_*`, `generalized_gamma_*`, `dirichlet_*` (three spellings each) | one `*_revision()` each |
+
+Twelve lag constructors become four. The **outcome values are unchanged**: a case
+is still `"confirmed"`, `"retracted"` or `"pending"`. Revision is what the
+process does; confirmed is one of the things it can conclude.
+
+## Breaking: the revision process is detected, not requested
+
+`nowcast()` no longer takes `retraction_date`, `confirmation_date`,
+`retraction_censored` or `confirmation_censored`. It reads the process off the
+data instead, in the two places it can be:
+
+* the `tbl_now` carries `revision_date` / `revision_type` (see
+  `tbl.now::add_revision_date()`).
+
+```r
+# before
+nowcast(data, model(), retraction_date = "retracted")
+
+# now
+data <- tbl.now::add_revision_date(data, retracted, revision_type = outcome)
+nowcast(data, model())
+```
+
+Revision censoring is also read from the `tbl_now` object's
+`is_censored_revision` attribute. There is no parallel column-name argument in
+`nowcast()`; event, report, revision, outcome, and censoring metadata all have
+one source of truth.
+
+**The mode is inferred from the data.** `unique(revision_type)` over the
+**full** data -- not the as-of view -- decides between `confirmation_only`,
+`retraction_only` and `both`, so the mode is a stable property of the data source
+and cannot flip between backtest dates. Assert it with
+`revision_process(mode = )` when you want the check rather than the inference:
+an assertion the data cannot support is an error, whereas inference with no
+evidence falls back to the ordinary count model.
+
+A revision **date with an `NA` `revision_type`** is now an error. The report
+has resolved but its sign is unknown, so it cannot enter either lag law.
+
+`backtest()` needs nothing extra either: the truth is built from the cases that
+settle positive (confirmed, or never retracted), with pending cases kept --
+"not resolved yet" is not "not a case".
+
+The `nowcast_class` stores the resolved `@revision_mode` (`"none"`,
+`"confirmation_only"`, `"retraction_only"`, or `"both"`). Date and censoring
+column metadata remain on its `tbl_now` data.
+
+## Documentation
+
+`vignette("Retractions_and_confirmations")` is now
+**`vignette("Revision_processes")`**, rewritten around the detected process
+rather than the old column arguments. The old name is gone, like the old API.
+
+## Breaking: `tidy()` is now `parameters()`
+
+`tidy()` on a nowcast gives you the **nowcast** -- the predicted counts, through
+`tbl.now`'s method for the broom generic. The parameter table is
+`parameters()`. This package used to own the generic and answer the second
+question under the first one's name; `tbl.now`'s `.onLoad()` takes it over now
+that the method is gone.
+
+```r
+coef(nc)          # unchanged
+parameters(nc)    # was tidy(nc)
+tidy(nc)          # now tbl.now's: the nowcast itself
+```
+
+## count-cumulative data
+
+The old fixed-`p` Skellam/SkNB implementation is replaced by a dedicated
+`cumulative_process()` component. A cumulative stream identifies the
+unconditional finite-age kernel `h_R`, not a biological truth probability and a
+conditional revision-delay law separately. An old cumulative specification
+using `revision_process()` is translated once to the collapsed kernel with a
+targeted deprecation warning; the old likelihood is not used.
+
+Three observation composites are selectable:
+
+* `"cumulative"`: Poisson or negative-binomial cumulative-level marginals;
+* `"hurdle_ztnb"`: signed updates with a structural zero and a
+  zero-truncated-NB magnitude indexed by its own mean; and
+* `"hurdle_ztpoisson"`: the same hurdle/sign construction with a
+  zero-truncated-Poisson magnitude indexed by `(alpha + omega) / pi` and no
+  magnitude dispersion.
+
+The settlement horizon `H` is configurable and defaults to 26 model steps.
+Predictions target `C_t(H)`, finite-horizon database retention, and are anchored
+to the level observed at the analysis origin. Completed zeroes inside the as-of
+triangle are scored; future cells are masked. The products over levels or signed
+updates are composite likelihoods, and the current pseudo-posterior intervals do
+not include sandwich/Godambe calibration.
+
+## Fixed: `prior_only = TRUE` returned all-`NA` draws for cumulative data (#129)
+
+The prior sampler now supplies the collapsed-kernel and model-specific hurdle
+parameters. `hurdle_ztpoisson` deliberately supplies no magnitude dispersion.
+A sampler that cannot reconstruct any draw aborts with the captured first error
+instead of returning a correctly shaped but entirely missing result.
+
 # 2.1.0
 
 ## `tidy()` now returns the nowcast, and uses the shared `generics` generic
@@ -32,38 +200,170 @@ not have to special-case this package.
 
 # 2.0.0
 
+## Resolution processes: confirmation as well as retraction
+
+A report is rarely a case outright — it is provisional, and **resolved exactly
+once**: a test comes back, and it is either positive (the case is *confirmed*) or
+negative (the case is *retracted*). Nothing is confirmed and then later retracted.
+What differs between surveillance systems is only which resolutions get a date
+column, and `diseasenowcasting` now handles all three possibilities under one
+likelihood:
+
+| | **retraction only** | **confirmation only** | **both** |
+|---|---|---|---|
+| dates recorded | the negatives | the positives | both signs |
+| a missing date means | not retracted **yet** | not confirmed **yet** | not resolved **yet** |
+| target | reports never retracted | reports eventually confirmed | reports resolving positive |
+| lag support | `{1, 2, ...}` | `{0, 1, ...}` | `{0, 1, ...}` |
+| argument | `retraction_date =` | `confirmation_date =` | both |
+
+The lag support differs only because a *retraction* in the same period as its
+report describes a case never visible in any data vintage, whereas a test coming
+back the day it was ordered is ordinary.
+
+* `nowcast(confirmation_date = , confirmation_censored = )` mirrors the retraction
+  pair, with the same censoring, stratified-`p` and `g_C`-family support.
+* The sign of the evidence flips. Under retraction the longer a report stands
+  unretracted the more likely it is genuine (`rho(j)` rises); under confirmation
+  the longer it sits unconfirmed the more likely it never will be (`rho(j)`
+  falls). Confirmed rows enter the nowcast with certainty; retracted rows with
+  probability zero.
+* New lag constructors `lognormal_confirmation()`, `gamma_confirmation()`,
+  `generalized_gamma_confirmation()`, `dirichlet_confirmation()`.
+* **`count-incidence` data are supported for both modes**: one row per distinct
+  `(event, report, resolution)` with a case count, `NA` marking the unresolved.
+  Every statistic is a weighted tally, so the aggregated form and the linelist
+  give bit-identical engines and log-likelihoods.
+* **`count-cumulative` data are not row-level revision data.** As of 2.2.0
+  they use `cumulative_process()` and the collapsed finite-age retraction
+  kernel described above.
+* **Both outcome values in one revision column** fit the full process: a report
+  is resolved exactly once and the resolution is either positive (confirmed) or negative (retracted),
+  as when a test comes back. Seeing the sign is strictly more informative than
+  inferring it from the censoring: `p` collapses to a plain binomial on the
+  resolved rows (`N+ / (N+ + N-)`, no censoring correction), an unresolved row
+  contributes only `1 - G_C(j)`, free of `p`, and it enters the nowcast with
+  probability `p` **flat in its age** — with a shared lag law the age says nothing
+  about which way a pending test will go.
+* The first prototype uses one revision-delay law. In a single-outcome mode it
+  is the lag of that outcome; with both outcomes recorded it is shared by positive
+  and negative resolutions. Separate competing-risk lag laws are outside this
+  prototype.
+* Not implemented, and named as such in the vignette: the **two published
+  streams** count-cumulative model (a source publishing the reported *and*
+  confirmed cumulatives, which does identify `p` and `g_K` apart).
+* New vignette: `vignette("Retractions_and_confirmations")`, written for
+  practitioners; the derivation stays in `vignette("Mathematics")` section 8.
+
+## Verified for the negative binomial
+
+The resolution blocks were derived by Poisson colouring, which raises the fair
+question of whether they hold under `nb_likelihood()`. They do, and it is now
+tested rather than asserted: conditional on the shared gamma frailty the
+trajectory-type counts are independent Poisson, so the split of the rows across
+types is multinomial and **free of the frailty size `r`** — checked by Monte Carlo
+across `r` from 0.5 to 1e6. The count block is then the ordinary negative-binomial
+`S_k`, and no quadrature is needed. `p` comes out identical under Poisson and NB
+(it lives entirely in the frailty-free block), which is also tested.
+
+### The negative-binomial predictive is wider than nominal — diagnosed, fix opt-in
+
+On data simulated with a genuine per-origin gamma frailty, NB predictive
+intervals cover far more than they should at recent horizons (50% intervals
+covering ~0.77, 95% covering ~1.00, against Poisson's ~0.49 / ~0.94). It
+reproduces identically on a plain nowcast with no retractions, so it is
+package-wide and predates this work.
+
+**Cause, now confirmed rather than suspected.** `predict()` draws the count still
+to come from the *prior* frailty `Gamma(r, r)`. That gives the correct *marginal*
+spread — which is why it survives casual checks — but a predictive must be
+conditional on what has already been seen, and the `k_t` reports already in hand
+pin that origin's frailty down. Simulated exactly, with true parameters and
+conditioning on `k`: the true future SD is 11.6, the prior draw gives 32.6, and
+the conjugate posterior `Gamma(r + k_t, r + E[observed])` gives 11.6.
+
+**The fix is implemented but off by default**, behind
+`options(diseasenowcasting.conditional_frailty = TRUE)`. Switching it on fixes the
+calibration on data simulated from the model (50% coverage 0.77 → 0.51, intervals
+~40% narrower). But on the real dengue / mpox / COVID benchmark it made mean WIS
+*worse* on every disease (COVID 11.1 → 160.4) at essentially unchanged coverage:
+the epidemic mean is always somewhat misspecified on real data, and the prior
+draw's extra width was quietly absorbing that. Sharper intervals around a
+slightly-off centre score worse. The default therefore reproduces the published
+benchmarks exactly, and the option is there for anyone who wants the theoretically
+correct predictive. Resolving the underlying misfit is separate work.
+
+## `tidy()` reports uncertainty again
+
+`tidy()` returned `NA` for every standard error on any joint AR(1) / HSGP fit —
+`diag()` was being called on a sparse `Matrix`, which errors, and the surrounding
+`tryCatch` turned the whole column into `NA`s. Fixed, with a Laplace-sampling
+fallback for precision matrices too large or ill-conditioned to invert. `tidy()`
+also now reports `confirm_p` (or `confirm_p[<stratum>]`) on the **natural scale**,
+with the exact transformed credible interval rather than a logit-scale one.
+
+## Linelist data with retractions
+
+A linelist can now carry a **retraction date** — the date a reported case was
+withdrawn from the register (reclassified, corrected, a duplicate) — and
+`diseasenowcasting` will nowcast the **settled** count: cases that are reported
+and never retracted.
+
+* `nowcast(retraction_date = "<column>")` switches the observation model on. A
+  missing retraction date is read as *not retracted yet*, not as *genuine*: the
+  retraction lag of a standing row is right-censored at the age of its report, so
+  the retraction block is a Berkson–Gage **mixture-cure** likelihood with cure
+  fraction `p`. Retractions dated after `now` are masked out automatically.
+* The row-level retraction structure uses `p` (the probability a report is
+  genuine) and a revision lag. Left alone, `nowcast()` attaches a sensible
+  default. A linelist identifies `p` directly from resolved and standing rows,
+  so it gets a **weak** data-informed Beta prior. Count-cumulative data no longer
+  use this decomposition; see the 2.2.0 migration entry.
+* New retraction-delay constructors — `lognormal_retraction()`,
+  `gamma_retraction()`, `generalized_gamma_retraction()`,
+  `dirichlet_retraction()` — so a model reads as what it is. They are aliases of
+  the `*_delay()` constructors; the difference is the support, `g_C` living on
+  `{1, 2, ...}`. **Prefer `dirichlet_retraction()` when counts are large**: the
+  correction `rho(j)` is applied to every standing case, so a *shape* error in
+  `g_C` biases the nowcast by more than its Monte-Carlo noise. On a COVID series
+  of ~8000 cases/day a lognormal `g_C` fitted to a `1 + Poisson(2)` lag left a
+  0.9% bias and lost nominal coverage; the Dirichlet recovered `rho` to four
+  decimals.
+* **Per-stratum `p`** via `revision_process(stratified_p = TRUE)`: each
+  stratum gets its own confirmation probability under a shared prior, while `g_C`
+  stays shared. Use it when strata plausibly differ in data quality and each has
+  enough retractions; with sparse strata the shared `p` is safer.
+* **Partially observed rows are supported**, in every combination. A censored
+  report date (`tbl.now`'s `is_censored`) and/or a censored retraction date (a new
+  `retraction_censored =` column of flags, marking rows whose retraction date is
+  an upper bound) contribute the log of a sum over the appearance delays they are
+  compatible with. Note that an exact retraction *also bounds* a censored report —
+  a case cannot be withdrawn before it is filed — so the two constraints combine.
+  Each kernel collapses to the exact-row term when its interval is a single point.
+* The posterior predictive thins the standing rows one by one: a row whose report
+  is `j` periods old survives into the nowcast with probability
+  `rho(j) = p / (p + (1 - p) * (1 - G_C(j)))`. Already-retracted rows contribute
+  nothing.
+* Negative-binomial over-dispersion needs **no quadrature** here — the gamma
+  frailty cancels out of the row-level split, so the count block is the ordinary
+  NB and the retraction block is closed form.
+* With no retraction column, an all-`NA` one, or no retraction observed by `now`,
+  the fit is bit-for-bit the ordinary count model.
+* `backtest()` builds its truth from the cases that were never retracted when
+  `retraction_date` is passed through — scoring against every reported row would
+  make an unbiased model look biased low by the retraction rate.
+* Cases retracted in the *same period* as their report are dropped: they were
+  never visible in any data vintage, and `g_C` lives on `{1, 2, ...}`.
+* See the new section 8 of the *Mathematical Foundations* vignette for the
+  derivation, and `devel/benchmark_retraction.R` for the dengue / mpox / covid
+  benchmark against ignoring or naively dropping the retracted rows.
+
 ## Count-cumulative data: counts that can revise *up and down*
 
-`diseasenowcasting` now nowcasts **count-cumulative** surveillance streams — the
-running cumulative total for each event-time, re-reported over time, where later
-reports may revise a total **downward** as well as upward (e.g. a suspected case
-later re-classified as negative, as in the FluSight hospitalisation forecasts).
-
-* New `confirmation_process()` model component describes the down-revision
-  (retraction) side of the stream. Attach it to a `model()` via the
-  `confirmation` argument. It carries a retraction delay (`retract_delay`, any
-  `delay_process()`) and a confirmation probability `p` (the probability a report
-  is genuine and never retracted). `p` is specified exactly like a delay
-  parameter: leave it unset for a strong **data-informed** default prior, pass a
-  `beta_prior()` to estimate it, or pass a single numeric in `(0, 1]` to hold it
-  fixed.
-* `nowcast()` **auto-detects** count-cumulative data (via
-  `tbl.now::get_data_type()`) and switches the observation model to the
-  signed-increment **Skellam** (Poisson) / **SkNB** (negative-binomial, gamma
-  frailty) likelihood. The same `model()` → `nowcast()` → `predict()` /
-  `autoplot()` workflow applies; every epidemic process (HSGP, AR(1), SIR,
-  custom), delay family, covariate, temporal effect and stratum works as before.
-* At `p = 1` the confirmation layer is inert and the model reduces exactly to the
-  standard right-censored count model, so nothing changes for ordinary
-  count-incidence / linelist data.
-* The mathematics are derived in the
-  [Mathematical Foundations](https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.html)
-  vignette (new §8), and a worked FluSight example is in the
-  [Introduction](https://rodrigozepeda.github.io/diseasenowcasting/articles/introduction.html)
-  vignette and the README.
-
-This is a major feature addition; the version is bumped to `2.0.0`. Existing code
-is unaffected.
+Version 2.0.0 introduced the initial count-cumulative experiment. Its original
+fixed-`p` Skellam/SkNB formulation is superseded by the 2.2.0 migration entry
+above. Current code uses `cumulative_process()`, targets finite-horizon
+retention, and does not estimate or report cumulative `p`.
 
 # 1.3.2
 
@@ -102,7 +402,8 @@ is unaffected.
   `n_draws`, no RTMB needed -- even for custom delays/epidemics), and can be
   re-fit from its `model` + bundled data. `load_nowcast(file, rebuild = TRUE)`
   also re-tapes the objective (no re-optimization) when a live tape is needed.
-* Removed the `censor_delays_above()` function as it now lives in `tbl.now`.
+* Removed the old `censor_delays_above()` spelling. The function now lives in
+  `tbl.now` as `censor_reporting_delays_above()`.
   It remains available with the same signature because `tbl.now` is a dependency
   (attached whenever `diseasenowcasting` is).
 * Improved documentation and badges with `lifecycle`. 

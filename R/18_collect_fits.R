@@ -42,11 +42,11 @@
   # estimated jointly), regardless of the requested `type`.
   if (model@delay@num_id == 5L) type <- "one_stage"
 
-  # Confirmation (count-cumulative) models are fit one-stage: the two-stage
-  # delay-only Stage 1 uses the ordinary count delay likelihood, which does not
-  # apply to signed increments.  The appearance delay + retraction structure are
-  # estimated jointly with the epidemic mean instead.
-  if (isTRUE(engine$is_confirmation == 1L)) type <- "one_stage"
+  # Count-cumulative models are fit one-stage: the ordinary delay-only Stage 1
+  # does not apply to cumulative levels or signed updates.  Report delay,
+  # defective retraction kernel, and epidemic intensity are estimated jointly.
+  if (isTRUE(engine$is_count_cumulative == 1L) ||
+      isTRUE(engine$is_confirmation == 1L)) type <- "one_stage"
 
   if (type == "one_stage") {
     return(list(fits = list(fit(model, engine, priors = priors, init = warm_inits)),
@@ -89,6 +89,11 @@
   }
 
   # -- Two-stage PARAMETRIC (windowed Stage-1, impute mu/sigma) -----------------
+  # When a revision process is active, only the EVENT-TO-REPORT parameters are
+  # fixed by these imputations. The revision delay and p remain free in every
+  # Stage-2 objective, where their cure/marked-state likelihood is estimated
+  # jointly with the epidemic. Its posterior is sampled within each fitted block;
+  # stacking blocks adds the reporting-delay imputation uncertainty.
   delay_estimate <- if (is_nonparametric) NULL else tryCatch({
     window       <- .window_delay_m(m, max_time, delay_window)
     delay_engine <- prepare_data(model, window$m, max_time = window$max_time, delay_only = TRUE)
@@ -149,12 +154,19 @@
   nowcast_blocks <- vector("list", length(fits))
   lambda_blocks  <- vector("list", length(fits))
   strata_blocks  <- vector("list", length(fits))
+  projection_count <- 0L
+  estimand <- reconstruction <- NULL
   n_strata <- 1L
   for (fit_index in seq_along(fits)) {
     fit_draws <- .nowcast_draws(fits[[fit_index]], target = target, n_draws = n_draws)
     nowcast_blocks[[fit_index]] <- fit_draws$M
     lambda_blocks[[fit_index]]  <- fit_draws$lambda_draws
     strata_blocks[[fit_index]]  <- fit_draws$M_strata
+    projection_count <- projection_count +
+      as.integer(fit_draws$negative_projection_count %||% 0L)
+    estimand <- estimand %||% fit_draws$estimand
+    reconstruction <- reconstruction %||%
+      fit_draws$cumulative_reconstruction
     n_strata <- fit_draws$n_strata %||% 1L
   }
 
@@ -170,7 +182,10 @@
 
   list(M = do.call(rbind, nowcast_blocks),
        lambda = do.call(rbind, lambda_blocks),
-       M_strata = pooled_strata, n_strata = n_strata)
+       M_strata = pooled_strata, n_strata = n_strata,
+       estimand = estimand,
+       cumulative_reconstruction = reconstruction,
+       negative_projection_count = projection_count)
 }
 
 #' Bind two `[draws x time x strata]` arrays along the draws (first) dimension

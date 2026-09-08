@@ -26,9 +26,10 @@ nowcast(
 
 \item{model}{A \code{\link[=model]{model()}} object.  Default: \code{model()} (NB + HSGP + Dirichlet).}
 
-\item{type}{\code{"two_stage"} (default; delay-imputation pooling), \code{"one_stage"}
-(a single joint fit), or \code{"auto"} (per delay: dirichlet one-stage, all other
-delays two-stage -- the better choice for each in our experiments).}
+\item{type}{\code{"two_stage"} (default; reporting-delay imputation pooling),
+\code{"one_stage"} (a single joint fit), or \code{"auto"} (per reporting-delay
+family: Dirichlet one-stage, all other delays two-stage -- the better choice
+for each in our experiments).}
 
 \item{now}{As-of date; only events/reports up to \code{now} are used.  Default:
 \code{tbl.now::get_now(data)}, falling back to the latest report date.}
@@ -75,6 +76,40 @@ posterior-predictive nowcast is produced lazily by \code{\link[=predict]{predict
 incidence by \code{\link[=mean]{mean()}}/\code{\link[=median]{median()}}/\code{\link[=quantile]{quantile()}}; the parameter estimates by
 \code{\link[=coef]{coef()}}.
 }
+\section{Revision processes}{
+
+A revision process -- reports that are later \strong{confirmed} or \strong{retracted} --
+is a row-level mechanism for linelist and count-incidence data. It is detected
+from the data, not requested by an argument. \code{nowcast()} attaches one when the
+\code{tbl_now} carries \code{revision_date} / \code{revision_type} (see
+\code{tbl.now::add_revision_date()}).  The mode
+(\code{confirmation_only} / \code{retraction_only} / \code{both}) is read from
+\code{unique(revision_type)} over the full data, so it is stable across as-of
+dates.  Configure \code{p} and the lag with
+\code{model(revision = revision_process(...))}, which always wins over the
+detected default; assert the mode with \code{revision_process(mode = )}.
+Revision-date censoring is likewise data metadata: set
+\code{is_censored_revision} when constructing the \code{tbl_now}. There is no
+\code{nowcast()} column-name argument for it.
+Count-cumulative revisions instead use \code{\link[=cumulative_process]{cumulative_process()}} and do
+not estimate a separate revision probability \code{p}.
+}
+
+\section{One-stage and two-stage revision}{
+
+With \code{type = "one_stage"}, the epidemic process, event-to-report delay,
+report-to-revision delay, and revision probability \code{p} are estimated in
+one joint objective. With \code{type = "two_stage"}, Stage 1 estimates the
+event-to-report delay and draws \code{K} imputations from its Laplace
+approximation. Each Stage-2 fit conditions on one imputed reporting-delay
+distribution and jointly estimates the epidemic process, revision delay,
+and \code{p}. Posterior draws within a Stage-2 fit propagate revision uncertainty;
+pooling across the fits additionally propagates reporting-delay uncertainty.
+This is the same stepwise boundary used by the original event-to-report model:
+\code{two_stage} separates the reporting process from the downstream model, while
+the revision block remains downstream of a report.
+}
+
 \section{Overdispersion (\code{phi})}{
 
 The negative-binomial overdispersion prior is \strong{not} an argument of

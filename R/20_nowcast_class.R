@@ -24,6 +24,10 @@ nowcast_class <- S7::new_class(
     priors = S7::class_list,
     phi    = S7::class_any,      # NB overdispersion prior (for update())
     n_draws = S7::class_numeric, # default posterior draws for predict/summaries
+    # Which outcomes the fit modelled: "none", "confirmation_only",
+    # "retraction_only" or "both".  Recorded rather than re-derived so a saved fit
+    # reports the mode it was FITTED under, even if its data are later subset.
+    revision_mode = S7::new_property(S7::class_character, default = "none"),
     # Model-selection scoreboard, set by auto_nowcast() (NULL for a plain fit):
     # list(scores = <ranked data.frame>, chosen = <label>, metric = <chr>).
     comparison = S7::new_property(S7::class_any, default = NULL)
@@ -41,9 +45,10 @@ nowcast_class <- S7::new_class(
 #'
 #' @param data A `tbl_now` object (`tbl.now::tbl_now()`).
 #' @param model A [model()] object.  Default: `model()` (NB + HSGP + Dirichlet).
-#' @param type `"two_stage"` (default; delay-imputation pooling), `"one_stage"`
-#'   (a single joint fit), or `"auto"` (per delay: dirichlet one-stage, all other
-#'   delays two-stage -- the better choice for each in our experiments).
+#' @param type `"two_stage"` (default; reporting-delay imputation pooling),
+#'   `"one_stage"` (a single joint fit), or `"auto"` (per reporting-delay
+#'   family: Dirichlet one-stage, all other delays two-stage -- the better choice
+#'   for each in our experiments).
 #' @param now As-of date; only events/reports up to `now` are used.  Default:
 #'   `tbl.now::get_now(data)`, falling back to the latest report date.
 #' @param K Number of delay imputations for the two-stage path.
@@ -52,6 +57,36 @@ nowcast_class <- S7::new_class(
 #' @param delay_window Recent window length for the parametric Stage-1 delay fit.
 #' @param np_spread Dirichlet simplex imputation covariance inflation (default 1).
 #' @param floor_mu,floor_sig_frac Imputation-spread floors (parametric families).
+#' @section Revision processes:
+#' A revision process -- reports that are later **confirmed** or **retracted** --
+#' is a row-level mechanism for linelist and count-incidence data. It is detected
+#' from the data, not requested by an argument. `nowcast()` attaches one when the
+#' `tbl_now` carries `revision_date` / `revision_type` (see
+#' `tbl.now::add_revision_date()`).  The mode
+#' (`confirmation_only` / `retraction_only` / `both`) is read from
+#' `unique(revision_type)` over the full data, so it is stable across as-of
+#' dates.  Configure `p` and the lag with
+#' `model(revision = revision_process(...))`, which always wins over the
+#' detected default; assert the mode with `revision_process(mode = )`.
+#' Revision-date censoring is likewise data metadata: set
+#' `is_censored_revision` when constructing the `tbl_now`. There is no
+#' `nowcast()` column-name argument for it.
+#' Count-cumulative revisions instead use [cumulative_process()] and do
+#' not estimate a separate revision probability `p`.
+#'
+#' @section One-stage and two-stage revision:
+#' With `type = "one_stage"`, the epidemic process, event-to-report delay,
+#' report-to-revision delay, and revision probability `p` are estimated in
+#' one joint objective. With `type = "two_stage"`, Stage 1 estimates the
+#' event-to-report delay and draws `K` imputations from its Laplace
+#' approximation. Each Stage-2 fit conditions on one imputed reporting-delay
+#' distribution and jointly estimates the epidemic process, revision delay,
+#' and `p`. Posterior draws within a Stage-2 fit propagate revision uncertainty;
+#' pooling across the fits additionally propagates reporting-delay uncertainty.
+#' This is the same stepwise boundary used by the original event-to-report model:
+#' `two_stage` separates the reporting process from the downstream model, while
+#' the revision block remains downstream of a report.
+#'
 #' @param temporal_effects Controls automatic seasonal / day-of-week covariates.
 #'   `"auto"` (default) adds sensible effects based on the data's time unit
 #'   (weekly -> 52-period seasonality; daily -> day-of-week + 52-period
@@ -87,15 +122,94 @@ nowcast <- function(data, model = diseasenowcasting::model(),
                     type = c("two_stage", "one_stage", "auto"), now = NULL,
                     K = 25L, n_draws = 2000L, delay_window = 120L, np_spread = 1,
                     floor_mu = 0.08, floor_sig_frac = 0.08,
-                    temporal_effects = "auto", prior_only = FALSE,
+                    temporal_effects = "auto",
+                    prior_only = FALSE,
                     seed = sample.int(.Machine$integer.max, 1), ...) {
+  if ("revision_censored" %in% names(list(...))) {
+    cli::cli_abort(c(
+      "{.arg revision_censored} is not a {.fn nowcast} argument.",
+      "i" = "Attach the censoring column to the {.cls tbl_now} with {.arg is_censored_revision}."
+    ))
+  }
   type <- match.arg(type)
   if (!is.null(seed)) set.seed(seed)
   # The NB overdispersion prior lives on the likelihood, not on nowcast().
   phi <- .likelihood_phi(model)
+  # -- revision process: detected, not requested ----------------------------
+  # Report-level revision is detected from revision_date/revision_type.
+  # Count-cumulative down-revisions use the separate cumulative_process;
+  # they do not identify a report-level `p`.
+  is_cumulative  <- identical(tbl.now::get_data_type(data), "count-cumulative")
+  has_revision <- isTRUE(.tblnow_has_revision(data))
+  revision_mode <- "none"
+
+  if (has_revision) {
+    revision_mode <- .resolve_revision_mode(data, model@revision)
+    # Count-cumulative cannot see confirmations: eq. `noconfirmcum` sets
+    # g^val_{D+} = 0, because a confirmation does not change a cumulative count.
+    if (is_cumulative && !revision_mode %in% c("retraction_only", "none"))
+      cli::cli_abort(c(
+        "A count-cumulative stream cannot carry {.val confirmed} revisions.",
+        "x" = "A confirmation does not change a cumulative count, so the confirmation-delay parameters are unidentifiable.",
+        "i" = "Only the DOWN-revisions are informative here; keep the retractions and drop the confirmations, or model the data as {.val count-incidence}."))
+  }
+
+  if (!is_cumulative && isTRUE(model@cumulative@active)) {
+    cli::cli_abort(c(
+      "A {.fn cumulative_process} can only be used with {.val count-cumulative} data.",
+      "x" = "The supplied data type is {.val {tbl.now::get_data_type(data)}}."
+    ))
+  }
+
+  if (is_cumulative && isTRUE(model@revision@active)) {
+    cli::cli_abort(c(
+      "A {.fn revision_process} cannot be used with {.val count-cumulative} data.",
+      "i" = "Count-cumulative data consume signed changes in the cumulative trajectory only.",
+      "*" = "Use {.code model(cumulative = cumulative_process(...))}."
+    ))
+  }
+
+  if (is_cumulative && !isTRUE(model@cumulative@active)) {
+    cumulative_process <- cumulative_process(
+      observation = "hurdle_ztnb",
+      retraction_delay = lognormal_delay(),
+      settlement = 26L,
+      retraction_mass = beta_prior(1.5, 20)
+    )
+    model <- model_class(
+      likelihood = model@likelihood,
+      epidemic = model@epidemic,
+      delay = model@delay,
+      revision = no_revision(),
+      covariate_prior = model@covariate_prior,
+      strata_pooling = model@strata_pooling,
+      cumulative = cumulative_process
+    )
+    cli::cli_inform(c(
+      "i" = "Using the default signed hurdle--ZTNB count-cumulative model with a 26-step settlement horizon.",
+      "*" = "Configure it with {.code model(cumulative = cumulative_process(...))}."
+    ))
+  }
+
+  promote <- !is_cumulative && has_revision &&
+    !identical(revision_mode, "none")
+  if (promote && !isTRUE(model@revision@active)) {
+    model <- model_class(likelihood = model@likelihood, epidemic = model@epidemic,
+                         delay = model@delay, revision = revision_process(),
+                         covariate_prior = model@covariate_prior,
+                         strata_pooling = model@strata_pooling,
+                         cumulative = model@cumulative)
+    promoted_for <- switch(revision_mode,
+      "confirmation_only" = "confirmations", "retraction_only" = "retractions",
+      "both" = "confirmations and retractions", "down-revisions")
+    cli::cli_inform(c("i" = "Modelling {promoted_for} with a default {.fn revision_process} (lognormal revision lag, data-informed default for {.arg p}).",
+                      "*" = "Pass {.code model(revision = revision_process(...))} to configure it."))
+  }
+
   # prior_only: don't auto-add temporal effects (keep the prior epidemic clean).
   data <- .apply_default_temporal_effects(data, if (isTRUE(prior_only)) "none" else temporal_effects)
-  prepared <- prepare_from_tbl_now(data, model, now = now, delay_only = FALSE, ...)
+  prepared <- prepare_from_tbl_now(data, model, now = now, delay_only = FALSE,
+                                   revision_mode = revision_mode, ...)
   engine   <- prepared$data
   priors   <- default_priors(model, engine)
 
@@ -123,7 +237,8 @@ nowcast <- function(data, model = diseasenowcasting::model(),
   nowcast_class(model = model, data = data, now = prepared$now,
                 type = if (isTRUE(prior_only)) "prior_only" else type,
                 fits = collected$fits, rung = collected$rung, target = collected$target,
-                engine = engine, priors = priors, phi = phi, n_draws = as.integer(n_draws))
+                engine = engine, priors = priors, phi = phi, n_draws = as.integer(n_draws),
+                revision_mode = revision_mode)
 }
 
 #' The NB overdispersion prior carried by a model's likelihood (or `NULL`).
@@ -174,6 +289,8 @@ nowcast <- function(data, model = diseasenowcasting::model(),
   } else if (grepl("^month", unit)) {
     eff   <- tbl.now::temporal_effects(seasons = 12)
     descr <- "12-period seasonality (monthly data)"
+  } else {
+    return(data)
   } 
 
   out <- tryCatch({
@@ -207,6 +324,9 @@ nowcast_prediction_class <- S7::new_class(
     strata_levels    = S7::class_any,     # character vector of stratum labels (or NULL)
     event_dates      = S7::class_any,     # Date vector length max_time (or NULL)
     observed_series  = S7::class_any,     # [max_time] observed total per event-time (or NULL)
-    observed_strata  = S7::class_any      # [max_time x n_strata] observed per stratum (or NULL)
+    observed_strata  = S7::class_any,     # [max_time x n_strata] observed per stratum (or NULL)
+    estimand = S7::new_property(S7::class_any, default = NULL),
+    cumulative_reconstruction = S7::new_property(S7::class_any, default = NULL),
+    negative_projection_count = S7::new_property(S7::class_numeric, default = 0)
   )
 )

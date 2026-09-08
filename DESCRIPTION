@@ -1,6 +1,6 @@
 Package: diseasenowcasting
 Title: Nowcast Time Series of Epidemiological Cases
-Version: 2.1.0
+Version: 2.3.0
 Authors@R:
     c(person("Rodrigo", "Zepeda-Tello", role = c("aut", "cre"),
              email = "rzepeda17@gmail.com",
@@ -30,16 +30,14 @@ URL: https://rodrigozepeda.github.io/diseasenowcasting/,
 BugReports: https://github.com/RodrigoZepeda/diseasenowcasting/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.0.0
 Depends:
     R (>= 4.2.0),
-    tbl.now (>= 0.7.8)
+    tbl.now (>= 0.35.1)
 Imports:
     cli,
     dplyr,
     future,
     future.apply,
-    generics,
     ggplot2,
     lifecycle,
     Matrix,
@@ -50,9 +48,9 @@ Imports:
     S7,
     scoringutils,
     stats,
-    tibble,
     utils
 Suggests:
+    withr,
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
@@ -63,10 +61,10 @@ Suggests:
     almanac,
     RTMBode
 Additional_repositories:
-    https://kaskr.r-universe.dev
-Remotes:
-    DavisVaughan/almanac,
-    RodrigoZepeda/tbl.now
+    https://kaskr.r-universe.dev,
+    https://davisvaughan.r-universe.dev,
+    https://rodrigozepeda.r-universe.dev
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 LazyData: true
+Config/roxygen2/version: 8.1.0

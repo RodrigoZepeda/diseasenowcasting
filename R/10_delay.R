@@ -74,13 +74,15 @@
     log_cdf_upper <- log_cdf_fn(delay_values[lower_mask])
     log_cdf_lower <- log_cdf_fn(delay_values[lower_mask] - 1)
     loglik <- loglik +
-      sum(weights[lower_mask] * (log_cdf_upper + log1p(-exp(log_cdf_lower - log_cdf_upper))))
+      sum(weights[lower_mask] *
+            (log_cdf_upper + log(-expm1(log_cdf_lower - log_cdf_upper))))
   }
   if (any(upper_mask)) {                          # survival-tail log_diff_exp(logS(d-1), logS(d))
     log_surv_lower <- log_survival_fn(delay_values[upper_mask] - 1)
     log_surv_upper <- log_survival_fn(delay_values[upper_mask])
     loglik <- loglik +
-      sum(weights[upper_mask] * (log_surv_lower + log1p(-exp(log_surv_upper - log_surv_lower))))
+      sum(weights[upper_mask] *
+            (log_surv_lower + log(-expm1(log_surv_upper - log_surv_lower))))
   }
   loglik
 }
@@ -233,5 +235,18 @@
     result
   }
 
-  list(cdf = cdf, log_cdf = log_cdf, log_pmf_raw = log_pmf_raw)
+  # Survival on the NATURAL scale, written directly rather than as `1 - cdf()`:
+  # in the geometric tail the complement is `tail * exp(...)` exactly, so this form
+  # keeps the small tail probabilities the retraction block relies on (see
+  # 31_retraction_likelihood.R) from being lost to cancellation.
+  survival <- function(delay) {
+    result  <- 0 * tail_mass + numeric(length(delay))
+    in_grid <- delay >= 1 & delay < n_bins
+    in_tail <- delay >= n_bins
+    if (any(in_grid)) result[in_grid] <- 1 - cumulative_probs[delay[in_grid]]
+    if (any(in_tail)) result[in_tail] <- tail_mass * exp(-(delay[in_tail] - n_bins))
+    result
+  }
+
+  list(cdf = cdf, log_cdf = log_cdf, log_pmf_raw = log_pmf_raw, survival = survival)
 }

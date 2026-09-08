@@ -10,21 +10,24 @@ model_class <- S7::new_class(
     likelihood      = likelihood_class,
     epidemic        = epidemic_process_class,
     delay           = delay_process_class,
-    confirmation    = confirmation_process_class,   # retraction layer (inert by default)
+    revision       = revision_process_class,    # revision layer (inert by default)
     covariate_prior = prior_class,
-    strata_pooling  = S7::class_character   # "independent" | "hierarchical"
+    strata_pooling  = S7::class_character,  # "independent" | "hierarchical"
+    cumulative = cumulative_process_class
   ),
   constructor = function(likelihood      = nb_likelihood(),
                          epidemic        = hsgp_epidemic(),
                          delay           = dirichlet_delay(),
-                         confirmation    = no_confirmation(),
+                         revision       = no_revision(),
                          covariate_prior = std_normal_prior(),
-                         strata_pooling  = "independent") {
+                         strata_pooling  = "independent",
+                         cumulative = no_cumulative()) {
     S7::new_object(S7::S7_object(),
                    likelihood = likelihood, epidemic = epidemic,
-                   delay = delay, confirmation = confirmation,
+                   delay = delay, revision = revision,
                    covariate_prior = covariate_prior,
-                   strata_pooling = strata_pooling)
+                   strata_pooling = strata_pooling,
+                   cumulative = cumulative)
   },
   validator = function(self) {
     if (!self@strata_pooling %in% c("independent", "hierarchical"))
@@ -34,20 +37,18 @@ model_class <- S7::new_class(
 
 #' Bayesian Nowcast Model
 #'
-#' Combines a likelihood, an epidemic process, and a delay distribution into a
-#' model object.  Arguments are positional: the first is the likelihood, the
-#' second the epidemic process, the third the delay.  Any argument can be
-#' omitted to use its default.
-#'
+#' Combines a likelihood, an epidemic process, a reporting-delay distribution,
+#' and an optional revision process into a model object. Arguments are
+#' positional: likelihood, epidemic process, reporting delay, then revision
+#' process. Any argument can be omitted by naming the later components.
 #' @param likelihood      A `likelihood_class` ([poisson_likelihood()] /
 #'   [nb_likelihood()]).  Default: [nb_likelihood()].
 #' @param epidemic        An `epidemic_process_class`.  Default: [hsgp_epidemic()].
 #' @param delay           A `delay_process_class`.  Default: [lognormal_delay()].
-#' @param confirmation    A `confirmation_process_class` ([confirmation_process()])
-#'   describing the retraction (down-revision) structure of a count-cumulative
-#'   stream.  Default: inert (`p = 1`, no retractions).  [nowcast()] switches
-#'   to the signed-increment Skellam / SkNB likelihood automatically when the data
-#'   are count-cumulative; supply a `confirmation_process()` to configure it.
+#' @param revision      A `revision_process_class` ([revision_process()])
+#'   for report-level confirmation/retraction outcomes in linelist or
+#'   count-incidence data. Default: inert. Count-cumulative revisions use the
+#'   separate `cumulative` component.
 #' @param covariate_prior A `prior_class` applied to all covariate coefficients.
 #'   Default: [std_normal_prior()].
 #' @param strata_pooling  `"independent"` (default) fits fully separate intercepts
@@ -57,6 +58,10 @@ model_class <- S7::new_class(
 #'   \eqn{\delta^{(s)} \sim \mathcal{N}(0,1)},
 #'   \eqn{\tau \sim \text{HalfNormal}(0,1)}.
 #'   Only relevant when `num_strata > 1`.
+#' @param cumulative Dedicated count-cumulative observation configuration
+#'   from [cumulative_process()]. It is inert by default for linelist and
+#'   count-incidence data; count-cumulative data use the hurdle--ZTNB default
+#'   unless configured explicitly.
 #'
 #' @returns A `model_class` object.
 #'
@@ -64,6 +69,8 @@ model_class <- S7::new_class(
 #' model()
 #' model(poisson_likelihood(), hsgp_epidemic(gp_kernel = "matern52"))
 #' model(nb_likelihood(), ar1_epidemic(), lognormal_delay())
+#' model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
+#'       revision_process())
 #' model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
 #'       strata_pooling = "hierarchical")
 #'
@@ -71,11 +78,13 @@ model_class <- S7::new_class(
 model <- function(likelihood      = nb_likelihood(),
                   epidemic        = hsgp_epidemic(),
                   delay           = lognormal_delay(),
-                  confirmation    = no_confirmation(),
+                  revision       = no_revision(),
                   covariate_prior = std_normal_prior(),
-                  strata_pooling  = "independent") {
+                  strata_pooling  = "independent",
+                  cumulative = no_cumulative()) {
   model_class(likelihood = likelihood, epidemic = epidemic,
-              delay = delay, confirmation = confirmation,
+              delay = delay, revision = revision,
               covariate_prior = covariate_prior,
-              strata_pooling = strata_pooling)
+              strata_pooling = strata_pooling,
+              cumulative = cumulative)
 }

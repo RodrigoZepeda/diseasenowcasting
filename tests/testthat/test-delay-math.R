@@ -68,6 +68,23 @@ test_that(".discretised_delay_loglik returns finite value for valid data", {
   expect_lt(llik, 0)
 })
 
+test_that("discretised delay tails remain finite when adjacent probabilities are tiny", {
+  # COVID confirmation lags exposed this case: at a narrow initial delay law,
+  # adjacent upper-tail log survivals can differ by much less than machine
+  # precision on the probability scale. `log1p(-exp(x))` then rounds to
+  # log(0), whereas the expm1 formulation retains the log-mass.
+  fns <- diseasenowcasting:::.delay_distribution_functions(
+    1L, log(17.7), 1.01
+  )
+  delays <- 1:199
+  llik <- diseasenowcasting:::.discretised_delay_loglik(
+    delays, rep(1, length(delays)), split_delay = 6,
+    fns$log_cdf, fns$log_survival
+  )
+  expect_true(is.finite(llik))
+  expect_lt(llik, 0)
+})
+
 test_that("delay-only fit returns finite delay_mu and delay_sigma (all families)", {
   m <- .make_synth()$m
   max_t <- max(m[, 1])

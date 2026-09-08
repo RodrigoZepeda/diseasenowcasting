@@ -272,6 +272,51 @@ having the lowest WIS at essentially the same coverage as HGSP. Note however tha
 for the tutorial  we only used 5 historical dates which is too low to reach
 a definite conslusion.
 
+## When a report is not yet a case: the revision process
+
+Everything so far assumes a report **is** a case. Many registers work
+provisionally instead: a report arrives, and is later **resolved** — confirmed by
+a laboratory result, or retracted when it turns out not to be a case at all.
+
+Record that on the `tbl_now` and `diseasenowcasting` nowcasts the number that
+actually settles rather than the raw report count. There is no argument to pass:
+the process is **detected** from the data.
+
+```{r resolution-demo, eval = FALSE}
+# One date, plus what the result was: "confirmed", "retracted" or "pending".
+dat <- tbl_now(linelist, event_date = onset, report_date = reported,
+               revision_date = result, revision_type = outcome,
+               data_type = "linelist")
+
+nowcast(dat)     # works out for itself which outcomes you record
+```
+
+Whether you record only retractions, only confirmations, or both, is read from
+the values in `revision_type` — and the answer targets, respectively, the cases
+never retracted, the cases eventually confirmed, or the cases whose result comes
+back positive.
+
+The key point, and the reason this is not just "multiply by the confirmed
+fraction": **a missing resolution date means *not resolved yet*, not "fine"**. A
+report filed this morning has had no chance to be retracted; one filed two months
+ago and still standing is almost certainly genuine. The model weighs every report
+by how long it has had to be contradicted, so recent event times — exactly the
+ones you care about — are corrected properly.
+
+`nowcast()` prints what it is modelling and the fitted probability, and
+`parameters()` gives its uncertainty (`tidy()` on a nowcast gives you the
+predicted counts instead):
+
+```{r resolution-parameters, eval = FALSE}
+parameters(nc) |> filter(type == "resolution")
+#>                 term estimate conf.low conf.high       type
+#>  prob_not_retracted    0.8512   0.8399    0.8619 resolution
+```
+
+See `vignette("Revision_processes")` for the full treatment, including
+per-stratum probabilities, censored revision dates, count-incidence data, and
+the shared revision-delay assumption used when both outcomes are recorded.
+
 ## Example 4 -- Letting the package choose the model (`auto_nowcast()`)
 
 Doing the backtest-and-compare loop by hand (Example 3) is exactly what
@@ -372,75 +417,110 @@ extreme_values(auto_ncast_updated)
 See the vignette on [Handling Outlier Delays with Censoring](Handling_Outlier_Delays_with_Censoring.html) for what to do when a
 delay *is* flagged.
 
-## Example 5 -- Count-cumulative data that revises up *and* down (FluSight)
+## Example 5 -- Count-cumulative revisions and a historical origin
 
-So far every example has used **incident** data: each case is counted once, and
-counts only ever grow as late reports arrive. Some surveillance systems instead
-publish a **running cumulative total** for each event-time that is *re-reported*
-week after week -- and those totals can be revised **downward** as well as upward
-(for example when a suspected case is later re-classified as negative). The
-[FluSight](https://github.com/cdcepi/FluSight-forecast-hub) influenza
-hospitalisation data shipped with `tbl.now` is exactly this kind of stream: for
-each `target_end_date` (the epiweek being counted), the reported cumulative
-`observation` changes across `as_of` report dates.
+FluSight publishes a running level for each target week. Keep three dates
+distinct: `full_data` is the retrospective extract used only to obtain scoring
+truth; `historical_now` is the information cutoff; and `event_date` identifies
+the weeks being nowcast. Starting near September 2023 avoids interpreting the
+between-season gap as a reporting delay.
 
-```{r flusight-data}
+```{r flusight-data, eval = FALSE}
 data(flusight, package = "tbl.now")
-head(flusight)
+historical_now <- as.Date("2024-01-27")
+full_data <- flusight |>
+  filter(location_name == "California",
+         target_end_date >= as.Date("2023-09-01"))
+
+calendar_tbl <- tbl_now(
+  full_data,
+  event_date = target_end_date,
+  report_date = as_of,
+  case_count = observation,
+  data_type = "count-cumulative",
+  event_units = "weeks", report_units = "weeks",
+  now = max(full_data$as_of), verbose = FALSE
+)
+calendar_rows <- full_data |>
+  filter(target_end_date <= historical_now, as_of <= historical_now)
+calendar_asof <- tbl_now(
+  calendar_rows,
+  event_date = target_end_date, report_date = as_of,
+  case_count = observation, data_type = "count-cumulative",
+  event_units = "weeks", report_units = "weeks",
+  now = historical_now, verbose = FALSE
+) |>
+  tbl.now::complete_zeroes(max_delay = 26L, until = historical_now)
+
+stopifnot(max(calendar_asof$target_end_date) <= historical_now,
+          max(calendar_asof$as_of) <= historical_now)
 ```
 
-We tell `tbl_now()` that these are cumulative counts with
-`data_type = "count-cumulative"`. Here we nowcast a single location (California),
-keeping a recent window of the season:
+The **calendar clock** keeps every intervening calendar week, and zero completion
+makes missing cells inside the observable triangle explicit. For the
+**compressed publication clock**, map the observed publication weeks to
+consecutive synthetic weeks before constructing the `tbl_now`; retain the real
+dates in separate columns for the as-of filter and scoring join.
 
-```{r flusight-tbl}
-california <- flusight |>
-  filter(location_name == "California", target_end_date >= as.Date("2023-10-01"))
+```{r flusight-compressed, eval = FALSE}
+publication_weeks <- sort(unique(full_data$as_of))
+publication_index <- setNames(seq_along(publication_weeks) - 1L,
+                              as.character(publication_weeks))
+compressed_data <- full_data |>
+  filter(target_end_date %in% publication_weeks) |>
+  mutate(event_num = publication_index[as.character(target_end_date)],
+         report_num = publication_index[as.character(as_of)],
+         event_model = as.Date("2000-01-01") + 7L * event_num,
+         report_model = as.Date("2000-01-01") + 7L * report_num)
+compressed_tbl <- tbl_now(
+  compressed_data, event_date = event_model, report_date = report_model,
+  case_count = observation, data_type = "count-cumulative",
+  event_units = "weeks", report_units = "weeks", verbose = FALSE
+)
+# The final publication of one season is immediately followed by the first of
+# the next on this model clock; the original dates still enforce historical_now.
+```
 
-flu_tbl <- tbl_now(
-  california,
-  event_date  = target_end_date,  # the epiweek being counted
-  report_date = as_of,            # when that cumulative count was known
-  case_count  = observation,      # cumulative admissions (can go up OR down)
-  data_type   = "count-cumulative",
-  now         = as.Date("2024-01-27")
+Count-cumulative data use their own component. `settlement = 26L` targets
+$C_t(26)$, finite-horizon database retention. The cumulative-level model and the
+two signed hurdle models share the same collapsed retraction kernel; the
+zero-truncated Poisson magnitude has no dispersion parameter.
+
+```{r flusight-nowcast, eval = FALSE}
+level_model <- model(
+  nb_likelihood(), ar1_epidemic(), lognormal_delay(),
+  cumulative = cumulative_process(
+    observation = "cumulative", settlement = 26L
+  )
+)
+ztnb_model <- model(
+  nb_likelihood(), ar1_epidemic(), lognormal_delay(),
+  cumulative = cumulative_process(
+    observation = "hurdle_ztnb", settlement = 26L
+  )
+)
+ztp_model <- model(
+  poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
+  cumulative = cumulative_process(
+    observation = "hurdle_ztpoisson", settlement = 26L
+  )
+)
+
+calendar_fits <- lapply(
+  list(level = level_model, ztnb = ztnb_model, ztp = ztp_model),
+  nowcast, data = calendar_tbl, now = historical_now,
+  temporal_effects = "none"
 )
 ```
 
-To model the down-revisions we attach a **confirmation process** to the model.
-`confirmation_process()` describes the retraction side of the stream through a
-retraction delay and a *confirmation probability* `p` -- the probability that a
-report is genuine and never retracted. Left unset, `p` gets a strong
-data-informed prior (just like the lognormal delay's mean); pass
-`confirmation_process(p = 0.98)` to hold it fixed, or a `beta_prior()` to set your
-own. When the data are count-cumulative, `nowcast()` automatically switches from
-the censored count likelihood to the **signed-increment Skellam / SkNB**
-likelihood that the confirmation process needs:
-
-```{r flusight-nowcast, fig.cap = "_Confirmation nowcast for cumulative influenza hospitalisations in California._"}
-flu_model <- model(
-  likelihood   = nb_likelihood(),
-  epidemic     = ar1_epidemic(),
-  delay        = lognormal_delay(),
-  confirmation = confirmation_process()   # models the up- and down-revisions
-)
-
-flu_ncast <- nowcast(flu_tbl, flu_model, n_draws = 1000)
-autoplot(flu_ncast)
-```
-
-Everything else works exactly as before -- `predict()`, `summary()`, `coef()`
-and the different epidemic processes, delay families, covariates and temporal
-effects are all available for count-cumulative data too:
-
-```{r flusight-predict}
-summary(predict(flu_ncast)) |> dplyr::as_tibble() |> tail(4)
-```
-
-To nowcast **several locations at once**, declare the location column as `strata`
-in `tbl_now()`. A single stratified `nowcast()` then shares the delay and
-confirmation structure across locations, which is both faster than a separate fit
-per location and -- on FluSight -- sharper (lower Weighted Interval Score).
+An empirical multiplier is a development comparator, not part of the fitted
+model. At target age $a$, calibrate it only on earlier cohorts for which both
+$C_s(a)$ and $C_s(26)$ were observable by `historical_now`; discard zero
+denominators and report a fallback when too few pairs remain. Retrospective
+terminal values after `historical_now` may be used for scoring, never for this
+calibration. See `devel/skellam_prototypes/flusight_asof_data.R` for the complete
+calendar/compressed preparation and leakage-safe multiplier used by the large
+backtest runner.
 
 ## Saving and loading a fitted nowcast
 
@@ -460,7 +540,7 @@ saved <- tempfile(fileext = ".rds")
 save_nowcast(auto_ncast, saved)
 
 restored <- load_nowcast(saved)
-# predict() / autoplot() / coef() / tidy() / model_parameters() all work just as before:
+# predict() / autoplot() / coef() / parameters() all work just as before:
 autoplot(restored)
 ```
 
@@ -516,4 +596,3 @@ vignettes:
   that powers `RTMB`.
 
 See `?nowcast`, `?backtest`, `?score`, and `?model` for full documentation.
-

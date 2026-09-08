@@ -34,8 +34,20 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
   priors  <- fit$priors
   family  <- data$delay_family
   n_time  <- data$max_time
-  observed_total <- rowSums(if (is.matrix(data$case_counts)) data$case_counts
-                             else matrix(data$case_counts, n_time, 1))
+  # Standing (not-yet-retracted) cases when the fit models retractions; every
+  # observed row otherwise.  See the note in `predict()`.
+  observed_counts <- if (isTRUE(data$is_count_cumulative == 1L)) {
+    anchored <- matrix(0.0, n_time, as.integer(data$num_strata %||% 1L))
+    for (s in seq_len(ncol(anchored))) for (t in seq_len(nrow(anchored))) {
+      observed_delays <- which(data$observation_mask[t, , s])
+      if (length(observed_delays))
+        anchored[t, s] <- data$cumulative_level_array[t, max(observed_delays), s]
+    }
+    anchored
+  } else if (isTRUE(data$is_linelist_retraction == 1L))
+    data$standing_counts else data$case_counts
+  observed_total <- rowSums(if (is.matrix(observed_counts)) observed_counts
+                             else matrix(observed_counts, n_time, 1))
   # Panels 2 & 3 keep only the most recent `previous_times` event-times (the
   # delay panel is unaffected).  `keep_from` is the smallest event-index to keep
   # (event-indices are 0-based, running 0 .. n_time - 1).
@@ -59,7 +71,8 @@ nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machin
   # Observed delays (column 3) and their case weights (column 2), trimmed to a
   # high quantile so the long tail does not stretch the axis (cap at 60).
   observed_delays  <- data$m[, 3]
-  observed_weights <- data$m[, 2]
+  observed_weights <- if (isTRUE(data$is_count_cumulative == 1L))
+    pmax(data$m[, 2], 0) else data$m[, 2]
   max_delay_plot <- min(quantile(rep(observed_delays, times = pmax(1, round(observed_weights))),
                                  0.995, na.rm = TRUE) + 2, 60)
   hist_df <- data.frame(delay = observed_delays, weight = observed_weights) |>

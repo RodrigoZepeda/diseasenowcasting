@@ -9,7 +9,7 @@
   load_nowcast(f)
 }
 
-test_that("a one-stage nowcast round-trips: predict/coef/model_parameters match", {
+test_that("a one-stage nowcast round-trips: predict/coef/parameters match", {
   tn <- .make_synth_tblnow(Tn = 50L, seed = 100)
   nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                 type = "one_stage", n_draws = 200, seed = 1)
@@ -20,7 +20,7 @@ test_that("a one-stage nowcast round-trips: predict/coef/model_parameters match"
   expect_equal(predict(nc,  summary = TRUE, seed = 7)$median,
                predict(nc2, summary = TRUE, seed = 7)$median)
   expect_equal(unname(coef(nc)), unname(coef(nc2)))
-  td <- model_parameters(nc2)
+  td <- parameters(nc2)
   expect_s3_class(td, "data.frame")
   ok <- is.finite(td$std.error)
   expect_true(all(is.finite(td$estimate[ok])))

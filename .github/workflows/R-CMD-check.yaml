@@ -2,6 +2,10 @@
 # tbl.now is a GitHub-only dependency: it is installed automatically by
 # setup-r-dependencies (pak) from the `Remotes:` field in DESCRIPTION
 # (RodrigoZepeda/tbl.now).
+# almanac (Suggests, used by the holiday-effects section of the introduction
+# vignette) was archived from CRAN on 2026-08-22, so it is also pinned to
+# GitHub in `Remotes:` (DavisVaughan/almanac). Without that, pak cannot solve
+# the dependency graph and the workflow fails before it ever builds.
 # The heavy RTMB / BLAS dependencies are cached between runs.
 
 on:
@@ -74,7 +78,9 @@ jobs:
           use-public-rspm: true
           extra-repositories: >-
             https://epinowcast.r-universe.dev,
-            https://kaskr.r-universe.dev
+            https://kaskr.r-universe.dev,
+            https://davisvaughan.r-universe.dev,
+            https://rodrigozepeda.r-universe.dev
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
@@ -110,7 +116,9 @@ jobs:
           use-public-rspm: true
           extra-repositories: >-
             https://epinowcast.r-universe.dev,
-            https://kaskr.r-universe.dev
+            https://kaskr.r-universe.dev,
+            https://davisvaughan.r-universe.dev,
+            https://rodrigozepeda.r-universe.dev
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:

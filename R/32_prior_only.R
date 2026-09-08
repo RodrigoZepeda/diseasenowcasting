@@ -73,8 +73,47 @@
   }
 
   # -- likelihood overdispersion --------------------------------------------
-  if (engine$is_negative_binomial == 1L)
+  uses_nb_dispersion <- engine$is_negative_binomial == 1L &&
+    (!isTRUE(engine$is_count_cumulative == 1L) ||
+       identical(as.integer(engine$count_cumulative_observation), 1L))
+  if (uses_nb_dispersion)
     parlist$log_phi_nb <- log(max(draw_one(priors$phi_nb), 1e-3))
+
+  # -- finite-horizon count-cumulative process ------------------------------
+  if (isTRUE(engine$is_count_cumulative == 1L)) {
+    if (!isTRUE(priors$retraction_mass$is_constant == 1L)) {
+      mass <- clamp(draw_one(priors$retraction_mass), 1e-5, 1 - 1e-5)
+      parlist$cumulative_retraction_mass_raw <- stats::qlogis(mass)
+    }
+    if (!isTRUE(priors$count_cumulative_retraction_mu$is_constant == 1L))
+      parlist$cumulative_retraction_mu <-
+        draw_one(priors$count_cumulative_retraction_mu)
+    if (!isTRUE(priors$count_cumulative_retraction_sigma$is_constant == 1L))
+      parlist$log_cumulative_retraction_sigma_excess <- log(max(
+        draw_one(priors$count_cumulative_retraction_sigma) - 0.01, 1e-6
+      ))
+    if (identical(as.integer(priors$count_cumulative_retraction_family), 3L) &&
+        !isTRUE(priors$count_cumulative_retraction_Q$is_constant == 1L)) {
+      q_natural <- clamp(
+        draw_one(priors$count_cumulative_retraction_Q), 0.051, 2.99
+      )
+      parlist$cumulative_retraction_Q <-
+        stats::qlogis((q_natural - 0.05) / 2.95)
+    }
+    if (engine$count_cumulative_observation %in% c(2L, 3L)) {
+      if (!isTRUE(priors$movement_intercept$is_constant == 1L))
+        parlist$movement_intercept <- draw_one(priors$movement_intercept)
+      if (!isTRUE(priors$movement_age$is_constant == 1L))
+        parlist$movement_age <- draw_one(priors$movement_age)
+      if (!isTRUE(priors$movement_previous$is_constant == 1L))
+        parlist$movement_previous <- draw_one(priors$movement_previous)
+    }
+    if (engine$count_cumulative_observation == 2L &&
+        !isTRUE(priors$magnitude_size$is_constant == 1L)) {
+      parlist$log_magnitude_size <-
+        log(max(draw_one(priors$magnitude_size), 1e-6))
+    }
+  }
 
   # -- epidemic process -----------------------------------------------------
   # Each parameter is drawn from its prior then mapped to the UNCONSTRAINED scale
@@ -100,9 +139,11 @@
     parlist$log_R0  <- log(max(draw_one(priors$R0), 1e-3))
     parlist$u_gamma <- stats::qlogis(clamp(draw_one(priors$gamma_sir), 1e-4, 1 - 1e-4))
     parlist$u_neff  <- stats::qlogis(clamp(draw_one(priors$N_eff),     1e-4, 1 - 1e-4))
-    parlist$ar_phi_unc       <- stats::qlogis((clamp(draw_one(priors$ar_phi), -0.998, 0.998) + 0.999) / 1.998)
-    parlist$log_ar_sigma_unc <- stats::qlogis(clamp(draw_one(priors$ar_sigma), 1e-4, ar_sigma_max - 1e-4) / ar_sigma_max)
-    parlist$ar_innov         <- matrix(stats::rnorm(n_time * n_strata), n_time, n_strata)
+    if (isTRUE(engine$use_beta_rw_trend == 1L)) {
+      parlist$ar_phi_unc       <- stats::qlogis((clamp(draw_one(priors$ar_phi), -0.998, 0.998) + 0.999) / 1.998)
+      parlist$log_ar_sigma_unc <- stats::qlogis(clamp(draw_one(priors$ar_sigma), 1e-4, ar_sigma_max - 1e-4) / ar_sigma_max)
+      parlist$ar_innov         <- matrix(stats::rnorm(n_time * n_strata), n_time, n_strata)
+    }
   } else {
     parlist$mu_intercept <- vapply(seq_len(n_strata), function(stratum) draw_one(priors$mu_intercept), numeric(1))
     if (engine$P > 0)
@@ -130,7 +171,10 @@
   n_time   <- engine$max_time
   n_strata <- as.integer(engine$num_strata %||% 1L)
   num_basis <- ncol(Bmat)
-  is_nb    <- engine$is_negative_binomial == 1L
+  is_count_cumulative <- isTRUE(engine$is_count_cumulative == 1L)
+  is_nb <- engine$is_negative_binomial == 1L &&
+    (!is_count_cumulative ||
+       identical(as.integer(engine$count_cumulative_observation), 1L))
 
   # SIR needs a non-zero seed of infectious cases at t = 1, otherwise the
   # epidemic can never start; force at least one case in the first event-time.
@@ -145,22 +189,56 @@
   # (lambda) and the observed-count posterior predictive.
   nowcast_draws <- lambda_draws <- matrix(NA_real_, n_draws, n_time)
   nowcast_strata <- lambda_strata <- array(NA_real_, c(n_draws, n_time, n_strata))
+  # A draw that cannot be reconstructed is skipped, because one pathological
+  # parameter vector out of many is not a reason to abandon the simulation.  But
+  # the matrices are pre-allocated NA, so when EVERY draw fails the result comes
+  # back full-size, correctly shaped and entirely NA, with no warning -- which is
+  # how issue #129 stayed hidden.  Keep the first condition and surface it.
+  first_failure <- NULL
+  n_failed <- 0L
+  negative_projection_count <- 0L
+  cumulative_reconstruction <- NULL
   for (draw_index in seq_len(n_draws)) {
     parlist       <- .sample_prior_parlist(engine, priors, num_basis, n_strata)
     reconstructed <- tryCatch(.joint_reconstruct(engine, priors, parlist, Bmat, freq),
-                              error = function(e) NULL)
-    if (is.null(reconstructed)) next
+                              error = function(e) {
+                                if (is.null(first_failure)) first_failure <<- e
+                                NULL })
+    if (is.null(reconstructed)) { n_failed <- n_failed + 1L; next }
     lambda_matrix <- matrix(reconstructed$lambda, n_time, n_strata)
     phi_nb        <- if (is_nb) reconstructed$phi_nb else NA_real_
-    predicted     <- matrix(.epidemic_rng(is_nb, as.numeric(lambda_matrix) + 1e-8, phi_nb),
-                            n_time, n_strata)
+    predicted <- if (is_count_cumulative) {
+      cumulative_draw <- .draw_count_cumulative_terminal(engine, reconstructed)
+      negative_projection_count <- negative_projection_count +
+        cumulative_draw$projection_count
+      cumulative_reconstruction <- cumulative_draw$reconstruction
+      cumulative_draw$terminal
+    } else {
+      matrix(
+        .epidemic_rng(is_nb, as.numeric(lambda_matrix) + 1e-8, phi_nb),
+        n_time, n_strata
+      )
+    }
     lambda_strata[draw_index, , ]  <- lambda_matrix
     nowcast_strata[draw_index, , ] <- predicted
     lambda_draws[draw_index, ]  <- rowSums(lambda_matrix)
     nowcast_draws[draw_index, ] <- rowSums(predicted)
   }
+  if (n_failed == n_draws)
+    cli::cli_abort(c("Every one of the {n_draws} prior draw{?s} failed to reconstruct, so the prior-predictive is entirely missing.",
+                     "x" = "First failure: {conditionMessage(first_failure)}",
+                     "i" = "This is a bug in the prior sampler, not in your model -- please report it."),
+                   parent = first_failure)
+  if (n_failed > 0)
+    cli::cli_warn(c("!" = "{n_failed} of {n_draws} prior draw{?s} failed to reconstruct and {?is/are} returned as {.code NA}.",
+                    "x" = "First failure: {conditionMessage(first_failure)}"))
   list(M = nowcast_draws, lambda_draws = lambda_draws, M_strata = nowcast_strata,
-       lambda_strata = lambda_strata, n_strata = n_strata)
+       lambda_strata = lambda_strata, n_strata = n_strata,
+       estimand = if (is_count_cumulative)
+         sprintf("C_t(%d): finite-horizon settled retention",
+                 as.integer(engine$settlement_horizon)) else NULL,
+       cumulative_reconstruction = cumulative_reconstruction,
+       negative_projection_count = negative_projection_count)
 }
 
 #' Return precomputed prior-only draws in the `.nowcast_draws()` shape.
@@ -178,7 +256,10 @@
   td <- M[, target]
   list(M = M, lambda_draws = lam, M_strata = Ms, lambda_strata = ls, n_strata = s$n_strata,
        nowcast = summarise_nowcast_matrix(M), draws = td,
-       quantiles = stats::quantile(td, probs = probs, na.rm = TRUE), target = target)
+       quantiles = stats::quantile(td, probs = probs, na.rm = TRUE), target = target,
+       estimand = s$estimand,
+       cumulative_reconstruction = s$cumulative_reconstruction,
+       negative_projection_count = s$negative_projection_count %||% 0L)
 }
 
 #' Build the HSGP basis/frequencies for an engine (mirrors build_joint_obj()).
@@ -192,4 +273,3 @@
     Bmat = hsgp_basis(ts, engine$gp_L_left, engine$gp_L_right, engine$num_basis, engine$gp_basis),
     freq = seq_len(engine$num_basis) * pi / (engine$gp_L_left + engine$gp_L_right))
 }
-

@@ -1,5 +1,5 @@
 # Test-local LogNormal native params (inlined, so the synthetic-data helpers do
-# not depend on a non-exported package internal — see scoring/validation note).
+# not depend on a non-exported package internal — see scoring/revision note).
 # log_mean = log of the natural-scale mean; sd = natural-scale SD.
 lognormal_native <- function(log_mean, sd) {
   natural_mean <- exp(log_mean)
