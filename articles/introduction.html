@@ -12,7 +12,7 @@
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
 <!-- katex math --><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script><script src="../katex-auto.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script><script src="../katex-auto.js"></script><script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -20,24 +20,10 @@
 <meta property="og:title" content="Introduction to diseasenowcasting: Real-Time Epidemic Nowcasting">
 </head>
 <body>
-<p>
-
-
-
-
-
-
-
-
-  pkgdown/extra.css
-
-  
-
-  </p>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top " aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
@@ -60,6 +46,14 @@
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://github.com/RodrigoZepeda/diseasenowcasting" aria-label="GitHub"><span class="fa fab fa-github"></span></a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-lightswitch" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true" aria-label="Light switch"><span class="fa fa-sun"></span></button>
+  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdown-lightswitch">
+<li><button class="dropdown-item" data-bs-theme-value="light"><span class="fa fa-sun"></span> Light</button></li>
+    <li><button class="dropdown-item" data-bs-theme-value="dark"><span class="fa fa-moon"></span> Dark</button></li>
+    <li><button class="dropdown-item" data-bs-theme-value="auto"><span class="fa fa-adjust"></span> Auto</button></li>
+  </ul>
+</li>
       </ul>
 </div>
 
@@ -238,13 +232,13 @@ the errorbar has the 90% credible intervals.</em>
 <span></span>
 <span><span class="co">#This creates a summary of mean and quantiles</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">pred_dengue</span><span class="op">)</span> </span></code></pre></div>
-<pre><code><span><span class="co">#&gt;         mean median        sd     mad q2.5     q5 q10 q25 q50 q75 q90 q95 q97.5</span></span>
-<span><span class="co">#&gt; 154 108.5075    108  1.492333  1.4826  107 107.00 107 107 108 109 110 111   112</span></span>
-<span><span class="co">#&gt; 155  89.1340     89  2.511413  1.4826   86  86.00  87  87  89  90  92  93    95</span></span>
-<span><span class="co">#&gt; 156  67.9995     67  3.939703  2.9652   63  63.00  64  65  67  70  73  75    78</span></span>
-<span><span class="co">#&gt; 157  45.2740     44  7.203323  5.9304   36  37.00  38  41  44  48  54  58    62</span></span>
-<span><span class="co">#&gt; 158  39.6785     37 12.354086 10.3782   23  25.00  27  31  37  45  55  62    69</span></span>
-<span><span class="co">#&gt; 159  35.3885     32 17.866762 14.8260   11  13.95  17  23  32  44  58  67    79</span></span>
+<pre><code><span><span class="co">#&gt;         mean median        sd     mad q2.5  q5 q10 q25 q50    q75 q90 q95 q97.5</span></span>
+<span><span class="co">#&gt; 154 108.4865    108  1.425424  1.4826  107 107 107 107 108 109.00 110 111   112</span></span>
+<span><span class="co">#&gt; 155  89.1460     89  2.332038  1.4826   86  86  87  87  89  90.00  92  93    95</span></span>
+<span><span class="co">#&gt; 156  68.0295     67  4.248489  2.9652   63  63  64  65  67  70.00  73  75    77</span></span>
+<span><span class="co">#&gt; 157  45.2005     44  6.878587  5.9304   36  37  38  40  44  48.00  54  58    63</span></span>
+<span><span class="co">#&gt; 158  39.9620     37 13.517874 10.3782   23  25  27  31  37  46.00  55  63    71</span></span>
+<span><span class="co">#&gt; 159  35.2170     32 18.017331 14.8260   12  14  17  23  32  43.25  57  69    80</span></span>
 <span><span class="co">#&gt;     .event_num stratum event_date</span></span>
 <span><span class="co">#&gt; 154         47   Total 1990-11-26</span></span>
 <span><span class="co">#&gt; 155         48   Total 1990-12-03</span></span>
@@ -379,13 +373,13 @@ coverage:</p>
 <code class="sourceCode R"><span><span class="co"># Rank by Weighted Interval Score (WIS) -- lower is better</span></span>
 <span><span class="fu"><a href="../reference/score.html">score</a></span><span class="op">(</span><span class="va">backtest_mpox</span><span class="op">)</span></span>
 <span><span class="co">#&gt;               model      wis overprediction underprediction dispersion</span></span>
-<span><span class="co">#&gt; 1  SIR/nb/LogNormal 12.52813       0.000000       10.247222   2.280903</span></span>
-<span><span class="co">#&gt; 2 HSGP/nb/LogNormal 12.82090       1.652778        5.175000   5.993125</span></span>
-<span><span class="co">#&gt; 3  AR1/nb/LogNormal 12.95514       3.194444        2.166667   7.594028</span></span>
-<span><span class="co">#&gt;   coverage_50 coverage_90       ape      mse n</span></span>
-<span><span class="co">#&gt; 1        0.50        0.75 0.4126905 1741.250 4</span></span>
-<span><span class="co">#&gt; 2        0.50        1.00 1.3491883 1685.312 4</span></span>
-<span><span class="co">#&gt; 3        0.25        1.00 6.8936290 1237.250 4</span></span></code></pre></div>
+<span><span class="co">#&gt; 1  SIR/nb/LogNormal 12.08038       0.000000        9.938889   2.141493</span></span>
+<span><span class="co">#&gt; 2  AR1/nb/LogNormal 12.97285       2.916667        2.583333   7.472847</span></span>
+<span><span class="co">#&gt; 3 HSGP/nb/LogNormal 12.97531       1.972222        4.694444   6.308646</span></span>
+<span><span class="co">#&gt;   coverage_50 coverage_90       ape    mse n</span></span>
+<span><span class="co">#&gt; 1        0.50        0.75 0.4370294 1734.5 4</span></span>
+<span><span class="co">#&gt; 2        0.25        1.00 6.3857230 1297.5 4</span></span>
+<span><span class="co">#&gt; 3        0.50        1.00 1.3918787 1759.5 4</span></span></code></pre></div>
 <p>The <code><a href="../reference/score.html">score()</a></code> output shows WIS, absolute percentage error
 (APE), and empirical coverage at 50 % and 90 %. A well-calibrated
 nowcast should have the lowest WIS and coverage close to these
@@ -486,25 +480,25 @@ stays single-process):</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/comparison_scores.html">comparison_scores</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span>  <span class="co"># every candidate, ranked best-first</span></span>
 <span><span class="co">#&gt;                      model       wis overprediction underprediction dispersion</span></span>
-<span><span class="co">#&gt; 1 HSGP/nb/GeneralizedGamma  8.218611     0.12777778        3.752222   4.338611</span></span>
-<span><span class="co">#&gt; 2        HSGP/nb/Dirichlet  8.816000     0.25000000        3.928889   4.637111</span></span>
-<span><span class="co">#&gt; 3        HSGP/nb/LogNormal  8.844042     0.05555556        3.666667   5.121819</span></span>
-<span><span class="co">#&gt; 4         AR1/nb/Dirichlet  9.925694     0.20555556        4.993333   4.726806</span></span>
-<span><span class="co">#&gt; 5         AR1/nb/LogNormal  9.929444     0.15000000        4.590000   5.189444</span></span>
-<span><span class="co">#&gt; 6  AR1/nb/GeneralizedGamma 10.130500     0.21666667        5.008333   4.905500</span></span>
-<span><span class="co">#&gt; 7         SIR/nb/Dirichlet 23.179056     0.00000000       19.785000   3.394056</span></span>
-<span><span class="co">#&gt; 8  SIR/nb/GeneralizedGamma 23.427319     0.00000000       20.369444   3.057875</span></span>
-<span><span class="co">#&gt; 9         SIR/nb/LogNormal 24.517931     0.00000000       21.393333   3.124597</span></span>
+<span><span class="co">#&gt; 1 HSGP/nb/GeneralizedGamma  8.345028     0.05555556        4.031111   4.258361</span></span>
+<span><span class="co">#&gt; 2        HSGP/nb/Dirichlet  8.645306     0.30000000        3.845556   4.499750</span></span>
+<span><span class="co">#&gt; 3        HSGP/nb/LogNormal  9.602722     0.10555556        3.816667   5.680500</span></span>
+<span><span class="co">#&gt; 4         AR1/nb/Dirichlet  9.636514     0.17777778        4.518889   4.939847</span></span>
+<span><span class="co">#&gt; 5  AR1/nb/GeneralizedGamma  9.722528     0.08888889        4.527778   5.105861</span></span>
+<span><span class="co">#&gt; 6         AR1/nb/LogNormal 10.218333     0.20000000        5.275556   4.742778</span></span>
+<span><span class="co">#&gt; 7  SIR/nb/GeneralizedGamma 22.519042     0.00000000       19.019444   3.499597</span></span>
+<span><span class="co">#&gt; 8         SIR/nb/LogNormal 22.853764     0.00000000       19.950556   2.903208</span></span>
+<span><span class="co">#&gt; 9         SIR/nb/Dirichlet 23.095069     0.00000000       19.756111   3.338958</span></span>
 <span><span class="co">#&gt;   coverage_50 coverage_90       ape      mse  n</span></span>
-<span><span class="co">#&gt; 1         0.4         1.0 0.3862159  527.725 10</span></span>
-<span><span class="co">#&gt; 2         0.5         1.0 0.3636975  511.050 10</span></span>
-<span><span class="co">#&gt; 3         0.4         1.0 0.3927836  580.050 10</span></span>
-<span><span class="co">#&gt; 4         0.4         0.8 0.4138215  602.825 10</span></span>
-<span><span class="co">#&gt; 5         0.4         1.0 0.4099969  665.250 10</span></span>
-<span><span class="co">#&gt; 6         0.4         0.9 0.4316606  673.250 10</span></span>
-<span><span class="co">#&gt; 7         0.2         0.7 0.7245595 2723.650 10</span></span>
-<span><span class="co">#&gt; 8         0.2         0.6 0.7230872 2748.975 10</span></span>
-<span><span class="co">#&gt; 9         0.2         0.6 0.7105699 2793.950 10</span></span></code></pre></div>
+<span><span class="co">#&gt; 1         0.3         1.0 0.3818904  494.725 10</span></span>
+<span><span class="co">#&gt; 2         0.4         1.0 0.3745044  565.550 10</span></span>
+<span><span class="co">#&gt; 3         0.5         1.0 0.3800479  565.475 10</span></span>
+<span><span class="co">#&gt; 4         0.4         0.9 0.4148512  642.125 10</span></span>
+<span><span class="co">#&gt; 5         0.5         0.9 0.4268592  717.675 10</span></span>
+<span><span class="co">#&gt; 6         0.5         0.9 0.4322367  735.050 10</span></span>
+<span><span class="co">#&gt; 7         0.2         0.7 0.6925159 2763.825 10</span></span>
+<span><span class="co">#&gt; 8         0.1         0.5 0.7198249 2707.225 10</span></span>
+<span><span class="co">#&gt; 9         0.2         0.6 0.6977445 2758.925 10</span></span></code></pre></div>
 <p><code><a href="../reference/best_model.html">best_model()</a></code> hands back the winning <code><a href="../reference/model.html">model()</a></code>
 object, so you can reuse the same specification on other data (or feed
 it to <code><a href="../reference/nowcast.html">nowcast()</a></code> / <code><a href="../reference/backtest.html">backtest()</a></code>):</p>
@@ -545,17 +539,17 @@ fitted delay, warning if any arrive far later than expected:</p>
 <span></span>
 <span><span class="va">auto_ncast_updated</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">auto_ncast</span>, <span class="va">dengue_tbl_apr</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning: <span style="color: #BBBB00;">!</span> Surprising reporting delay of 11 weeks (1 report): longer than the model</span></span>
-<span><span class="co">#&gt;   expects (P(D &gt;= d) = 1e-06).</span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Surprising reporting delay of 10 weeks (1 report): longer than the model</span></span>
 <span><span class="co">#&gt;   expects (P(D &gt;= d) = 3e-06).</span></span>
+<span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Surprising reporting delay of 10 weeks (1 report): longer than the model</span></span>
+<span><span class="co">#&gt;   expects (P(D &gt;= d) = 1.4e-05).</span></span>
 <span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Surprising reporting delay of 9 weeks (2 reports): longer than the model</span></span>
-<span><span class="co">#&gt;   expects (P(D &gt;= d) = 1.8e-05).</span></span>
+<span><span class="co">#&gt;   expects (P(D &gt;= d) = 6e-05).</span></span>
 <span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Surprising reporting delay of 8 weeks (5 reports): longer than the model</span></span>
-<span><span class="co">#&gt;   expects (P(D &gt;= d) = 9.8e-05).</span></span>
+<span><span class="co">#&gt;   expects (P(D &gt;= d) = 0.00026).</span></span>
 <span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Surprising reporting delay of 7 weeks (3 reports): longer than the model</span></span>
-<span><span class="co">#&gt;   expects (P(D &gt;= d) = 5e-04).</span></span>
+<span><span class="co">#&gt;   expects (P(D &gt;= d) = 0.0011).</span></span>
 <span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Surprising reporting delay of 6 weeks (2 reports): longer than the model</span></span>
-<span><span class="co">#&gt;   expects (P(D &gt;= d) = 0.0025).</span></span>
+<span><span class="co">#&gt;   expects (P(D &gt;= d) = 0.0045).</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> If these are outliers, treat them as censored with</span></span>
 <span><span class="co">#&gt;   `tbl.now::censor_reporting_delays_above()` and re-fit.</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> See all flagged delays with `extreme_values(nc)`.</span></span></code></pre></div>
@@ -565,12 +559,12 @@ looks off):</p>
 <div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/extreme_values.html">extreme_values</a></span><span class="op">(</span><span class="va">auto_ncast_updated</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   delay weight mean_tail_prob cdf_prob      lpd relative_surprise direction</span></span>
-<span><span class="co">#&gt; 1     6      2       0.002484 0.997516  -5.4569            0.0103      long</span></span>
-<span><span class="co">#&gt; 2     7      3       0.000504 0.999496  -7.0098            0.0022      long</span></span>
-<span><span class="co">#&gt; 3     8      5       0.000098 0.999902  -8.6189            0.0004      long</span></span>
-<span><span class="co">#&gt; 4     9      2       0.000018 0.999982 -10.2670            0.0001      long</span></span>
-<span><span class="co">#&gt; 5    10      1       0.000003 0.999997 -11.9426            0.0000      long</span></span>
-<span><span class="co">#&gt; 6    11      1       0.000001 0.999999 -13.6383            0.0000      long</span></span>
+<span><span class="co">#&gt; 1     6      2       0.004489 0.995511  -5.0076            0.0169      long</span></span>
+<span><span class="co">#&gt; 2     7      3       0.001099 0.998901  -6.3799            0.0043      long</span></span>
+<span><span class="co">#&gt; 3     8      5       0.000260 0.999740  -7.7970            0.0010      long</span></span>
+<span><span class="co">#&gt; 4     9      2       0.000060 0.999940  -9.2440            0.0002      long</span></span>
+<span><span class="co">#&gt; 5    10      1       0.000014 0.999986 -10.7111            0.0001      long</span></span>
+<span><span class="co">#&gt; 6    11      1       0.000003 0.999997 -12.1919            0.0000      long</span></span>
 <span><span class="co">#&gt;   surprise level</span></span>
 <span><span class="co">#&gt; 1    delay  0.99</span></span>
 <span><span class="co">#&gt; 2    delay  0.99</span></span>
@@ -784,6 +778,5 @@ families, and the Laplace-approximation inference that powers
 
 
 
-  
-</body>
+  </body>
 </html>

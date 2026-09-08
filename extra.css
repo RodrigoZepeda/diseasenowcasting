@@ -1,10 +1,3 @@
-:root {
-  --sage-dark: #5F7E62;
-  --sage-light: #A8BFA9;
-  --brand-red: #B85348;
-  --charcoal: #262626;
-}
-
 .small-table table {
   font-size: 0.8rem;
 }
@@ -14,26 +7,367 @@
   padding: 0.2rem 0.4rem;
 }
 
-/* First column wraps */
 .small-table th:first-child,
 .small-table td:first-child {
   white-space: normal;
-  min-width: 220px;   /* adjust as needed */
+  min-width: 220px;
 }
 
-/* All other columns stay on one line */
 .small-table th:not(:first-child),
 .small-table td:not(:first-child) {
   white-space: nowrap;
 }
 
-.navbar {
-  background-color: #B85348 !important;
+/* ==========================================================================
+   COLOUR TOKENS — light and dark.
+
+   The whole site is themed from these. Every rule below uses `var(--dn-*)`
+   rather than a literal hex, so the dark palette is a matter of redefining the
+   tokens once instead of shadowing every selector — which matters here because
+   almost every rule carries `!important` to beat Bootswatch, and a shadowing
+   rule would have to repeat all of it.
+
+   The palette keeps the package's visual grammar: GREEN is the primary
+   epidemic/brand colour and RED is the secondary reporting/emphasis colour.
+   What changes is which end of each ramp is the surface and which is the ink:
+   in light mode the surfaces are pale tints and the text is near-black; in dark
+   mode the surfaces are deep, desaturated versions of the same hues and the
+   text is the pale tint. The accent hues are lifted slightly in dark mode
+   because a mid-tone that reads as "strong" on white reads as "muddy" on
+   charcoal.
+   ========================================================================== */
+
+:root {
+  /* Secondary reporting/emphasis colour — red */
+  --dn-red-strong:      #B85348;
+  --dn-red-mid:         #C55F53;
+  --dn-red-soft:        #e78b7f;
+  --dn-red-surface:     #f9e6e2;
+  --dn-red-surface-2:   #f4ddd9;
+  --dn-red-surface-3:   #fdf3f1;
+  --dn-red-surface-4:   #fbeeeb;
+  --dn-red-surface-5:   #f7e4e0;
+  --dn-red-text:        #8a4038;
+  --dn-red-text-muted:  #a9675d;
+  --dn-red-text-dim:    #6d4a44;
+  --dn-red-hover:       #f1d6d1;
+
+  /* Primary epidemic/brand colour — green */
+  --dn-green-strong:    #5F7E62;
+  --dn-green-mid:       #718f74;
+  --dn-green-soft:      #A8BFA9;
+  --dn-green-text:      #334335;
+  --dn-green-text-muted:#607862;
+  --dn-green-text-dim:  #4f6251;
+  --dn-green-surface:   #eaf1ea;
+  --dn-green-surface-2: #e3ece3;
+  --dn-green-surface-3: #f4f8f4;
+  --dn-green-surface-4: #eff5ef;
+  --dn-green-surface-5: #e6efe6;
+  --dn-green-hover:     #dbe4db;
+
+  /* Neutrals */
+  --dn-ink:             #262626;
+  --dn-ink-muted:       #6b7280;
+  --dn-on-strong:       #ffffff;
+  --dn-code-surface:    #f4e8e6;
+
+  /* Kept: older rules and any user CSS may still reference these. */
+  --sage-dark:  var(--dn-green-strong);
+  --sage-light: var(--dn-green-soft);
+  --brand-red:  var(--dn-red-strong);
+  --charcoal:   var(--dn-ink);
 }
 
-[data-bs-theme="dark"] .navbar {
-  background-color: #C55F53 !important;
+html[data-bs-theme="dark"] {
+  /* Reporting process — red. Surfaces become deep warm browns rather than
+     desaturated greys, so a red-family callout still reads as red-family. */
+  --dn-red-strong:      #d4776b;
+  --dn-red-mid:         #e08a7f;
+  --dn-red-soft:        #8a4038;
+  --dn-red-surface:     #3a2521;
+  --dn-red-surface-2:   #452a25;
+  --dn-red-surface-3:   #2f1f1c;
+  --dn-red-surface-4:   #34211e;
+  --dn-red-surface-5:   #452a25;
+  --dn-red-text:        #f0a99e;
+  --dn-red-text-muted:  #d99e93;
+  --dn-red-text-dim:    #c49a92;
+  --dn-red-hover:       #4f302a;
+
+  /* Epidemic process — green. Same idea: deep sage, not grey. */
+  --dn-green-strong:    #8fae92;
+  --dn-green-mid:       #789a7b;
+  --dn-green-soft:      #4a6b4d;
+  --dn-green-text:      #b8d0ba;
+  --dn-green-text-muted:#9fbea2;
+  --dn-green-text-dim:  #91a894;
+  --dn-green-surface:   #232e24;
+  --dn-green-surface-2: #273328;
+  --dn-green-surface-3: #1f291f;
+  --dn-green-surface-4: #212c22;
+  --dn-green-surface-5: #2b392c;
+  --dn-green-hover:     #2f3d30;
+
+  /* Neutrals. `--dn-ink` is the *text* colour, so it inverts. */
+  --dn-ink:             #e8eae8;
+  --dn-ink-muted:       #9aa3a0;
+  --dn-on-strong:       #ffffff;
+  --dn-code-surface:    #2b2424;
+
+  /* Terminal colours, lifted for the dark code surface — see the ANSI block
+     at the bottom of this file. Only defined here: in light mode the originals
+     are already legible and nothing overrides them. */
+  --dn-ansi-blue:       #6ea8fe;
+  --dn-ansi-red:        #e78b7f;
+  --dn-ansi-cyan:       #5fd7d7;
 }
+
+.navbar {
+  background-color: var(--dn-green-strong) !important;
+}
+
+/* Keep white navbar controls readable when the page switches to dark mode. */
+html[data-bs-theme="dark"] .navbar {
+  background-color: #49684c !important;
+}
+
+/* --------------------------------------------------------------------------
+   Navbar dropdowns (the "Articles" menu).
+
+   Bootstrap 5 renders these as `.dropdown-menu`, NOT `.submenu`, so the old
+   `.submenu` rules never matched and the menu fell through to the Bootswatch
+   "flatly" default, which is near-black. Both selectors are kept below so the
+   styling survives a pkgdown/Bootstrap version bump.
+
+   Target: a pale tint of the primary green (var(--dn-green-soft)) with the
+   `near_black` (var(--dn-ink)) text used elsewhere in the package.
+   -------------------------------------------------------------------------- */
+.navbar .dropdown-menu,
+.navbar .submenu {
+  background-color: var(--dn-green-surface) !important;
+  border: 1px solid var(--dn-green-soft) !important;
+  box-shadow: 0 0.5rem 1rem rgba(38, 38, 38, 0.15);
+}
+
+.navbar .dropdown-menu .dropdown-item,
+.navbar .submenu .dropdown-item {
+  color: var(--dn-ink) !important;
+}
+
+.navbar .dropdown-menu .dropdown-item:hover,
+.navbar .dropdown-menu .dropdown-item:focus,
+.navbar .submenu .dropdown-item:hover,
+.navbar .submenu .dropdown-item:focus {
+  background-color: var(--dn-green-soft) !important;
+  color: var(--dn-ink) !important;
+}
+
+.navbar .dropdown-menu .dropdown-item.active,
+.navbar .dropdown-menu .dropdown-item:active {
+  background-color: var(--dn-green-strong) !important;
+  color: var(--dn-on-strong) !important;
+}
+
+/* Section headers and separators inside the dropdown. */
+.navbar .dropdown-menu .dropdown-header {
+  color: var(--dn-green-text) !important;
+  font-weight: 600;
+}
+
+.navbar .dropdown-menu .dropdown-divider {
+  border-top-color: var(--dn-green-soft) !important;
+}
+
+/* The pale treatment is legible in both themes, so dark mode keeps it rather
+   than reverting to the dark Bootswatch default. */
+[data-bs-theme="dark"] .navbar .dropdown-menu,
+[data-bs-theme="dark"] .navbar .submenu {
+  background-color: var(--dn-green-surface-2) !important;
+  border-color: var(--dn-green-mid) !important;
+}
+
+[data-bs-theme="dark"] .navbar .dropdown-menu .dropdown-item,
+[data-bs-theme="dark"] .navbar .submenu .dropdown-item {
+  color: var(--dn-ink) !important;
+}
+
+html[data-bs-theme="dark"] .navbar .dropdown-menu .dropdown-item.active,
+html[data-bs-theme="dark"] .navbar .dropdown-menu .dropdown-item:active {
+  color: #171a18 !important;
+}
+
+/* --------------------------------------------------------------------------
+   Navbar search box, matched to the Articles dropdown above.
+
+   pkgdown's search is the Algolia autocomplete widget: `#search-input` is the
+   box itself and the results render into `.aa-dropdown-menu` / `.aa-suggestion`
+   (NOT a Bootstrap `.dropdown-menu`), so the results list has to be styled
+   separately or it stays on the Bootswatch default while the box turns pale.
+   -------------------------------------------------------------------------- */
+.navbar #search-input,
+.navbar #search-input.form-control {
+  background-color: var(--dn-green-surface) !important;
+  color: var(--dn-ink) !important;
+  border: 1px solid var(--dn-green-soft) !important;
+}
+
+.navbar #search-input::placeholder {
+  color: var(--dn-green-text-muted) !important;
+  opacity: 1; /* Firefox dims placeholders by default. */
+}
+
+.navbar #search-input:focus {
+  background-color: var(--dn-green-surface-3) !important;
+  border-color: var(--dn-green-strong) !important;
+  box-shadow: 0 0 0 0.2rem rgba(95, 126, 98, 0.3) !important;
+}
+
+/* Results list. */
+.aa-dropdown-menu {
+  background-color: var(--dn-green-surface) !important;
+  border: 1px solid var(--dn-green-soft) !important;
+  box-shadow: 0 0.5rem 1rem rgba(38, 38, 38, 0.15);
+}
+
+.aa-dropdown-menu .aa-suggestion {
+  color: var(--dn-ink) !important;
+}
+
+.aa-dropdown-menu .aa-suggestion:hover,
+.aa-dropdown-menu .aa-suggestion.aa-cursor {
+  background-color: var(--dn-green-soft) !important;
+  color: var(--dn-ink) !important;
+}
+
+/* mark.js wraps matched terms in <mark>; the default yellow clashes with the
+   pale green ground. */
+.aa-dropdown-menu .aa-suggestion mark {
+  background-color: var(--dn-green-strong) !important;
+  color: var(--dn-on-strong) !important;
+  padding: 0 0.15em;
+  border-radius: 2px;
+}
+
+html[data-bs-theme="dark"] .aa-dropdown-menu .aa-suggestion mark {
+  color: #171a18 !important;
+}
+
+/* "No results found" and the dimmed context line under each hit. */
+.aa-dropdown-menu .aa-suggestion .search-details,
+.aa-dropdown-menu .aa-suggestion .autocomplete-item {
+  color: var(--dn-green-text-dim) !important;
+}
+
+/* NO `[data-bs-theme="dark"]` override for the search box or its results.
+   pkgdown stamps `data-bs-theme="dark"` on the <nav class="navbar"> ELEMENT
+   itself, so that navbar text stays light on the coloured bar. Anything nested
+   inside the navbar — which includes `.aa-dropdown-menu` — therefore matches
+   `[data-bs-theme="dark"] ...` on *every* page, light mode included. A
+   dark-mode variant here would permanently mis-colour the results list and
+   leave it a different shade from the Articles menu. The single pale palette
+   above is legible in both themes, so it is used unconditionally.
+
+   (The `.navbar .dropdown-menu` dark rule further up is fine: it needs a themed
+   ANCESTOR of `.navbar`, which only exists when the page itself is dark.) */
+
+
+/* --------------------------------------------------------------------------
+   Callout boxes written as pandoc fenced divs, e.g.
+
+       ::: {.alert .alert-info}
+       **TIP**: ...
+       :::
+
+   Bootstrap's default `.alert-info` is a blue that belongs to no part of this
+   package's palette, so it is restyled into the secondary red accent.
+   -------------------------------------------------------------------------- */
+.alert-info {
+  background-color: var(--dn-red-surface) !important;
+  border: 1px solid var(--dn-red-soft) !important;
+  border-left: 4px solid var(--dn-red-strong) !important;
+  color: var(--dn-ink) !important;
+  border-radius: 4px;
+}
+
+/* Headings, bold lead-ins ("**TIP**") and links inside the callout. */
+.alert-info strong,
+.alert-info b,
+.alert-info h1, .alert-info h2, .alert-info h3,
+.alert-info h4, .alert-info h5, .alert-info h6 {
+  color: var(--dn-red-text) !important;
+}
+
+.alert-info a {
+  color: var(--dn-red-strong) !important;
+  text-decoration: underline;
+}
+
+.alert-info a:hover {
+  color: var(--dn-red-text) !important;
+}
+
+/* Inline code inside the callout: the page-wide `code` rule paints a pale red
+   background that disappears against the callout, so lift it slightly. */
+.alert-info code {
+  background-color: var(--dn-red-hover) !important;
+  color: var(--dn-ink) !important;
+}
+
+/* The callout is legible in both themes, so dark mode keeps the same palette
+   rather than reverting to the Bootswatch default. */
+[data-bs-theme="dark"] .alert-info {
+  background-color: var(--dn-red-surface-2) !important;
+  border-color: var(--dn-red-soft) !important;
+  border-left-color: var(--dn-red-strong) !important;
+  color: var(--dn-ink) !important;
+}
+
+[data-bs-theme="dark"] .alert-info strong,
+[data-bs-theme="dark"] .alert-info b {
+  color: var(--dn-red-text) !important;
+}
+
+
+/* `.alert-warning` callouts use the attenuated primary green
+   (var(--dn-green-soft)), so the two callout kinds are distinguishable at a
+   glance and both stay inside the package palette. */
+.alert-warning {
+  background-color: var(--dn-green-surface-4) !important;
+  border: 1px solid var(--dn-green-soft) !important;
+  border-left: 4px solid var(--dn-green-soft) !important;
+  color: var(--dn-ink) !important;
+  border-radius: 4px;
+}
+
+.alert-warning strong,
+.alert-warning b,
+.alert-warning h1, .alert-warning h2, .alert-warning h3,
+.alert-warning h4, .alert-warning h5, .alert-warning h6 {
+  color: var(--dn-green-text-muted) !important;
+}
+
+.alert-warning a {
+  color: var(--dn-green-text-muted) !important;
+  text-decoration: underline;
+}
+
+/* Inline code keeps the page-wide red here. The callout's own tint is
+   green, and a green-on-green chip reads as a coloured square rather than as code, so
+   this deliberately does NOT follow the callout the way `.alert-info code`
+   does (there the lift stays within the same green family). */
+.alert-warning code {
+  background-color: var(--dn-code-surface) !important;
+  color: var(--dn-ink) !important;
+}
+
+[data-bs-theme="dark"] .alert-warning {
+  background-color: var(--dn-green-surface-5) !important;
+  border-color: var(--dn-green-soft) !important;
+  border-left-color: var(--dn-green-soft) !important;
+  color: var(--dn-ink) !important;
+}
+
 
 .navbar .navbar-brand,
 .navbar .nav-link {
@@ -46,33 +380,84 @@
 }
 
 a {
-  color: #5F7E62;
+  color: var(--dn-red-strong);
 }
 
 a:hover {
-  color: #B85348;
+  color: var(--dn-green-strong);
 }
 
 /* Color for all headings (H1, H2, H3, etc.) */
 h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
-  color: #334335 !important;
+  color: var(--dn-red-text) !important;
 }
 
 /* Color for bold text */
 strong, b {
-  color: #334335;
+  color: var(--dn-red-text);
 }
 
 /* Background color for inline code snippets */
 code {
-  background-color: #ebefeb;
+  background-color: var(--dn-code-surface);
   padding: 0.2em 0.4em;
   border-radius: 4px;
 }
 
+/* --------------------------------------------------------------------------
+   Code blocks must SCROLL sideways, never wrap.
+
+   Two separate jobs, and mixing them is what produced a stray empty scrollbar
+   track ("a rectangle") under every chunk:
+
+     1. NO WRAPPING -- pkgdown/Bootstrap set `white-space: pre-wrap` on `code`
+        inside `pre`, which beats a bare `pre` rule and folds long lines. That
+        has to be pinned on every layer, `code` included.
+     2. SCROLLING -- must be set ONLY on the container (`div.sourceCode`, `pre`).
+        Putting `overflow-x` on the inner `<code>` as well makes it a second
+        scroll container, and each one reserves a horizontal scrollbar gutter
+        even when there is nothing to scroll.
+   -------------------------------------------------------------------------- */
+
+/* 1. Nothing wraps, at any level. */
+div.sourceCode,
+div.sourceCode pre,
+pre.sourceCode,
+pre.sourceCode code,
+pre code.sourceCode,
+pre code.hljs,
+.section pre,
+.section pre code {
+  white-space: pre !important;
+  word-wrap: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
+/* 2. Only the container scrolls. */
+div.sourceCode,
+pre.sourceCode,
+.section pre {
+  overflow-x: auto !important;
+}
+
+/* The inner <code> stays inline and never scrolls, so no second gutter. */
+div.sourceCode pre code,
+pre.sourceCode code,
+.section pre code {
+  overflow: visible !important;
+}
+
+pre, pre code {
+  white-space: pre;
+  padding-right: 1rem;
+  overflow: auto;
+  word-wrap: normal;
+}
+
 /* Background color for code chunks/blocks */
 pre.src, pre.r, div.sourceCode {
-  background-color: #ebefeb !important;
+  background-color: var(--dn-code-surface) !important;
 }
 
 /* Ensures the internal pre block inherits the background */
@@ -82,10 +467,114 @@ pre.src code, div.sourceCode pre {
 
 /* Target evaluated output blocks and standard preformatted text */
 pre, .markdown-body pre, pre code, .output pre {
-  background-color: #ebefeb !important;
+  background-color: var(--dn-code-surface) !important;
 }
 
 /* Ensure the container background matches seamlessly */
 div.pre {
-  background-color: #ebefeb !important;
+  background-color: var(--dn-code-surface) !important;
+}
+
+
+/* --------------------------------------------------------------------------
+   Figure captions: centred, smaller and grey, so they read as a caption rather
+   than as body text.
+   -------------------------------------------------------------------------- */
+.figure > .caption,
+.figure figcaption,
+p.caption,
+figcaption {
+  text-align: center !important;
+  font-size: 0.875rem !important;
+  color: var(--dn-ink-muted) !important;
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+
+/* Keep the figure itself centred with its caption. */
+.figure,
+figure {
+  text-align: center;
+}
+
+
+/* --------------------------------------------------------------------------
+   ANSI colours in printed output, in dark mode.
+
+   `cli` styles `{.val ...}` in ANSI blue, `{.cls ...}` and error bullets in
+   red, and a few fields in cyan. pkgdown converts the escape codes to HTML at
+   build time and bakes each one in as an INLINE `style="color: #0000BB"`. On
+   the charcoal `--dn-code-surface` those three are near-invisible: the dates
+   and row counts in `print(covid_snapshots)` disappear entirely.
+
+   Two consequences shape the rules below.
+
+     1. An inline style beats every class selector, whatever its specificity,
+        so the ONLY way to lift them is an attribute selector carrying
+        `!important`. There is nothing to hook that is not the style itself.
+     2. This must be scoped to `pre`. pkgdown stamps `data-bs-theme="dark"` on
+        the `<nav class="navbar">` ELEMENT on every page, light mode included
+        (see the note by the search box above), so an unscoped
+        `[data-bs-theme="dark"] [style*=...]` would also match inside the
+        navbar. No `<pre>` lives there, so `pre` is what keeps this rule to
+        genuinely dark pages.
+
+   Light mode is left alone: these are the colours a terminal shows, and they
+   are perfectly legible on the pale code surface.
+   -------------------------------------------------------------------------- */
+[data-bs-theme="dark"] pre [style*="#0000BB" i] {
+  color: var(--dn-ansi-blue) !important;
+}
+
+[data-bs-theme="dark"] pre [style*="#BB0000" i] {
+  color: var(--dn-ansi-red) !important;
+}
+
+[data-bs-theme="dark"] pre [style*="#00BBBB" i] {
+  color: var(--dn-ansi-cyan) !important;
+}
+
+/* ==========================================================================
+   PLOT BACKGROUNDS IN DARK MODE
+
+   pkgdown does not ship the figures twice, so a plot is one PNG serving both
+   themes; what makes it readable on a dark page is a CSS filter that bslib
+   applies for us:
+
+       [data-bs-theme="dark"] img.r-plt { filter: invert(100%) hue-rotate(180deg) }
+
+   That is why the plots looked wrong here and why nothing in the R code was to
+   blame. A ggplot2 background is WHITE, and `invert(100%)` takes white to
+   #000000 -- pure black -- while the site body is #212529. Every figure was a
+   black rectangle sitting on charcoal.
+
+   The fix is two changes to the same filter:
+
+   1. `brightness(0.871)` BEFORE the invert. Filters compose left to right, so
+      the pair maps a channel c to `1 - 0.871c`: black still comes out white
+      (full contrast is kept, unlike lowering the invert amount, which
+      compresses both ends), and white comes out at 0.129 = #212121 instead of
+      #000000. The constant is 1 - 33/255, i.e. the red channel of #212529.
+
+   2. `mix-blend-mode: lighten` closes the remaining gap. #212121 is a neutral
+      grey and #212529 is faintly blue, so step 1 alone leaves (0, +4, +8) of
+      difference -- a seam at the figure's edge. `lighten` takes the per-channel
+      maximum against whatever is actually behind the image, which lands the
+      background exactly on the page colour and, because step 1 guarantees NO
+      pixel is darker than #212121, touches nothing else. It is also
+      self-correcting: an example figure inside a `pre` blends against the code
+      surface rather than the body, which is the colour behind it there.
+
+   Nothing here changes the page background, and light mode is untouched --
+   bslib applies no filter there, and a white plot on a white page already
+   matches.
+   ========================================================================== */
+
+[data-bs-theme="dark"] img.r-plt,
+[data-bs-theme="dark"] pre .r-plt.img img,
+[data-bs-theme="dark"] .no-invert-dark-mode img.r-plt,
+[data-bs-theme="dark"] .no-invert-dark-mode pre .r-plt.img img,
+html[data-bs-theme="dark"] main img[src*="reference/figures/README-"] {
+  filter: brightness(0.871) invert(100%) hue-rotate(180deg) !important;
+  mix-blend-mode: lighten;
 }
