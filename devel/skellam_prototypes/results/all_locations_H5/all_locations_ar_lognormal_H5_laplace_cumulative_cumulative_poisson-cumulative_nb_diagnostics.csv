@@ -1,5 +1,0 @@
-"location","origin","clock","model","nll","convergence","max_gradient","finite_fit","leakage_ok","retract_mass","q_terminal","n_cells"
-"Alabama",2025-01-02,"calendar","cumulative_poisson",1148.89277898012,0,1.48450038042203e-05,TRUE,TRUE,0.0703145324600297,0.93025493126974,405
-"Alabama",2025-01-02,"calendar","cumulative_nb",1156.9855369008,0,3.1375824263602e-05,TRUE,TRUE,0.0692651535376586,0.931332312087872,405
-"Alabama",2025-01-02,"compressed","cumulative_poisson",734.817628304417,0,2.23927819156117e-05,TRUE,TRUE,0.0881210016658671,0.9123288909452,207
-"Alabama",2025-01-02,"compressed","cumulative_nb",746.041830290833,0,7.23857739765103e-06,TRUE,TRUE,0.0881362014741694,0.912314863114704,207

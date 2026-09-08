@@ -54,7 +54,7 @@ Default 0.62.}
 \item{ar_sigma_max}{Upper bound on the AR/beta RW innovation SD. Default 1.}
 
 \item{is_confirmation}{Deprecated legacy switch.  \code{TRUE} now errors; use the
-dedicated \code{cumulative} model component and cumulative arguments.}
+dedicated \code{count_cumulative} model component and cumulative arguments.}
 
 \item{cumulative_levels}{Optional cumulative levels aligned row-for-row with
 \code{m}; used only by the dedicated count-cumulative composites.}

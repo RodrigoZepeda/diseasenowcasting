@@ -1,5 +1,0 @@
-"location","epidemic","model","targets","mean_wis","mean_absolute_error","median_absolute_error","median_signed_error","coverage90"
-"Alabama","hsgp","hurdle_ztnb",5,1.93763636363636,1.9,2,2,1
-"Alabama","hsgp","hurdle_ztpoisson",5,1.81854545454545,1.1,0,0,1
-"Alabama","sir","hurdle_ztnb",5,0.525818181818183,0.6,0,0,1
-"Alabama","sir","hurdle_ztpoisson",5,1.09348484848485,1.1,0,0,1

@@ -12,11 +12,7 @@ lognormal_revision(mu = numeric(0), sigma = numeric(0))
 
 gamma_revision(shape = numeric(0), rate = numeric(0))
 
-generalized_gamma_revision(
-  mu = numeric(0),
-  sigma = numeric(0),
-  Q = numeric(0)
-)
+generalized_gamma_revision(mu = numeric(0), sigma = numeric(0), Q = numeric(0))
 
 dirichlet_revision(alpha = numeric(0), bins = numeric(0))
 }
