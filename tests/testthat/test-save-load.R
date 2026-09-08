@@ -9,7 +9,7 @@
   load_nowcast(f)
 }
 
-test_that("a one-stage nowcast round-trips: predict/coef/tidy match", {
+test_that("a one-stage nowcast round-trips: predict/coef/parameters match", {
   tn <- .make_synth_tblnow(Tn = 50L, seed = 100)
   nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                 type = "one_stage", n_draws = 200, seed = 1)

@@ -308,7 +308,7 @@ parameters plus its Laplace mode and precision — all `predict()` needs.
 save_nowcast(ncast, "dengue_nowcast.rds")
 
 restored <- load_nowcast("dengue_nowcast.rds")
-predict(restored)               # predict() / autoplot() / coef() / tidy() all work
+predict(restored)               # predict() / autoplot() / coef() / parameters() all work
 nowcast(restored@data, restored@model)   # or re-fit from the bundled data
 ```
 

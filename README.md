@@ -168,7 +168,7 @@ pred <- predict(ncast)   # full posterior-predictive nowcast at every event-time
 summary(pred)
 ```
 
-    #> # A tibble: 6 x 16
+    #> # A tibble: 6 × 16
     #>    mean median    sd   mad  q2.5    q5   q10   q25   q50   q75   q90   q95 q97.5
     #>   <dbl>  <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
     #> 1 109.     108  1.53  1.48   107   107   107   107   108 109     110 111   112  
@@ -177,7 +177,7 @@ summary(pred)
     #> 4  45.6     44  9.11  5.93    36    36    38    40    44  49      55  59    65.0
     #> 5  41.6     39 15.8  11.9     23    24    27    32    39  47      59  68    74.0
     #> 6  37.6     33 19.8  16.3     13    16    18    24    33  45.2    61  72.0  85.0
-    #> # i 3 more variables: .event_num <int>, stratum <chr>, event_date <date>
+    #> # ℹ 3 more variables: .event_num <int>, stratum <chr>, event_date <date>
 
 You can choose a different epidemic process, delay family or likelihood
 by passing a `model()` to `nowcast()`:
@@ -253,26 +253,19 @@ best_model_name(auto_ncast)
 
 # Get the scores for all the models
 comparison_scores(auto_ncast)
-#>                      model       wis overprediction underprediction dispersion
-#> 1        HSGP/nb/Dirichlet  8.295708     0.06666667        5.147778   3.081264
-#> 2        HSGP/nb/LogNormal  8.448542     0.06666667        5.220000   3.161875
-#> 3         AR1/nb/Dirichlet  8.512125     0.06666667        5.819444   2.626014
-#> 4 HSGP/nb/GeneralizedGamma  8.624472     0.06666667        5.330000   3.227806
-#> 5         AR1/nb/LogNormal  8.916250     0.05555556        5.916111   2.944583
-#> 6  AR1/nb/GeneralizedGamma  8.919347     0.06666667        6.077778   2.774903
-#> 7         SIR/nb/LogNormal 16.660708     0.01111111       13.270000   3.379597
-#> 8         SIR/nb/Dirichlet 17.512181     0.01111111       14.362222   3.138847
-#> 9  SIR/nb/GeneralizedGamma 18.083403     0.01111111       14.682778   3.389514
-#>   coverage_50 coverage_90       ape      mse  n
-#> 1         0.3         0.9 0.7641435  676.100 10
-#> 2         0.2         0.9 0.7904566  664.600 10
-#> 3         0.0         0.8 0.7887334  650.700 10
-#> 4         0.1         0.9 0.7989751  738.000 10
-#> 5         0.1         0.8 0.7658455  714.100 10
-#> 6         0.1         0.8 0.8019557  709.425 10
-#> 7         0.3         0.5 0.7541397 1467.925 10
-#> 8         0.3         0.5 0.7465948 1506.100 10
-#> 9         0.3         0.5 0.7537398 1514.675 10
+#>                      model      wis overprediction underprediction dispersion
+#> 1        HSGP/nb/Dirichlet 8.295708     0.06666667        5.147778   3.081264
+#> 2        HSGP/nb/LogNormal 8.448542     0.06666667        5.220000   3.161875
+#> 3         AR1/nb/Dirichlet 8.512125     0.06666667        5.819444   2.626014
+#> 4 HSGP/nb/GeneralizedGamma 8.624472     0.06666667        5.330000   3.227806
+#> 5         AR1/nb/LogNormal 8.916250     0.05555556        5.916111   2.944583
+#>   coverage_50 coverage_90       ape   mse  n
+#> 1         0.3         0.9 0.7641435 676.1 10
+#> 2         0.2         0.9 0.7904566 664.6 10
+#> 3         0.0         0.8 0.7887334 650.7 10
+#> 4         0.1         0.9 0.7989751 738.0 10
+#> 5         0.1         0.8 0.7658455 714.1 10
+#>  [ reached 'max' / getOption("max.print") -- omitted 4 rows ]
 
 autoplot(auto_ncast)
 ```
@@ -391,7 +384,7 @@ each fit’s parameters plus its Laplace mode and precision — all
 save_nowcast(ncast, "dengue_nowcast.rds")
 
 restored <- load_nowcast("dengue_nowcast.rds")
-predict(restored)               # predict() / autoplot() / coef() / tidy() all work
+predict(restored)               # predict() / autoplot() / coef() / parameters() all work
 nowcast(restored@data, restored@model)   # or re-fit from the bundled data
 ```
 

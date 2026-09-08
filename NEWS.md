@@ -11,6 +11,26 @@ removed rather than deprecated.
 tbl.now revision metadata directly: `revision_date`, `revision_type`, and
 `is_censored_revision`.
 
+## Breaking: `model_parameters()` is now `parameters()`, and `tidy()` belongs to tbl.now
+
+Version 2.1.0 moved the per-parameter table to `model_parameters()` and defined
+a `tidy()` here that returned the nowcast. Both halves of that are now revised.
+
+* `model_parameters()` is renamed **`parameters()`**. It is the same table
+  (`term`, `estimate`, `std.error`, `conf.low`, `conf.high`, `type`) and the
+  same `conf.level` argument; only the name changed. The old name is removed
+  rather than deprecated.
+* Standard errors are fixed. The interval was computed with `base::diag()` on
+  the sparse solve of the precision matrix, which errors out and left
+  `std.error` `NA` for **every** parameter. It now uses `Matrix::diag()`, and
+  falls back to marginal SDs estimated from Laplace draws when the precision
+  matrix is too large or too ill-conditioned to invert.
+* **`tidy()` is no longer defined in this package.** `tbl.now (>= 0.35.0)`
+  exports the shared generic and registers the `diseasenowcasting` method
+  itself, so `tidy()` on a fit still returns the cross-package nowcast table
+  described under 2.1.0 -- it is simply no longer our code, and we no longer
+  register a method on a generic we do not own.
+
 ## Breaking: cumulative model configuration is now `cumulative_process()`
 
 The count-cumulative model component is now configured with
@@ -145,6 +165,38 @@ The prior sampler now supplies the collapsed-kernel and model-specific hurdle
 parameters. `hurdle_ztpoisson` deliberately supplies no magnitude dispersion.
 A sampler that cannot reconstruct any draw aborts with the captured first error
 instead of returning a correctly shaped but entirely missing result.
+
+# 2.1.0
+
+## `tidy()` now returns the nowcast, and uses the shared `generics` generic
+
+**Breaking change.** `tidy()` on a fitted nowcast used to return one row per
+estimated *parameter*. It now returns the **nowcast** — one row per event date
+per stratum — matching the contract every other nowcasting engine returns, so
+downstream code (plotting, scoring, cross-engine comparison via `tbl.now`) does
+not have to special-case this package.
+
+* `tidy()` is now **re-exported from `generics`** instead of being a generic
+  defined here. The old package-local generic masked `generics::tidy` after
+  `library(diseasenowcasting)`, which made every method other packages register
+  on the shared generic invisible — including `tbl.now`'s.
+* `tidy()` works on both a fitted `nowcast()` and on `predict(fit)`. On a fit it
+  draws the posterior predictive first (pass `n_draws` / `seed` through `...`).
+  It returns a tibble sorted by `stratum` then `event_date`, with columns
+  `event_date`, `stratum` (`"all"` when unstratified), `estimate` (posterior
+  **median**), `conf.low`, `conf.high`, `level` (the width the interval actually
+  has) and `engine`. Event dates are reported on the model's own grid — never
+  re-gridded.
+* A `probs` argument appends one exact quantile column per probability, named
+  `q5`, `q50`, `q95` (`probs * 100`, so `0.025` gives `q2.5`).
+* Stratified fits get one block of rows per stratum, read from the per-stratum
+  draws rather than the pooled ones.
+* **New `model_parameters()`** returns the old `tidy()` table (`term`,
+  `estimate`, `std.error`, `conf.low`, `conf.high`, `type`). Calling `tidy()` on
+  a fit warns once per session and names `model_parameters()`.
+* `tidy.default` is gone: registering a default method on the shared generic
+  would have changed `tidy()`'s behaviour for every other package in the
+  session. `model_parameters()` keeps a default method that errors clearly.
 
 # 2.0.0
 

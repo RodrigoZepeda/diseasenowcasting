@@ -239,7 +239,7 @@ test_that("infer_max_time returns the model's event-time span", {
   expect_equal(mt, diseasenowcasting:::prepare_from_tbl_now(tn, model())$max_time)
 })
 
-# ── 27_tidy.R (0% → target high) ────────────────────────────────────────────
+# ── 27_parameters.R -- parameters() (0% → target high) ───────────────────────
 
 test_that("parameters() returns a long parameter table with credible intervals", {
   tn <- .make_synth_tblnow(Tn = 45L, seed = 51)
