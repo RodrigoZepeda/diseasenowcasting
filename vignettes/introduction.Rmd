@@ -272,7 +272,7 @@ having the lowest WIS at essentially the same coverage as HGSP. Note however tha
 for the tutorial  we only used 5 historical dates which is too low to reach
 a definite conslusion.
 
-## When a report is not yet a case: the validation process
+## When a report is not yet a case: the revision process
 
 Everything so far assumes a report **is** a case. Many registers work
 provisionally instead: a report arrives, and is later **resolved** — confirmed by
@@ -285,14 +285,14 @@ the process is **detected** from the data.
 ```{r resolution-demo, eval = FALSE}
 # One date, plus what the result was: "confirmed", "retracted" or "pending".
 dat <- tbl_now(linelist, event_date = onset, report_date = reported,
-               validation_date = result, validation_type = outcome,
+               revision_date = result, revision_type = outcome,
                data_type = "linelist")
 
 nowcast(dat)     # works out for itself which outcomes you record
 ```
 
 Whether you record only retractions, only confirmations, or both, is read from
-the values in `validation_type` — and the answer targets, respectively, the cases
+the values in `revision_type` — and the answer targets, respectively, the cases
 never retracted, the cases eventually confirmed, or the cases whose result comes
 back positive.
 
@@ -313,9 +313,9 @@ parameters(nc) |> filter(type == "resolution")
 #>  prob_not_retracted    0.8512   0.8399    0.8619 resolution
 ```
 
-See `vignette("Validation_processes")` for the full treatment, including
-per-stratum probabilities, censored validation dates, count-incidence data, and
-the shared validation-delay assumption used when both outcomes are recorded.
+See `vignette("Revision_processes")` for the full treatment, including
+per-stratum probabilities, censored revision dates, count-incidence data, and
+the shared revision-delay assumption used when both outcomes are recorded.
 
 ## Example 4 -- Letting the package choose the model (`auto_nowcast()`)
 
@@ -489,19 +489,19 @@ zero-truncated Poisson magnitude has no dispersion parameter.
 ```{r flusight-nowcast, eval = FALSE}
 level_model <- model(
   nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-  count_cumulative = count_cumulative_process(
+  cumulative = cumulative_process(
     observation = "cumulative", settlement = 26L
   )
 )
 ztnb_model <- model(
   nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-  count_cumulative = count_cumulative_process(
+  cumulative = cumulative_process(
     observation = "hurdle_ztnb", settlement = 26L
   )
 )
 ztp_model <- model(
   poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
-  count_cumulative = count_cumulative_process(
+  cumulative = cumulative_process(
     observation = "hurdle_ztpoisson", settlement = 26L
   )
 )

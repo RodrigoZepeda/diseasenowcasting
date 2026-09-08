@@ -53,7 +53,7 @@ for (state in STATES) {
   # follows the REPORT axis, and `align_weeks()` displaces the two axes by
   # different amounts (event Saturdays back 6 days, report Wednesdays back 3), so a
   # 4-day gap becomes a 7-day one -- exactly one extra event-time. No data-side
-  # filter reaches that; see devel/HANDOFF_validation.md.
+  # filter reaches that; see devel/HANDOFF_revision.md.
   raw <- raw |>
     filter(as_of <= max(target_end_date))
 

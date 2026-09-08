@@ -64,7 +64,7 @@ save_nowcast <- function(object, file) {
     priors     = object@priors,
     phi        = object@phi,
     n_draws    = object@n_draws,
-    validation_mode = object@validation_mode,
+    revision_mode = object@revision_mode,
     comparison = object@comparison,   # auto_nowcast() scoreboard, or NULL
     fits       = lapply(object@fits, .serialize_fit)
   )
@@ -107,7 +107,7 @@ load_nowcast <- function(file, rebuild = FALSE) {
     type = bundle$type, fits = fits, rung = bundle$rung, target = bundle$target,
     engine = bundle$engine, priors = bundle$priors, phi = bundle$phi,
     n_draws = as.integer(bundle$n_draws), comparison = bundle$comparison,
-    validation_mode = bundle$validation_mode %||% "none")
+    revision_mode = bundle$revision_mode %||% "none")
 }
 
 # -- internals ----------------------------------------------------------------

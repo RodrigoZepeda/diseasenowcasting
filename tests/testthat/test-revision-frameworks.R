@@ -1,8 +1,8 @@
-# Validation is an observation layer, so it must compose with every epidemic
+# Revision is an observation layer, so it must compose with every epidemic
 # process. The mode-specific algebra is tested in test-confirmation-mode.R and
 # test-resolution-math.R; this file checks the orthogonal epidemic-process axis.
 
-.validation_framework_fixture <- function() {
+.revision_framework_fixture <- function() {
   n_time <- 35L
   simulated <- simulate_both_signs_linelist(
     n_days = n_time, p_true = 0.7, lag_mean = 1.5, seed = 121
@@ -10,16 +10,16 @@
   list(
     n_time = n_time,
     simulated = simulated,
-    data = as_validation_tbl_now(simulated$linelist, simulated$now)
+    data = as_revision_tbl_now(simulated$linelist, simulated$now)
   )
 }
 
-.fit_validation_framework <- function(epidemic, fixture) {
+.fit_revision_framework <- function(epidemic, fixture) {
   specification <- model(
     poisson_likelihood(), epidemic,
     lognormal_delay(mu = log(3), sigma = 0.6),
-    validation = validation_process(
-      lognormal_validation(mu = log(1.5), sigma = 0.7),
+    revision = revision_process(
+      lognormal_revision(mu = log(1.5), sigma = 0.7),
       p = 0.7,
       mode = "both"
     )
@@ -30,15 +30,15 @@
   )))
 }
 
-.expect_validation_framework_fit <- function(fitted, framework) {
-  expect_equal(fitted@validation_mode, "both", info = framework)
+.expect_revision_framework_fit <- function(fitted, framework) {
+  expect_equal(fitted@revision_mode, "both", info = framework)
   expect_equal(fitted@fits[[1]]$opt$convergence, 0L, info = framework)
   expect_true(all(is.finite(median(fitted))), info = framework)
 }
 
-test_that("validation nowcasting composes with built-in epidemic processes", {
+test_that("revision nowcasting composes with built-in epidemic processes", {
   skip_on_cran()
-  fixture <- .validation_framework_fixture()
+  fixture <- .revision_framework_fixture()
   processes <- list(
     hsgp = hsgp_epidemic(alpha = 0.5, ell = 5, num_basis = 6),
     ar = ar1_epidemic(phi = 0.7, sigma = 0.1),
@@ -47,12 +47,12 @@ test_that("validation nowcasting composes with built-in epidemic processes", {
   )
 
   for (framework in names(processes)) {
-    fitted <- .fit_validation_framework(processes[[framework]], fixture)
-    .expect_validation_framework_fit(fitted, framework)
+    fitted <- .fit_revision_framework(processes[[framework]], fixture)
+    .expect_revision_framework_fit(fitted, framework)
   }
 })
 
-test_that("validation nowcasting composes with a custom epidemic process", {
+test_that("revision nowcasting composes with a custom epidemic process", {
   skip_on_cran()
   library(RTMB)
 
@@ -75,7 +75,7 @@ test_that("validation nowcasting composes with a custom epidemic process", {
     "RTMB user-function dispatch inactive (load_all); runs under R CMD check"
   )
 
-  fixture <- .validation_framework_fixture()
+  fixture <- .revision_framework_fixture()
   constant_intensity <- function(theta) {
     matrix(theta[1] + rep(0, fixture$n_time), fixture$n_time, 1L)
   }
@@ -84,6 +84,6 @@ test_that("validation nowcasting composes with a custom epidemic process", {
     priors = list(normal_prior(log(40), 1)),
     name = "constant", param_names = "log_mean", inits = log(40)
   )
-  fitted <- .fit_validation_framework(epidemic, fixture)
-  .expect_validation_framework_fit(fitted, "custom")
+  fitted <- .fit_revision_framework(epidemic, fixture)
+  .expect_revision_framework_fit(fitted, "custom")
 })

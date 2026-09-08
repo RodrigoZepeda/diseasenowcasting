@@ -62,11 +62,11 @@ settled_truth <- function(linelist, event_dates) {
 }
 
 fit_real <- function(linelist, now, ..., strata = FALSE, epidemic = hsgp_epidemic()) {
-  tn <- if (strata) as_validation_tbl_now(linelist, now, strata = "gender")
-        else        as_validation_tbl_now(linelist, now)
+  tn <- if (strata) as_revision_tbl_now(linelist, now, strata = "gender")
+        else        as_revision_tbl_now(linelist, now)
   suppressMessages(suppressWarnings(nowcast(
     tn, model(nb_likelihood(), epidemic, lognormal_delay(),
-              validation = validation_process(validation_delay = dirichlet_validation(bins = 8),
+              revision = revision_process(revision_delay = dirichlet_revision(bins = 8),
                                                   ...)),
     now = now, type = "one_stage",
     temporal_effects = "none", n_draws = 300, seed = 8)))
@@ -123,13 +123,13 @@ test_that("dengue: censored reports and censored retractions still recover p", {
       ifelse(is.na(censored$retracted[bumped]), now, censored$retracted[bumped] - 7L))
     censored$retracted[censored$q_bound] <- pmin(censored$retracted[censored$q_bound] + 7L, now)
 
-    tn <- as_validation_tbl_now(
+    tn <- as_revision_tbl_now(
       censored, now, is_censored_report = is_censored,
-      is_censored_validation = q_bound
+      is_censored_revision = q_bound
     )
     fitted <- suppressMessages(suppressWarnings(nowcast(tn,
       model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
-            validation = validation_process(validation_delay = dirichlet_validation(bins = 8))),
+            revision = revision_process(revision_delay = dirichlet_revision(bins = 8))),
       now = now,
       type = "one_stage", temporal_effects = "none", n_draws = 50, seed = 8)))
     expect_gt(fitted@engine$n_censored, 0)
@@ -208,9 +208,9 @@ test_that("covid: the retraction model beats ignoring or dropping the retracted 
   as_of <- linelist[linelist$onset <= now & linelist$reported <= now, , drop = FALSE]
 
   relative_bias <- function(rows, use_retraction) {
-    # The validation process is detected from the object, so the two arms differ in
+    # The revision process is detected from the object, so the two arms differ in
     # whether the tbl_now CARRIES one -- not in an argument to nowcast().
-    tn <- if (use_retraction) as_validation_tbl_now(rows, now) else
+    tn <- if (use_retraction) as_revision_tbl_now(rows, now) else
       suppressWarnings(tbl.now::tbl_now(rows, event_date = onset,
             report_date = reported, now = now, data_type = "linelist", verbose = FALSE))
     fitted <- suppressMessages(suppressWarnings(nowcast(tn,

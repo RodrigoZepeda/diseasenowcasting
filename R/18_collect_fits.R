@@ -89,6 +89,11 @@
   }
 
   # -- Two-stage PARAMETRIC (windowed Stage-1, impute mu/sigma) -----------------
+  # When a revision process is active, only the EVENT-TO-REPORT parameters are
+  # fixed by these imputations. The revision delay and p remain free in every
+  # Stage-2 objective, where their cure/marked-state likelihood is estimated
+  # jointly with the epidemic. Its posterior is sampled within each fitted block;
+  # stacking blocks adds the reporting-delay imputation uncertainty.
   delay_estimate <- if (is_nonparametric) NULL else tryCatch({
     window       <- .window_delay_m(m, max_time, delay_window)
     delay_engine <- prepare_data(model, window$m, max_time = window$max_time, delay_only = TRUE)

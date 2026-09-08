@@ -32,6 +32,20 @@ test_that("prior_only works for AR1 and SIR epidemics", {
   }
 })
 
+test_that("prior_only SIR respects use_beta_rw_trend = FALSE", {
+  tn <- .grid_tn()
+  specification <- model(
+    nb_likelihood(), sir_epidemic(N_pop = 5000, use_beta_rw_trend = FALSE),
+    lognormal_delay()
+  )
+  nc <- nowcast(tn, specification, prior_only = TRUE, n_draws = 40, seed = 1)
+  sampled <- diseasenowcasting:::.sample_prior_parlist(
+    nc@engine, nc@priors, num_basis = 0L, n_strata = 1L
+  )
+  expect_false(any(grepl("^ar_", names(sampled))))
+  expect_true(all(is.finite(quantile(nc, probs = 0.5, seed = 2))))
+})
+
 test_that("prior_only is sensitive to the prior: higher SIR R0 -> larger epidemic", {
   tn <- .grid_tn()
   sir <- function(r0) model(nb_likelihood(),
@@ -98,10 +112,10 @@ test_that("count-cumulative data promotes the inert default to the dedicated pro
   expect_message(
     fitted <- nowcast(x, model(), n_draws = 50L, temporal_effects = "none", seed = 1L),
     "signed hurdle--ZTNB")
-  expect_identical(fitted@model@validation@active, FALSE)
-  expect_identical(fitted@model@count_cumulative@active, TRUE)
-  expect_identical(fitted@model@count_cumulative@observation, "hurdle_ztnb")
-  expect_identical(as.integer(fitted@model@count_cumulative@settlement), 26L)
+  expect_identical(fitted@model@revision@active, FALSE)
+  expect_identical(fitted@model@cumulative@active, TRUE)
+  expect_identical(fitted@model@cumulative@observation, "hurdle_ztnb")
+  expect_identical(as.integer(fitted@model@cumulative@settlement), 26L)
   expect_identical(fitted@fits[[1]]$convergence, 0L)
 })
 
@@ -131,7 +145,7 @@ test_that("the prior sampler supplies every name .joint_reconstruct() reads", {
 
   ztnb <- basis_for(model(
     nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
-    count_cumulative = count_cumulative_process(
+    cumulative = cumulative_process(
       observation = "hurdle_ztnb", settlement = 6L
     )
   ))
@@ -149,7 +163,7 @@ test_that("the prior sampler supplies every name .joint_reconstruct() reads", {
 
   ztp <- basis_for(model(
     nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
-    count_cumulative = count_cumulative_process(
+    cumulative = cumulative_process(
       observation = "hurdle_ztpoisson", settlement = 6L
     )
   ))
@@ -167,7 +181,7 @@ test_that(".simulate_prior_draws() aborts instead of returning an all-NA result"
   x     <- make_cumulative_grid()
   mdl <- model(
     nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
-    count_cumulative = count_cumulative_process(
+    cumulative = cumulative_process(
       observation = "hurdle_ztpoisson", settlement = 6L
     )
   )

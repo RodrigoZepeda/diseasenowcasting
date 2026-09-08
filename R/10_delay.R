@@ -74,13 +74,15 @@
     log_cdf_upper <- log_cdf_fn(delay_values[lower_mask])
     log_cdf_lower <- log_cdf_fn(delay_values[lower_mask] - 1)
     loglik <- loglik +
-      sum(weights[lower_mask] * (log_cdf_upper + log1p(-exp(log_cdf_lower - log_cdf_upper))))
+      sum(weights[lower_mask] *
+            (log_cdf_upper + log(-expm1(log_cdf_lower - log_cdf_upper))))
   }
   if (any(upper_mask)) {                          # survival-tail log_diff_exp(logS(d-1), logS(d))
     log_surv_lower <- log_survival_fn(delay_values[upper_mask] - 1)
     log_surv_upper <- log_survival_fn(delay_values[upper_mask])
     loglik <- loglik +
-      sum(weights[upper_mask] * (log_surv_lower + log1p(-exp(log_surv_upper - log_surv_lower))))
+      sum(weights[upper_mask] *
+            (log_surv_lower + log(-expm1(log_surv_upper - log_surv_lower))))
   }
   loglik
 }

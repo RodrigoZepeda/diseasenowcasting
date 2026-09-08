@@ -69,12 +69,12 @@ test_that("model() combines all three components", {
   expect_true(S7::S7_inherits(mdl@delay,      diseasenowcasting:::delay_process_class))
 })
 
-test_that("model() accepts validation as the optional fourth component", {
-  validation <- validation_process(p = 0.8, mode = "both")
-  mdl <- model(nb_likelihood(), ar1_epidemic(), lognormal_delay(), validation)
+test_that("model() accepts revision as the optional fourth component", {
+  revision <- revision_process(p = 0.8, mode = "both")
+  mdl <- model(nb_likelihood(), ar1_epidemic(), lognormal_delay(), revision)
 
-  expect_identical(mdl@validation, validation)
-  expect_true(mdl@validation@active)
+  expect_identical(mdl@revision, revision)
+  expect_true(mdl@revision@active)
 })
 
 test_that("model() print method runs without error", {

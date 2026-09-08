@@ -28,7 +28,7 @@
     likelihood,
     ar1_epidemic(),
     lognormal_delay(),
-    count_cumulative = count_cumulative_process(
+    cumulative = cumulative_process(
       observation = observation,
       settlement = 6L
     )

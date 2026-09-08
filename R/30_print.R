@@ -45,7 +45,7 @@ S7::method(print, nb_likelihood_class) <- function(x, ..., digits = 4) {
 }
 
 #' @noRd
-S7::method(print, count_cumulative_process_class) <- function(x, ..., digits = 4) {
+S7::method(print, cumulative_process_class) <- function(x, ..., digits = 4) {
   label <- switch(
     x@observation,
     cumulative = "Cumulative-level composite",
@@ -183,17 +183,17 @@ S7::method(print, model_class) <- function(x, ..., digits = 4) {
   print(x@epidemic, digits = digits)
   cli::cli_h3("Delay process")
   print(x@delay, digits = digits)
-  if (isTRUE(x@validation@active)) {
-    cli::cli_h3("Validation process")
-    cli::cli_text(paste0(cli::col_yellow("Validation"), "(",
-      .fmt_slot("p", x@validation@p), ")"))
-    cli::cli_text("{.emph Shared validation delay}: {x@validation@validation_delay@name}")
-    if (isTRUE(x@validation@stratified_p))
+  if (isTRUE(x@revision@active)) {
+    cli::cli_h3("Revision process")
+    cli::cli_text(paste0(cli::col_yellow("Revision"), "(",
+      .fmt_slot("p", x@revision@p), ")"))
+    cli::cli_text("{.emph Shared revision delay}: {x@revision@revision_delay@name}")
+    if (isTRUE(x@revision@stratified_p))
       cli::cli_text("{.emph p}: estimated separately per stratum")
   }
-  if (isTRUE(x@count_cumulative@active)) {
+  if (isTRUE(x@cumulative@active)) {
     cli::cli_h3("Count-cumulative process")
-    print(x@count_cumulative, digits = digits)
+    print(x@cumulative, digits = digits)
   }
   cli::cli_h3("Covariate prior")
   print(x@covariate_prior, digits = digits)

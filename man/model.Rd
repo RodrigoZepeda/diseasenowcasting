@@ -8,10 +8,10 @@ model(
   likelihood = nb_likelihood(),
   epidemic = hsgp_epidemic(),
   delay = lognormal_delay(),
-  validation = no_validation(),
+  revision = no_revision(),
   covariate_prior = std_normal_prior(),
   strata_pooling = "independent",
-  count_cumulative = no_count_cumulative()
+  cumulative = no_cumulative()
 )
 }
 \arguments{
@@ -22,10 +22,10 @@ model(
 
 \item{delay}{A \code{delay_process_class}.  Default: \code{\link[=lognormal_delay]{lognormal_delay()}}.}
 
-\item{validation}{A \code{validation_process_class} (\code{\link[=validation_process]{validation_process()}})
+\item{revision}{A \code{revision_process_class} (\code{\link[=revision_process]{revision_process()}})
 for report-level confirmation/retraction outcomes in linelist or
 count-incidence data. Default: inert. Count-cumulative revisions use the
-separate \code{count_cumulative} component.}
+separate \code{cumulative} component.}
 
 \item{covariate_prior}{A \code{prior_class} applied to all covariate coefficients.
 Default: \code{\link[=std_normal_prior]{std_normal_prior()}}.}
@@ -38,8 +38,8 @@ half-normal prior on the between-stratum SD:
 \eqn{\tau \sim \text{HalfNormal}(0,1)}.
 Only relevant when \code{num_strata > 1}.}
 
-\item{count_cumulative}{Dedicated count-cumulative observation configuration
-from \code{\link[=count_cumulative_process]{count_cumulative_process()}}. It is inert by default for linelist and
+\item{cumulative}{Dedicated count-cumulative observation configuration
+from \code{\link[=cumulative_process]{cumulative_process()}}. It is inert by default for linelist and
 count-incidence data; count-cumulative data use the hurdle--ZTNB default
 unless configured explicitly.}
 }
@@ -48,8 +48,8 @@ A \code{model_class} object.
 }
 \description{
 Combines a likelihood, an epidemic process, a reporting-delay distribution,
-and an optional validation process into a model object. Arguments are
-positional: likelihood, epidemic process, reporting delay, then validation
+and an optional revision process into a model object. Arguments are
+positional: likelihood, epidemic process, reporting delay, then revision
 process. Any argument can be omitted by naming the later components.
 }
 \examples{
@@ -57,7 +57,7 @@ model()
 model(poisson_likelihood(), hsgp_epidemic(gp_kernel = "matern52"))
 model(nb_likelihood(), ar1_epidemic(), lognormal_delay())
 model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-      validation_process())
+      revision_process())
 model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
       strata_pooling = "hierarchical")
 

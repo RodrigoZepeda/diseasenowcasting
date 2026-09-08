@@ -1,7 +1,7 @@
 # =============================================================================
 # Confirmation mode, count-incidence data, and the count-cumulative reduction
 # =============================================================================
-# Confirmation and retraction are two readings of one validation
+# Confirmation and retraction are two readings of one revision
 # process (see the "Resolution processes" section of the Mathematics vignette):
 # under retraction the observed dates are the NEGATIVE resolutions and evidence
 # accumulates in favour of a surviving report; under confirmation they are the
@@ -36,28 +36,28 @@ simulate_confirmation_linelist <- function(n_days = 70, p_true = 0.7,
 }
 
 fit_confirmation <- function(linelist, now, ..., data_type = "linelist",
-                             .validation = validation_process(
-                               validation_delay = dirichlet_validation(bins = 8))) {
-  # Since 2.2.0 the validation process is detected from the tbl_now, so the outcome
-  # has to be ON the object: one `validation_date` plus a `validation_type`, folded
+                             .revision = revision_process(
+                               revision_delay = dirichlet_revision(bins = 8))) {
+  # Since 2.2.0 the revision process is detected from the tbl_now, so the outcome
+  # has to be ON the object: one `revision_date` plus a `revision_type`, folded
   # here from whichever of `confirmed` / `retracted` the simulator filled.
   confirmed <- if ("confirmed" %in% names(linelist)) linelist$confirmed else
     as.Date(rep(NA_real_, nrow(linelist)), origin = "1970-01-01")
   retracted <- if ("retracted" %in% names(linelist)) linelist$retracted else
     as.Date(rep(NA_real_, nrow(linelist)), origin = "1970-01-01")
-  linelist$validation_date <- dplyr::coalesce(confirmed, retracted)
-  linelist$validation_type <- ifelse(!is.na(confirmed), "confirmed",
+  linelist$revision_date <- dplyr::coalesce(confirmed, retracted)
+  linelist$revision_type <- ifelse(!is.na(confirmed), "confirmed",
                               ifelse(!is.na(retracted), "retracted", "pending"))
-  # `now` is not pinned on the object: a tbl_now refuses to hold a validation dated
+  # `now` is not pinned on the object: a tbl_now refuses to hold a revision dated
   # after its own `now` (tbl.now#51), and these simulators resolve cases past the
   # analysis date deliberately.  nowcast(now = ) does the as-of masking.
   tn <- suppressWarnings(tbl.now::tbl_now(linelist, event_date = onset,
-          report_date = reported, validation_date = validation_date,
-          validation_type = validation_type, data_type = data_type,
+          report_date = reported, revision_date = revision_date,
+          revision_type = revision_type, data_type = data_type,
           verbose = FALSE, ...))
   suppressMessages(suppressWarnings(nowcast(tn,
     model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-          validation = .validation),
+          revision = .revision),
     now = now, type = "one_stage",
     temporal_effects = "none", n_draws = 200, seed = 7)))
 }
@@ -114,18 +114,18 @@ test_that("same-period confirmations are kept, unlike same-period retractions", 
   # as retractions, which is what a stream recording each sign would look like.
   labelled <- function(outcome) {
     rows <- linelist
-    rows$validation_date <- rows$confirmed
-    rows$validation_type <- ifelse(is.na(rows$confirmed), "pending", outcome)
+    rows$revision_date <- rows$confirmed
+    rows$revision_type <- ifelse(is.na(rows$confirmed), "pending", outcome)
     suppressWarnings(tbl.now::tbl_now(rows, event_date = onset, report_date = reported,
-      validation_date = validation_date, validation_type = validation_type,
+      revision_date = revision_date, revision_type = revision_type,
       data_type = "linelist", verbose = FALSE))
   }
   as_confirmation <- suppressMessages(suppressWarnings(
     diseasenowcasting:::prepare_from_tbl_now(labelled("confirmed"), model(),
-      now = simulated$now, validation_mode = "confirmation_only")))$data
+      now = simulated$now, revision_mode = "confirmation_only")))$data
   as_retraction <- suppressMessages(suppressWarnings(
     diseasenowcasting:::prepare_from_tbl_now(labelled("retracted"), model(),
-      now = simulated$now, validation_mode = "retraction_only")))$data
+      now = simulated$now, revision_mode = "retraction_only")))$data
 
   in_view <- sum(in_view_rows)
   expect_equal(as_confirmation$n_retracted + as_confirmation$n_standing, in_view)
@@ -159,7 +159,7 @@ test_that("a stream with no confirmation reduces under auto and uses the prior w
   # ASSERTING confirmation mode on data where nothing is confirmed leaves the
   # target (the eventually-confirmed count) unidentified, so it is refused.  With
   # `mode = "auto"` the same data instead REDUCES -- nothing has resolved, so there
-  # is no validation process to fit and the ordinary count model is the answer.
+  # is no revision process to fit and the ordinary count model is the answer.
   # An assertion that cannot be satisfied is an error; an inference with no
   # evidence falls back.
   simulated <- simulate_confirmation_linelist(n_days = 30, seed = 34)
@@ -171,18 +171,18 @@ test_that("a stream with no confirmation reduces under auto and uses the prior w
   # the process exists, so `p` is carried by its prior rather than the fit failing.
   asserted <- suppressMessages(suppressWarnings(fit_confirmation(
     linelist, simulated$now,
-    .validation = validation_process(p = beta_prior(7, 3), mode = "confirmation_only"))))
-  expect_equal(asserted@validation_mode, "confirmation_only")
+    .revision = revision_process(p = beta_prior(7, 3), mode = "confirmation_only"))))
+  expect_equal(asserted@revision_mode, "confirmation_only")
   # With no data on `p`, the posterior sits where the prior put it.
   expect_equal(asserted@fits[[1]]$reconstruct$retraction$p, 0.7, tolerance = 0.15)
 
   reduced <- suppressMessages(suppressWarnings(
     fit_confirmation(linelist, simulated$now)))
-  expect_equal(reduced@validation_mode, "none")
+  expect_equal(reduced@revision_mode, "none")
   expect_equal(reduced@engine$is_linelist_retraction, 0L)
 })
 
-test_that("a validation date with no validation_type is an error", {
+test_that("a revision date with no revision_type is an error", {
   # tbl.now records ONE date plus an outcome, so "both dates at once" is no longer
   # expressible.  The invariant that replaces it: a row that HAS resolved but whose
   # sign is unknown cannot enter either lag law, so it must be refused rather than
@@ -190,15 +190,15 @@ test_that("a validation date with no validation_type is an error", {
   # second and final ask.
   simulated <- simulate_confirmation_linelist(n_days = 20, seed = 35)
   linelist  <- simulated$linelist
-  linelist$validation_date <- linelist$confirmed
-  linelist$validation_type <- ifelse(is.na(linelist$confirmed), "pending", "confirmed")
+  linelist$revision_date <- linelist$confirmed
+  linelist$revision_type <- ifelse(is.na(linelist$confirmed), "pending", "confirmed")
   # A resolved row whose outcome went missing.
-  first_resolved <- which(!is.na(linelist$validation_date))[1]
-  linelist$validation_type[first_resolved] <- NA_character_
+  first_resolved <- which(!is.na(linelist$revision_date))[1]
+  linelist$revision_type[first_resolved] <- NA_character_
 
   tn <- suppressWarnings(tbl.now::tbl_now(linelist, event_date = onset,
-          report_date = reported, validation_date = validation_date,
-          validation_type = validation_type,
+          report_date = reported, revision_date = revision_date,
+          revision_type = revision_type,
           data_type = "linelist", verbose = FALSE))
   expect_error(
     suppressMessages(suppressWarnings(nowcast(tn, model(), now = simulated$now))),
@@ -219,10 +219,10 @@ test_that("count-incidence and linelist give bit-identical engines and likelihoo
   expect_equal(sum(aggregated$n), nrow(linelist))      # and lost nothing
 
   retraction_model <- model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-    validation = validation_process(validation_delay = dirichlet_validation(bins = 8)))
+    revision = revision_process(revision_delay = dirichlet_revision(bins = 8)))
   engine_of <- function(tn) suppressMessages(suppressWarnings(
     diseasenowcasting:::prepare_from_tbl_now(tn, retraction_model, now = simulated$now,
-      validation_mode = "confirmation_only")))$data
+      revision_mode = "confirmation_only")))$data
 
   linelist_engine <- engine_of(suppressWarnings(tbl.now::tbl_now(linelist,
     event_date = onset, report_date = reported, now = simulated$now,
@@ -254,7 +254,7 @@ test_that("count-incidence works for the retraction mode too", {
                              name = "n")
   engine_of <- function(tn) suppressMessages(suppressWarnings(
     diseasenowcasting:::prepare_from_tbl_now(tn, model(), now = simulated$now,
-      validation_mode = "retraction_only")))$data
+      revision_mode = "retraction_only")))$data
   linelist_engine <- engine_of(suppressWarnings(tbl.now::tbl_now(linelist,
     event_date = onset, report_date = reported, now = simulated$now,
     data_type = "linelist", verbose = FALSE)))
@@ -279,17 +279,17 @@ test_that("count-cumulative confirmation is refused, with the reduction spelled 
   tn <- suppressWarnings(tbl.now::tbl_now(cumulative, event_date = event,
     report_date = report, case_count = n, now = simulated$now,
     data_type = "count-cumulative", verbose = FALSE))
-  # With the confirmations carried as a validation process, the refusal is eq.
+  # With the confirmations carried as a revision process, the refusal is eq.
   # `noconfirmcum`: a confirmation does not change a cumulative count, so its delay
   # parameters are unidentifiable.
-  cumulative$validation_date <- cumulative$report
-  cumulative$validation_type <- "confirmed"
+  cumulative$revision_date <- cumulative$report
+  cumulative$revision_type <- "confirmed"
   tn_validated <- suppressWarnings(tbl.now::tbl_now(cumulative, event_date = event,
-    report_date = report, case_count = n, validation_date = validation_date,
-    validation_type = validation_type, data_type = "count-cumulative", verbose = FALSE))
+    report_date = report, case_count = n, revision_date = revision_date,
+    revision_type = revision_type, data_type = "count-cumulative", verbose = FALSE))
   expect_error(
     suppressMessages(suppressWarnings(nowcast(tn_validated, model(), now = simulated$now))),
-    "cannot carry .*confirmed.* validations")
+    "cannot carry .*confirmed.* revisions")
 })
 
 test_that("the confirmed-only reduction matches an onset-to-confirmation count model", {
@@ -345,10 +345,10 @@ test_that("parameters() gives a usable interval for p", {
 test_that("parameters() names one p per stratum under stratified_p", {
   skip_on_cran()
   simulated <- simulate_two_site_linelist(n_days = 60, seed = 41)
-  tn <- as_validation_tbl_now(simulated$linelist, simulated$now, strata = site)
+  tn <- as_revision_tbl_now(simulated$linelist, simulated$now, strata = site)
   fitted <- suppressMessages(suppressWarnings(nowcast(tn,
     model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-          validation = validation_process(validation_delay = dirichlet_validation(bins = 8),
+          revision = revision_process(revision_delay = dirichlet_revision(bins = 8),
                                               stratified_p = TRUE)),
     now = simulated$now, type = "one_stage",
     temporal_effects = "none", n_draws = 50, seed = 4)))
@@ -360,4 +360,108 @@ test_that("parameters() names one p per stratum under stratified_p", {
   expect_equal(natural$term, c("prob_not_retracted[A]", "prob_not_retracted[B]"))
   expect_true(all(natural$conf.low < simulated$p_true))
   expect_true(all(natural$conf.high > simulated$p_true))
+})
+
+test_that("future confirmations are pending as of the backtest date", {
+  rows <- data.frame(
+    onset = as.Date("2020-01-01"),
+    reported = as.Date("2020-01-02"),
+    revision_date = as.Date(c("2020-01-03", "2020-01-05", NA)),
+    revision_type = c("confirmed", "confirmed", "pending"),
+    n = c(2L, 3L, 5L)
+  )
+  data <- suppressWarnings(tbl.now::tbl_now(
+    rows, event_date = onset, report_date = reported, case_count = n,
+    revision_date = revision_date, revision_type = revision_type,
+    units = "days", data_type = "count-incidence", verbose = FALSE
+  ))
+  specification <- model(
+    poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
+    revision_process(mode = "confirmation_only")
+  )
+  engine <- suppressMessages(prepare_from_tbl_now(
+    data, specification, now = as.Date("2020-01-03"),
+    revision_mode = "confirmation_only"
+  ))$data
+
+  # Only the first laboratory result is known by January 3. The later result is
+  # still pending, exactly like the structurally unconfirmed Probable row.
+  expect_equal(sum(engine$n_positive_by_stratum), 2)
+  expect_equal(sum(engine$standing_counts), 8)
+
+  # Full-data backtest truth for confirmation-only data is confirmed cases only.
+  truth <- diseasenowcasting:::.revision_truth_source(data)
+  expect_equal(sum(truth$n), 5)
+})
+
+test_that("confirmation revision works in one-stage and stepwise two-stage fits", {
+  skip_on_cran()
+  simulated <- simulate_confirmation_linelist(n_days = 40, seed = 42)
+  rows <- simulated$linelist
+  rows$revision_date <- rows$confirmed
+  rows$revision_type <- ifelse(is.na(rows$confirmed), "pending", "confirmed")
+  data <- suppressWarnings(tbl.now::tbl_now(
+    rows, event_date = onset, report_date = reported,
+    revision_date = revision_date, revision_type = revision_type,
+    data_type = "linelist", verbose = FALSE
+  ))
+  specification <- model(
+    poisson_likelihood(), ar1_epidemic(phi = 0.7, sigma = 0.1),
+    lognormal_delay(),
+    revision_process(lognormal_revision(), mode = "confirmation_only")
+  )
+  fit_with <- function(type) suppressMessages(suppressWarnings(nowcast(
+    data, specification, now = simulated$now, type = type, K = 3,
+    temporal_effects = "none", n_draws = 20, seed = 43
+  )))
+
+  joint <- fit_with("one_stage")
+  staged <- fit_with("two_stage")
+
+  expect_equal(joint@rung, "onestage")
+  expect_length(joint@fits, 1L)
+  expect_equal(staged@rung, "multi")
+  expect_gt(length(staged@fits), 1L)
+  expect_true(all(vapply(staged@fits, function(x) x$opt$convergence == 0L,
+                         logical(1))))
+  # Reporting-delay parameters are imputed/fixed in Stage 2. Revision delay
+  # and p remain free and are sampled from each Stage-2 posterior.
+  expect_true(all(vapply(staged@fits,
+    function(x) isTRUE(x$priors$delay_mu$is_constant == 1L), logical(1))))
+  expect_true(all(vapply(staged@fits,
+    function(x) isTRUE(x$priors$retract_mu$is_constant == 0L), logical(1))))
+  expect_true(all(vapply(staged@fits,
+    function(x) isTRUE(x$priors$confirm_p$is_constant == 0L), logical(1))))
+  expect_true(all(is.finite(median(joint))))
+  expect_true(all(is.finite(median(staged))))
+})
+
+test_that("both-sign revision works in one-stage and stepwise two-stage fits", {
+  skip_on_cran()
+  simulated <- simulate_both_signs_linelist(n_days = 40, seed = 48)
+  data <- as_revision_tbl_now(simulated$linelist, simulated$now)
+  specification <- model(
+    poisson_likelihood(), ar1_epidemic(phi = 0.7, sigma = 0.1),
+    lognormal_delay(),
+    revision_process(lognormal_revision(), mode = "both")
+  )
+  fit_with <- function(type) suppressMessages(suppressWarnings(nowcast(
+    data, specification, now = simulated$now, type = type, K = 3,
+    temporal_effects = "none", n_draws = 20, seed = 49
+  )))
+
+  joint <- fit_with("one_stage")
+  staged <- fit_with("two_stage")
+
+  expect_equal(joint@rung, "onestage")
+  expect_equal(staged@rung, "multi")
+  expect_gt(length(staged@fits), 1L)
+  expect_true(all(vapply(staged@fits,
+    function(x) isTRUE(x$priors$delay_mu$is_constant == 1L), logical(1))))
+  expect_true(all(vapply(staged@fits,
+    function(x) isTRUE(x$priors$retract_mu$is_constant == 0L), logical(1))))
+  expect_true(all(vapply(staged@fits,
+    function(x) isTRUE(x$priors$confirm_p$is_constant == 0L), logical(1))))
+  expect_true(all(is.finite(median(joint))))
+  expect_true(all(is.finite(median(staged))))
 })

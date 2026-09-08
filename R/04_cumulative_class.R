@@ -8,7 +8,7 @@
 #' target is finite-horizon database retention `C_t(H)`, not biological truth.
 #' The retraction mechanism is the collapsed kernel
 #' `h_R(l) = retraction_mass * g_R(l)`; it does not separately identify a truth
-#' probability and a conditional validation-delay law.
+#' probability and a conditional revision-delay law.
 #'
 #' @param observation Observation composite likelihood. `"cumulative"` uses
 #'   cumulative Poisson or negative-binomial marginals according to the model's
@@ -26,16 +26,16 @@
 #' @param magnitude_size Positive prior or fixed value for the ZTNB magnitude
 #'   size. It is used only by `"hurdle_ztnb"`.
 #'
-#' @returns A `count_cumulative_process_class` object for
-#'   `model(count_cumulative = )`.
+#' @returns A `cumulative_process_class` object for
+#'   `model(cumulative = )`.
 #'
 #' @examples
-#' count_cumulative_process()
-#' count_cumulative_process(observation = "cumulative", settlement = 52L)
-#' count_cumulative_process(observation = "hurdle_ztpoisson", settlement = 6L)
+#' cumulative_process()
+#' cumulative_process(observation = "cumulative", settlement = 52L)
+#' cumulative_process(observation = "hurdle_ztpoisson", settlement = 6L)
 #'
 #' @export
-count_cumulative_process <- function(
+cumulative_process <- function(
     observation = c("hurdle_ztnb", "hurdle_ztpoisson", "cumulative"),
     retraction_delay = lognormal_delay(),
     settlement = 26L,
@@ -51,7 +51,7 @@ count_cumulative_process <- function(
       !is.null(magnitude_size)) {
     cli::cli_abort("`hurdle_ztpoisson` has no magnitude-dispersion parameter; omit `magnitude_size`.")
   }
-  count_cumulative_process_class(
+  cumulative_process_class(
     observation = observation,
     retraction_delay = retraction_delay,
     settlement = as.numeric(settlement),
@@ -67,8 +67,8 @@ count_cumulative_process <- function(
 #' Count-cumulative process S7 class
 #' @keywords internal
 #' @noRd
-count_cumulative_process_class <- S7::new_class(
-  "count_cumulative_process_class",
+cumulative_process_class <- S7::new_class(
+  "cumulative_process_class",
   properties = list(
     observation = S7::class_character,
     retraction_delay = delay_process_class,
@@ -152,6 +152,6 @@ count_cumulative_process_class <- S7::new_class(
 #' Inert count-cumulative configuration for non-cumulative data
 #' @keywords internal
 #' @noRd
-no_count_cumulative <- function() {
-  count_cumulative_process_class(active = FALSE)
+no_cumulative <- function() {
+  cumulative_process_class(active = FALSE)
 }

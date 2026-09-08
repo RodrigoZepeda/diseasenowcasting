@@ -83,7 +83,7 @@ test_that("engine arrays distinguish observed zeroes from masked future cells", 
   now <- as.Date("2024-01-20")
   model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
-    count_cumulative = count_cumulative_process(
+    cumulative = cumulative_process(
       observation = "hurdle_ztpoisson", settlement = 6L
     )
   )

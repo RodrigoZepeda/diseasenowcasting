@@ -229,7 +229,7 @@ default_priors <- function(mod, data = NULL, ...) {
   }
 
   # -- Count-cumulative collapsed retraction and hurdle priors ----------------
-  cumulative <- tryCatch(mod@count_cumulative, error = function(e) NULL)
+  cumulative <- tryCatch(mod@cumulative, error = function(e) NULL)
   if (!is.null(cumulative) && isTRUE(cumulative@active)) {
     pr$count_cumulative_observation <- switch(
       cumulative@observation,
@@ -300,15 +300,15 @@ default_priors <- function(mod, data = NULL, ...) {
     }
   }
 
-  # -- Report-level validation priors ------------------------------------------
+  # -- Report-level revision priors ------------------------------------------
   # Active only when a linelist/count-incidence model carries
-  # validation_process(). Count-cumulative data use the collapsed kernel above.
-  confirmation <- tryCatch(mod@validation, error = function(e) NULL)
+  # revision_process(). Count-cumulative data use the collapsed kernel above.
+  confirmation <- tryCatch(mod@revision, error = function(e) NULL)
   if (is_count_cumulative && !is.null(confirmation) &&
       isTRUE(confirmation@active)) {
     cli::cli_abort(c(
-      "A {.fn validation_process} cannot supply count-cumulative priors.",
-      "i" = "Use {.fn count_cumulative_process}; cumulative data identify {.code h_R}, not a separate {.code p}."
+      "A {.fn revision_process} cannot supply count-cumulative priors.",
+      "i" = "Use {.fn cumulative_process}; cumulative data identify {.code h_R}, not a separate {.code p}."
     ))
   }
   if (!is.null(confirmation) && isTRUE(confirmation@active)) {
@@ -400,7 +400,7 @@ default_priors <- function(mod, data = NULL, ...) {
     pr$confirm_p_stratified <- as.integer(is_linelist_retraction &&
                                           isTRUE(confirmation@stratified_p))
 
-    retract_delay     <- confirmation@validation_delay
+    retract_delay     <- confirmation@revision_delay
     pr$retract_family <- as.integer(retract_delay@num_id)
 
     # Retraction-delay priors, one branch per family.  A linelist observes the
@@ -439,7 +439,7 @@ default_priors <- function(mod, data = NULL, ...) {
       pr$retract_sigma <- .res(retract_delay@sigma, gamma_prior(2, 2),  key = "retract_sigma")
     } else {
       cli::cli_abort(c("Unsupported retraction delay family {.val {retract_delay@name}}.",
-                       "i" = "`validation_delay` must be lognormal, gamma, generalized-gamma or Dirichlet."))
+                       "i" = "`revision_delay` must be lognormal, gamma, generalized-gamma or Dirichlet."))
     }
 
   }

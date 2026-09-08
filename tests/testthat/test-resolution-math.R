@@ -63,13 +63,13 @@ test_that("the analytic gradient of the cure block matches a numeric one", {
   # on `p` -- the piece no point-recovery test can catch.
   skip_on_cran()
   simulated <- simulate_retraction_linelist(n_days = 45, seed = 23)
-  tn <- as_validation_tbl_now(simulated$linelist, simulated$now)
+  tn <- as_revision_tbl_now(simulated$linelist, simulated$now)
   engine <- suppressMessages(suppressWarnings(diseasenowcasting:::prepare_from_tbl_now(
     tn, model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-              validation = validation_process()),
-    now = simulated$now, validation_mode = "retraction_only")))$data
+              revision = revision_process()),
+    now = simulated$now, revision_mode = "retraction_only")))$data
   priors <- default_priors(model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-                                 validation = validation_process()), engine)
+                                 revision = revision_process()), engine)
   objective <- diseasenowcasting:::build_joint_obj(engine, priors, use_random = FALSE)$obj
 
   at <- objective$par
@@ -140,16 +140,16 @@ test_that("with both signs recorded, rho is flat in the report age", {
   expect_equal(as.numeric(resolution$rho[1, 1]), resolution$p)
 })
 
-test_that("a validation date with an unusable outcome is rejected", {
+test_that("a revision date with an unusable outcome is rejected", {
   # "A report resolves once" used to need a test, because the two dates were two
   # columns and a row could fill both.  A tbl_now records ONE date plus one
   # outcome, so that is now structural.  What still needs guarding is the other
   # direction: a dated row whose outcome is not one we recognise would fall through
   # every `== "confirmed"` test and be silently counted as a RETRACTION.
   simulated <- simulate_both_signs_linelist(n_days = 30, seed = 79)
-  tn <- as_validation_tbl_now(simulated$linelist, simulated$now)
-  type_col <- tbl.now::get_validation_type(tn)
-  resolved <- which(!is.na(tn[[tbl.now::get_validation_date(tn)]]))
+  tn <- as_revision_tbl_now(simulated$linelist, simulated$now)
+  type_col <- tbl.now::get_revision_type(tn)
+  resolved <- which(!is.na(tn[[tbl.now::get_revision_date(tn)]]))
 
   unknown <- tn
   unknown[[type_col]][resolved[1]] <- "unknown"
@@ -175,7 +175,7 @@ test_that("seeing both signs beats seeing only one", {
   interval_width <- function(mode) {
     fitted <- fit_resolution(
       simulated$linelist, simulated$now, n_draws = 20,
-      .validation_mode = mode)
+      .revision_mode = mode)
     natural <- resolution_probability(fitted)
     c(width = natural$conf.high - natural$conf.low, estimate = natural$estimate)
   }
@@ -194,10 +194,10 @@ test_that("stratified p is recovered per stratum with the right cell bookkeeping
   # most error-prone line in the predictive.
   skip_on_cran()
   simulated <- simulate_two_site_linelist(n_days = 70, seed = 41)
-  tn <- as_validation_tbl_now(simulated$linelist, simulated$now, strata = site)
+  tn <- as_revision_tbl_now(simulated$linelist, simulated$now, strata = site)
   fitted <- suppressMessages(suppressWarnings(nowcast(tn,
     model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-          validation = validation_process(validation_delay = dirichlet_validation(bins = 8),
+          revision = revision_process(revision_delay = dirichlet_revision(bins = 8),
                                               stratified_p = TRUE)),
     now = simulated$now, type = "one_stage",
     temporal_effects = "none", n_draws = 300, seed = 4)))
@@ -223,13 +223,13 @@ test_that("un-masking future retractions changes the fit (leakage regression)", 
   simulated <- simulate_retraction_linelist(n_days = 60, seed = 25)
   early_now <- simulated$now - 15
   honest <- suppressMessages(suppressWarnings(diseasenowcasting:::prepare_from_tbl_now(
-    as_validation_tbl_now(simulated$linelist, early_now), model(),
-    now = early_now, validation_mode = "retraction_only")))$data
+    as_revision_tbl_now(simulated$linelist, early_now), model(),
+    now = early_now, revision_mode = "retraction_only")))$data
 
   leaked_linelist <- simulated$linelist        # pretend every retraction is known now
   leaked <- suppressMessages(suppressWarnings(diseasenowcasting:::prepare_from_tbl_now(
-    as_validation_tbl_now(leaked_linelist, simulated$now), model(),
-    now = simulated$now, validation_mode = "retraction_only")))$data
+    as_revision_tbl_now(leaked_linelist, simulated$now), model(),
+    now = simulated$now, revision_mode = "retraction_only")))$data
 
   future_retractions <- sum(simulated$linelist$onset <= early_now &
                             simulated$linelist$reported <= early_now &
@@ -270,18 +270,18 @@ test_that("update() moves a newly retracted case out of the standing pool", {
   skip_on_cran()
   simulated <- simulate_retraction_linelist(n_days = 60, seed = 27)
   early_now <- simulated$now - 10
-  early_tn <- as_validation_tbl_now(
+  early_tn <- as_revision_tbl_now(
     dplyr::filter(simulated$linelist, .data$reported <= early_now), early_now)
   fitted <- suppressMessages(suppressWarnings(nowcast(early_tn,
     model(nb_likelihood(), ar1_epidemic(), lognormal_delay()),
     now = early_now, type = "one_stage",
     temporal_effects = "none", n_draws = 20, seed = 6)))
 
-  later_tn <- as_validation_tbl_now(simulated$linelist, simulated$now)
+  later_tn <- as_revision_tbl_now(simulated$linelist, simulated$now)
   refreshed <- suppressMessages(suppressWarnings(
     stats::update(fitted, later_tn, compute_surprise = FALSE)))
 
-  expect_equal(refreshed@validation_mode, "retraction_only")
+  expect_equal(refreshed@revision_mode, "retraction_only")
   expect_equal(refreshed@engine$is_linelist_retraction, 1L)
   expect_gt(refreshed@engine$n_retracted, fitted@engine$n_retracted)
 })

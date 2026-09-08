@@ -1,70 +1,103 @@
+# 2.3.0
+
+## Breaking: tbl.now revision vocabulary is now the package vocabulary
+
+The report-level post-report component is now called a revision process
+everywhere. The exported API is `revision_process()`, `model(revision = )`,
+`revision_delay =`, and the `*_revision()` delay aliases. Older spellings are
+removed rather than deprecated.
+
+`diseasenowcasting` now depends on `tbl.now (>= 0.35.0)` and reads the current
+tbl.now revision metadata directly: `revision_date`, `revision_type`, and
+`is_censored_revision`.
+
+## Breaking: cumulative model configuration is now `cumulative_process()`
+
+The count-cumulative model component is now configured with
+`cumulative_process()` and passed as `model(cumulative = )`. Automatic
+count-cumulative model selection remains inside `nowcast()`: when a
+`tbl_now` has `data_type = "count-cumulative"` and no explicit cumulative
+component, `nowcast()` selects the default signed hurdle--ZTNB cumulative model.
+
+Count-cumulative data consume signed changes in the cumulative trajectory only.
+Any `revision_date` metadata on such objects is treated as data provenance, not
+as an individual report-level revision likelihood.
+
+## Default model selection
+
+`nowcast(type = "auto")` continues to select a fitting strategy automatically,
+but the user-facing default remains `type = "two_stage"`. All automatic
+selection for the diseasenowcasting backend lives in
+`diseasenowcasting::nowcast()`; `tbl.now::run_nowcast()` passes the `tbl_now`
+and engine arguments through without injecting model components.
+
 # 2.2.0
 
-## Breaking: the confirmation process is now the validation process
+## Breaking: the revision process is now the revision process
 
 The optional component describing what happens to a report *after* it is filed --
 a laboratory result comes back, and the report is either confirmed or retracted --
-is called a **validation** process throughout, matching `tbl.now` 0.28.0. The old
+is called a **revision** process throughout, matching `tbl.now` 0.28.0. The old
 spellings are gone, not deprecated.
 
 | was | is |
 |---|---|
-| `confirmation_process()`, `resolution_process()` | `validation_process()` |
-| `model(confirmation = )` | `model(validation = )` |
-| `retract_delay = `, `resolution_delay = ` | `validation_delay = ` |
-| `lognormal_retraction()` / `_confirmation()` / `_resolution()` | `lognormal_validation()` |
-| `gamma_*`, `generalized_gamma_*`, `dirichlet_*` (three spellings each) | one `*_validation()` each |
+| `revision_process()`, `resolution_process()` | `revision_process()` |
+| `model(revision = )` | `model(revision = )` |
+| `retract_delay = `, `resolution_delay = ` | `revision_delay = ` |
+| `lognormal_retraction()` / `_confirmation()` / `_resolution()` | `lognormal_revision()` |
+| `gamma_*`, `generalized_gamma_*`, `dirichlet_*` (three spellings each) | one `*_revision()` each |
 
 Twelve lag constructors become four. The **outcome values are unchanged**: a case
-is still `"confirmed"`, `"retracted"` or `"pending"`. Validation is what the
+is still `"confirmed"`, `"retracted"` or `"pending"`. Revision is what the
 process does; confirmed is one of the things it can conclude.
 
-## Breaking: the validation process is detected, not requested
+## Breaking: the revision process is detected, not requested
 
 `nowcast()` no longer takes `retraction_date`, `confirmation_date`,
 `retraction_censored` or `confirmation_censored`. It reads the process off the
 data instead, in the two places it can be:
 
-* the `tbl_now` carries `validation_date` / `validation_type` (see
-  `tbl.now::add_validation_date()`).
+* the `tbl_now` carries `revision_date` / `revision_type` (see
+  `tbl.now::add_revision_date()`).
 
 ```r
 # before
 nowcast(data, model(), retraction_date = "retracted")
 
 # now
-data <- tbl.now::add_validation_date(data, retracted, validation_type = outcome)
+data <- tbl.now::add_revision_date(data, retracted, revision_type = outcome)
 nowcast(data, model())
 ```
 
-Validation censoring is also read from the `tbl_now` object's
-`is_censored_validation` attribute. There is no parallel column-name argument in
-`nowcast()`; event, report, validation, outcome, and censoring metadata all have
+Revision censoring is also read from the `tbl_now` object's
+`is_censored_revision` attribute. There is no parallel column-name argument in
+`nowcast()`; event, report, revision, outcome, and censoring metadata all have
 one source of truth.
 
-**The mode is inferred from the data.** `unique(validation_type)` over the
+**The mode is inferred from the data.** `unique(revision_type)` over the
 **full** data -- not the as-of view -- decides between `confirmation_only`,
 `retraction_only` and `both`, so the mode is a stable property of the data source
 and cannot flip between backtest dates. Assert it with
-`validation_process(mode = )` when you want the check rather than the inference:
+`revision_process(mode = )` when you want the check rather than the inference:
 an assertion the data cannot support is an error, whereas inference with no
 evidence falls back to the ordinary count model.
 
-A validation **date with an `NA` `validation_type`** is now an error. The report
+A revision **date with an `NA` `revision_type`** is now an error. The report
 has resolved but its sign is unknown, so it cannot enter either lag law.
 
 `backtest()` needs nothing extra either: the truth is built from the cases that
 settle positive (confirmed, or never retracted), with pending cases kept --
 "not resolved yet" is not "not a case".
 
-The `nowcast_class` stores the resolved `@validation_mode` (`"none"`,
+The `nowcast_class` stores the resolved `@revision_mode` (`"none"`,
 `"confirmation_only"`, `"retraction_only"`, or `"both"`). Date and censoring
 column metadata remain on its `tbl_now` data.
 
 ## Documentation
 
 `vignette("Retractions_and_confirmations")` is now
-**`vignette("Validation_processes")`**, rewritten around the detected process
+**`vignette("Revision_processes")`**, rewritten around the detected process
 rather than the old column arguments. The old name is gone, like the old API.
 
 ## Breaking: `tidy()` is now `parameters()`
@@ -84,10 +117,10 @@ tidy(nc)          # now tbl.now's: the nowcast itself
 ## count-cumulative data
 
 The old fixed-`p` Skellam/SkNB implementation is replaced by a dedicated
-`count_cumulative_process()` component. A cumulative stream identifies the
+`cumulative_process()` component. A cumulative stream identifies the
 unconditional finite-age kernel `h_R`, not a biological truth probability and a
-conditional validation-delay law separately. An old cumulative specification
-using `validation_process()` is translated once to the collapsed kernel with a
+conditional revision-delay law separately. An old cumulative specification
+using `revision_process()` is translated once to the collapsed kernel with a
 targeted deprecation warning; the old likelihood is not used.
 
 Three observation composites are selectable:
@@ -149,10 +182,10 @@ back the day it was ordered is ordinary.
   `(event, report, resolution)` with a case count, `NA` marking the unresolved.
   Every statistic is a weighted tally, so the aggregated form and the linelist
   give bit-identical engines and log-likelihoods.
-* **`count-cumulative` data are not row-level validation data.** As of 2.2.0
-  they use `count_cumulative_process()` and the collapsed finite-age retraction
+* **`count-cumulative` data are not row-level revision data.** As of 2.2.0
+  they use `cumulative_process()` and the collapsed finite-age retraction
   kernel described above.
-* **Both outcome values in one validation column** fit the full process: a report
+* **Both outcome values in one revision column** fit the full process: a report
   is resolved exactly once and the resolution is either positive (confirmed) or negative (retracted),
   as when a test comes back. Seeing the sign is strictly more informative than
   inferring it from the censoring: `p` collapses to a plain binomial on the
@@ -160,7 +193,7 @@ back the day it was ordered is ordinary.
   contributes only `1 - G_C(j)`, free of `p`, and it enters the nowcast with
   probability `p` **flat in its age** — with a shared lag law the age says nothing
   about which way a pending test will go.
-* The first prototype uses one validation-delay law. In a single-outcome mode it
+* The first prototype uses one revision-delay law. In a single-outcome mode it
   is the lag of that outcome; with both outcomes recorded it is shared by positive
   and negative resolutions. Separate competing-risk lag laws are outside this
   prototype.
@@ -230,7 +263,7 @@ and never retracted.
   the retraction block is a Berkson–Gage **mixture-cure** likelihood with cure
   fraction `p`. Retractions dated after `now` are masked out automatically.
 * The row-level retraction structure uses `p` (the probability a report is
-  genuine) and a validation lag. Left alone, `nowcast()` attaches a sensible
+  genuine) and a revision lag. Left alone, `nowcast()` attaches a sensible
   default. A linelist identifies `p` directly from resolved and standing rows,
   so it gets a **weak** data-informed Beta prior. Count-cumulative data no longer
   use this decomposition; see the 2.2.0 migration entry.
@@ -244,7 +277,7 @@ and never retracted.
   of ~8000 cases/day a lognormal `g_C` fitted to a `1 + Poisson(2)` lag left a
   0.9% bias and lost nominal coverage; the Dirichlet recovered `rho` to four
   decimals.
-* **Per-stratum `p`** via `confirmation_process(stratified_p = TRUE)`: each
+* **Per-stratum `p`** via `revision_process(stratified_p = TRUE)`: each
   stratum gets its own confirmation probability under a shared prior, while `g_C`
   stays shared. Use it when strata plausibly differ in data quality and each has
   enough retractions; with sparse strata the shared `p` is safer.
@@ -277,7 +310,7 @@ and never retracted.
 
 Version 2.0.0 introduced the initial count-cumulative experiment. Its original
 fixed-`p` Skellam/SkNB formulation is superseded by the 2.2.0 migration entry
-above. Current code uses `count_cumulative_process()`, targets finite-horizon
+above. Current code uses `cumulative_process()`, targets finite-horizon
 retention, and does not estimate or report cumulative `p`.
 
 # 1.3.2

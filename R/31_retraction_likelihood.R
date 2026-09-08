@@ -58,7 +58,7 @@
 #     happen here, and a weak data-informed prior is enough.
 #
 # `p` may be shared across strata (the default) or estimated per stratum
-# (`validation_process(stratified_p = TRUE)`); `g_C` is always shared.
+# (`revision_process(stratified_p = TRUE)`); `g_C` is always shared.
 # =============================================================================
 
 #' Mask and drop retraction dates that the as-of view must not see

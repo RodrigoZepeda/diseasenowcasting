@@ -139,9 +139,11 @@
     parlist$log_R0  <- log(max(draw_one(priors$R0), 1e-3))
     parlist$u_gamma <- stats::qlogis(clamp(draw_one(priors$gamma_sir), 1e-4, 1 - 1e-4))
     parlist$u_neff  <- stats::qlogis(clamp(draw_one(priors$N_eff),     1e-4, 1 - 1e-4))
-    parlist$ar_phi_unc       <- stats::qlogis((clamp(draw_one(priors$ar_phi), -0.998, 0.998) + 0.999) / 1.998)
-    parlist$log_ar_sigma_unc <- stats::qlogis(clamp(draw_one(priors$ar_sigma), 1e-4, ar_sigma_max - 1e-4) / ar_sigma_max)
-    parlist$ar_innov         <- matrix(stats::rnorm(n_time * n_strata), n_time, n_strata)
+    if (isTRUE(engine$use_beta_rw_trend == 1L)) {
+      parlist$ar_phi_unc       <- stats::qlogis((clamp(draw_one(priors$ar_phi), -0.998, 0.998) + 0.999) / 1.998)
+      parlist$log_ar_sigma_unc <- stats::qlogis(clamp(draw_one(priors$ar_sigma), 1e-4, ar_sigma_max - 1e-4) / ar_sigma_max)
+      parlist$ar_innov         <- matrix(stats::rnorm(n_time * n_strata), n_time, n_strata)
+    }
   } else {
     parlist$mu_intercept <- vapply(seq_len(n_strata), function(stratum) draw_one(priors$mu_intercept), numeric(1))
     if (engine$P > 0)

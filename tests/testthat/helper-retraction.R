@@ -33,32 +33,32 @@ simulate_retraction_linelist <- function(n_days = 70, p_true = 0.85, seed = 1) {
 # The simulators above record the OUTCOME as which of two date columns is filled
 # (`confirmed` / `retracted`), because that is how the maths is written.  A
 # `tbl_now` records it as ONE date plus an outcome, and since 2.2.0 that is the
-# only representation `nowcast()` reads -- it detects the validation process from
+# only representation `nowcast()` reads -- it detects the revision process from
 # the object rather than taking a column-name argument.  This folds one into the
 # other, so the simulators do not have to change.
-as_validation_tbl_now <- function(linelist, now, ...) {
+as_revision_tbl_now <- function(linelist, now, ...) {
   confirmed <- if ("confirmed" %in% names(linelist)) linelist$confirmed else
     as.Date(rep(NA_real_, nrow(linelist)), origin = "1970-01-01")
   retracted <- if ("retracted" %in% names(linelist)) linelist$retracted else
     as.Date(rep(NA_real_, nrow(linelist)), origin = "1970-01-01")
 
-  linelist$validation_date <- dplyr::coalesce(confirmed, retracted)
-  linelist$validation_type <- ifelse(!is.na(confirmed), "confirmed",
+  linelist$revision_date <- dplyr::coalesce(confirmed, retracted)
+  linelist$revision_type <- ifelse(!is.na(confirmed), "confirmed",
                               ifelse(!is.na(retracted), "retracted", "pending"))
 
   # NOTE: `now` is deliberately NOT pinned here.  A tbl_now refuses to hold a
-  # validation dated after its own `now` (tbl.now#51), and the simulators resolve
+  # revision dated after its own `now` (tbl.now#51), and the simulators resolve
   # cases past the analysis date on purpose -- that is what the as-of masking in
   # prepare_from_tbl_now() exists to handle.  So let the object infer `now` from
   # the data and pass the ANALYSIS date to nowcast(now = ) instead.
   suppressWarnings(tbl.now::tbl_now(
     linelist, event_date = onset, report_date = reported,
-    validation_date = validation_date, validation_type = validation_type,
+    revision_date = revision_date, revision_type = revision_type,
     data_type = "linelist", verbose = FALSE, ...))
 }
 
 # An ordinary two-date tbl_now, for the tests that deliberately carry NO
-# validation process.
+# revision process.
 as_retraction_tbl_now <- function(linelist, now) {
   suppressWarnings(tbl.now::tbl_now(linelist, event_date = onset, report_date = reported,
                                     now = now, data_type = "linelist", verbose = FALSE))
@@ -146,14 +146,14 @@ simulate_both_signs_linelist <- function(n_days = 70, p_true = 0.65,
 
 # One fitting entry point for all three modes.
 fit_resolution <- function(linelist, now, likelihood = nb_likelihood(),
-                           n_draws = 200, validation_delay = NULL,
-                           .validation_mode = "auto", ...) {
-  tn <- as_validation_tbl_now(linelist, now)
-  validation_delay <- validation_delay %||% dirichlet_validation(bins = 8)
+                           n_draws = 200, revision_delay = NULL,
+                           .revision_mode = "auto", ...) {
+  tn <- as_revision_tbl_now(linelist, now)
+  revision_delay <- revision_delay %||% dirichlet_revision(bins = 8)
   suppressMessages(suppressWarnings(nowcast(tn,
     model(likelihood, ar1_epidemic(), lognormal_delay(),
-          validation = validation_process(validation_delay,
-                                          mode = .validation_mode)),
+          revision = revision_process(revision_delay,
+                                          mode = .revision_mode)),
     now = now, type = "one_stage", temporal_effects = "none",
     n_draws = n_draws, seed = 7, ...)))
 }

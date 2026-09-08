@@ -119,7 +119,7 @@ test_that("delay surprise works for the Dirichlet (non-parametric) delay", {
   expect_equal(ds$direction[ds$delay == 300], "long")          # a 300-unit delay is surprisingly long
 })
 
-test_that("surprise() dispatch, input validation, type='both' and printing", {
+test_that("surprise() dispatch, input revision, type='both' and printing", {
   tn <- .make_synth_tblnow(Tn = 55L, seed = 8)
   nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                 type = "one_stage", n_draws = 150, seed = 1)

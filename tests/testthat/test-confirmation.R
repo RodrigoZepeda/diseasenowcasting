@@ -1,6 +1,6 @@
 # Tests for the count-cumulative confirmation model: the Skellam / SkNB
 # signed-increment densities (R/28_confirmation_likelihood.R), the
-# validation_process() class + priors, the count-cumulative de-accumulation,
+# revision_process() class + priors, the count-cumulative de-accumulation,
 # and one small end-to-end nowcast -> predict.
 #
 # The unit tests below use only plain-numeric arithmetic, but the densities are
@@ -9,43 +9,43 @@
 # test files do.
 library(RTMB)
 
-# ── validation_process() constructor and validator ─────────────────────────
+# ── revision_process() constructor and validator ─────────────────────────
 
-test_that("validation_process() default is a valid, active component with unset p", {
-  conf <- validation_process()
-  expect_s3_class(conf, "diseasenowcasting::validation_process_class")
+test_that("revision_process() default is a valid, active component with unset p", {
+  conf <- revision_process()
+  expect_s3_class(conf, "diseasenowcasting::revision_process_class")
   expect_true(conf@active)
   # p unset -> length-0 numeric, resolved to a data-informed prior in default_priors()
   expect_true(is.numeric(conf@p) && length(conf@p) == 0L)
 })
 
-test_that("validation_process() accepts a fixed p in (0, 1] and a prior on p", {
-  fixed <- validation_process(p = 0.97)
+test_that("revision_process() accepts a fixed p in (0, 1] and a prior on p", {
+  fixed <- revision_process(p = 0.97)
   expect_equal(fixed@p, 0.97)
 
-  estimated <- validation_process(p = beta_prior(50, 1))
+  estimated <- revision_process(p = beta_prior(50, 1))
   expect_true(S7::S7_inherits(estimated@p, diseasenowcasting:::prior_class))
 })
 
-test_that("validation_process() rejects p outside (0, 1]", {
-  expect_error(validation_process(p = 0), "in \\(0, 1\\]")
-  expect_error(validation_process(p = 1.5), "in \\(0, 1\\]")
-  expect_error(validation_process(p = "0.9"), "prior_class|numeric")
+test_that("revision_process() rejects p outside (0, 1]", {
+  expect_error(revision_process(p = 0), "in \\(0, 1\\]")
+  expect_error(revision_process(p = 1.5), "in \\(0, 1\\]")
+  expect_error(revision_process(p = "0.9"), "prior_class|numeric")
 })
 
-test_that("no_validation() is the inert p = 1 default", {
-  inert <- diseasenowcasting:::no_validation()
+test_that("no_revision() is the inert p = 1 default", {
+  inert <- diseasenowcasting:::no_revision()
   expect_false(inert@active)
   expect_equal(inert@p, 1)
 })
 
-test_that("model() carries a validation component (inert by default, active when supplied)", {
+test_that("model() carries a revision component (inert by default, active when supplied)", {
   default_model <- model(poisson_likelihood(), ar1_epidemic(), lognormal_delay())
-  expect_false(default_model@validation@active)
+  expect_false(default_model@revision@active)
 
   confirm_model <- model(poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
-                         validation = validation_process())
-  expect_true(confirm_model@validation@active)
+                         revision = revision_process())
+  expect_true(confirm_model@revision@active)
 })
 
 # ── Skellam log-pmf: accuracy across the whole (alpha, beta, m) space ───────
@@ -248,7 +248,7 @@ test_that("count-cumulative data is detected and signed updates rebuild each lev
   cumulative_tn <- make_cumulative_tblnow()
   cumulative_model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
-    count_cumulative = count_cumulative_process(
+    cumulative = cumulative_process(
       observation = "hurdle_ztpoisson", settlement = 6L
     )
   )
@@ -272,7 +272,7 @@ test_that("down-revisions produce negative signed increments", {
   cumulative_tn <- make_cumulative_tblnow(down_revision = TRUE)
   cumulative_model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
-    count_cumulative = count_cumulative_process(
+    cumulative = cumulative_process(
       observation = "hurdle_ztpoisson", settlement = 6L
     )
   )
@@ -290,7 +290,7 @@ test_that("count-cumulative priors contain h_R parameters and no separate p", {
   cumulative_tn <- make_cumulative_tblnow()
   cumulative_model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
-    count_cumulative = count_cumulative_process(
+    cumulative = cumulative_process(
       observation = "hurdle_ztpoisson", settlement = 6L
     )
   )
@@ -312,13 +312,13 @@ test_that("linelist data keeps the WEAK data-informed Beta on p", {
   # The cure block identifies `p` directly there -- a report standing unresolved is
   # evidence about the cure fraction -- so the prior only has to keep it on (0, 1).
   sim <- simulate_retraction_linelist(n_days = 40, p_true = 0.85, seed = 4)
-  tn  <- as_validation_tbl_now(sim$linelist, sim$now)
+  tn  <- as_revision_tbl_now(sim$linelist, sim$now)
   mdl <- model(poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
-               validation = validation_process())
+               revision = revision_process())
   # The simulated reports run past `now` by construction; tbl.now says so, and the
   # as-of filter below is exactly what handles it.
   engine <- suppressWarnings(diseasenowcasting:::prepare_from_tbl_now(
-    tn, mdl, now = sim$now, validation_mode = "retraction_only"))$data
+    tn, mdl, now = sim$now, revision_mode = "retraction_only"))$data
   priors <- default_priors(mdl, engine)
 
   expect_identical(priors$confirm_p$is_constant, 0L)
@@ -334,7 +334,7 @@ test_that("count-cumulative nowcast() -> predict() runs end-to-end", {
   cumulative_tn <- make_cumulative_tblnow(n_events = 14L)
   cumulative_model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
-    count_cumulative = count_cumulative_process(
+    cumulative = cumulative_process(
       observation = "hurdle_ztpoisson", settlement = 6L
     )
   )
@@ -363,7 +363,7 @@ test_that("the settled count is never negative, even when the stream revises dow
   cumulative_tn <- make_cumulative_tblnow(n_events = 14L, down_revision = TRUE)
   cumulative_model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
-    count_cumulative = count_cumulative_process(
+    cumulative = cumulative_process(
       observation = "hurdle_ztpoisson", settlement = 6L
     )
   )

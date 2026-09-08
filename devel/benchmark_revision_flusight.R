@@ -1,6 +1,6 @@
-# benchmark_validation_flusight.R
+# benchmark_revision_flusight.R
 #
-# Does the count-cumulative validation model match the article, and does the
+# Does the count-cumulative revision model match the article, and does the
 # correction pay for itself?
 #
 # The article (main_journal_revised.tex, "Count-cumulative data") gives the
@@ -138,7 +138,7 @@ for (p_true in SIM_P) {
     )
     if (is.null(fitted)) next
 
-    # `coef()` does not surface the validation parameters -- read them off parList.
+    # `coef()` does not surface the revision parameters -- read them off parList.
     fitted_pars <- fitted@fits[[1]]$parList
 
     sim_results[[length(sim_results) + 1L]] <- data.frame(
@@ -214,4 +214,4 @@ print(
 )
 
 saveRDS(list(simulation = sim_table, flusight = flusight_table),
-        file.path("devel", "benchmark_validation_flusight.rds"))
+        file.path("devel", "benchmark_revision_flusight.rds"))

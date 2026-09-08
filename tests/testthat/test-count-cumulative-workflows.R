@@ -28,7 +28,7 @@
 .ztp_workflow_model <- function() {
   model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
-    count_cumulative = count_cumulative_process(
+    cumulative = cumulative_process(
       observation = "hurdle_ztpoisson", settlement = 6L,
       movement_previous = 0
     )
@@ -59,9 +59,9 @@ test_that("hurdle ZTPoisson supports fit, prediction, save/load, and update", {
   path <- tempfile(fileext = ".rds")
   expect_invisible(suppressMessages(save_nowcast(fitted, path)))
   restored <- load_nowcast(path)
-  expect_identical(restored@model@count_cumulative@observation,
+  expect_identical(restored@model@cumulative@observation,
                    "hurdle_ztpoisson")
-  expect_identical(as.integer(restored@model@count_cumulative@settlement), 6L)
+  expect_identical(as.integer(restored@model@cumulative@settlement), 6L)
   expect_equal(
     predict(fitted, n_draws = 40L, seed = 99L)@draws,
     predict(restored, n_draws = 40L, seed = 99L)@draws
@@ -70,7 +70,7 @@ test_that("hurdle ZTPoisson supports fit, prediction, save/load, and update", {
   updated <- update(
     fitted, data, now = later_now, compute_surprise = FALSE
   )
-  expect_identical(updated@model@count_cumulative@observation,
+  expect_identical(updated@model@cumulative@observation,
                    "hurdle_ztpoisson")
   expect_identical(updated@engine$settlement_horizon, 6L)
   expect_lte(updated@fits[[1L]]$max_gradient, 0.1)
@@ -108,7 +108,7 @@ test_that("cumulative-level fits use Laplace while hurdle fits use MAP", {
   now <- as.Date("2023-01-07") + 10L * 7L
   level_model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
-    count_cumulative = count_cumulative_process(
+    cumulative = cumulative_process(
       observation = "cumulative", settlement = 6L
     )
   )

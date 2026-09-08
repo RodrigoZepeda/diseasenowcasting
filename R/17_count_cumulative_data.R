@@ -39,7 +39,13 @@
   if (!nrow(as_of)) {
     cli::cli_abort("No count-cumulative cells are observable at the requested `now`.")
   }
-  as_of <- tbl.now::change_now(as_of, now = now, verbose = FALSE)
+  if (inherits(now, "Date")) {
+    as_of <- tbl.now::change_now(as_of, now = now, verbose = FALSE)
+  } else {
+    # tbl.now::change_now() currently validates `now` as a Date. Numeric grids
+    # are already filtered above, so preserve the numeric origin directly.
+    attr(as_of, "now") <- now
+  }
 
   # `complete_zeroes()` is data-type aware: leading cumulative cells are zero
   # and gaps after a published level carry that level forward.  The result stays

@@ -115,7 +115,7 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
     m
   })
   prepared <- prepare_from_tbl_now(merged, object@model, now = now, delay_only = FALSE,
-                                   validation_mode = object@validation_mode)
+                                   revision_mode = object@revision_mode)
   engine   <- prepared$data
   engine$min_event <- prepared$min_event
   engine$event_unit <- as.character(prepared$event_unit)
@@ -150,7 +150,7 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
   new_nc <- nowcast_class(model = object@model, data = merged, now = prepared$now, type = object@type,
                           fits = collected$fits, rung = collected$rung, target = collected$target,
                           engine = engine, priors = priors, phi = object@phi, n_draws = object@n_draws,
-                          validation_mode = object@validation_mode)
+                          revision_mode = object@revision_mode)
   if (!is.null(extreme_values)) attr(new_nc, "surprise") <- extreme_values
   new_nc
 }

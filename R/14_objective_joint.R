@@ -31,6 +31,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   if (!epidemic_model %in% c(1L, 2L, 3L, 4L))
     cli::cli_abort("build_joint_obj supports HSGP (1), AR1 (2), SIR (3), Custom (4) epidemic.")
   is_sir            <- epidemic_model == 3L
+  sir_use_beta_rw_trend <- is_sir && isTRUE(data$use_beta_rw_trend == 1L)
   is_custom_epidemic <- epidemic_model == 4L
   # User-supplied functions need RTMB's AD methods on the search path (see helper).
   if (is_custom_delay || is_custom_epidemic) .assert_rtmb_attached()
@@ -146,7 +147,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   if (is_confirmation) {
     cli::cli_abort(c(
       "The legacy fixed-`p` count-cumulative objective is no longer available.",
-      "i" = "Use the dedicated `count_cumulative_process()` configuration."
+      "i" = "Use the dedicated `cumulative_process()` configuration."
     ))
   }
   conf_D <- if (is_confirmation) as.integer(min(data$max_conf_delay - 1L, 15L)) else 0L  # modelled max delay (0-indexed)
@@ -166,7 +167,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   has_confirm    <- is_confirmation || is_retraction
   # Escape hatch reproducing the pre-fix count-cumulative retraction intensity
   # (`beta_d = (1 - p) lambda_t g_W(d)`, missing the `/ p` that makes it a rate on
-  # the GROSS reports).  Kept only so `devel/benchmark_validation_flusight.R` can
+  # the GROSS reports).  Kept only so `devel/benchmark_revision_flusight.R` can
   # score the two side by side; the default is the article's formula.  Read here,
   # at tape-build time, so the AD tape sees a constant.
   legacy_eta <- as.integer(isTRUE(getOption("diseasenowcasting.legacy_retraction_rate", FALSE)))
@@ -259,11 +260,12 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     prior_gp_ell_params = if (epidemic_model == 1L) .pad3(priors$gp_ell$params) else c(0, 0, 0),
     prior_ar_phi_dist = if (epidemic_model == 2L) priors$ar_phi$dist else 0L,
     prior_ar_phi_params = if (epidemic_model == 2L) .pad3(priors$ar_phi$params) else c(0, 0, 0),
-    prior_ar_sigma_dist = if (epidemic_model %in% c(2L, 3L)) priors$ar_sigma$dist else 0L,
-    prior_ar_sigma_params = if (epidemic_model %in% c(2L, 3L)) .pad3(priors$ar_sigma$params) else c(0, 0, 0),
-    prior_ar_phi_sir_dist = if (is_sir) priors$ar_phi$dist else 0L,
-    prior_ar_phi_sir_params = if (is_sir) .pad3(priors$ar_phi$params) else c(0, 0, 0),
-    is_sir = as.integer(is_sir), N_pop = data$N_pop,
+    prior_ar_sigma_dist = if (epidemic_model == 2L || sir_use_beta_rw_trend) priors$ar_sigma$dist else 0L,
+    prior_ar_sigma_params = if (epidemic_model == 2L || sir_use_beta_rw_trend) .pad3(priors$ar_sigma$params) else c(0, 0, 0),
+    prior_ar_phi_sir_dist = if (sir_use_beta_rw_trend) priors$ar_phi$dist else 0L,
+    prior_ar_phi_sir_params = if (sir_use_beta_rw_trend) .pad3(priors$ar_phi$params) else c(0, 0, 0),
+    is_sir = as.integer(is_sir), sir_use_beta_rw_trend = as.integer(sir_use_beta_rw_trend),
+    N_pop = data$N_pop,
     initial_infected = if (is_sir) data$case_counts[1, ] else numeric(n_strata),
     prior_R0_dist = if (is_sir) priors$R0$dist else 0L, prior_R0_params = if (is_sir) .pad3(priors$R0$params) else c(0, 0, 0),
     prior_gamma_sir_dist = if (is_sir) priors$gamma_sir$dist else 0L,
@@ -455,9 +457,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   }
   if (is_negbin) parameters$log_phi_nb <- init$log_phi_nb %||% log(20)
   # Dedicated count-cumulative parameters.  These are deliberately separate
-  # from the linelist validation parameters below: the cumulative stream
+  # from the linelist revision parameters below: the cumulative stream
   # identifies the defective kernel h_R, not a biological confirmation
-  # probability and conditional validation-delay law.
+  # probability and conditional revision-delay law.
   if (is_count_cumulative) {
     parameters$cumulative_retraction_mass_raw <-
       if (cumulative_retraction_mass_fixed) 0 else
@@ -538,14 +540,18 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     }
     parameters$custom_epidemic_params <- init_vals
     random <- character(0)
-  } else {  # epidemic_model == 3L: SIR (coupled) — per-stratum R0/gamma/N_eff + AR(1) beta walk
+  } else {  # epidemic_model == 3L: coupled SIR, optionally with an AR(1) beta walk
     parameters$log_R0  <- init$log_R0  %||% rep(log(2), n_strata)
     parameters$u_gamma <- init$u_gamma %||% rep(stats::qlogis(1/5), n_strata)
     parameters$u_neff  <- init$u_neff  %||% rep(stats::qlogis(0.5), n_strata)
-    parameters$ar_phi_unc       <- init$ar_phi_unc %||% rep(0, n_strata)
-    parameters$log_ar_sigma_unc <- init$log_ar_sigma_unc %||% rep(-2, n_strata)
-    parameters$ar_innov         <- init$ar_innov %||% matrix(0, n_time, n_strata)
-    random <- "ar_innov"
+    if (sir_use_beta_rw_trend) {
+      parameters$ar_phi_unc       <- init$ar_phi_unc %||% rep(0, n_strata)
+      parameters$log_ar_sigma_unc <- init$log_ar_sigma_unc %||% rep(-2, n_strata)
+      parameters$ar_innov         <- init$ar_innov %||% matrix(0, n_time, n_strata)
+      random <- "ar_innov"
+    } else {
+      random <- character(0)
+    }
   }
 
   # Defensive: per-stratum vector params must have length num_strata even if a
@@ -634,7 +640,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     # -- finite-horizon count-cumulative kernel ------------------------------
     # Both delay PMFs are conditional on falling inside their configured finite
     # support.  The primitive object used below is h_R = mass * g_R; no `p` or
-    # biological validation probability enters this observation model.
+    # biological revision probability enters this observation model.
     if (is_count_cumulative == 1L) {
       cumulative_report_cdf <- if (delay_fully_fixed == 1L) {
         fixed_delay_fns$cdf(seq_len(settlement_horizon + 1L))
@@ -817,14 +823,17 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     if (is_sir == 1L) {
       R0 <- exp(log_R0); recovery_rate <- plogis(u_gamma); susceptible_frac <- plogis(u_neff)
       effective_pop <- susceptible_frac * N_pop
-      ar_phi   <- -0.999 + 1.998 * plogis(ar_phi_unc)
-      ar_sigma <- ar_sigma_max * plogis(log_ar_sigma_unc)
       log_beta_baseline <- log(R0 * recovery_rate)
       incidence  <- matrix(0.0, n_time, n_strata)
       susceptible <- 1 - initial_infected / effective_pop
       infected    <- initial_infected / effective_pop
-      trend_cols  <- vector("list", n_strata)
-      for (s in seq_len(n_strata)) trend_cols[[s]] <- ar1_trend(ar_innov[, s], ar_phi[s], ar_sigma[s])
+      trend_cols  <- lapply(seq_len(n_strata), function(s) rep(0, n_time))
+      if (sir_use_beta_rw_trend == 1L) {
+        ar_phi   <- -0.999 + 1.998 * plogis(ar_phi_unc)
+        ar_sigma <- ar_sigma_max * plogis(log_ar_sigma_unc)
+        for (s in seq_len(n_strata))
+          trend_cols[[s]] <- ar1_trend(ar_innov[, s], ar_phi[s], ar_sigma[s])
+      }
       for (t in seq_len(n_time)) {
         total_infectious <- sum(infected)                       # coupled force of infection
         for (s in seq_len(n_strata)) {
@@ -843,9 +852,14 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       # a finite log(1e-8) penalty in the pathological region so nlminb can recover.
       log_mean_matrix <- log((incidence + abs(incidence)) * 0.5 + 1e-8)
       log_jacobian <- log_jacobian +
-        sum(log_R0 + log(recovery_rate) + log(1 - recovery_rate) + log(susceptible_frac) + log(1 - susceptible_frac) +
-            log(1.998) + log(plogis(ar_phi_unc)) + log(1 - plogis(ar_phi_unc)) +
-            log(ar_sigma_max) + log(plogis(log_ar_sigma_unc)) + log(1 - plogis(log_ar_sigma_unc)))
+        sum(log_R0 + log(recovery_rate) + log(1 - recovery_rate) +
+            log(susceptible_frac) + log(1 - susceptible_frac))
+      if (sir_use_beta_rw_trend == 1L) {
+        log_jacobian <- log_jacobian +
+          sum(log(1.998) + log(plogis(ar_phi_unc)) + log(1 - plogis(ar_phi_unc)) +
+              log(ar_sigma_max) + log(plogis(log_ar_sigma_unc)) +
+              log(1 - plogis(log_ar_sigma_unc)))
+      }
     } else if (is_custom_epidemic == 1L) {
       # The user's intensity_fn returns the full log_mean[T x S] directly; no
       # intercept or trend is added on top (it owns the whole trajectory).
@@ -1045,7 +1059,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       log_prior <- log_prior + prior_lpdf(as.vector(gamma), prior_gamma_dist, prior_gamma_params)
     if (is_negbin == 1L) log_prior <- log_prior + prior_lpdf(1.0 / nb_size, prior_phi_dist, prior_phi_params)
     # Count-cumulative priors are intentionally disjoint from confirm_p and the
-    # linelist validation-delay priors.  The mass prior is evaluated on h_R's
+    # linelist revision-delay priors.  The mass prior is evaluated on h_R's
     # finite-horizon mass; hurdle ZTP has no magnitude-dispersion parameter.
     if (is_count_cumulative == 1L) {
       if (cumulative_retraction_mass_fixed == 0L) {
@@ -1137,9 +1151,11 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       log_prior <- log_prior + prior_lpdf(R0, prior_R0_dist, prior_R0_params)
       log_prior <- log_prior + prior_lpdf(recovery_rate, prior_gamma_sir_dist, prior_gamma_sir_params)
       log_prior <- log_prior + prior_lpdf(susceptible_frac, prior_n_eff_dist, prior_n_eff_params)
-      log_prior <- log_prior + prior_lpdf(ar_phi, prior_ar_phi_sir_dist, prior_ar_phi_sir_params)
-      log_prior <- log_prior + prior_lpdf(ar_sigma, prior_ar_sigma_dist, prior_ar_sigma_params)
-      log_prior <- log_prior + sum(dnorm(ar_innov, 0, 1, log = TRUE))
+      if (sir_use_beta_rw_trend == 1L) {
+        log_prior <- log_prior + prior_lpdf(ar_phi, prior_ar_phi_sir_dist, prior_ar_phi_sir_params)
+        log_prior <- log_prior + prior_lpdf(ar_sigma, prior_ar_sigma_dist, prior_ar_sigma_params)
+        log_prior <- log_prior + sum(dnorm(ar_innov, 0, 1, log = TRUE))
+      }
     }
 
     -(loglik_delay + loglik_counts + loglik_retraction + log_prior + log_jacobian)
@@ -1196,13 +1212,16 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     R0 <- exp(parlist$log_R0); recovery_rate <- stats::plogis(parlist$u_gamma)
     susceptible_frac <- stats::plogis(parlist$u_neff); effective_pop <- susceptible_frac * data$N_pop
     initial_infected <- data$case_counts[1, ]
-    ar_phi   <- -0.999 + 1.998 * stats::plogis(parlist$ar_phi_unc)
-    ar_sigma <- data$ar_sigma_max * stats::plogis(parlist$log_ar_sigma_unc)
-    ar_innov <- reshape(parlist$ar_innov, n_time, n_strata)
     trend <- matrix(0.0, n_time, n_strata)
-    for (s in seq_len(n_strata)) {
-      trend[1, s] <- ar_innov[1, s] * ar_sigma[s] / sqrt(1 - ar_phi[s]^2)
-      if (n_time >= 2) for (t in 2:n_time) trend[t, s] <- ar_phi[s] * trend[t - 1, s] + ar_innov[t, s] * ar_sigma[s]
+    if (isTRUE(data$use_beta_rw_trend == 1L)) {
+      ar_phi   <- -0.999 + 1.998 * stats::plogis(parlist$ar_phi_unc)
+      ar_sigma <- data$ar_sigma_max * stats::plogis(parlist$log_ar_sigma_unc)
+      ar_innov <- reshape(parlist$ar_innov, n_time, n_strata)
+      for (s in seq_len(n_strata)) {
+        trend[1, s] <- ar_innov[1, s] * ar_sigma[s] / sqrt(1 - ar_phi[s]^2)
+        if (n_time >= 2) for (t in 2:n_time)
+          trend[t, s] <- ar_phi[s] * trend[t - 1, s] + ar_innov[t, s] * ar_sigma[s]
+      }
     }
     beta0 <- log(R0 * recovery_rate); incidence <- matrix(0.0, n_time, n_strata)
     susceptible <- 1 - initial_infected / effective_pop; infected <- initial_infected / effective_pop

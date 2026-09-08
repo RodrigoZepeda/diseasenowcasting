@@ -55,7 +55,7 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     cli::cli_abort(c(
       "The legacy count-cumulative `is_confirmation` engine has been removed.",
       "x" = "It estimated a fixed-`p` Skellam/SkNB model that is not identified by cumulative streams.",
-      "i" = "Use `model(count_cumulative = count_cumulative_process(...))` and prepare through `nowcast()` or `prepare_from_tbl_now()`."
+      "i" = "Use `model(cumulative = cumulative_process(...))` and prepare through `nowcast()` or `prepare_from_tbl_now()`."
     ))
   }
   if (!S7::S7_inherits(model, model_class))
@@ -224,8 +224,8 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     increment_array = increment_array, max_conf_delay = max_conf_delay,
     is_count_cumulative = as.integer(is_count_cumulative),
     count_cumulative_observation = if (is_count_cumulative &&
-      isTRUE(model@count_cumulative@active)) switch(
-        model@count_cumulative@observation,
+      isTRUE(model@cumulative@active)) switch(
+        model@cumulative@observation,
         cumulative = 1L, hurdle_ztnb = 2L, hurdle_ztpoisson = 3L
       ) else 0L,
     settlement_horizon = settlement_horizon,

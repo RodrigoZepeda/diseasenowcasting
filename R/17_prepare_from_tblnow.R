@@ -15,9 +15,9 @@
 #' @param model A [model()] object (delay family etc. drive prepare_data()).
 #' @param now As-of date: only events and reports up to `now` are used.  If
 #'   `NULL`, uses `get_now(data)` and falls back to the latest report date.
-#' @param validation_mode `"none"`, `"confirmation_only"`, `"retraction_only"` or
-#'   `"both"`, as resolved by [nowcast()] from the `tbl_now`'s `validation_type`
-#'   column.  Anything but `"none"` switches on the validation (cure-model)
+#' @param revision_mode `"none"`, `"confirmation_only"`, `"retraction_only"` or
+#'   `"both"`, as resolved by [nowcast()] from the `tbl_now`'s `revision_type`
+#'   column.  Anything but `"none"` switches on the revision (cure-model)
 #'   observation block; see 31_retraction_likelihood.R.
 #' @param ... Passed to [prepare_data()] (e.g. `gp_boundary_frac`).
 #' @returns A list: `data` (the prepare_data() engine list), `now`,
@@ -25,17 +25,18 @@
 #' @keywords internal
 #' @noRd
 prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
-                                 validation_mode = "none", ...) {
-  if ("validation_censored" %in% names(list(...))) {
+                                 revision_mode = "none", ...) {
+  if ("revision_censored" %in% names(list(...))) {
     cli::cli_abort(c(
-      "{.arg validation_censored} is not accepted here.",
-      "i" = "The validation-censoring column is read from the {.cls tbl_now} attribute {.field is_censored_validation}."
+      "{.arg revision_censored} is not accepted here.",
+      "i" = "The revision-censoring column is read from the {.cls tbl_now} attribute {.field is_censored_revision}."
     ))
   }
   if (!tbl.now::is_tbl_now(data)) cli::cli_abort("`data` must be a tbl_now (see tbl.now::tbl_now()).")
   event_col   <- tbl.now::get_event_date(data)
   report_col  <- tbl.now::get_report_date(data)
   event_unit  <- tbl.now::get_event_units(data)
+  .validate_tblnow_engine_units(data)
   effect_cols <- tbl.now::get_temporal_effect_cols(data)
 
   now <- now %||% tbl.now::get_now(data)
@@ -68,7 +69,7 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
   }
   unit_steps <- function(to) .unit_steps(min_event, to, event_unit)
   covariate_source <- if (is_cumulative) as_of else data
-  cumulative_process <- tryCatch(model@count_cumulative, error = function(e) NULL)
+  cumulative_process <- tryCatch(model@cumulative, error = function(e) NULL)
   cumulative_settlement <- if (!is.null(cumulative_process) &&
                                isTRUE(cumulative_process@active)) {
     as.integer(cumulative_process@settlement)
@@ -86,35 +87,35 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
   # (see `.mask_retractions()`): a retraction dated after `now` has not happened
   # yet, so the row is STANDING; a retraction in the same period as its report was
   # never visible at any observation epoch, so the row is dropped outright.
-  # VALIDATION mode.  tbl.now records ONE date plus an outcome; the engine below
+  # REVISION mode.  tbl.now records ONE revision date plus an outcome; the engine below
   # was built around two mirror-image columns (retractions and confirmations), so
   # the two representations are reconciled here rather than duplicating the whole
   # tested path:
   #
-  #   confirmation_date := validation_date where validation_type == "confirmed"
-  #   retraction_date   := validation_date where validation_type == "retracted"
+  #   confirmation_date := revision_date where revision_type == "confirmed"
+  #   retraction_date   := revision_date where revision_type == "retracted"
   #
   # A report resolves either negatively (retracted, we see the negatives) or
   # positively (confirmed, we see the positives).  The two share every downstream
   # code path and differ only in `lag_offset`, which sets the support of the
-  # validation lag, and in what a resolved row means for the nowcast target.
+  # revision lag, and in what a resolved row means for the nowcast target.
   # Mode 2 -- BOTH -- is the full process: modes 0 and 1 see only one of the signs
   # and infer the split from the censoring, while mode 2 sees the sign outright.
-  resolution_mode <- switch(validation_mode,
+  resolution_mode <- switch(revision_mode,
                             "both" = 2L, "confirmation_only" = 1L,
                             "retraction_only" = 0L, 0L)
-  has_validation  <- !identical(validation_mode, "none") &&
-                     isTRUE(tbl.now::has_validation(data))
+  has_revision  <- !identical(revision_mode, "none") &&
+                     isTRUE(.tblnow_has_revision(data))
   resolution_name <- if (resolution_mode == 1L) "confirmation" else "retraction"
-  validation_censor_col <- if (has_validation) {
-    tbl.now::get_is_censored_validation(data)
+  revision_censor_col <- if (has_revision) {
+    .tblnow_get_is_censored_revision(data)
   } else NULL
 
-  if (has_validation && is_cumulative && resolution_mode != 0L) {
+  if (has_revision && is_cumulative && resolution_mode != 0L) {
     # Eq. `noconfirmcum`: a confirmation does not change a cumulative count, so
     # g^val_{D+} = 0 and the confirmation-delay parameters are unidentifiable.
     cli::cli_abort(c(
-      "A count-cumulative stream cannot carry {.val confirmed} validations.",
+      "A count-cumulative stream cannot carry {.val confirmed} revisions.",
       "i" = "A confirmation does not change a cumulative count, so its delay parameters are unidentifiable.",
       "*" = "Keep the retractions and drop the confirmations, or model the data as {.val count-incidence}."))
   }
@@ -122,12 +123,12 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
   now_step        <- as.integer(unit_steps(now))
   retraction_step <- NULL
   resolution_positive <- NULL
-  if (has_validation && !is_cumulative) {
+  if (has_revision && !is_cumulative) {
     as_of_frame    <- as.data.frame(as_of)
-    validation_col <- tbl.now::get_validation_date(data)
-    type_col       <- tbl.now::get_validation_type(data)
+    revision_col <- .tblnow_get_revision_date(data)
+    type_col       <- .tblnow_get_revision_type(data)
 
-    resolution_values <- as_of_frame[[validation_col]]
+    resolution_values <- as_of_frame[[revision_col]]
     outcomes          <- as.character(as_of_frame[[type_col]])
     # A dated row with no outcome cannot enter either lag law.  The mode inference
     # already refused this over the FULL data; re-check here because the as-of view
@@ -136,7 +137,7 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
                 (is.na(outcomes) | !outcomes %in% c("confirmed", "retracted"))
     if (any(unusable))
       cli::cli_abort(c(
-        "{sum(unusable)} row{?s} {?carries/carry} a validation date without a usable {.field validation_type}.",
+        "{sum(unusable)} row{?s} {?carries/carry} a revision date without a usable {.field revision_type}.",
         "x" = "A resolved report whose outcome is unknown cannot enter either lag law.",
         "i" = "Use {.val confirmed} or {.val retracted}, or clear the date to mark the row {.val pending}."))
 
@@ -150,7 +151,7 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
       resolution_values[!is.na(resolution_values) & outcomes != wanted] <- NA
     }
     retract_censored <- .resolve_logical_column(
-      as_of_frame, validation_censor_col, "is_censored_validation"
+      as_of_frame, revision_censor_col, "is_censored_revision"
     )
 
     # Modes 1 and 2 both allow a same-period resolution (a test can come back the
@@ -175,7 +176,7 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
       if (resolution_mode >= 1L) {
         cli::cli_inform(c(
           "i" = "No report is confirmed as of {format(now)}, so {.arg p} is determined by its prior.",
-          "*" = "Set it with {.code validation_process(p = beta_prior(...))}, or move `now` later."))
+          "*" = "Set it with {.code revision_process(p = beta_prior(...))}, or move `now` later."))
       } else {
         cli::cli_inform(c("i" = "No case is retracted as of {format(now)}; fitting the ordinary count model (`p = 1`)."))
         retraction_step <- NULL
@@ -359,7 +360,9 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
 .grid_event_dates <- function(min_event, event_unit, max_time) {
   unit <- as.character(event_unit)
   idx  <- seq_len(max_time) - 1L
-  if (unit %in% c("month", "months")) {
+  if (unit %in% c("numeric")) {
+    as.numeric(min_event) + idx
+  } else if (unit %in% c("month", "months")) {
     base <- as.POSIXlt(as.Date(min_event))
     out  <- vapply(idx, function(k) {
       d <- base; d$mon <- d$mon + k; as.numeric(as.Date(d))
@@ -425,7 +428,9 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
 #' @noRd
 .unit_steps <- function(from, to, event_unit) {
   unit <- as.character(event_unit)
-  if (unit %in% c("month", "months")) {
+  if (unit %in% c("numeric")) {
+    as.numeric(to) - as.numeric(from)
+  } else if (unit %in% c("month", "months")) {
     fl <- as.POSIXlt(from); tl <- as.POSIXlt(to)
     (tl$year - fl$year) * 12 + (tl$mon - fl$mon)
   } else {
@@ -467,4 +472,50 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
   }
   storage.mode(X) <- "double"
   X
+}
+
+#' Validate the tbl.now date grids the engine can consume
+#'
+#' The engine stores a single event-grid index and computes report delays on
+#' that grid. Daily, weekly and numeric grids are supported directly; mixed
+#' event/report units need an explicit converter before they can be safe.
+#' Revision units are metadata for now: revision dates are still placed on the
+#' event grid until revision-date temporal effects are implemented.
+#'
+#' @keywords internal
+#' @noRd
+.validate_tblnow_engine_units <- function(data) {
+  normalize_unit <- function(unit) switch(
+    as.character(unit),
+    day = "days",
+    week = "weeks",
+    as.character(unit)
+  )
+  event_unit_raw <- as.character(tbl.now::get_event_units(data))
+  report_unit_raw <- as.character(tbl.now::get_report_units(data))
+  event_unit <- normalize_unit(event_unit_raw)
+  report_unit <- normalize_unit(report_unit_raw)
+  supported <- c("days", "weeks", "numeric")
+
+  if (!event_unit %in% supported) {
+    cli::cli_abort(c(
+      "Unsupported {.cls tbl_now} event units {.val {event_unit}}.",
+      "i" = "diseasenowcasting currently supports daily, weekly, and numeric event/report grids."
+    ))
+  }
+  if (!report_unit %in% supported) {
+    cli::cli_abort(c(
+      "Unsupported {.cls tbl_now} report units {.val {report_unit}}.",
+      "i" = "diseasenowcasting currently supports daily, weekly, and numeric event/report grids."
+    ))
+  }
+  if (!identical(event_unit, report_unit)) {
+    cli::cli_abort(c(
+      "diseasenowcasting needs matching event and report units.",
+      "x" = "The data have event_units = {.val {event_unit_raw}} and report_units = {.val {report_unit_raw}}.",
+      "i" = "Convert the {.cls tbl_now} to a common event/report grid before nowcasting."
+    ))
+  }
+
+  invisible(data)
 }

@@ -1,13 +1,13 @@
-test_that("count_cumulative_process exposes all three finite-horizon models", {
+test_that("cumulative_process exposes all three finite-horizon models", {
   expected <- c("cumulative", "hurdle_ztnb", "hurdle_ztpoisson")
   for (observation in expected) {
-    process <- count_cumulative_process(
+    process <- cumulative_process(
       observation = observation,
       settlement = 26L
     )
     expect_s7_class(
       process,
-      diseasenowcasting:::count_cumulative_process_class
+      diseasenowcasting:::cumulative_process_class
     )
     expect_identical(process@observation, observation)
     expect_equal(process@settlement, 26)
@@ -15,19 +15,19 @@ test_that("count_cumulative_process exposes all three finite-horizon models", {
   }
 })
 
-test_that("count_cumulative_process validates horizons, delays, and parameter support", {
-  expect_error(count_cumulative_process(settlement = 0), "positive integer")
-  expect_error(count_cumulative_process(settlement = 2.5), "positive integer")
+test_that("cumulative_process validates horizons, delays, and parameter support", {
+  expect_error(cumulative_process(settlement = 0), "positive integer")
+  expect_error(cumulative_process(settlement = 2.5), "positive integer")
   expect_error(
-    count_cumulative_process(retraction_delay = dirichlet_delay()),
+    cumulative_process(retraction_delay = dirichlet_delay()),
     "Unsupported count-cumulative retraction-delay family"
   )
-  expect_error(count_cumulative_process(retraction_mass = 1.1), "in \\[0, 1\\]")
-  expect_error(count_cumulative_process(retraction_mass = normal_prior(0, 1)),
+  expect_error(cumulative_process(retraction_mass = 1.1), "in \\[0, 1\\]")
+  expect_error(cumulative_process(retraction_mass = normal_prior(0, 1)),
                "Beta prior")
-  expect_error(count_cumulative_process(magnitude_size = 0), "positive")
+  expect_error(cumulative_process(magnitude_size = 0), "positive")
   expect_error(
-    count_cumulative_process(
+    cumulative_process(
       "hurdle_ztpoisson", magnitude_size = lognormal_prior(0, 1)
     ),
     "no magnitude-dispersion"
@@ -36,22 +36,22 @@ test_that("count_cumulative_process validates horizons, delays, and parameter su
 
 test_that("model carries an inert or explicit dedicated count-cumulative component", {
   ordinary <- model()
-  expect_false(ordinary@count_cumulative@active)
+  expect_false(ordinary@cumulative@active)
 
-  process <- count_cumulative_process(
+  process <- cumulative_process(
     observation = "hurdle_ztpoisson", settlement = 52L,
     movement_previous = 0
   )
-  cumulative_model <- model(count_cumulative = process)
-  expect_true(cumulative_model@count_cumulative@active)
-  expect_identical(cumulative_model@count_cumulative@observation,
+  cumulative_model <- model(cumulative = process)
+  expect_true(cumulative_model@cumulative@active)
+  expect_identical(cumulative_model@cumulative@observation,
                    "hurdle_ztpoisson")
-  expect_equal(cumulative_model@count_cumulative@settlement, 52)
+  expect_equal(cumulative_model@cumulative@settlement, 52)
   expect_no_error(print(cumulative_model))
 })
 
-test_that("count-cumulative priors are distinct from validation p and g_C", {
-  ztnb_model <- model(count_cumulative = count_cumulative_process(
+test_that("count-cumulative priors are distinct from revision p and g_C", {
+  ztnb_model <- model(cumulative = cumulative_process(
     observation = "hurdle_ztnb",
     retraction_delay = generalized_gamma_delay(),
     settlement = 26L
@@ -70,7 +70,7 @@ test_that("count-cumulative priors are distinct from validation p and g_C", {
   expect_null(priors$confirm_p)
 
   ztpoisson <- default_priors(model(
-    count_cumulative = count_cumulative_process("hurdle_ztpoisson")
+    cumulative = cumulative_process("hurdle_ztpoisson")
   ))
   expect_identical(ztpoisson$count_cumulative_observation, 3L)
   expect_null(ztpoisson$magnitude_size)

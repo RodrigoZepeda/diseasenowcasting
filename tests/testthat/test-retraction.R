@@ -11,9 +11,9 @@
 
 test_that("a retraction column switches on the cure block and builds its sufficient statistics", {
   simulated <- simulate_retraction_linelist()
-  tn <- as_validation_tbl_now(simulated$linelist, simulated$now)
+  tn <- as_revision_tbl_now(simulated$linelist, simulated$now)
   engine <- suppressMessages(suppressWarnings(diseasenowcasting:::prepare_from_tbl_now(
-    tn, model(), now = simulated$now, validation_mode = "retraction_only")))$data
+    tn, model(), now = simulated$now, revision_mode = "retraction_only")))$data
 
   expect_equal(engine$is_linelist_retraction, 1L)
   expect_gt(engine$n_retracted, 0)
@@ -38,9 +38,9 @@ test_that("retractions dated after `now` are masked, leaving the row standing", 
   linelist  <- simulated$linelist
   # Pull `now` back so a chunk of the retractions has not happened yet.
   early_now <- simulated$now - 20
-  tn <- as_validation_tbl_now(linelist, early_now)
+  tn <- as_revision_tbl_now(linelist, early_now)
   engine <- suppressMessages(suppressWarnings(diseasenowcasting:::prepare_from_tbl_now(
-    tn, model(), now = early_now, validation_mode = "retraction_only")))$data
+    tn, model(), now = early_now, revision_mode = "retraction_only")))$data
 
   in_view <- linelist$onset <= early_now & linelist$reported <= early_now
   retracted_by_now <- sum(in_view & !is.na(linelist$retracted) & linelist$retracted <= early_now)
@@ -53,22 +53,22 @@ test_that("same-period retractions are dropped from the data entirely", {
   simulated <- simulate_retraction_linelist(n_days = 30)
   linelist  <- simulated$linelist
   linelist$retracted[1:5] <- linelist$reported[1:5]         # lag 0
-  tn <- as_validation_tbl_now(linelist, simulated$now)
+  tn <- as_revision_tbl_now(linelist, simulated$now)
   engine <- suppressMessages(suppressWarnings(diseasenowcasting:::prepare_from_tbl_now(
-    tn, model(), now = simulated$now, validation_mode = "retraction_only")))$data
+    tn, model(), now = simulated$now, revision_mode = "retraction_only")))$data
 
   in_view <- linelist$onset <= simulated$now & linelist$reported <= simulated$now
   expect_equal(engine$n_retracted + engine$n_standing, sum(in_view) - 5L)
 })
 
-test_that("a tbl_now with no validation process is a plain count fit", {
-  # There is no column ARGUMENT to get wrong any more -- the validation process is
+test_that("a tbl_now with no revision process is a plain count fit", {
+  # There is no column ARGUMENT to get wrong any more -- the revision process is
   # read off the object -- so the failure mode this used to guard (a misspelled
   # `retraction_date =`) cannot happen.  What is still worth pinning is the
-  # no-op: an object that carries no validation process must not acquire one.
+  # no-op: an object that carries no revision process must not acquire one.
   simulated <- simulate_retraction_linelist(n_days = 20)
   tn <- as_retraction_tbl_now(simulated$linelist, simulated$now)
-  expect_false(isTRUE(tbl.now::has_validation(tn)))
+  expect_false(isTRUE(tbl.now::has_revision(tn)))
   engine <- suppressWarnings(diseasenowcasting:::prepare_from_tbl_now(
     tn, model(), now = simulated$now))$data
   expect_equal(engine$is_linelist_retraction, 0L)
@@ -80,7 +80,7 @@ test_that("an all-NA retraction column gives exactly the ordinary count fit", {
   simulated <- simulate_retraction_linelist(n_days = 45)
   linelist  <- simulated$linelist
   linelist$retracted <- as.Date(NA)
-  tn  <- as_validation_tbl_now(linelist, simulated$now)
+  tn  <- as_revision_tbl_now(linelist, simulated$now)
   mdl <- model(nb_likelihood(), ar1_epidemic(), lognormal_delay())
 
   plain <- suppressMessages(suppressWarnings(nowcast(
@@ -96,9 +96,9 @@ test_that("an all-NA retraction column gives exactly the ordinary count fit", {
 
 test_that("pinning p = 1 with observed retractions errors clearly", {
   simulated <- simulate_retraction_linelist(n_days = 40)
-  tn  <- as_validation_tbl_now(simulated$linelist, simulated$now)
+  tn  <- as_revision_tbl_now(simulated$linelist, simulated$now)
   mdl <- model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-               validation = validation_process(p = 1))
+               revision = revision_process(p = 1))
   expect_error(
     suppressMessages(suppressWarnings(nowcast(
       tn, mdl, now = simulated$now, type = "one_stage",
@@ -173,7 +173,7 @@ test_that("the empirical p estimate corrects the naive rate upward in retraction
 test_that("p and the settled counts are recovered from a simulated linelist", {
   skip_on_cran()
   simulated <- simulate_retraction_linelist(n_days = 80, p_true = 0.85, seed = 4)
-  tn <- as_validation_tbl_now(simulated$linelist, simulated$now)
+  tn <- as_revision_tbl_now(simulated$linelist, simulated$now)
   fitted <- suppressMessages(suppressWarnings(nowcast(
     tn, model(nb_likelihood(), ar1_epidemic(), lognormal_delay()),
     now = simulated$now, type = "one_stage",
@@ -194,14 +194,14 @@ test_that("p and the settled counts are recovered from a simulated linelist", {
 test_that("every supported retraction-delay family fits and agrees on p", {
   skip_on_cran()
   simulated <- simulate_retraction_linelist(n_days = 60, p_true = 0.85, seed = 6)
-  tn <- as_validation_tbl_now(simulated$linelist, simulated$now)
+  tn <- as_revision_tbl_now(simulated$linelist, simulated$now)
 
   fitted_p <- vapply(list(lognormal_delay(), gamma_delay(),
                           generalized_gamma_delay(), dirichlet_delay(bins = 8)),
                      function(retract_delay) {
     fitted <- suppressMessages(suppressWarnings(nowcast(
       tn, model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-                validation = validation_process(validation_delay = retract_delay)),
+                revision = revision_process(revision_delay = retract_delay)),
       now = simulated$now, type = "one_stage",
       temporal_effects = "none", n_draws = 50, seed = 3)))
     fitted@fits[[1]]$reconstruct$retraction$p
@@ -215,7 +215,7 @@ test_that("every supported retraction-delay family fits and agrees on p", {
 
 test_that("the predictive thins the standing rows rather than starting from every row", {
   simulated <- simulate_retraction_linelist(n_days = 50, seed = 8)
-  tn <- as_validation_tbl_now(simulated$linelist, simulated$now)
+  tn <- as_revision_tbl_now(simulated$linelist, simulated$now)
   fitted <- suppressMessages(suppressWarnings(nowcast(
     tn, model(nb_likelihood(), ar1_epidemic(), lognormal_delay()),
     now = simulated$now, type = "one_stage",
@@ -264,38 +264,38 @@ censor_linelist <- function(linelist, now, report_frac = 0, retract_frac = 0, se
 }
 
 fit_censored <- function(linelist, now, ...) {
-  tn <- as_validation_tbl_now(
+  tn <- as_revision_tbl_now(
     linelist, now, is_censored_report = is_censored,
-    is_censored_validation = q_bound
+    is_censored_revision = q_bound
   )
   suppressMessages(suppressWarnings(nowcast(tn,
     model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-          validation = validation_process(validation_delay = dirichlet_validation(bins = 8))),
+          revision = revision_process(revision_delay = dirichlet_revision(bins = 8))),
     now = now,
     type = "one_stage", temporal_effects = "none", n_draws = 100, seed = 6, ...)))
 }
 
-test_that("validation censoring is read only from tbl_now metadata", {
+test_that("revision censoring is read only from tbl_now metadata", {
   simulated <- simulate_retraction_linelist(n_days = 45, seed = 16)
   rows <- simulated$linelist
   rows$q_bound <- !is.na(rows$retracted)
-  data <- as_validation_tbl_now(
-    rows, simulated$now, is_censored_validation = q_bound
+  data <- as_revision_tbl_now(
+    rows, simulated$now, is_censored_revision = q_bound
   )
   specification <- model(
-    nb_likelihood(), ar1_epidemic(), lognormal_delay(), validation_process()
+    nb_likelihood(), ar1_epidemic(), lognormal_delay(), revision_process()
   )
 
-  expect_identical(tbl.now::get_is_censored_validation(data), "q_bound")
-  expect_false("validation_censored" %in% names(formals(nowcast)))
+  expect_identical(tbl.now::get_is_censored_revision(data), "q_bound")
+  expect_false("revision_censored" %in% names(formals(nowcast)))
   expect_error(
-    nowcast(data, specification, validation_censored = "q_bound"),
+    nowcast(data, specification, revision_censored = "q_bound"),
     "not a.*nowcast.*argument"
   )
 
   engine <- suppressMessages(prepare_from_tbl_now(
     data, specification, now = simulated$now,
-    validation_mode = "retraction_only"
+    revision_mode = "retraction_only"
   ))$data
   expect_gt(engine$n_censored, 0)
 })
@@ -321,17 +321,17 @@ test_that("a point-valued censoring interval reproduces the exact-row likelihood
   linelist$q_bound <- FALSE
 
   retraction_model <- model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-                            validation = validation_process())
+                            revision = revision_process())
   engine_for <- function(is_censored) {
     rows <- linelist
     rows$is_censored <- is_censored
-    tn <- as_validation_tbl_now(
+    tn <- as_revision_tbl_now(
       rows, simulated$now, is_censored_report = is_censored,
-      is_censored_validation = q_bound
+      is_censored_revision = q_bound
     )
     suppressMessages(suppressWarnings(diseasenowcasting:::prepare_from_tbl_now(
       tn, retraction_model, now = simulated$now,
-      validation_mode = "retraction_only")))$data
+      revision_mode = "retraction_only")))$data
   }
   exact_engine <- engine_for(rep(FALSE, nrow(linelist)))
   point_engine <- engine_for(linelist$reported == linelist$onset)
@@ -445,10 +445,10 @@ test_that("a censored standing row sums the appearance mass against h", {
 # ── stratum-varying p ────────────────────────────────────────────────────────
 
 fit_two_site <- function(simulated, stratified_p) {
-  tn <- as_validation_tbl_now(simulated$linelist, simulated$now, strata = site)
+  tn <- as_revision_tbl_now(simulated$linelist, simulated$now, strata = site)
   suppressMessages(suppressWarnings(nowcast(tn,
     model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-          validation = validation_process(validation_delay = dirichlet_validation(bins = 8),
+          revision = revision_process(revision_delay = dirichlet_revision(bins = 8),
                                               stratified_p = stratified_p)),
     now = simulated$now, type = "one_stage",
     temporal_effects = "none", n_draws = 100, seed = 4)))
@@ -475,11 +475,11 @@ test_that("stratified_p recovers per-stratum confirmation probabilities", {
 
 test_that("stratified_p is a no-op on a single stratum", {
   simulated <- simulate_retraction_linelist(n_days = 40, seed = 17)
-  tn <- as_validation_tbl_now(simulated$linelist, simulated$now)
+  tn <- as_revision_tbl_now(simulated$linelist, simulated$now)
   nll <- vapply(c(FALSE, TRUE), function(stratified) {
     suppressMessages(suppressWarnings(nowcast(tn,
       model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-            validation = validation_process(stratified_p = stratified)),
+            revision = revision_process(stratified_p = stratified)),
       now = simulated$now, type = "one_stage",
       temporal_effects = "none", n_draws = 20, seed = 3)))@fits[[1]]$nll
   }, numeric(1))
@@ -504,7 +504,7 @@ test_that("the cure block's gradient matches a numeric one at the mode", {
   # Catches a wrong Jacobian on the logit transform, which no point-recovery test
   # can: a bias in the transform shifts the mode without breaking the fit.
   simulated <- simulate_retraction_linelist(n_days = 40, seed = 18)
-  tn <- as_validation_tbl_now(simulated$linelist, simulated$now)
+  tn <- as_revision_tbl_now(simulated$linelist, simulated$now)
   fitted <- suppressMessages(suppressWarnings(nowcast(tn,
     model(nb_likelihood(), ar1_epidemic(), lognormal_delay()),
     now = simulated$now, type = "one_stage",
@@ -562,10 +562,10 @@ test_that("p is calibrated across repeated simulations", {
   covered <- vapply(seq_along(true_p), function(replicate_index) {
     simulated <- simulate_retraction_linelist(n_days = 50, p_true = true_p[replicate_index],
                                               seed = 100 + replicate_index)
-    tn <- as_validation_tbl_now(simulated$linelist, simulated$now)
+    tn <- as_revision_tbl_now(simulated$linelist, simulated$now)
     fitted <- suppressMessages(suppressWarnings(nowcast(tn,
       model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-            validation = validation_process(validation_delay = dirichlet_validation(bins = 8))),
+            revision = revision_process(revision_delay = dirichlet_revision(bins = 8))),
       now = simulated$now, type = "one_stage",
       temporal_effects = "none", n_draws = 20, seed = 3)))
     interval <- stats::quantile(posterior_confirm_p(fitted), c(0.05, 0.95), names = FALSE)
@@ -584,7 +584,7 @@ test_that("the linelist and count-cumulative models agree on the settled mean", 
   now <- simulated$now
 
   linelist_fit <- suppressMessages(suppressWarnings(nowcast(
-    as_validation_tbl_now(linelist, now),
+    as_revision_tbl_now(linelist, now),
     model(poisson_likelihood(), ar1_epidemic(), lognormal_delay()),
     now = now, type = "one_stage",
     temporal_effects = "none", n_draws = 100, seed = 3)))
@@ -606,7 +606,7 @@ test_that("the linelist and count-cumulative models agree on the settled mean", 
     data_type = "count-cumulative", verbose = FALSE))
   cumulative_fit <- tryCatch(suppressMessages(suppressWarnings(nowcast(cumulative_tn,
     model(poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
-          validation = validation_process()),
+          revision = revision_process()),
     now = now, type = "one_stage", temporal_effects = "none", n_draws = 100, seed = 3))),
     error = function(e) NULL)
   skip_if(is.null(cumulative_fit), "count-cumulative comparison fit did not converge")
@@ -627,7 +627,7 @@ test_that("short follow-up widens the posterior for p rather than pretending pre
   # should say so through a wider posterior, not report false precision.
   skip_on_cran()
   simulated <- simulate_retraction_linelist(n_days = 60, seed = 22)
-  tn <- as_validation_tbl_now(simulated$linelist, simulated$now)
+  tn <- as_revision_tbl_now(simulated$linelist, simulated$now)
   posterior_spread <- function(now) {
     fitted <- suppressMessages(suppressWarnings(nowcast(tn,
       model(nb_likelihood(), ar1_epidemic(), lognormal_delay()),
@@ -645,16 +645,16 @@ test_that("update() carries the retraction settings and moves cases out of stand
   simulated <- simulate_retraction_linelist(n_days = 60, seed = 23)
   linelist  <- simulated$linelist
   early_now <- simulated$now - 15
-  tn <- as_validation_tbl_now(linelist, early_now)
+  tn <- as_revision_tbl_now(linelist, early_now)
 
   fitted <- suppressMessages(suppressWarnings(nowcast(tn,
     model(nb_likelihood(), ar1_epidemic(), lognormal_delay()),
     now = early_now, type = "one_stage",
     temporal_effects = "none", n_draws = 20, seed = 3)))
-  expect_equal(fitted@validation_mode, "retraction_only")
+  expect_equal(fitted@revision_mode, "retraction_only")
 
   refit <- suppressMessages(suppressWarnings(
-    update(fitted, new_data = as_validation_tbl_now(linelist, simulated$now),
+    update(fitted, new_data = as_revision_tbl_now(linelist, simulated$now),
            now = simulated$now, compute_surprise = FALSE)))
   expect_equal(refit@engine$is_linelist_retraction, 1L)
   # Retractions that landed between the two dates have left the standing pool.

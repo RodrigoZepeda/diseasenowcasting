@@ -275,10 +275,15 @@ The posterior-predictive distribution of the nowcast at event time $t$ is then
 summarised from the draws.
 
 
-## 7. Two-stage cascade 
+## 7. One-stage and two-stage inference
 
-We fit the model in two steps due to the non-identifiability between delay
-and epidemic processess. The two-stage cascade addresses this via **multiple imputation**:
+With `type = "one_stage"`, the reporting-delay, epidemic, likelihood, and any
+revision parameters are optimized in one joint objective. This retains all
+posterior dependence, but it can be more sensitive to the joint geometry between
+recent incidence and incomplete reporting.
+
+With `type = "two_stage"`, the reporting delay and epidemic process are separated
+by **multiple imputation**:
 
 1. **Stage 1.** Fit a delay-only model to a recent window of the series (default:
    120 events), obtaining a posterior $(\hat\theta_D, \hat\Sigma_D)$ over delay parameters.
@@ -310,7 +315,7 @@ surveillance systems is only **which resolutions get a date column**:
 | a missing date means | not retracted **yet** | not confirmed **yet** | not resolved **yet** |
 | nowcast target | reports never retracted | reports eventually confirmed | reports that resolve positive |
 | lag support | $\{1, 2, \ldots\}$ | $\{0, 1, \ldots\}$ | $\{0, 1, \ldots\}$ |
-| `validation_type` records | only `"retracted"` | only `"confirmed"` | both |
+| `revision_type` records | only `"retracted"` | only `"confirmed"` | both |
 
 The lag support differs only because a *retraction* recorded in the same period as
 its report describes a case that was never visible in any data vintage, whereas a
@@ -319,11 +324,11 @@ generative object seen through different windows, so they share one likelihood;
 §8.2 gives the single parameter that switches between them.
 
 The software interface mirrors the three-axis data object. `tbl.now` supplies the
-event, report and validation date columns, the `validation_type` column, and the
-optional `is_censored_validation` column through attributes on the `tbl_now`.
+event, report and revision date columns, the `revision_type` column, and the
+optional `is_censored_revision` column through attributes on the `tbl_now`.
 `nowcast()` reads those attributes directly; it has no parallel column-name
-arguments. In `tbl_now(..., is_censored_validation = result_is_upper_bound)`, the
-named logical column marks validation dates that are upper bounds rather than
+arguments. In `tbl_now(..., is_censored_revision = result_is_upper_bound)`, the
+named logical column marks revision dates that are upper bounds rather than
 exact dates. The model is configured as
 
 ```r
@@ -331,13 +336,13 @@ model(
   nb_likelihood(),
   ar1_epidemic(),
   lognormal_delay(),                 # event to report
-  validation = validation_process(
-    dirichlet_validation(),          # report to validation
+  revision = revision_process(
+    dirichlet_revision(),          # report to revision
     mode = "auto")
 )
 ```
 
-There is one validation-delay law in this first prototype. In either single-sign
+There is one revision-delay law in this first prototype. In either single-sign
 mode it is the lag for the sign that is recorded. In `mode = "both"` the same law
 is used for confirmations and retractions. Consequently, with both signs observed,
 the age of a pending report informs when it will resolve but not which sign it will
@@ -479,7 +484,14 @@ for right-censored lags with cure fraction $p$. Two consequences:
    $1 - p$, because recent reports have not had time to be retracted).
 
 Blocks (ii) and (iii) also involve neither $\lambda_t$ nor the epidemic process,
-so the two-stage cascade of §7 carries over unchanged.
+so the stepwise boundary of §7 carries over without introducing a second
+revision-imputation stage. In `type = "two_stage"`, Stage 1 estimates only the
+event-to-report law $g_D$. Each imputed $\theta_D^{(k)}$ is fixed in Stage 2,
+while the revision-delay parameters and $p$ remain free and are estimated
+jointly with the epidemic process. Posterior sampling within each Stage-2 fit
+therefore propagates revision uncertainty; pooling across $k$ additionally
+propagates reporting-delay uncertainty. In `type = "one_stage"`, $g_D$, $g_R$,
+$p$, and the epidemic process are all estimated together.
 
 ### 8.7 Reconstruction
 
@@ -549,7 +561,7 @@ biases the retraction timing without ever looking wrong.
 As in §5, the log-likelihood is a sum over $(t,s)$ cells, and $g_D$, $g_C$ and
 $\phi$ are shared while $\lambda_t^{(s)}$ is per stratum. The confirmation
 probability may be either: shared (the default) or estimated per stratum via
-`validation_process(stratified_p = TRUE)`. The cure block is already a sum over
+`revision_process(stratified_p = TRUE)`. The cure block is already a sum over
 strata, so a per-stratum $p^{(s)}$ changes nothing structural — each stratum
 contributes its own $R^{(s)}$, $r_c^{(s)}$, $u_j^{(s)}$ under the same prior, and
 the count block uses $\mu_t^{(s)} = \lambda_t^{(s)}/p^{(s)}$. $g_C$ stays shared
@@ -573,7 +585,7 @@ the shared $p$ is the safer choice.
   Monte-Carlo noise. On a COVID series of $\approx 8000$ cases/day, a lognormal
   $g_C$ fitted to a $1 + \mathrm{Poisson}(2)$ lag left a $0.9\%$ bias and lost
   nominal coverage, while a Dirichlet $g_C$ recovered $\rho$ to four decimals.
-  Prefer `dirichlet_validation()` when counts are large.
+  Prefer `dirichlet_revision()` when counts are large.
 
 ### 8.11 The three data types
 
@@ -590,11 +602,11 @@ unresolved counts are identical, and the two log-likelihoods agree exactly. The
 package implements this by weighting each tally by $n$ instead of by 1.
 
 **Count-cumulative.** A stream of repeatedly published levels is not an
-aggregation of the row-level validation likelihood. It does not reveal which
-records remain pending, and therefore cannot identify the validation probability
-$p$ separately from a conditional validation-delay distribution. Downward
+aggregation of the row-level revision likelihood. It does not reveal which
+records remain pending, and therefore cannot identify the revision probability
+$p$ separately from a conditional revision-delay distribution. Downward
 revisions are handled by the dedicated collapsed retraction kernel of §9, not by
-`validation_process()`.
+`revision_process()`.
 
 ### 8.12 Relationship to the count-cumulative model
 
@@ -630,7 +642,7 @@ $$h_R(\ell)=m_R g_R(\ell), \qquad 0\leq m_R\leq1,$$
 where $g_R$ is a lognormal, gamma, or generalized-gamma mass normalised over
 $1{:}H$. Here $m_R$ is the retraction mass within $H$ and $S_R(H)$ is terminal
 retention. This factorisation must not be interpreted as separate identification
-of a biological truth probability and a conditional validation law.
+of a biological truth probability and a conditional revision law.
 
 ### 9.2 Cumulative-level composite likelihood
 
@@ -710,12 +722,12 @@ are conditionally independent given that frailty.
 There is no third “confirmation update” in a count-cumulative provisional
 register. A report enters through $A_t(d)$ whether it will later be confirmed or
 retracted. Confirmation leaves that report in the level, while a negative
-validation produces the withdrawal counted by $W_t(d)$. Adding a separate
+revision produces the withdrawal counted by $W_t(d)$. Adding a separate
 confirmation intensity would count the same positive report twice. If a source
 publishes only confirmed totals, its confirmation date is the observation/report
 date and the ordinary event-to-observation delay model applies. When row-level
-reports and their positive/negative validation outcomes are both available, §8's
-marked validation likelihood is used instead of a Skellam likelihood.
+reports and their positive/negative revision outcomes are both available, §8's
+marked revision likelihood is used instead of a Skellam likelihood.
 
 The product over ages is again a composite likelihood because updates from one
 event-time are dependent.

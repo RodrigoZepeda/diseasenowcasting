@@ -50,10 +50,10 @@ backtest_class <- S7::new_class(
 #' @param seed Optional base RNG seed.
 #' @param ... Passed to [nowcast()].
 #'
-#'   A `tbl_now` carrying a validation process needs nothing extra: the validation
-#'   model is fitted at each as-of date, and the truth is built from the cases that
-#'   settle POSITIVE (confirmed, or never retracted) -- the settled count the model
-#'   actually targets.
+#'   A `tbl_now` carrying a revision process needs nothing extra: the revision
+#'   model is fitted at each as-of date, and the truth follows the inferred mode:
+#'   confirmed records for `confirmation_only` / `both`, and records never
+#'   retracted for `retraction_only` -- the settled count the model targets.
 #' @returns A `backtest_class` object.
 #'
 #' @details
@@ -103,8 +103,8 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
   cumulative_horizon <- NULL
   if (is_count_cumulative) {
     horizons <- vapply(models, function(candidate) {
-      if (!isTRUE(candidate@count_cumulative@active)) 26L
-      else as.integer(candidate@count_cumulative@settlement)
+      if (!isTRUE(candidate@cumulative@active)) 26L
+      else as.integer(candidate@cumulative@settlement)
     }, integer(1L))
     if (length(unique(horizons)) != 1L) {
       cli::cli_abort(
@@ -167,13 +167,10 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
   # Under a retraction model the target is the SETTLED count, so cases that are
   # ultimately retracted must not be counted -- scoring against every reported row
   # would make an unbiased model look biased low by the retraction rate.
-  # A retracted case is not part of the settled count, so it must be dropped from
-  # the truth; a case still pending is kept, because "not resolved yet" is not
-  # "not a case".  Detected from the tbl_now, exactly as nowcast() detects it.
-  truth_source <- if (!isTRUE(tbl.now::has_validation(data))) data else {
-    outcomes <- as.character(as.data.frame(data)[[tbl.now::get_validation_type(data)]])
-    data[which(is.na(outcomes) | outcomes != "retracted"), , drop = FALSE]
-  }
+  # The full-data truth must match the revision estimand. Confirmation-only
+  # data can contain structurally unconfirmed rows (for example Probable cases),
+  # so treating every non-retracted row as truth would score the wrong target.
+  truth_source <- .revision_truth_source(data)
   truth_inc <- if (is_count_cumulative) {
     full_origin <- max(truth_source[[report_col]], na.rm = TRUE)
     completed <- .prepare_count_cumulative_as_of(
@@ -224,6 +221,15 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
       pred_summary$date_run <- as_of
       pred_summary$final    <- truth_by_evnum[as.character(pred_summary$.event_num)]
       pred_summary$target   <- nc@target
+      pred_summary$inference_rung <- nc@rung
+      pred_summary$n_fits <- length(nc@fits)
+      gradient_values <- vapply(
+        nc@fits, function(candidate) candidate$max_gradient %||% NA_real_,
+        numeric(1L)
+      )
+      pred_summary$max_gradient <- if (any(is.finite(gradient_values))) {
+        max(gradient_values[is.finite(gradient_values)])
+      } else NA_real_
       list(summary = pred_summary,
            sims = if (return_simulations) predict(nc, n_draws = n_draws)@draws else NULL)
     }, error = function(e) NULL)   # a failed cell contributes nothing
@@ -239,15 +245,40 @@ backtest <- function(data, models = diseasenowcasting::model(), dates = NULL,
                  results = summaries, simulations = sims)
 }
 
+#' Full-data truth source for the revision mode carried by a tbl_now
+#'
+#' Confirmation-only and both-outcome models target positive resolutions, so
+#' only confirmed rows enter their observable final truth. Retraction-only data
+#' target reports that are never retracted, so unresolved rows remain included.
+#' @keywords internal
+#' @noRd
+.revision_truth_source <- function(data) {
+  if (!isTRUE(.tblnow_has_revision(data))) return(data)
+
+  type_col <- .tblnow_get_revision_type(data)
+  date_col <- .tblnow_get_revision_date(data)
+  frame <- as.data.frame(data)
+  outcomes <- as.character(frame[[type_col]])
+  mode <- .infer_revision_mode(outcomes, frame[[date_col]])
+
+  if (is.na(mode)) return(data)
+  keep <- if (mode %in% c("confirmation_only", "both")) {
+    !is.na(outcomes) & outcomes == "confirmed"
+  } else {
+    is.na(outcomes) | outcomes != "retracted"
+  }
+  data[which(keep), , drop = FALSE]
+}
+
 #' Human-readable label for a model (epidemic / likelihood / delay).
 #' @keywords internal
 #' @noRd
 .model_label <- function(model) {
   base <- paste(model@epidemic@name, model@likelihood@name,
                 model@delay@name, sep = "/")
-  if (isTRUE(model@count_cumulative@active)) {
-    paste(base, model@count_cumulative@observation,
-          paste0("H", model@count_cumulative@settlement), sep = "/")
+  if (isTRUE(model@cumulative@active)) {
+    paste(base, model@cumulative@observation,
+          paste0("H", model@cumulative@settlement), sep = "/")
   } else base
 }
 

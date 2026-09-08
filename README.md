@@ -80,7 +80,7 @@ age/region structure only, not arbitrary user-defined strata;
 <sup>🚧</sup> In development for `diseasenowcasting` (extending a
 nowcast into a forward forecast / scenario projection). Counts that
 revise *downward* (e.g. a positive later re-classified as negative) are
-supported from version 2.0.0 via `confirmation_process()` — see below.
+supported from version 2.0.0 via `revision_process()` — see below.
 </sub>
 
 ## Installing
@@ -296,7 +296,7 @@ re-classified as negative. The
 [FluSight](https://github.com/cdcepi/FluSight-forecast-hub) influenza
 hospitalisation data shipped with `tbl.now` is one such stream.
 `diseasenowcasting` handles these with a dedicated finite-horizon
-`count_cumulative_process()`. The estimand is retained database count
+`cumulative_process()`. The estimand is retained database count
 `C_t(H)`, not biological truth unless non-withdrawal is assumed to imply truth.
 
 ``` r
@@ -319,7 +319,7 @@ flu_model <- model(
   likelihood   = nb_likelihood(),
   epidemic     = ar1_epidemic(),
   delay        = lognormal_delay(),
-  count_cumulative = count_cumulative_process(
+  cumulative = cumulative_process(
     observation = "hurdle_ztpoisson",
     settlement = 26L
   )

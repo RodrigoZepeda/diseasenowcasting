@@ -5,6 +5,7 @@
 *.o
 *.so
 logs/
+paper/
 *.log
 *.rds
 *.pdf

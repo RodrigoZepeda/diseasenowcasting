@@ -23,6 +23,20 @@ test_that("sir_epidemic() stores N_pop and use_beta_rw_trend", {
   expect_true(S7::S7_inherits(ep, diseasenowcasting:::epidemic_process_class))
 })
 
+test_that("SIR without a beta trend omits the AR parameters from the objective", {
+  tn <- .make_synth_tblnow(Tn = 30L, seed = 70)
+  specification <- model(
+    nb_likelihood(), sir_epidemic(N_pop = 5000, use_beta_rw_trend = FALSE),
+    lognormal_delay()
+  )
+  engine <- prepare_from_tbl_now(tn, specification)$data
+  built <- diseasenowcasting:::build_joint_obj(
+    engine, default_priors(specification, engine), use_random = FALSE
+  )
+  expect_false(any(grepl("^ar_", names(built$obj$par))))
+  expect_true(is.finite(built$obj$fn(built$obj$par)))
+})
+
 test_that("hsgp_epidemic() with custom kernel and basis", {
   ep <- hsgp_epidemic(num_basis = 12L, gp_kernel = "matern32")
   expect_equal(ep@num_basis, 12L)

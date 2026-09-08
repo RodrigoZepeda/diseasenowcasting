@@ -77,7 +77,7 @@ user-defined strata; `diseasenowcasting` allows any combination of strata column
  <sup>🚧</sup> In development for `diseasenowcasting` (extending a nowcast into a
 forward forecast / scenario projection). Counts that revise *downward* (e.g. a
 positive later re-classified as negative) are supported from version 2.0.0 via
-`confirmation_process()` — see below. </sub>
+`revision_process()` — see below. </sub>
 
 ## Installing
 
@@ -233,7 +233,7 @@ event-time that is re-reported over time and can be revised **downward** as well
 as upward — for example when a suspected case is later re-classified as negative.
 The [FluSight](https://github.com/cdcepi/FluSight-forecast-hub) influenza
 hospitalisation data shipped with `tbl.now` is one such stream. `diseasenowcasting`
-handles these with a **confirmation process**: attach `confirmation_process()` to
+handles these with a **revision process**: attach `revision_process()` to
 your `model()` and `nowcast()` automatically switches to the signed-increment
 (Skellam / SkNB) likelihood when the data are `"count-cumulative"`.
 
@@ -257,7 +257,7 @@ flu_model <- model(
   likelihood   = nb_likelihood(),
   epidemic     = ar1_epidemic(),
   delay        = lognormal_delay(),
-  confirmation = confirmation_process()   # <- models the up- and down-revisions
+  revision = revision_process()   # <- models the up- and down-revisions
 )
 
 flu_ncast <- nowcast(flu_tbl, flu_model, n_draws = 1000)
@@ -266,7 +266,7 @@ autoplot(flu_ncast)
 
 The confirmation probability `p` — the chance a report is genuine and never
 retracted — is estimated with a strong data-informed prior by default; pass
-`confirmation_process(p = 0.98)` to hold it fixed, or your own `beta_prior()` to
+`revision_process(p = 0.98)` to hold it fixed, or your own `beta_prior()` to
 change the prior. For several locations at once, declare the location column as
 `strata`: a single stratified `nowcast()` then shares the delay and confirmation
 structure across locations (which is both faster and, on FluSight, sharper than a

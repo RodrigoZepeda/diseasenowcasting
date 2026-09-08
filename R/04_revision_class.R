@@ -1,35 +1,35 @@
 # =============================================================================
-# Validation process class
+# Revision process class
 # =============================================================================
-# A validation process describes what happens to a report AFTER it is filed: a
+# A revision process describes what happens to a report AFTER it is filed: a
 # laboratory result comes back, and the report is either CONFIRMED (a real case)
 # or RETRACTED (struck from the register).  It is an OPTIONAL model component,
 # attached to a model() alongside the epidemic and (appearance-)delay processes.
 #
-# This component is only for linelist / count-incidence data with a validation
+# This component is only for linelist / count-incidence data with a revision
 # date and outcome per report; its likelihood is the mixture-cure block in
 # 31_retraction_likelihood.R.  Aggregate count-cumulative streams use the
-# distinct count_cumulative_process() component because they do not identify a
+# distinct cumulative_process() component because they do not identify a
 # report-level confirmation probability.
 #
-# With no validation process (`p = 1`) the model reduces exactly to the standard
+# With no revision process (`p = 1`) the model reduces exactly to the standard
 # right-censored count model.
 # =============================================================================
 
-#' Validation process: reports that are later confirmed or retracted
+#' Revision process: reports that are later confirmed or retracted
 #'
 #' A report is rarely a case outright.  It is provisional, and **resolved exactly
 #' once**: a test comes back, and the report is either *confirmed* (a real case)
-#' or *retracted* (removed from the register).  A validation process models that
+#' or *retracted* (removed from the register).  A revision process models that
 #' second step, so the nowcast targets the settled count rather than the raw
 #' report count.
 #'
-#' Attach it with `model(validation = validation_process(...))`.  [nowcast()]
+#' Attach it with `model(revision = revision_process(...))`.  [nowcast()]
 #' switches it on automatically when the data carry it -- see **Detection** below.
 #'
-#' @param validation_delay A `delay_process_class` describing the validation lag
-#'   `g_C` (report to result).  Any delay family works; the `*_validation()`
-#'   constructors ([lognormal_validation()] and friends) are aliases that read
+#' @param revision_delay A `delay_process_class` describing the revision lag
+#'   `g_C` (report to result).  Any delay family works; the `*_revision()`
+#'   constructors ([lognormal_revision()] and friends) are aliases that read
 #'   more naturally in this slot.  Default a short lognormal.
 #' @param p Probability that a report resolves **positive** -- that it is a real
 #'   case and is never retracted.  Either a `prior_class` (estimated under that
@@ -43,13 +43,13 @@
 #'     prior only has to keep `p` on the interval.
 #'
 #' @param stratified_p If `TRUE`, estimate a **separate** `p` per stratum instead
-#'   of one shared value.  Only meaningful for per-report validation data with
-#'   more than one stratum; the validation lag `g_C` stays shared either way (it
+#'   of one shared value.  Only meaningful for per-report revision data with
+#'   more than one stratum; the revision lag `g_C` stays shared either way (it
 #'   is usually a property of the verification workflow, whereas `p` reflects how
 #'   often a given group is misclassified).  Each stratum's `p` gets the same
 #'   prior.  Default `FALSE` -- with sparse strata the shared `p` is safer.
 #' @param mode Which outcomes the data record.  `"auto"` (the default) infers it
-#'   from the `validation_type` column; the others assert it.  See **Modes**.
+#'   from the `revision_type` column; the others assert it.  See **Modes**.
 #'
 #' @section Modes:
 #' What differs between surveillance systems is only which resolutions get
@@ -66,78 +66,78 @@
 #' report describes a case never visible in any data vintage, whereas a test
 #' coming back the day it was ordered is ordinary.
 #'
-#' In `mode = "both"`, `validation_delay` is one shared law for positive and
+#' In `mode = "both"`, `revision_delay` is one shared law for positive and
 #' negative resolutions. This first prototype deliberately does not fit separate
 #' competing-risk lag laws. In a one-outcome mode, the same argument denotes the
 #' lag for the outcome that is recorded: confirmation or retraction respectively.
 #'
-#' `"auto"` reads `unique(validation_type)` over the **full** data, not the as-of
+#' `"auto"` reads `unique(revision_type)` over the **full** data, not the as-of
 #' view, so the mode is a stable property of the data source and does not flip
 #' between backtest dates.
 #'
 #' @section Detection:
-#' [nowcast()] attaches a validation process when the `tbl_now` carries
-#' `validation_date` / `validation_type` (see
-#' `tbl.now::add_validation_date()`).
+#' [nowcast()] attaches a revision process when the `tbl_now` carries
+#' `revision_date` / `revision_type` (see
+#' `tbl.now::add_revision_date()`).
 #'
-#' Count-cumulative data instead use [count_cumulative_process()], whose primitive
+#' Count-cumulative data instead use [cumulative_process()], whose primitive
 #' retraction object is the finite-age kernel `h_R`; it does not estimate `p`.
 #'
 #' @section Count-cumulative data:
 #' Do not use this component for an aggregate cumulative stream.  Configure its
-#' down-revisions with [count_cumulative_process()].  Without individual report
-#' outcomes, `p` and a conditional validation-delay law are not separately
+#' down-revisions with [cumulative_process()].  Without individual report
+#' outcomes, `p` and a conditional revision-delay law are not separately
 #' identified.
 #'
 #' @section Default priors:
-#' `validation_delay` inherits the default priors of its delay family (see
+#' `revision_delay` inherits the default priors of its delay family (see
 #' [delay_process]).  `p` is described under its argument above.  At `p = 1` the
-#' validation layer is inert and the model is the ordinary count model.
+#' revision layer is inert and the model is the ordinary count model.
 #'
-#' @returns A `validation_process_class` object, for `model(validation = )`.
+#' @returns A `revision_process_class` object, for `model(revision = )`.
 #'
 #' @examples
 #' # Results come back on one shared timescale, whatever the answer:
-#' validation_process(lognormal_validation())
+#' revision_process(lognormal_revision())
 #'
 #' # Attach to a model:
 #' model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
-#'       validation = validation_process(
-#'         validation_delay = dirichlet_validation(bins = 10),
+#'       revision = revision_process(
+#'         revision_delay = dirichlet_revision(bins = 10),
 #'         p                = beta_prior(20, 3),
 #'         stratified_p     = TRUE))
 #'
-#' @seealso [model()], [validation_delay], [delay_process], [nowcast()]
+#' @seealso [model()], [revision_delay], [delay_process], [nowcast()]
 #' @export
-validation_process <- function(validation_delay = lognormal_delay(),
+revision_process <- function(revision_delay = lognormal_delay(),
                                p = numeric(0), stratified_p = FALSE,
                                mode = c("auto", "confirmation_only",
                                         "retraction_only", "both")) {
   mode <- match.arg(mode)
-  validation_process_class(validation_delay = validation_delay, p = p,
+  revision_process_class(revision_delay = revision_delay, p = p,
                            stratified_p = isTRUE(stratified_p),
                            mode = mode)
 }
 
-#' Validation process S7 class
+#' Revision process S7 class
 #' @keywords internal
 #' @noRd
-validation_process_class <- S7::new_class(
-  "validation_process_class",
+revision_process_class <- S7::new_class(
+  "revision_process_class",
   properties = list(
-    validation_delay = delay_process_class,
+    revision_delay = delay_process_class,
     p                = .valid_param_slot,   # prior_class or fixed numeric in (0, 1]
     stratified_p     = S7::class_logical,   # one p per stratum instead of a shared one
     mode             = S7::class_character, # auto / confirmation_only / retraction_only / both
     active           = S7::class_logical    # FALSE for the inert (p = 1) default
   ),
-  constructor = function(validation_delay = lognormal_delay(),
+  constructor = function(revision_delay = lognormal_delay(),
                          p                = numeric(0),
                          stratified_p     = FALSE,
                          mode             = "auto",
                          active           = TRUE) {
     S7::new_object(S7::S7_object(),
-                   validation_delay = validation_delay, p = p,
+                   revision_delay = revision_delay, p = p,
                    stratified_p = isTRUE(stratified_p),
                    mode = mode, active = active)
   },
@@ -146,7 +146,7 @@ validation_process_class <- S7::new_class(
     # (0, 1], or a prior on (0, 1) -- mirroring the delay parameter slots.
     if (is.numeric(self@p) && length(self@p) == 1L) {
       if (self@p <= 0 || self@p > 1)
-        cli::cli_abort("Fixed validation probability `p` must be in (0, 1]. Got {self@p}.")
+        cli::cli_abort("Fixed revision probability `p` must be in (0, 1]. Got {self@p}.")
     } else if (is.numeric(self@p) && length(self@p) == 0L) {
       invisible(NULL)                       # unset -> resolved in default_priors()
     } else if (!S7::S7_inherits(self@p, prior_class)) {
@@ -159,21 +159,21 @@ validation_process_class <- S7::new_class(
 )
 
 # =============================================================================
-# Validation-lag constructors
+# Revision-lag constructors
 # =============================================================================
-# `validation_delay` is an ordinary delay distribution used in a different role,
+# `revision_delay` is an ordinary delay distribution used in a different role,
 # so these are thin aliases of the `*_delay()` constructors.  They exist so that a
-# model reads as what it is -- `validation_process(lognormal_validation())` -- and
+# model reads as what it is -- `revision_process(lognormal_revision())` -- and
 # so the support convention has a documented home.
 
-#' Validation-lag distributions
+#' Revision-lag distributions
 #'
-#' The distribution `g_C` of the **validation lag**: how long after a case is
-#' reported its result comes back.  Pass one to [validation_process()] as
-#' `validation_delay`.
+#' The distribution `g_C` of the **revision lag**: how long after a case is
+#' reported its result comes back.  Pass one to [revision_process()] as
+#' `revision_delay`.
 #'
 #' These are aliases of the corresponding [delay_process] constructors -- a
-#' validation lag is an ordinary non-negative delay, only measured from the
+#' revision lag is an ordinary non-negative delay, only measured from the
 #' *report* rather than from the event -- so the parameters, priors and
 #' `r lifecycle::badge('experimental')` behaviour are identical.  The one
 #' difference is the support, and it depends on the mode: under
@@ -185,11 +185,11 @@ validation_process_class <- S7::new_class(
 #'
 #' @inheritParams delay_process
 #'
-#' @returns A `delay_process_class` object, for the `validation_delay` slot of
-#'   [validation_process()].
+#' @returns A `delay_process_class` object, for the `revision_delay` slot of
+#'   [revision_process()].
 #'
 #' @section Which one to use:
-#' `dirichlet_validation()` is the safest default when the counts are large.  The
+#' `dirichlet_revision()` is the safest default when the counts are large.  The
 #' correction applied to a pending report of age `j` is
 #' `rho(j) = p / (p + (1 - p) * (1 - G_C(j)))`, so at high counts a *shape* error
 #' in `g_C` biases the nowcast by more than its Monte-Carlo noise: on a COVID
@@ -199,73 +199,94 @@ validation_process_class <- S7::new_class(
 #' estimate fewer parameters.
 #'
 #' @examples
-#' validation_process(lognormal_validation())
-#' validation_process(dirichlet_validation(bins = 10))
+#' revision_process(lognormal_revision())
+#' revision_process(dirichlet_revision(bins = 10))
 #'
-#' # Held-fixed validation lag, e.g. from an external study
-#' validation_process(gamma_validation(shape = log(3), rate = 2))
+#' # Held-fixed revision lag, e.g. from an external study
+#' revision_process(gamma_revision(shape = log(3), rate = 2))
 #'
-#' @seealso [validation_process()], [delay_process], [nowcast()]
-#' @name validation_delay
+#' @seealso [revision_process()], [delay_process], [nowcast()]
+#' @name revision_delay
 NULL
 
-#' @rdname validation_delay
+#' @rdname revision_delay
 #' @export
-lognormal_validation <- function(mu = numeric(0), sigma = numeric(0)) {
+lognormal_revision <- function(mu = numeric(0), sigma = numeric(0)) {
   lognormal_delay(mu = mu, sigma = sigma)
 }
 
-#' @rdname validation_delay
+#' @rdname revision_delay
 #' @export
-gamma_validation <- function(shape = numeric(0), rate = numeric(0)) {
+gamma_revision <- function(shape = numeric(0), rate = numeric(0)) {
   gamma_delay(shape = shape, rate = rate)
 }
 
-#' @rdname validation_delay
+#' @rdname revision_delay
 #' @export
-generalized_gamma_validation <- function(mu = numeric(0), sigma = numeric(0), Q = numeric(0)) {
+generalized_gamma_revision <- function(mu = numeric(0), sigma = numeric(0), Q = numeric(0)) {
   generalized_gamma_delay(mu = mu, sigma = sigma, Q = Q)
 }
 
-#' @rdname validation_delay
+#' @rdname revision_delay
 #' @export
-dirichlet_validation <- function(alpha = numeric(0), bins = numeric(0)) {
+dirichlet_revision <- function(alpha = numeric(0), bins = numeric(0)) {
   dirichlet_delay(alpha = alpha, bins = bins)
 }
 
-#' The inert validation process (`p = 1`, nothing is ever retracted).
+#' The inert revision process (`p = 1`, nothing is ever retracted).
 #'
-#' Used as the model() default so the validation layer is off unless the user opts
+#' Used as the model() default so the revision layer is off unless the user opts
 #' in.  nowcast() promotes this to an active default when the data carry a
-#' report-level validation process.
+#' report-level revision process.
 #' @keywords internal
 #' @noRd
-no_validation <- function() {
-  validation_process_class(validation_delay = lognormal_delay(), p = 1,
+no_revision <- function() {
+  revision_process_class(revision_delay = lognormal_delay(), p = 1,
                            mode = "auto", active = FALSE)
+}
+
+# =============================================================================
+# tbl.now revision metadata adapter
+# =============================================================================
+
+# Read current tbl.now revision metadata in one place.
+.tblnow_has_revision <- function(data) {
+  tbl.now::has_revision(data)
+}
+
+.tblnow_get_revision_date <- function(data) {
+  tbl.now::get_revision_date(data)
+}
+
+.tblnow_get_revision_type <- function(data) {
+  tbl.now::get_revision_type(data)
+}
+
+.tblnow_get_is_censored_revision <- function(data) {
+  tbl.now::get_is_censored_revision(data)
 }
 
 # =============================================================================
 # Mode inference
 # =============================================================================
 
-#' Infer the validation mode from the outcomes recorded in the data.
+#' Infer the revision mode from the outcomes recorded in the data.
 #'
-#' Reads `unique(validation_type)` over the FULL data rather than an as-of view, so
+#' Reads `unique(revision_type)` over the FULL data rather than an as-of view, so
 #' the mode is a stable property of the data source and cannot flip between
 #' backtest dates.  A dated row whose outcome is `NA` is an error: the row IS
 #' resolved but its sign is unknown, so it cannot enter either lag law.
 #'
-#' @param validation_type Character vector of outcomes (`"confirmed"`,
+#' @param revision_type Character vector of outcomes (`"confirmed"`,
 #'   `"retracted"`, `"pending"`, or `NA`).
-#' @param validation_date The matching dates, used only to tell an unresolved row
+#' @param revision_date The matching dates, used only to tell an unresolved row
 #'   (no date) from a resolved one whose sign is missing.
 #' @returns One of `"confirmation_only"`, `"retraction_only"` or `"both"`.
 #' @keywords internal
 #' @noRd
-.infer_validation_mode <- function(validation_type, validation_date) {
-  outcomes <- as.character(validation_type)
-  dated    <- !is.na(validation_date)
+.infer_revision_mode <- function(revision_type, revision_date) {
+  outcomes <- as.character(revision_type)
+  dated    <- !is.na(revision_date)
 
   # A date without an outcome is unusable: the report resolved, but we cannot say
   # into which lag law it goes. tbl.now warns at construction; this is the final
@@ -278,7 +299,7 @@ no_validation <- function() {
   if (any(unusable)) {
     offending <- unique(outcomes[dated & !is.na(outcomes) & !outcomes %in% recognised])
     cli::cli_abort(c(
-      "{sum(unusable)} row{?s} {?carries/carry} a validation date without a usable {.field validation_type}.",
+      "{sum(unusable)} row{?s} {?carries/carry} a revision date without a usable {.field revision_type}.",
       "x" = "A resolved report whose outcome is unknown cannot enter either lag law.",
       if (length(offending))
         c("x" = "Unrecognised outcome{?s}: {.val {offending}}.") else
@@ -291,48 +312,48 @@ no_validation <- function() {
   has_retracted <- "retracted" %in% observed
 
   # Nothing resolved anywhere in the data: the mode is genuinely unknowable, and
-  # the honest answer is that there is no validation process to fit.  `NA` rather
+  # the honest answer is that there is no revision process to fit.  `NA` rather
   # than an error, because under retraction that IS the documented reduction --
   # nothing retracted means p = 1, i.e. the ordinary count model.  An ASSERTED
   # mode can still retain the process under its prior (see
-  # `.resolve_validation_mode()`); only automatic inference falls back.
+  # `.resolve_revision_mode()`); only automatic inference falls back.
   if (has_confirmed && has_retracted) "both"
   else if (has_confirmed)             "confirmation_only"
   else if (has_retracted)             "retraction_only"
   else                                NA_character_
 }
 
-#' Resolve the validation mode for a `tbl_now`, honouring an asserted one.
+#' Resolve the revision mode for a `tbl_now`, honouring an asserted one.
 #'
-#' `validation_process(mode = )` asserts; `"auto"` infers.  An asserted mode is
+#' `revision_process(mode = )` asserts; `"auto"` infers.  An asserted mode is
 #' checked against the data, because asserting `both` on a stream that only
 #' records retractions would silently fit an unidentifiable model.
 #'
-#' @param data A `tbl_now` carrying a validation process.
-#' @param validation The model's `validation_process_class` component.
+#' @param data A `tbl_now` carrying a revision process.
+#' @param revision The model's `revision_process_class` component.
 #' @returns `"confirmation_only"`, `"retraction_only"` or `"both"`.
 #' @keywords internal
 #' @noRd
-.resolve_validation_mode <- function(data, validation) {
-  type_col <- tbl.now::get_validation_type(data)
-  date_col <- tbl.now::get_validation_date(data)
+.resolve_revision_mode <- function(data, revision) {
+  type_col <- .tblnow_get_revision_type(data)
+  date_col <- .tblnow_get_revision_date(data)
   if (is.null(type_col) || !type_col %in% names(data))
     cli::cli_abort(c(
-      "The data carry a validation date but no {.field validation_type} column.",
+      "The data carry a revision date but no {.field revision_type} column.",
       "i" = "A date alone cannot say whether the report was confirmed or retracted.",
-      "*" = "Set one with {.code tbl.now::change_validation_date(x, <date>, validation_type = <outcome>)}."))
+      "*" = "Set one with {.code tbl.now::change_revision_date(x, <date>, revision_type = <outcome>)}."))
 
   # Inferred from the FULL data, not the as-of view, so the mode is a property of
   # the data source and cannot flip between backtest dates.
-  observed_mode <- .infer_validation_mode(data[[type_col]], data[[date_col]])
-  asserted <- validation@mode %||% "auto"
-  inferring <- identical(asserted, "auto") || !isTRUE(validation@active)
+  observed_mode <- .infer_revision_mode(data[[type_col]], data[[date_col]])
+  asserted <- revision@mode %||% "auto"
+  inferring <- identical(asserted, "auto") || !isTRUE(revision@active)
 
   if (is.na(observed_mode)) {
     # No row has resolved anywhere in the data.
     if (inferring) {
       cli::cli_inform(c(
-        "i" = "No report has resolved, so there is nothing for a validation process to learn.",
+        "i" = "No report has resolved, so there is nothing for a revision process to learn.",
         "*" = "Fitting the ordinary count model ({.code p = 1})."))
       return("none")
     }
@@ -342,7 +363,7 @@ no_validation <- function() {
     # its prior, which is the honest answer rather than a refusal.
     cli::cli_inform(c(
       "i" = "No report has resolved yet, so {.arg p} is determined by its prior.",
-      "*" = "Set it with {.code validation_process(p = beta_prior(...))}, or use {.code mode = \"auto\"} to fit the ordinary count model instead."))
+      "*" = "Set it with {.code revision_process(p = beta_prior(...))}, or use {.code mode = \"auto\"} to fit the ordinary count model instead."))
     return(asserted)
   }
   if (inferring) return(observed_mode)
@@ -352,11 +373,11 @@ no_validation <- function() {
     # one than the data offer throws information away, so it is a warning.
     if (identical(observed_mode, "both"))
       cli::cli_warn(c(
-        "{.code validation_process(mode = {.val {asserted}})} ignores outcomes the data record.",
+        "{.code revision_process(mode = {.val {asserted}})} ignores outcomes the data record.",
         "i" = "The data carry both confirmations and retractions; seeing both signs is strictly more informative."))
     else
       cli::cli_abort(c(
-        "{.code validation_process(mode = {.val {asserted}})} does not match the data.",
+        "{.code revision_process(mode = {.val {asserted}})} does not match the data.",
         "x" = "The data record only {.val {observed_mode}} outcomes.",
         "i" = "Use {.val auto}, or {.val {observed_mode}}."))
   }

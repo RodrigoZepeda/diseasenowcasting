@@ -26,7 +26,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
   # unhelpful "failed to converge for all init attempts".
   if (isTRUE(data$is_linelist_retraction == 1L) && is.null(priors$confirm_p))
     cli::cli_abort(c("The engine carries linelist retractions but the priors have no confirmation block.",
-                     "i" = "Build the model with {.code model(validation = validation_process())}, or go through {.fn nowcast}, which attaches one automatically."))
+                     "i" = "Build the model with {.code model(revision = revision_process())}, or go through {.fn nowcast}, which attaches one automatically."))
   if (isTRUE(data$is_linelist_retraction == 1L) && isTRUE(priors$confirm_p$is_constant == 1L) &&
       isTRUE(priors$confirm_p$fixed >= 1) && data$n_retracted > 0)
     cli::cli_abort(c("`p = 1` says no report is ever retracted, but {data$n_retracted} retraction{?s} {?is/are} observed.",
@@ -189,7 +189,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
           "The `hurdle_ztpoisson` optimizer did not pass the stability gate.",
           "x" = "Optimizer code {best$convergence}: {optimizer_message}",
           "x" = "Maximum absolute gradient: {format(best$max_gradient, digits = 4)}.",
-          "i" = "Try `count_cumulative_process(observation = \"hurdle_ztnb\")`; the ZTNB magnitude law was stable in the package-wide sweep.",
+          "i" = "Try `cumulative_process(observation = \"hurdle_ztnb\")`; the ZTNB magnitude law was stable in the package-wide sweep.",
           "i" = "This finite fit is returned with `gradient_status = \"warning\"`; inspect `fit$opt` before using it."
         ))
       } else {
@@ -212,7 +212,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
     cli::cli_warn(c(
       "The `hurdle_ztpoisson` optimizer failed for every initialization.",
       "x" = "Last optimizer error: {optimizer_error}",
-      "i" = "Try `count_cumulative_process(observation = \"hurdle_ztnb\")`; the ZTNB magnitude law was stable in the package-wide sweep."
+      "i" = "Try `cumulative_process(observation = \"hurdle_ztnb\")`; the ZTNB magnitude law was stable in the package-wide sweep."
     ))
   }
   cli::cli_abort("Joint fit failed to converge for all init attempts.")
