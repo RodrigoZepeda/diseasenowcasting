@@ -22,6 +22,7 @@ knitr::opts_chunk$set(
 [![Codecov test coverage](https://codecov.io/gh/RodrigoZepeda/diseasenowcasting/graph/badge.svg)](https://app.codecov.io/gh/RodrigoZepeda/diseasenowcasting)
 [![R-CMD-check](https://github.com/RodrigoZepeda/diseasenowcasting/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RodrigoZepeda/diseasenowcasting/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![R-universe version](https://RodrigoZepeda.r-universe.dev/diseasenowcasting/badges/version)](https://RodrigoZepeda.r-universe.dev/diseasenowcasting)
 <!-- badges: end -->
 
 `diseasenowcasting` is an R package for nowcasting time series of epidemiological cases.
@@ -257,7 +258,7 @@ flu_model <- model(
   likelihood   = nb_likelihood(),
   epidemic     = ar1_epidemic(),
   delay        = lognormal_delay(),
-  revision = revision_process()   # <- models the up- and down-revisions
+  cumulative = cumulative_process()   # <- models the up- and down-revisions
 )
 
 flu_ncast <- nowcast(flu_tbl, flu_model, n_draws = 1000)
