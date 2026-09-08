@@ -8,13 +8,14 @@ home:
 
 template:
   bootstrap: 5
-  includes:
-    in_header: pkgdown/extra.css
+  # Show pkgdown's light/dark theme control. The stylesheet is discovered
+  # automatically from pkgdown/extra.css.
+  light-switch: true
   math-rendering: katex
   bslib:
     bootswatch: flatly
     primary: "#5F7E62"      # dark sage green
-    secondary: "#A8BFA9"    # light sage
+    secondary: "#B85348"    # desaturated red
     success: "#5F7E62"
     danger: "#B85348"       # desaturated red
     dark: "#262626"         # charcoal
@@ -22,7 +23,7 @@ template:
 navbar:
   structure:
     left:  [get_started, reference, articles, news]
-    right: [search, github]
+    right: [search, github, lightswitch]
 
   components:
     get_started:
