@@ -523,7 +523,19 @@ test_that("the cure block's gradient matches a numeric one at the mode", {
     shifted_down[index] <- shifted_down[index] - step
     (objective$fn(shifted_up) - objective$fn(shifted_down)) / (2 * step)
   }, numeric(1))
-  expect_equal(as.numeric(analytic)[retraction_index], numeric_gradient, tolerance = 1e-4)
+
+  # Compare on an ABSOLUTE scale, not a relative one.  At the mode the gradient is
+  # numerically zero (~1e-3 against an objective of ~4e3), so `expect_equal()`'s
+  # relative tolerance divides the difference by nearly nothing and reports pure
+  # rounding noise as a failure -- which is what a different BLAS / libm makes
+  # happen on Linux and Windows but not on macOS.  The central difference itself
+  # cannot beat its own roundoff floor, eps * |f| / step, so bound the comparison
+  # by that floor with room to spare: a genuinely wrong Jacobian on the logit
+  # transform moves the mode and leaves a mismatch on the scale of the gradient,
+  # orders of magnitude above this bound.
+  finite_difference_noise <- .Machine$double.eps * abs(objective$fn(mode_par)) / step
+  expect_lt(max(abs(as.numeric(analytic)[retraction_index] - numeric_gradient)),
+            max(100 * finite_difference_noise, 1e-3 * max(abs(as.numeric(analytic)))))
 })
 
 test_that("the gamma frailty cancels out of the row-level split (Theorem 2)", {
