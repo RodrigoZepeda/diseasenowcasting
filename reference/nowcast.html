@@ -31,7 +31,7 @@ coef()."><meta property="og:image" content="https://rodrigozepeda.github.io/dise
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -100,9 +100,10 @@ incidence by <code><a href="https://rdrr.io/r/base/mean.html" class="external-li
 
 
 <dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
-<dd><p><code>"two_stage"</code> (default; delay-imputation pooling), <code>"one_stage"</code>
-(a single joint fit), or <code>"auto"</code> (per delay: dirichlet one-stage, all other
-delays two-stage – the better choice for each in our experiments).</p></dd>
+<dd><p><code>"two_stage"</code> (default; reporting-delay imputation pooling),
+<code>"one_stage"</code> (a single joint fit), or <code>"auto"</code> (per reporting-delay
+family: Dirichlet one-stage, all other delays two-stage – the better choice
+for each in our experiments).</p></dd>
 
 
 <dt id="arg-now">now<a class="anchor" aria-label="anchor" href="#arg-now"></a></dt>
@@ -138,7 +139,7 @@ latent-incidence summaries.</p></dd>
 seasonality; monthly -&gt; 12-period seasonality) <strong>only if the <code>tbl_now</code>
 does not already carry computed temporal effects</strong>.  Use <code>"none"</code> (or
 <code>"None"</code>) to disable, or pre-attach your own effects to the <code>tbl_now</code> with
-<code><a href="https://rodrigozepeda.github.io/tbl.now/reference/add_temporal_effects.html" class="external-link">tbl.now::add_temporal_effects()</a></code> + <code><a href="https://rodrigozepeda.github.io/tbl.now/reference/compute_temporal_effects.html" class="external-link">tbl.now::compute_temporal_effects()</a></code>.</p></dd>
+<code><a href="https://rodrigozepeda.github.io/tbl.now/reference/add_temporal_effects.html" class="external-link">tbl.now::add_temporal_effects()</a></code> + <code><a href="https://rodrigozepeda.github.io/tbl.now/reference/add_temporal_effects.html" class="external-link">tbl.now::compute_temporal_effects()</a></code>.</p></dd>
 
 
 <dt id="arg-prior-only">prior_only<a class="anchor" aria-label="anchor" href="#arg-prior-only"></a></dt>
@@ -162,6 +163,42 @@ time grid.  Default <code>FALSE</code>.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>nowcast_class</code> object.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="revision-processes">Revision processes<a class="anchor" aria-label="anchor" href="#revision-processes"></a></h2>
+
+
+<p>A revision process – reports that are later <strong>confirmed</strong> or <strong>retracted</strong> –
+is a row-level mechanism for linelist and count-incidence data. It is detected
+from the data, not requested by an argument. <code>nowcast()</code> attaches one when the
+<code>tbl_now</code> carries <code>revision_date</code> / <code>revision_type</code> (see
+<code><a href="https://rodrigozepeda.github.io/tbl.now/reference/add.html" class="external-link">tbl.now::add_revision_date()</a></code>).  The mode
+(<code>confirmation_only</code> / <code>retraction_only</code> / <code>both</code>) is read from
+<code>unique(revision_type)</code> over the full data, so it is stable across as-of
+dates.  Configure <code>p</code> and the lag with
+<code>model(revision = revision_process(...))</code>, which always wins over the
+detected default; assert the mode with <code>revision_process(mode = )</code>.
+Revision-date censoring is likewise data metadata: set
+<code>is_censored_revision</code> when constructing the <code>tbl_now</code>. There is no
+<code>nowcast()</code> column-name argument for it.
+Count-cumulative revisions instead use <code><a href="cumulative_process.html">cumulative_process()</a></code> and do
+not estimate a separate revision probability <code>p</code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="one-stage-and-two-stage-revision">One-stage and two-stage revision<a class="anchor" aria-label="anchor" href="#one-stage-and-two-stage-revision"></a></h2>
+
+
+<p>With <code>type = "one_stage"</code>, the epidemic process, event-to-report delay,
+report-to-revision delay, and revision probability <code>p</code> are estimated in
+one joint objective. With <code>type = "two_stage"</code>, Stage 1 estimates the
+event-to-report delay and draws <code>K</code> imputations from its Laplace
+approximation. Each Stage-2 fit conditions on one imputed reporting-delay
+distribution and jointly estimates the epidemic process, revision delay,
+and <code>p</code>. Posterior draws within a Stage-2 fit propagate revision uncertainty;
+pooling across the fits additionally propagates reporting-delay uncertainty.
+This is the same stepwise boundary used by the original event-to-report model:
+<code>two_stage</code> separates the reporting process from the downstream model, while
+the revision block remains downstream of a report.</p>
     </div>
     <div class="section level2">
     <h2 id="overdispersion-phi-">Overdispersion (<code>phi</code>)<a class="anchor" aria-label="anchor" href="#overdispersion-phi-"></a></h2>

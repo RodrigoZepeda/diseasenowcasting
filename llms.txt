@@ -49,7 +49,7 @@ How `diseasenowcasting` compares with other R nowcasting packages:
 | Nowcasts can be extended into forecasts or scenario-modeling | 🚧 | ❌ | ❌ | ❌ | ✅ |
 | Effective reproductive number (Rₜ) | ❌ | ❌ | ❌ | ❌ | ✅ |
 
-_(^(**†**)*Arbitrary* means you supply your own custom R function: any distribution for the delay, any function `f(t)` for the epidemic process (not just a choice from a built-in menu). `epinowcast` is very flexible through parametric families and model formulas, but does not take arbitrary user-defined functions. ^(**‡**)`NobBS` requires JAGS and `epinowcast` requires CmdStan (an external Stan toolchain); `nowcaster` runs entirely in R but depends on the (non-CRAN) `INLA` package. ^(**§**)`nowcaster` stratifies by age/region structure only, not arbitrary user-defined strata; `diseasenowcasting` allows any combination of strata columns. ^(🚧) In development for `diseasenowcasting` (extending a nowcast into a forward forecast / scenario projection). Counts that revise *downward* (e.g. a positive later re-classified as negative) are supported from version 2.0.0 via [`confirmation_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.md) — see below.)
+_(^(**†**)*Arbitrary* means you supply your own custom R function: any distribution for the delay, any function `f(t)` for the epidemic process (not just a choice from a built-in menu). `epinowcast` is very flexible through parametric families and model formulas, but does not take arbitrary user-defined functions. ^(**‡**)`NobBS` requires JAGS and `epinowcast` requires CmdStan (an external Stan toolchain); `nowcaster` runs entirely in R but depends on the (non-CRAN) `INLA` package. ^(**§**)`nowcaster` stratifies by age/region structure only, not arbitrary user-defined strata; `diseasenowcasting` allows any combination of strata columns. ^(🚧) In development for `diseasenowcasting` (extending a nowcast into a forward forecast / scenario projection). Counts that revise *downward* (e.g. a positive later re-classified as negative) are supported from version 2.0.0 via [`revision_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_process.md) — see below.)
 
 ## Installing
 
@@ -206,7 +206,7 @@ quantities directly with `score`
 
 score(bt)
 #>                     model      wis overprediction underprediction dispersion
-#> 1       HSGP/nb/LogNormal 11.05991              0        6.722222   4.337685
+#> 1       HSGP/nb/LogNormal 11.40569              0        7.240741   4.164954
 #> 2 AR1/nb/GeneralizedGamma 11.54056              0        8.203704   3.336852
 #>   coverage_50 coverage_90       ape      mse n
 #> 1           0           1 0.7115873 1139.417 3
@@ -242,15 +242,15 @@ best_model_name(auto_ncast)
 # Get the scores for all the models
 comparison_scores(auto_ncast)
 #>                      model      wis overprediction underprediction dispersion
-#> 1        HSGP/nb/Dirichlet 8.295708     0.06666667        5.147778   3.081264
-#> 2        HSGP/nb/LogNormal 8.448542     0.06666667        5.220000   3.161875
-#> 3         AR1/nb/Dirichlet 8.512125     0.06666667        5.819444   2.626014
+#> 1        HSGP/nb/Dirichlet 8.256750     0.06666667        5.097778   3.092306
+#> 2        HSGP/nb/LogNormal 8.384931     0.06666667        5.236667   3.081597
+#> 3         AR1/nb/Dirichlet 8.580958     0.06666667        5.891667   2.622625
 #> 4 HSGP/nb/GeneralizedGamma 8.624472     0.06666667        5.330000   3.227806
 #> 5         AR1/nb/LogNormal 8.916250     0.05555556        5.916111   2.944583
 #>   coverage_50 coverage_90       ape   mse  n
-#> 1         0.3         0.9 0.7641435 676.1 10
+#> 1         0.3         0.9 0.7627546 667.4 10
 #> 2         0.2         0.9 0.7904566 664.6 10
-#> 3         0.0         0.8 0.7887334 650.7 10
+#> 3         0.0         0.8 0.7998651 666.8 10
 #> 4         0.1         0.9 0.7989751 738.0 10
 #> 5         0.1         0.8 0.7658455 714.1 10
 #>  [ reached 'max' / getOption("max.print") -- omitted 4 rows ]
@@ -279,9 +279,8 @@ as well as upward — for example when a suspected case is later
 re-classified as negative. The
 [FluSight](https://github.com/cdcepi/FluSight-forecast-hub) influenza
 hospitalisation data shipped with `tbl.now` is one such stream.
-`diseasenowcasting` handles these with a **confirmation process**:
-attach
-[`confirmation_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.md)
+`diseasenowcasting` handles these with a **revision process**: attach
+[`revision_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_process.md)
 to your
 [`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
 and
@@ -310,7 +309,7 @@ flu_model <- model(
   likelihood   = nb_likelihood(),
   epidemic     = ar1_epidemic(),
   delay        = lognormal_delay(),
-  confirmation = confirmation_process()   # <- models the up- and down-revisions
+  cumulative = cumulative_process()   # <- models the up- and down-revisions
 )
 
 flu_ncast <- nowcast(flu_tbl, flu_model, n_draws = 1000)
@@ -325,8 +324,7 @@ California.*
 
 The confirmation probability `p` — the chance a report is genuine and
 never retracted — is estimated with a strong data-informed prior by
-default; pass `confirmation_process(p = 0.98)` to hold it fixed, or your
-own
+default; pass `revision_process(p = 0.98)` to hold it fixed, or your own
 [`beta_prior()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/priors.md)
 to change the prior. For several locations at once, declare the location
 column as `strata`: a single stratified
@@ -387,7 +385,7 @@ needs.
 save_nowcast(ncast, "dengue_nowcast.rds")
 
 restored <- load_nowcast("dengue_nowcast.rds")
-predict(restored)               # predict() / autoplot() / coef() / tidy() / model_parameters() all work
+predict(restored)               # predict() / autoplot() / coef() / parameters() all work
 nowcast(restored@data, restored@model)   # or re-fit from the bundled data
 ```
 
@@ -543,11 +541,11 @@ for the full function documentation.
   The model-selection scoreboard from
   [`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
 
-- [`confirmation_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.md)
-  : Confirmation / retraction process
-
 - [`covid_colombia`](https://rodrigozepeda.github.io/diseasenowcasting/reference/covid_colombia.md)
   : COVID-19 Notifications – Colombia 2020-2023
+
+- [`cumulative_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/cumulative_process.md)
+  : Count-cumulative observation process
 
 - [`custom_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_delay.md)
   **\[experimental\]** : User-defined delay distribution
@@ -603,9 +601,6 @@ for the full function documentation.
 - [`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
   : Bayesian Nowcast Model
 
-- [`model_parameters()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model_parameters.md)
-  : Parameter estimates from a fitted nowcast
-
 - [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
   : Fit a nowcast model to censored reporting data
 
@@ -614,6 +609,9 @@ for the full function documentation.
 
 - [`nowcast_twostage()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_twostage.md)
   : Two-stage multiple-imputation nowcast
+
+- [`parameters()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/parameters.md)
+  : Parameter estimates from a fitted nowcast
 
 - [`prepare_data()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/prepare_data.md)
   : Prepare data for the RTMB nowcast engine
@@ -639,6 +637,15 @@ for the full function documentation.
   [`logistic_prior()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/priors.md)
   [`beta_prior()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/priors.md)
   : Priors for model parameters
+
+- [`lognormal_revision()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_delay.md)
+  [`gamma_revision()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_delay.md)
+  [`generalized_gamma_revision()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_delay.md)
+  [`dirichlet_revision()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_delay.md)
+  : Revision-lag distributions
+
+- [`revision_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_process.md)
+  : Revision process: reports that are later confirmed or retracted
 
 - [`sample()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/sample.md)
   :
@@ -671,9 +678,6 @@ for the full function documentation.
 - [`theme_diseasenowcasting()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/theme_diseasenowcasting.md)
   : ggplot2 theme matching the diseasenowcasting visual identity
 
-- [`tidy.nowcast`](https://rodrigozepeda.github.io/diseasenowcasting/reference/tidy.nowcast.md)
-  : Tidy a nowcast into the cross-package nowcast table
-
 - [`validate_custom_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_delay.md)
   **\[experimental\]** : Validate a custom delay distribution for RTMB
   traceability
@@ -697,6 +701,8 @@ for the full function documentation.
   diseasenowcasting](https://rodrigozepeda.github.io/diseasenowcasting/articles/Understanding_Priors.md):
 - [Handling Outlier Delays with
   Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.md):
+- [Revision processes: when a report is not yet a
+  case](https://rodrigozepeda.github.io/diseasenowcasting/articles/Revision_processes.md):
 
 ### Applications
 

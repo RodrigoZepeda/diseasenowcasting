@@ -191,20 +191,20 @@ pred_dengue <- predict(nc_dengue)
 summary(pred_dengue) 
 ```
 
-    #>         mean median        sd     mad q2.5  q5 q10    q25 q50 q75 q90    q95
-    #> 154 108.6480    108  1.538597  1.4826  107 107 107 107.75 108 109 111 111.00
-    #> 155  89.1330     89  2.327664  1.4826   86  86  87  87.00  89  90  92  93.00
-    #> 156  68.1615     67  3.834680  2.9652   63  63  64  65.00  67  70  73  75.00
-    #> 157  45.2905     44  7.167901  5.9304   36  37  38  40.00  44  49  54  59.00
-    #> 158  40.6945     38 13.773635 10.3782   24  25  27  32.00  38  46  56  65.05
-    #> 159  36.4080     33 18.350747 16.3086   12  14  17  23.00  33  46  61  71.00
-    #>       q97.5 .event_num stratum event_date
-    #> 154 112.000         47   Total 1990-11-26
-    #> 155  95.000         48   Total 1990-12-03
-    #> 156  78.000         49   Total 1990-12-10
-    #> 157  62.025         50   Total 1990-12-17
-    #> 158  73.025         51   Total 1990-12-24
-    #> 159  81.000         52   Total 1990-12-31
+    #>         mean median        sd     mad q2.5     q5 q10 q25 q50 q75 q90 q95 q97.5
+    #> 154 108.5075    108  1.492333  1.4826  107 107.00 107 107 108 109 110 111   112
+    #> 155  89.1340     89  2.511413  1.4826   86  86.00  87  87  89  90  92  93    95
+    #> 156  67.9995     67  3.939703  2.9652   63  63.00  64  65  67  70  73  75    78
+    #> 157  45.2740     44  7.203323  5.9304   36  37.00  38  41  44  48  54  58    62
+    #> 158  39.6785     37 12.354086 10.3782   23  25.00  27  31  37  45  55  62    69
+    #> 159  35.3885     32 17.866762 14.8260   11  13.95  17  23  32  44  58  67    79
+    #>     .event_num stratum event_date
+    #> 154         47   Total 1990-11-26
+    #> 155         48   Total 1990-12-03
+    #> 156         49   Total 1990-12-10
+    #> 157         50   Total 1990-12-17
+    #> 158         51   Total 1990-12-24
+    #> 159         52   Total 1990-12-31
 
 Additionally the
 [`nowcast_diagnostic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_diagnostic.md)
@@ -371,13 +371,13 @@ Or obtain it via
 # Rank by Weighted Interval Score (WIS) -- lower is better
 score(backtest_mpox)
 #>               model      wis overprediction underprediction dispersion
-#> 1  SIR/nb/LogNormal 12.29247       0.000000       10.105556   2.186910
-#> 2 HSGP/nb/LogNormal 12.89510       2.013889        4.527778   6.353437
-#> 3  AR1/nb/LogNormal 13.28417       3.138889        2.319444   7.825833
+#> 1  SIR/nb/LogNormal 12.52813       0.000000       10.247222   2.280903
+#> 2 HSGP/nb/LogNormal 12.82090       1.652778        5.175000   5.993125
+#> 3  AR1/nb/LogNormal 12.95514       3.194444        2.166667   7.594028
 #>   coverage_50 coverage_90       ape      mse n
-#> 1        0.50        0.75 0.4329608 1766.000 4
-#> 2        0.50        1.00 1.4150650 1679.062 4
-#> 3        0.25        1.00 6.4057984 1215.812 4
+#> 1        0.50        0.75 0.4126905 1741.250 4
+#> 2        0.50        1.00 1.3491883 1685.312 4
+#> 3        0.25        1.00 6.8936290 1237.250 4
 ```
 
 The
@@ -390,6 +390,60 @@ lowest WIS and coverage close to these levels.
 > WIS at essentially the same coverage as HGSP. Note however that for
 > the tutorial we only used 5 historical dates which is too low to reach
 > a definite conslusion.
+
+## When a report is not yet a case: the revision process
+
+Everything so far assumes a report **is** a case. Many registers work
+provisionally instead: a report arrives, and is later **resolved** —
+confirmed by a laboratory result, or retracted when it turns out not to
+be a case at all.
+
+Record that on the `tbl_now` and `diseasenowcasting` nowcasts the number
+that actually settles rather than the raw report count. There is no
+argument to pass: the process is **detected** from the data.
+
+``` r
+
+# One date, plus what the result was: "confirmed", "retracted" or "pending".
+dat <- tbl_now(linelist, event_date = onset, report_date = reported,
+               revision_date = result, revision_type = outcome,
+               data_type = "linelist")
+
+nowcast(dat)     # works out for itself which outcomes you record
+```
+
+Whether you record only retractions, only confirmations, or both, is
+read from the values in `revision_type` — and the answer targets,
+respectively, the cases never retracted, the cases eventually confirmed,
+or the cases whose result comes back positive.
+
+The key point, and the reason this is not just “multiply by the
+confirmed fraction”: **a missing resolution date means *not resolved
+yet*, not “fine”**. A report filed this morning has had no chance to be
+retracted; one filed two months ago and still standing is almost
+certainly genuine. The model weighs every report by how long it has had
+to be contradicted, so recent event times — exactly the ones you care
+about — are corrected properly.
+
+[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
+prints what it is modelling and the fitted probability, and
+[`parameters()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/parameters.md)
+gives its uncertainty
+([`tidy()`](https://generics.r-lib.org/reference/tidy.html) on a nowcast
+gives you the predicted counts instead):
+
+``` r
+
+parameters(nc) |> filter(type == "resolution")
+#>                 term estimate conf.low conf.high       type
+#>  prob_not_retracted    0.8512   0.8399    0.8619 resolution
+```
+
+See
+[`vignette("Revision_processes")`](https://rodrigozepeda.github.io/diseasenowcasting/articles/Revision_processes.md)
+for the full treatment, including per-stratum probabilities, censored
+revision dates, count-incidence data, and the shared revision-delay
+assumption used when both outcomes are recorded.
 
 ## Example 4 – Letting the package choose the model (`auto_nowcast()`)
 
@@ -447,25 +501,25 @@ We can show the scores of the models to see the best performer:
 
 comparison_scores(auto_ncast)  # every candidate, ranked best-first
 #>                      model       wis overprediction underprediction dispersion
-#> 1 HSGP/nb/GeneralizedGamma  8.502125     0.01666667        4.264444   4.221014
-#> 2        HSGP/nb/LogNormal  8.540486     0.04444444        3.810000   4.686042
-#> 3        HSGP/nb/Dirichlet  8.900236     0.20555556        3.876667   4.818014
-#> 4         AR1/nb/Dirichlet  9.515236     0.16666667        4.177778   5.170792
-#> 5  AR1/nb/GeneralizedGamma  9.730778     0.07777778        4.780000   4.873000
-#> 6         AR1/nb/LogNormal 10.358556     0.08888889        5.391111   4.878556
-#> 7  SIR/nb/GeneralizedGamma 21.316139     0.00000000       18.050000   3.266139
-#> 8         SIR/nb/Dirichlet 23.516347     0.00000000       20.546111   2.970236
-#> 9         SIR/nb/LogNormal 23.636236     0.00000000       20.493889   3.142347
+#> 1 HSGP/nb/GeneralizedGamma  8.218611     0.12777778        3.752222   4.338611
+#> 2        HSGP/nb/Dirichlet  8.816000     0.25000000        3.928889   4.637111
+#> 3        HSGP/nb/LogNormal  8.844042     0.05555556        3.666667   5.121819
+#> 4         AR1/nb/Dirichlet  9.925694     0.20555556        4.993333   4.726806
+#> 5         AR1/nb/LogNormal  9.929444     0.15000000        4.590000   5.189444
+#> 6  AR1/nb/GeneralizedGamma 10.130500     0.21666667        5.008333   4.905500
+#> 7         SIR/nb/Dirichlet 23.179056     0.00000000       19.785000   3.394056
+#> 8  SIR/nb/GeneralizedGamma 23.427319     0.00000000       20.369444   3.057875
+#> 9         SIR/nb/LogNormal 24.517931     0.00000000       21.393333   3.124597
 #>   coverage_50 coverage_90       ape      mse  n
-#> 1         0.5         1.0 0.3484614  480.275 10
-#> 2         0.3         1.0 0.3989732  582.225 10
-#> 3         0.3         1.0 0.3821182  568.050 10
-#> 4         0.4         0.9 0.4212942  637.150 10
-#> 5         0.4         0.9 0.4103526  704.400 10
-#> 6         0.4         0.9 0.4405807  785.025 10
-#> 7         0.2         0.6 0.7496154 2819.350 10
-#> 8         0.1         0.6 0.7324501 2765.500 10
-#> 9         0.2         0.7 0.7379645 2790.175 10
+#> 1         0.4         1.0 0.3862159  527.725 10
+#> 2         0.5         1.0 0.3636975  511.050 10
+#> 3         0.4         1.0 0.3927836  580.050 10
+#> 4         0.4         0.8 0.4138215  602.825 10
+#> 5         0.4         1.0 0.4099969  665.250 10
+#> 6         0.4         0.9 0.4316606  673.250 10
+#> 7         0.2         0.7 0.7245595 2723.650 10
+#> 8         0.2         0.6 0.7230872 2748.975 10
+#> 9         0.2         0.6 0.7105699 2793.950 10
 ```
 
 [`best_model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/best_model.md)
@@ -522,19 +576,19 @@ dengue_tbl_apr <- tbl_now(
 
 auto_ncast_updated <- update(auto_ncast, dengue_tbl_apr)
 #> Warning: ! Surprising reporting delay of 11 weeks (1 report): longer than the model
-#>   expects (P(D >= d) = 3e-05).
+#>   expects (P(D >= d) = 1e-06).
 #> ! Surprising reporting delay of 10 weeks (1 report): longer than the model
-#>   expects (P(D >= d) = 9.1e-05).
+#>   expects (P(D >= d) = 3e-06).
 #> ! Surprising reporting delay of 9 weeks (2 reports): longer than the model
-#>   expects (P(D >= d) = 0.00028).
+#>   expects (P(D >= d) = 1.8e-05).
 #> ! Surprising reporting delay of 8 weeks (5 reports): longer than the model
-#>   expects (P(D >= d) = 0.00085).
+#>   expects (P(D >= d) = 9.8e-05).
 #> ! Surprising reporting delay of 7 weeks (3 reports): longer than the model
-#>   expects (P(D >= d) = 0.0026).
+#>   expects (P(D >= d) = 5e-04).
 #> ! Surprising reporting delay of 6 weeks (2 reports): longer than the model
-#>   expects (P(D >= d) = 0.0079).
-#> ℹ If these are outliers, treat them as censored with `censor_delays_above()`
-#>   and re-fit.
+#>   expects (P(D >= d) = 0.0025).
+#> ℹ If these are outliers, treat them as censored with
+#>   `tbl.now::censor_reporting_delays_above()` and re-fit.
 #> ℹ See all flagged delays with `extreme_values(nc)`.
 ```
 
@@ -546,12 +600,12 @@ Any reports with surprising delays are collected by
 
 extreme_values(auto_ncast_updated)
 #>   delay weight mean_tail_prob cdf_prob      lpd relative_surprise direction
-#> 1     6      2       0.007928 0.992072  -4.6875            0.0260      long
-#> 2     7      3       0.002606 0.997394  -5.7892            0.0086      long
-#> 3     8      5       0.000852 0.999148  -6.9041            0.0028      long
-#> 4     9      2       0.000278 0.999722  -8.0240            0.0009      long
-#> 5    10      1       0.000091 0.999909  -9.1439            0.0003      long
-#> 6    11      1       0.000030 0.999970 -10.2609            0.0001      long
+#> 1     6      2       0.002484 0.997516  -5.4569            0.0103      long
+#> 2     7      3       0.000504 0.999496  -7.0098            0.0022      long
+#> 3     8      5       0.000098 0.999902  -8.6189            0.0004      long
+#> 4     9      2       0.000018 0.999982 -10.2670            0.0001      long
+#> 5    10      1       0.000003 0.999997 -11.9426            0.0000      long
+#> 6    11      1       0.000001 0.999999 -13.6383            0.0000      long
 #>   surprise level
 #> 1    delay  0.99
 #> 2    delay  0.99
@@ -565,117 +619,116 @@ See the vignette on [Handling Outlier Delays with
 Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.md)
 for what to do when a delay *is* flagged.
 
-## Example 5 – Count-cumulative data that revises up *and* down (FluSight)
+## Example 5 – Count-cumulative revisions and a historical origin
 
-So far every example has used **incident** data: each case is counted
-once, and counts only ever grow as late reports arrive. Some
-surveillance systems instead publish a **running cumulative total** for
-each event-time that is *re-reported* week after week – and those totals
-can be revised **downward** as well as upward (for example when a
-suspected case is later re-classified as negative). The
-[FluSight](https://github.com/cdcepi/FluSight-forecast-hub) influenza
-hospitalisation data shipped with `tbl.now` is exactly this kind of
-stream: for each `target_end_date` (the epiweek being counted), the
-reported cumulative `observation` changes across `as_of` report dates.
+FluSight publishes a running level for each target week. Keep three
+dates distinct: `full_data` is the retrospective extract used only to
+obtain scoring truth; `historical_now` is the information cutoff; and
+`event_date` identifies the weeks being nowcast. Starting near September
+2023 avoids interpreting the between-season gap as a reporting delay.
 
 ``` r
 
 data(flusight, package = "tbl.now")
-head(flusight)
-#> # A tibble: 6 × 4
-#>   as_of      target_end_date location_name observation
-#>   <date>     <date>          <chr>               <dbl>
-#> 1 2023-09-23 2022-02-12      Alabama                10
-#> 2 2023-09-23 2022-02-12      Alaska                  0
-#> 3 2023-09-23 2022-02-12      Arizona                64
-#> 4 2023-09-23 2022-02-12      Arkansas               29
-#> 5 2023-09-23 2022-02-12      California             36
-#> 6 2023-09-23 2022-02-12      Colorado               29
+historical_now <- as.Date("2024-01-27")
+full_data <- flusight |>
+  filter(location_name == "California",
+         target_end_date >= as.Date("2023-09-01"))
+
+calendar_tbl <- tbl_now(
+  full_data,
+  event_date = target_end_date,
+  report_date = as_of,
+  case_count = observation,
+  data_type = "count-cumulative",
+  event_units = "weeks", report_units = "weeks",
+  now = max(full_data$as_of), verbose = FALSE
+)
+calendar_rows <- full_data |>
+  filter(target_end_date <= historical_now, as_of <= historical_now)
+calendar_asof <- tbl_now(
+  calendar_rows,
+  event_date = target_end_date, report_date = as_of,
+  case_count = observation, data_type = "count-cumulative",
+  event_units = "weeks", report_units = "weeks",
+  now = historical_now, verbose = FALSE
+) |>
+  tbl.now::complete_zeroes(max_delay = 26L, until = historical_now)
+
+stopifnot(max(calendar_asof$target_end_date) <= historical_now,
+          max(calendar_asof$as_of) <= historical_now)
 ```
 
-We tell
-[`tbl_now()`](https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html)
-that these are cumulative counts with `data_type = "count-cumulative"`.
-Here we nowcast a single location (California), keeping a recent window
-of the season:
+The **calendar clock** keeps every intervening calendar week, and zero
+completion makes missing cells inside the observable triangle explicit.
+For the **compressed publication clock**, map the observed publication
+weeks to consecutive synthetic weeks before constructing the `tbl_now`;
+retain the real dates in separate columns for the as-of filter and
+scoring join.
 
 ``` r
 
-california <- flusight |>
-  filter(location_name == "California", target_end_date >= as.Date("2023-10-01"))
+publication_weeks <- sort(unique(full_data$as_of))
+publication_index <- setNames(seq_along(publication_weeks) - 1L,
+                              as.character(publication_weeks))
+compressed_data <- full_data |>
+  filter(target_end_date %in% publication_weeks) |>
+  mutate(event_num = publication_index[as.character(target_end_date)],
+         report_num = publication_index[as.character(as_of)],
+         event_model = as.Date("2000-01-01") + 7L * event_num,
+         report_model = as.Date("2000-01-01") + 7L * report_num)
+compressed_tbl <- tbl_now(
+  compressed_data, event_date = event_model, report_date = report_model,
+  case_count = observation, data_type = "count-cumulative",
+  event_units = "weeks", report_units = "weeks", verbose = FALSE
+)
+# The final publication of one season is immediately followed by the first of
+# the next on this model clock; the original dates still enforce historical_now.
+```
 
-flu_tbl <- tbl_now(
-  california,
-  event_date  = target_end_date,  # the epiweek being counted
-  report_date = as_of,            # when that cumulative count was known
-  case_count  = observation,      # cumulative admissions (can go up OR down)
-  data_type   = "count-cumulative",
-  now         = as.Date("2024-01-27")
+Count-cumulative data use their own component. `settlement = 26L`
+targets C_t(26), finite-horizon database retention. The cumulative-level
+model and the two signed hurdle models share the same collapsed
+retraction kernel; the zero-truncated Poisson magnitude has no
+dispersion parameter.
+
+``` r
+
+level_model <- model(
+  nb_likelihood(), ar1_epidemic(), lognormal_delay(),
+  cumulative = cumulative_process(
+    observation = "cumulative", settlement = 26L
+  )
+)
+ztnb_model <- model(
+  nb_likelihood(), ar1_epidemic(), lognormal_delay(),
+  cumulative = cumulative_process(
+    observation = "hurdle_ztnb", settlement = 26L
+  )
+)
+ztp_model <- model(
+  poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
+  cumulative = cumulative_process(
+    observation = "hurdle_ztpoisson", settlement = 26L
+  )
+)
+
+calendar_fits <- lapply(
+  list(level = level_model, ztnb = ztnb_model, ztp = ztp_model),
+  nowcast, data = calendar_tbl, now = historical_now,
+  temporal_effects = "none"
 )
 ```
 
-To model the down-revisions we attach a **confirmation process** to the
-model.
-[`confirmation_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.md)
-describes the retraction side of the stream through a retraction delay
-and a *confirmation probability* `p` – the probability that a report is
-genuine and never retracted. Left unset, `p` gets a strong data-informed
-prior (just like the lognormal delay’s mean); pass
-`confirmation_process(p = 0.98)` to hold it fixed, or a
-[`beta_prior()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/priors.md)
-to set your own. When the data are count-cumulative,
-[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
-automatically switches from the censored count likelihood to the
-**signed-increment Skellam / SkNB** likelihood that the confirmation
-process needs:
-
-``` r
-
-flu_model <- model(
-  likelihood   = nb_likelihood(),
-  epidemic     = ar1_epidemic(),
-  delay        = lognormal_delay(),
-  confirmation = confirmation_process()   # models the up- and down-revisions
-)
-
-flu_ncast <- nowcast(flu_tbl, flu_model, n_draws = 1000)
-autoplot(flu_ncast)
-```
-
-![\_Confirmation nowcast for cumulative influenza hospitalisations in
-California.\_](introduction_files/figure-html/flusight-nowcast-1.png)
-
-*Confirmation nowcast for cumulative influenza hospitalisations in
-California.*
-
-Everything else works exactly as before –
-[`predict()`](https://rdrr.io/r/stats/predict.html),
-[`summary()`](https://rdrr.io/r/base/summary.html),
-[`coef()`](https://rdrr.io/r/stats/coef.html) and the different epidemic
-processes, delay families, covariates and temporal effects are all
-available for count-cumulative data too:
-
-``` r
-
-summary(predict(flu_ncast)) |> dplyr::as_tibble() |> tail(4)
-#> # A tibble: 4 × 15
-#>    mean median    sd   mad  q2.5    q5   q10   q25   q50   q75   q90   q95 q97.5
-#>   <dbl>  <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
-#> 1 1425.   1421  9.69  2.97 1417   1418  1419  1420  1421  1426  1433 1441. 1451.
-#> 2 1029.   1026  8.74  2.97 1020   1022  1023  1025  1026  1030  1040 1046. 1056 
-#> 3 1046.   1044  8.70  2.97 1031.  1035  1039  1043  1044  1047  1054 1061  1066.
-#> 4  703.    694 25.3   4.45  685.   688   691   692   694   705   724  744   764 
-#> # ℹ 2 more variables: .event_num <int>, event_date <date>
-```
-
-To nowcast **several locations at once**, declare the location column as
-`strata` in
-[`tbl_now()`](https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html).
-A single stratified
-[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
-then shares the delay and confirmation structure across locations, which
-is both faster than a separate fit per location and – on FluSight –
-sharper (lower Weighted Interval Score).
+An empirical multiplier is a development comparator, not part of the
+fitted model. At target age a, calibrate it only on earlier cohorts for
+which both C_s(a) and C_s(26) were observable by `historical_now`;
+discard zero denominators and report a fallback when too few pairs
+remain. Retrospective terminal values after `historical_now` may be used
+for scoring, never for this calibration. See
+`devel/skellam_prototypes/flusight_asof_data.R` for the complete
+calendar/compressed preparation and leakage-safe multiplier used by the
+large backtest runner.
 
 ## Saving and loading a fitted nowcast
 
@@ -702,7 +755,7 @@ saved <- tempfile(fileext = ".rds")
 save_nowcast(auto_ncast, saved)
 
 restored <- load_nowcast(saved)
-# predict() / autoplot() / coef() / tidy() / model_parameters() all work just as before:
+# predict() / autoplot() / coef() / parameters() all work just as before:
 autoplot(restored)
 ```
 

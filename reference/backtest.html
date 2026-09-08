@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -133,7 +133,11 @@ present-day nowcast).</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Passed to <code><a href="nowcast.html">nowcast()</a></code>.</p></dd>
+<dd><p>Passed to <code><a href="nowcast.html">nowcast()</a></code>.</p>
+<p>A <code>tbl_now</code> carrying a revision process needs nothing extra: the revision
+model is fitted at each as-of date, and the truth follows the inferred mode:
+confirmed records for <code>confirmation_only</code> / <code>both</code>, and records never
+retracted for <code>retraction_only</code> – the settled count the model targets.</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -34,11 +34,11 @@
   The model-selection scoreboard from
   [`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
 
-- [`confirmation_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.md)
-  : Confirmation / retraction process
-
 - [`covid_colombia`](https://rodrigozepeda.github.io/diseasenowcasting/reference/covid_colombia.md)
   : COVID-19 Notifications – Colombia 2020-2023
+
+- [`cumulative_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/cumulative_process.md)
+  : Count-cumulative observation process
 
 - [`custom_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_delay.md)
   **\[experimental\]** : User-defined delay distribution
@@ -94,9 +94,6 @@
 - [`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
   : Bayesian Nowcast Model
 
-- [`model_parameters()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model_parameters.md)
-  : Parameter estimates from a fitted nowcast
-
 - [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
   : Fit a nowcast model to censored reporting data
 
@@ -105,6 +102,9 @@
 
 - [`nowcast_twostage()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_twostage.md)
   : Two-stage multiple-imputation nowcast
+
+- [`parameters()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/parameters.md)
+  : Parameter estimates from a fitted nowcast
 
 - [`prepare_data()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/prepare_data.md)
   : Prepare data for the RTMB nowcast engine
@@ -130,6 +130,15 @@
   [`logistic_prior()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/priors.md)
   [`beta_prior()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/priors.md)
   : Priors for model parameters
+
+- [`lognormal_revision()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_delay.md)
+  [`gamma_revision()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_delay.md)
+  [`generalized_gamma_revision()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_delay.md)
+  [`dirichlet_revision()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_delay.md)
+  : Revision-lag distributions
+
+- [`revision_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_process.md)
+  : Revision process: reports that are later confirmed or retracted
 
 - [`sample()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/sample.md)
   :
@@ -161,9 +170,6 @@
 
 - [`theme_diseasenowcasting()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/theme_diseasenowcasting.md)
   : ggplot2 theme matching the diseasenowcasting visual identity
-
-- [`tidy.nowcast`](https://rodrigozepeda.github.io/diseasenowcasting/reference/tidy.nowcast.md)
-  : Tidy a nowcast into the cross-package nowcast table
 
 - [`validate_custom_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_delay.md)
   **\[experimental\]** : Validate a custom delay distribution for RTMB

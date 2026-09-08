@@ -254,11 +254,15 @@ k\_{\max})),\\ 16).
 The posterior-predictive distribution of the nowcast at event time t is
 then summarised from the draws.
 
-## 7. Two-stage cascade
+## 7. One-stage and two-stage inference
 
-We fit the model in two steps due to the non-identifiability between
-delay and epidemic processess. The two-stage cascade addresses this via
-**multiple imputation**:
+With `type = "one_stage"`, the reporting-delay, epidemic, likelihood,
+and any revision parameters are optimized in one joint objective. This
+retains all posterior dependence, but it can be more sensitive to the
+joint geometry between recent incidence and incomplete reporting.
+
+With `type = "two_stage"`, the reporting delay and epidemic process are
+separated by **multiple imputation**:
 
 1.  **Stage 1.** Fit a delay-only model to a recent window of the series
     (default: 120 events), obtaining a posterior (\hat\theta_D,
@@ -275,111 +279,486 @@ delay and epidemic processess. The two-stage cascade addresses this via
 
 ------------------------------------------------------------------------
 
-## 8. Count-cumulative data: the confirmation model (Skellam / SkNB)
+## 8. Resolution processes: confirmation and retraction
 
-Sections 2–7 assume **incident** data: each case is counted once and the
-observed count only ever grows. Some surveillance systems instead
-publish, for each event-time t, a **running cumulative total** C_t(d)
-known d periods after t, and that total may be revised **downward** as
-well as upward — a suspected case is later re-classified as negative and
-*removed*. `diseasenowcasting` handles such **count-cumulative** streams
-with a *confirmation process*, which replaces the censored count
-likelihood of §2 with a signed-increment likelihood.
+Sections 2–7 assume a report is a case, full stop. Registers rarely work
+that way: a report is provisional, and is later **resolved** one way or
+the other. Two conventions dominate, and they are mirror images of one
+another.
 
-### 8.1 Signed increments and the two streams
+A report is **resolved exactly once**: a test comes back, and it is
+either positive (the case is *confirmed*) or negative (the case is
+*retracted*). There is no chain — nothing is confirmed and then later
+retracted. What differs between surveillance systems is only **which
+resolutions get a date column**:
 
-Work with the **signed increments** of the cumulative curve, m_t^d =
-C_t(d) - C_t(d-1), \qquad C_t(-1) \equiv 0, which are positive when net
-reports are added at delay d and **negative** when net reports are
-retracted. Each increment is the difference of two latent counting
-streams:
+|  | **retraction only** | **confirmation only** | **both** |
+|----|----|----|----|
+| dates recorded | the **negatives** | the **positives** | both signs |
+| a missing date means | not retracted **yet** | not confirmed **yet** | not resolved **yet** |
+| nowcast target | reports never retracted | reports eventually confirmed | reports that resolve positive |
+| lag support | \\1, 2, \ldots\\ | \\0, 1, \ldots\\ | \\0, 1, \ldots\\ |
+| `revision_type` records | only `"retracted"` | only `"confirmed"` | both |
 
-- **Appearances** A_t^d — reports (genuine or erroneous) first entering
-  the system at delay d, with mean \alpha_t^d = \mu_t\\ g_D(d), where
-  g_D is the appearance-delay pmf (the delay families of §4) and \mu_t
-  is the gross report intensity.
-- **Retractions** W_t^d — erroneous reports being removed at delay d. An
-  erroneous report first appears at delay a (via g_D) and is retracted a
-  further c periods later (via a **retraction delay** g_C), so
-  retractions land at delay d = a + c with pmf given by the convolution
-  g_W = g_D \* g_C, \qquad g_W(d) = \sum\_{a=0}^{d} g_D(a)\\ g_C(d-a),
-  and mean \beta_t^d = \eta_t\\ g_W(d).
+The lag support differs only because a *retraction* recorded in the same
+period as its report describes a case that was never visible in any data
+vintage, whereas a test coming back the day it was ordered is ordinary.
+All three are the same generative object seen through different windows,
+so they share one likelihood; §8.2 gives the single parameter that
+switches between them.
 
-The two intensities are tied together by the **confirmation
-probability** p \in (0, 1\] — the probability that a report is genuine
-and never retracted. Writing \lambda_t for the mean of the final
-*settled* (genuine) count, as produced by the epidemic process of §3
-(\lambda_t = \exp(\text{cap}(\mu_t^{(s)}))), \mu_t = \frac{\lambda_t}{p}
-\quad\text{(gross appearances)}, \qquad \eta_t = (1-p)\\\lambda_t
-\quad\text{(retractions)}. At p = 1 there are no retractions (\eta_t =
-0, \beta_t^d = 0), every increment is a pure appearance, and the model
-collapses back to the ordinary right-censored count model of §2.
+The software interface mirrors the three-axis data object. `tbl.now`
+supplies the event, report and revision date columns, the
+`revision_type` column, and the optional `is_censored_revision` column
+through attributes on the `tbl_now`.
+[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
+reads those attributes directly; it has no parallel column-name
+arguments. In
+`tbl_now(..., is_censored_revision = result_is_upper_bound)`, the named
+logical column marks revision dates that are upper bounds rather than
+exact dates. The model is configured as
 
-### 8.2 The increment likelihood
+``` r
 
-**Poisson case.** If the appearance and retraction streams are
-independent Poisson processes, A_t^d \sim \mathrm{Poisson}(\alpha_t^d)
-and W_t^d \sim \mathrm{Poisson}(\beta_t^d), then the increment m_t^d =
-A_t^d - W_t^d follows a **Skellam** distribution, m_t^d \sim
-\mathrm{Skellam}(\alpha_t^d,\\ \beta_t^d), \qquad P(m) =
-e^{-(\alpha+\beta)} \left(\tfrac{\alpha}{\beta}\right)^{m/2}
-I\_{\|m\|}\\\bigl(2\sqrt{\alpha\beta}\bigr), where I\_\nu is the
-modified Bessel function of the first kind. Equivalently — and this is
-the identity the package evaluates, in log-space, for
-automatic-differentiation safety — P(m) is the Poisson-difference
-convolution P(m) = \sum\_{k \ge \max(0,\\-m)} \mathrm{Poisson}(k+m;\\
-\alpha)\\\mathrm{Poisson}(k;\\ \beta). The log-pmf is computed with a
-numerically stable ascending series for \log I\_{\|m\|} (never R’s
-[`besselI()`](https://rdrr.io/r/base/Bessel.html), which underflows to 0
-for the small arguments typical here and would return -\infty).
-Pure-addition (\beta = 0, delay 0) and pure-retraction bins reduce to a
-single Poisson term.
+model(
+  nb_likelihood(),
+  ar1_epidemic(),
+  lognormal_delay(),                 # event to report
+  revision = revision_process(
+    dirichlet_revision(),          # report to revision
+    mode = "auto")
+)
+```
 
-**Negative-binomial case.** Real streams are over-dispersed, so under
+There is one revision-delay law in this first prototype. In either
+single-sign mode it is the lag for the sign that is recorded. In
+`mode = "both"` the same law is used for confirmations and retractions.
+Consequently, with both signs observed, the age of a pending report
+informs when it will resolve but not which sign it will have. Separate
+competing-risk lag laws are not fitted by this prototype.
+
+### 8.1 What a missing resolution date means
+
+For case i write t_i for the event date, r_i for the report date, y_i
+for the resolution date (retraction or confirmation), and
+
+D_i = r_i - t_i \quad (\text{appearance delay}), \qquad R_i = y_i - r_i
+\quad (\text{resolution lag}).
+
+A row with y_i missing is **not** a resolved negative. Under retraction
+it is a case *not retracted yet*; under confirmation, one *not confirmed
+yet*. Either way the resolution lag is right-censored at the age of its
+report, \tau - r_i, where \tau is the analysis date. Every result below
+follows from taking that censoring seriously; reading “missing” as a
+settled answer is what produces the naive, over-confident correction.
+
+The two readings differ in an instructive way. Under retraction,
+evidence *accumulates in favour* of a standing report: the longer it
+survives unretracted, the more likely it is genuine. Under confirmation
+it accumulates *against*: the longer a report sits unconfirmed, the more
+likely it never will be. That sign flip is the whole difference on the
+prediction side (§8.7).
+
+### 8.2 The generative model
+
+The reports form the same marked Poisson process as §2, with two extra
+marks per case: a label L_i \in \\+, -\\ with P(L = +) = p, and a
+resolution lag R_i \sim g_R (any delay family of §4 may serve as g_R).
+A + report is one that belongs in the target — genuine under retraction,
+confirmable under confirmation. Writing \lambda_t for the mean
+**settled** count, which is what the epidemic process of §3 models, the
+gross report intensity is
+
+\mu_t \\=\\ \frac{\lambda_t}{p} \qquad\text{in both modes.}
+
+The single switch is **which label’s resolution you see**. Let
+
+\pi \\=\\ P(\text{the resolution is observed}) \\=\\ \begin{cases} 1 - p
+& \text{retraction only (you see the negatives)},\\ p &
+\text{confirmation only (you see the positives)},\\ 1 & \text{both
+(every resolution is visible)}.\end{cases}
+
+Everything from here is written in \pi and is mode-free. The resolved
+term R\ln\pi of §8.4 is really N\_+\ln p + N\_-\ln(1-p); the two
+single-sign modes put the whole count on one side and leave the other
+empty, which is why the compact form works for all three.
+
+### 8.3 Observable trajectory types
+
+At horizon d^\*\_t = \tau - t a report is in exactly one of three
+states, and Poisson colouring makes their counts **independent
+Poisson**:
+
+| Type | Visible as | Count | Mean |
+|----|----|----|----|
+| not yet reported (D \> d^\*) | row **absent** | n\_\varnothing | \mu_t\\\bar G_D(d^\*) |
+| unresolved (D = a \le d^\*, no resolution by \tau) | row, y_i missing | A^\circ\_{t,a} | \mu_t\\g_D(a)\\h(d^\*-a) |
+| resolved (D = a, D + R = b \le d^\*) | row, y_i present | B\_{t,a,b} | \mu_t\\\pi\\g_D(a)\\g_R(b-a) |
+
+where
+
+h(j) \\=\\ (1-\pi) + \pi\\\bar G_R(j)
+
+is the probability that a report made j periods ago is still unresolved:
+either it belongs to a silent class, or it belongs to an observed class
+but its resolution has not landed. h(\infty) = 1 - \pi. Under retraction
+h(0) = 1 — a report filed today carries no evidence, since nothing could
+have been retracted yet — but under confirmation h(0) = (1-p) + p\\\bar
+G_K(0) \< 1: a case *could* have been confirmed the same period and was
+not, which is already information.
+
+**When both signs are recorded, \pi = 1 and h(j) = \bar G_R(j), free of
+p.** An unresolved row then says only that its test has not come back;
+because the lag law is shared between the two signs, its age carries no
+information about *which way* it will go. Two consequences, both checked
+in the tests: p is a plain binomial on the resolved rows — the MLE is
+N\_+/(N\_+ + N\_-), with no censoring correction — and the survival part
+is a plain right-censored fit of g_R using every row. The two blocks are
+orthogonal.
+
+### 8.4 The likelihood
+
+n\_\varnothing is unobserved, but the counts are *independent*, so
+marginalising it contributes nothing. Because \sum_a \kappa_a +
+\sum\_{a\<b}\nu\_{ab} = \mu_t G_D(d^\*) — the retraction structure
+cancels out of the exposure term — the per-event-time log-likelihood
+splits into three blocks:
+
+\ell_t = \underbrace{\ln S\_{k_t}(\mu_t)}\_{\text{(i) count}} +
+\underbrace{\sum\_{i:\\t_i = t} \ln g_D(D_i)}\_{\text{(ii) appearance
+delay}} + \underbrace{\sum\_{\text{unresolved}} \ln h(\tau - r_i) +
+\sum\_{\text{resolved}} \bigl\[\ln \pi + \ln
+g_R(R_i)\bigr\]}\_{\text{(iii) resolution}} .
+
+Three things make this cheap to implement:
+
+- **(i) is the S_k of §2.4 verbatim**, with the single substitution
+  \lambda_t \mapsto \mu_t = \lambda_t / p, and with k_t counting
+  **every** row — standing and already-retracted alike.
+- **(ii) is the delay block of §2.3 verbatim**: every reported case
+  appeared with delay g_D regardless of its label.
+- **(iii) collapses to two one-dimensional tables.** A retracted row’s
+  factor separates, and a standing row’s factor h(d^\*\_t - a) depends
+  on t and a only through \tau - r_i, the *age of the report*. Pooled
+  over event times and strata, \ell^{\mathrm{res}} = R\ln\pi + \sum\_{c}
+  r_c \ln g_R(c) + \sum\_{j} u_j \ln h(j), with R the number of resolved
+  rows, r_c those with lag c, and u_j the unresolved rows whose report
+  is j periods old.
+
+At p = 1 block (iii) vanishes, h \equiv 1 and \mu_t = \lambda_t: the
+model is the one of §2 exactly, not approximately.
+
+### 8.5 Over-dispersion
+
+Give each event time a gamma frailty \Lambda_t \sim \mathrm{Gamma}(r,r),
+as in §2.4. It multiplies **every** trajectory-type mean by the same
+factor, so it cancels from the multinomial split of the rows: blocks
+(ii) and (iii) are unchanged, and block (i) is the ordinary
+negative-binomial S_k of §2.4 at mean \mu_t. **No quadrature is
+needed.**
+
+### 8.6 Identifiability: a mixture-cure model
+
+Block (iii) is exactly the **Berkson–Gage mixture-cure** likelihood,
+
+\prod\_{\text{retracted}} (1-p)\\g_C(C_i) \\\times\\
+\prod\_{\text{standing}} \bigl\[p + (1-p)\bar G_C(\tau - r_i)\bigr\],
+
+for right-censored lags with cure fraction p. Two consequences:
+
+1.  p is identified whenever there is **sufficient follow-up** — reports
+    whose age \tau - r_i runs well past the bulk of g_R. Those pin
+    h(\infty) = 1-\pi directly.
+2.  In block (i), \ln\mu_t = \gamma_0 - \ln p + f(t) +
+    \mathbf{X}\_t^\top\boldsymbol{\gamma}, so p is **exactly aliased
+    with the epidemic intercept**. The count block therefore contributes
+    no information about p, and the over-dispersion-knob pathology that
+    forces a strong prior in §9.4 cannot occur. `diseasenowcasting` uses
+    a *weak* data-informed Beta on p here, centred on the retraction
+    rate among reports with enough follow-up (the raw rate R/k
+    under-estimates 1 - p, because recent reports have not had time to
+    be retracted).
+
+Blocks (ii) and (iii) also involve neither \lambda_t nor the epidemic
+process, so the stepwise boundary of §7 carries over without introducing
+a second revision-imputation stage. In `type = "two_stage"`, Stage 1
+estimates only the event-to-report law g_D. Each imputed \theta_D^{(k)}
+is fixed in Stage 2, while the revision-delay parameters and p remain
+free and are estimated jointly with the epidemic process. Posterior
+sampling within each Stage-2 fit therefore propagates revision
+uncertainty; pooling across k additionally propagates reporting-delay
+uncertainty. In `type = "one_stage"`, g_D, g_R, p, and the epidemic
+process are all estimated together.
+
+### 8.7 Reconstruction
+
+The settled count splits into the standing rows that turn out to be
+genuine and the genuine cases not yet reported:
+
+\widehat N_t = \underbrace{w\\B_t}\_{\text{resolved rows}} \\+\\
+\sum\_{a=0}^{d^\*\_t} \mathrm{Binomial}\bigl(A^\circ\_{t,a},\\
+\rho(d^\*\_t - a)\bigr) \\+\\
+\mathrm{Poisson}\bigl(\Lambda_t\\\lambda_t\\\bar G_D(d^\*\_t)\bigr),
+
+where B_t is the number of resolved rows and, per mode,
+
+\begin{array}{lll} \text{retraction:} & w = 0, & \rho(j) = \dfrac{p}{p +
+(1-p)\bar G_C(j)} \\ \\ (\text{increasing in } j),\\\[2ex\]
+\text{confirmation:} & w = 1, & \rho(j) = \dfrac{p\\\bar G_K(j)}{(1-p) +
+p\\\bar G_K(j)} \\ \\ (\text{decreasing in } j). \end{array}
+
+A retracted row is gone, so it contributes nothing; a confirmed row is
+already in the target, so it contributes with certainty. Between them,
+**each unresolved row enters the nowcast independently with probability
+\rho(\tau - r_i)**, a function of its report age alone. The binomial
+split is free of the frailty, so over-dispersion enters only through the
+future term. Both means come to \lambda_t — unbiased — and at p = 1 the
+retraction form is the Step-4 formula of §6.
+
+### 8.8 Partially observed rows
+
+Censoring **coarsens the observable partition**: instead of knowing
+which trajectory type a row is, we know only that it is one of a set.
+Poisson colouring still applies — a count over a union of types is
+Poisson with the summed intensity — so such a row contributes the log of
+a *sum*, and the exposure term is untouched (summed over all types it is
+\mu_t G_D(d^\*) however they are grouped).
+
+With the appearance delay known only to lie in \[a\_{\text{lo}},
+a\_{\text{hi}}\], and writing b for the **withdrawal delay** measured
+from the event (b = q_i - t_i — the natural coordinate when the report
+date is itself uncertain):
+
+| Row | Contribution |
+|----|----|
+| standing | \ln \sum\_{a} g_D(a)\\ h(d^\*\_t - a) |
+| retracted **at** b | \ln(1-p) + \ln \sum\_{a \le \min(a\_{\text{hi}},\\ b-1)} g_D(a)\\ g_C(b - a) |
+| retracted **by** B | \ln(1-p) + \ln \sum\_{a \le \min(a\_{\text{hi}},\\ B-1)} g_D(a)\\ G_C(B - a) |
+
+The three cases the package supports are instances of these two kernels:
+
+1.  **Censored report, exact retraction.** The retraction *itself*
+    bounds the report — a case cannot be withdrawn before it is filed,
+    so a \le b - 1, and the effective upper bound is
+    \min(a\_{\text{hi}}, b - 1).
+2.  **Exact report, censored retraction.** A single term, with the lag
+    entering as G_C(B - a) rather than g_C(b-a): we know the retraction
+    happened by B, not when.
+3.  **Both censored.** The full double sum.
+
+Each collapses to the exact-row term when its interval is a single
+point, so the exactly observed rows of §8.4 are the degenerate case, not
+a separate branch.
+
+**A discretisation trap.** The two delays do *not* share a convention:
+the appearance delay is binned as g_D(a) = F(a+1) - F(a) (delay a falls
+in bin a+1) while the retraction lag is binned as g_C(c) = F_C(c) -
+F_C(c-1) with F_C(0) := 0. Applying the first to g_C shifts the lag pmf
+by one bin, which biases the retraction timing without ever looking
+wrong.
+
+### 8.9 Stratification
+
+As in §5, the log-likelihood is a sum over (t,s) cells, and g_D, g_C and
+\phi are shared while \lambda_t^{(s)} is per stratum. The confirmation
+probability may be either: shared (the default) or estimated per stratum
+via `revision_process(stratified_p = TRUE)`. The cure block is already a
+sum over strata, so a per-stratum p^{(s)} changes nothing structural —
+each stratum contributes its own R^{(s)}, r_c^{(s)}, u_j^{(s)} under the
+same prior, and the count block uses \mu_t^{(s)} =
+\lambda_t^{(s)}/p^{(s)}. g_C stays shared because the retraction *lag*
+is usually a property of the verification workflow, whereas p reflects
+how often a given group is misclassified. With sparse strata the shared
+p is the safer choice.
+
+### 8.10 Conventions and edge cases
+
+- **As-of masking.** A retraction dated **after** \tau has not happened
+  yet: the row is standing, and the date is masked rather than the row
+  dropped. Skipping this leaks the future into the fit.
+- **Same-period retractions.** g_C lives on \\1, 2, \ldots\\ (matching
+  §9), so a case retracted in the same event-unit period as its report
+  was never visible in any data vintage. Such rows are dropped from the
+  data entirely.
+- **No retractions observed.** The cure block would sit on the p = 1
+  boundary with only its prior for support; that boundary *is* the
+  ordinary count model, so the package fits that instead.
+- **Choosing g_C.** \rho(j) is applied to *every* standing case, so at
+  high counts a **shape** error in g_C biases the nowcast by more than
+  its Monte-Carlo noise. On a COVID series of \approx 8000 cases/day, a
+  lognormal g_C fitted to a 1 + \mathrm{Poisson}(2) lag left a 0.9\\
+  bias and lost nominal coverage, while a Dirichlet g_C recovered \rho
+  to four decimals. Prefer
+  [`dirichlet_revision()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_delay.md)
+  when counts are large.
+
+### 8.11 The three data types
+
+Everything above is written per **row**, but a row need not be a case.
+
+**Linelist.** One row per case, carrying (t_i, r_i, y_i). Each row has
+weight 1.
+
+**Count-incidence.** One row per distinct (t, r, y) combination with a
+case count n — the aggregated form of exactly the same information,
+since y is part of the key and `NA` marks the unresolved cases. Every
+quantity in §8.4 and §8.8 is a *weighted* tally, so aggregating changes
+nothing: the sufficient statistics m_a, R, r_c, u_j, the censoring
+patterns and the per-cell resolved and unresolved counts are identical,
+and the two log-likelihoods agree exactly. The package implements this
+by weighting each tally by n instead of by 1.
+
+**Count-cumulative.** A stream of repeatedly published levels is not an
+aggregation of the row-level revision likelihood. It does not reveal
+which records remain pending, and therefore cannot identify the revision
+probability p separately from a conditional revision-delay distribution.
+Downward revisions are handled by the dedicated collapsed retraction
+kernel of §9, not by
+[`revision_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_process.md).
+
+### 8.12 Relationship to the count-cumulative model
+
+The row-level model identifies p because it observes resolved and
+standing records. A cumulative database publishes only their net total.
+Its identifiable primitive is instead the unconditional finite-age
+withdrawal probability h_R(\ell) in §9. Equating terminal database
+retention with biological truth is an additional scientific assumption,
+not a consequence of the cumulative data.
+
+------------------------------------------------------------------------
+
+## 9. Count-cumulative data: finite-horizon retention
+
+Some surveillance systems publish, for each event-time t, a running
+level C_t(d) known at age d. The level may increase as reports arrive
+and decrease when records are withdrawn. The estimand is the retained
+database count at a configurable finite settlement horizon H, C_t(H).
+The default is H=26 model steps. This is biological truth only under the
+extra assumption that a record is true if and only if it is never
+withdrawn.
+
+### 9.1 The identifiable retraction object
+
+The cumulative stream identifies an unconditional, possibly defective
+retraction kernel
+
+h_R(\ell)=\Pr(R=\ell),\quad \ell=1,\ldots,H,
+S_R(a)=1-\sum\_{\ell=1}^{a}h_R(\ell),\quad a=0,\ldots,H.
+
+The package uses the parsimonious finite-horizon factorisation
+
+h_R(\ell)=m_R g_R(\ell), \qquad 0\leq m_R\leq1,
+
+where g_R is a lognormal, gamma, or generalized-gamma mass normalised
+over 1{:}H. Here m_R is the retraction mass within H and S_R(H) is
+terminal retention. This factorisation must not be interpreted as
+separate identification of a biological truth probability and a
+conditional revision law.
+
+### 9.2 Cumulative-level composite likelihood
+
+Let g_D(r) be the appearance-delay mass. The probability that a record
+has appeared by age d and remains in the database is
+
+q_C(d)=\sum\_{r=0}^{d}g_D(r)S_R(d-r),
+
+so
+
+\mathbb E\[C_t(d)\]=\mu_t q_C(d).
+
+With
+[`poisson_likelihood()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/likelihood.md)
+each marginal is Poisson with this mean; with
 [`nb_likelihood()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/likelihood.md)
-the two streams share a single **gamma frailty** per origin, \Lambda_t
-\sim \mathrm{Gamma}(r, r) (mean 1, variance 1/r, with r = 1/\phi), and
-are conditionally Poisson given \Lambda_t. The increment is then a
-gamma-mixed Skellam, the **SkNB** law. Because *all* delays of one
-origin are thinnings of the *same* over-dispersed report cloud, the
-frailty is shared **across delays** — it must sit outside the product —
-so the one-origin likelihood is the one-dimensional integral
-P\bigl(m_t^0, \ldots, m_t^{d^\*\_t}\bigr) = \int_0^\infty
-\Biggl\[\prod\_{d=0}^{d^\*\_t} \mathrm{Skellam}\bigl(m_t^d;\\
-\alpha_t^d\\ u,\\ \beta_t^d\\ u\bigr)\Biggr\] \mathrm{Gamma}(u;\\ r,
-r)\\ \mathrm{d}u, evaluated by fixed **Gauss–Legendre quadrature**.
-Treating the delay bins as independent negative binomials (a separate
-frailty each) would double-count the over-dispersion and is *not* the p
-= 1 limit of the count model. The increment moments are
-\mathbb{E}\\m_t^d = \alpha_t^d - \beta_t^d, \qquad \operatorname{Var}
-m_t^d = \alpha_t^d + \beta_t^d + \frac{(\alpha_t^d - \beta_t^d)^2}{r}.
+it is negative binomial in the package’s mean/size parameterisation.
+Levels at different ages for one event-time are dependent. Their product
+is therefore a **composite likelihood**, not an exact joint likelihood.
 
-The full log-likelihood again sums over event-times and strata (§5),
-with g_D, g_C, p and \phi shared across strata and the epidemic mean
-\lambda_t^{(s)} per stratum.
+### 9.3 Signed hurdle update composite
 
-### 8.3 Reconstruction
+Define
 
-For a partially observed origin t (observed up to delay d^\*\_t, current
-cumulative C_t(d^\*\_t)), the settled total adds the genuine reports
-still to arrive and removes the erroneous mass still standing, sharing
-one frailty draw \Lambda_t \sim \mathrm{Gamma}(r, r): \widehat{N}\_t =
-C_t(d^\*\_t) + \underbrace{\lambda_t\bigl\[1 -
-G_D(d^\*\_t)\bigr\]\\\Lambda_t}\_{\text{future genuine additions}} -
-\underbrace{(1-p)\\\lambda_t\bigl\[1 -
-G_W(d^\*\_t)\bigr\]\\\Lambda_t}\_{\text{still-standing retractions}},
-with the two terms drawn as \mathrm{Poisson}(\text{mean}\cdot\Lambda_t).
-The posterior-predictive nowcast is summarised from these draws, exactly
-as in §6.
+\Delta_t(0)=C_t(0),\qquad \Delta_t(d)=C_t(d)-C_t(d-1),
+\alpha_t(d)=\mu_tg_D(d),\qquad
+\omega_t(d)=\mu_t\sum\_{r=0}^{d-1}g_D(r)h_R(d-r).
 
-### 8.4 Identifiability
+The hurdle probability is
 
-The confirmation probability p and the tail of the retraction delay g_C
-are only weakly separated by the data: a lower p with faster retractions
-can mimic a higher p with slower ones. Two restrictions identify the
-model in practice: the retraction delay g_C is a **proper**
-distribution, and p carries a **strong, data-informed prior** (a Beta
-centred at the empirical retraction rate; see
-[`?confirmation_process`](https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.md)).
-Without the strong prior the Skellam variance abuses the retraction
-stream as an overdispersion knob and p collapses.
+\pi_t(d)=\\1-\exp\[-(\alpha_t(d)+\omega_t(d))\]\\
+\operatorname{logit}^{-1}(\eta_t(d)),
+
+where \eta_t(d) may contain age and previous-nonzero effects. Thus
+0\<\pi_t(d)\leq\min\\1,\alpha_t(d)+\omega_t(d)\\. Given movement, the
+sign is positive with probability \alpha/(\alpha+\omega) and the
+unsigned magnitude has its own mean (\alpha+\omega)/\pi.
+
+For `observation = "hurdle_ztnb"`, the magnitude follows a
+zero-truncated negative binomial. If z is its requested own mean and s
+its size, the parent NB mean m is obtained on the
+automatic-differentiation tape by solving
+
+z=\Psi_s(m)=\frac{m}{1-\Pr\\\mathrm{NB}(m,s)=0\\}.
+
+Using z directly as the parent NB mean is wrong. For
+`observation = "hurdle_ztpoisson"`, the same construction uses a
+zero-truncated Poisson indexed by own mean (\alpha+\omega)/\pi and has
+no magnitude-dispersion parameter.
+
+Both versions preserve
+
+\mathbb E\[\Delta_t(d)\] =\pi\frac{\alpha-\omega}{\alpha+\omega}
+\frac{\alpha+\omega}{\pi} =\alpha_t(d)-\omega_t(d).
+
+#### Skellam check and the role of confirmation
+
+Before adding the hurdle, the Poisson-process construction gives a
+useful exact one-age marginal. At a fixed age d, the reports entering
+the provisional count and the earlier reports withdrawn at that age are
+disjoint marked-Poisson classes:
+
+A_t(d)\sim\operatorname{Poisson}\\\alpha_t(d)\\,\qquad
+W_t(d)\sim\operatorname{Poisson}\\\omega_t(d)\\,\qquad A_t(d)\perp
+W_t(d).
+
+Therefore
+
+\Delta_t(d)=A_t(d)-W_t(d)
+\sim\operatorname{Skellam}\\\alpha_t(d),\omega_t(d)\\,
+
+with mean \alpha_t(d)-\omega_t(d) and variance \alpha_t(d)+\omega_t(d).
+This checks the signs and rates used by the hurdle construction. Under
+shared gamma frailty the corresponding marginal is the gamma-mixed
+Skellam (the package’s SkNB calculation); additions and withdrawals are
+conditionally independent given that frailty.
+
+There is no third “confirmation update” in a count-cumulative
+provisional register. A report enters through A_t(d) whether it will
+later be confirmed or retracted. Confirmation leaves that report in the
+level, while a negative revision produces the withdrawal counted by
+W_t(d). Adding a separate confirmation intensity would count the same
+positive report twice. If a source publishes only confirmed totals, its
+confirmation date is the observation/report date and the ordinary
+event-to-observation delay model applies. When row-level reports and
+their positive/negative revision outcomes are both available, §8’s
+marked revision likelihood is used instead of a Skellam likelihood.
+
+The product over ages is again a composite likelihood because updates
+from one event-time are dependent.
+
+### 9.4 Operational reconstruction and uncertainty
+
+At an analysis origin, let d^\* be the newest observed age. Prediction
+is anchored to the level actually known then:
+
+C_t(H)=C_t(d^\*)+\sum\_{d=d^\*+1}^{H}\Delta_t(d).
+
+The hurdle models simulate those future updates sequentially and carry
+the previous-nonzero state. If a simulated signed path ends below zero,
+the public count is projected to zero and the number of projections is
+exposed in the prediction diagnostics. The cumulative-level model uses
+an explicitly labelled anchored independent-update approximation; it is
+not an exact conditional law.
+
+Finally, curvature from either composite likelihood is pseudo-posterior
+curvature. The current intervals do not include a sandwich/Godambe or
+cluster-bootstrap calibration, so nominal coverage is not guaranteed.

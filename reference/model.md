@@ -1,9 +1,10 @@
 # Bayesian Nowcast Model
 
-Combines a likelihood, an epidemic process, and a delay distribution
-into a model object. Arguments are positional: the first is the
-likelihood, the second the epidemic process, the third the delay. Any
-argument can be omitted to use its default.
+Combines a likelihood, an epidemic process, a reporting-delay
+distribution, and an optional revision process into a model object.
+Arguments are positional: likelihood, epidemic process, reporting delay,
+then revision process. Any argument can be omitted by naming the later
+components.
 
 ## Usage
 
@@ -12,9 +13,10 @@ model(
   likelihood = nb_likelihood(),
   epidemic = hsgp_epidemic(),
   delay = lognormal_delay(),
-  confirmation = no_confirmation(),
+  revision = no_revision(),
   covariate_prior = std_normal_prior(),
-  strata_pooling = "independent"
+  strata_pooling = "independent",
+  cumulative = no_cumulative()
 )
 ```
 
@@ -39,17 +41,13 @@ model(
   A `delay_process_class`. Default:
   [`lognormal_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/delay_process.md).
 
-- confirmation:
+- revision:
 
-  A `confirmation_process_class`
-  ([`confirmation_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.md))
-  describing the retraction (down-revision) structure of a
-  count-cumulative stream. Default: inert (`p = 1`, no retractions).
-  [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
-  switches to the signed-increment Skellam / SkNB likelihood
-  automatically when the data are count-cumulative; supply a
-  [`confirmation_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.md)
-  to configure it.
+  A `revision_process_class`
+  ([`revision_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_process.md))
+  for report-level confirmation/retraction outcomes in linelist or
+  count-incidence data. Default: inert. Count-cumulative revisions use
+  the separate `cumulative` component.
 
 - covariate_prior:
 
@@ -64,6 +62,14 @@ model(
   \mu\_{\text{global}} + \tau \cdot \delta^{(s)}\\, \\\delta^{(s)} \sim
   \mathcal{N}(0,1)\\, \\\tau \sim \text{HalfNormal}(0,1)\\. Only
   relevant when `num_strata > 1`.
+
+- cumulative:
+
+  Dedicated count-cumulative observation configuration from
+  [`cumulative_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/cumulative_process.md).
+  It is inert by default for linelist and count-incidence data;
+  count-cumulative data use the hurdle–ZTNB default unless configured
+  explicitly.
 
 ## Value
 
@@ -118,6 +124,28 @@ model(nb_likelihood(), ar1_epidemic(), lognormal_delay())
 #> 
 #> ── Delay process 
 #> LogNormal(mu, sigma)
+#> 
+#> ── Covariate prior 
+#> StdNormal()
+#> Strata pooling: "independent"
+#> ────────────────────────────────────────────────────────────────────────────────
+model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
+      revision_process())
+#> 
+#> ── Bayesian Nowcast Model ──────────────────────────────────────────────────────
+#> 
+#> ── Likelihood 
+#> NegBin(mu, phi ~ LogNormal(2.996, 0.500))
+#> 
+#> ── Epidemic process 
+#> AR(1)(phi, sigma | error)
+#> 
+#> ── Delay process 
+#> LogNormal(mu, sigma)
+#> 
+#> ── Revision process 
+#> Revision(p)
+#> Shared revision delay: LogNormal
 #> 
 #> ── Covariate prior 
 #> StdNormal()

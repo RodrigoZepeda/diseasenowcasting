@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -67,6 +67,11 @@
 <span>  gp_boundary_frac <span class="op">=</span> <span class="fl">0.62</span>,</span>
 <span>  ar_sigma_max <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  is_confirmation <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  cumulative_levels <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  cumulative_previous_nonzero <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  cumulative_settlement <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  retraction <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  resolution_mode <span class="op">=</span> <span class="fl">0L</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -125,9 +130,35 @@ Default 0.62.</p></dd>
 
 
 <dt id="arg-is-confirmation">is_confirmation<a class="anchor" aria-label="anchor" href="#arg-is-confirmation"></a></dt>
-<dd><p>If TRUE, the data are count-cumulative signed increments
-and the engine is built for the confirmation (Skellam / SkNB) likelihood
-instead of the standard count likelihood. Default FALSE.</p></dd>
+<dd><p>Deprecated legacy switch.  <code>TRUE</code> now errors; use the
+dedicated <code>count_cumulative</code> model component and cumulative arguments.</p></dd>
+
+
+<dt id="arg-cumulative-levels">cumulative_levels<a class="anchor" aria-label="anchor" href="#arg-cumulative-levels"></a></dt>
+<dd><p>Optional cumulative levels aligned row-for-row with
+<code>m</code>; used only by the dedicated count-cumulative composites.</p></dd>
+
+
+<dt id="arg-cumulative-previous-nonzero">cumulative_previous_nonzero<a class="anchor" aria-label="anchor" href="#arg-cumulative-previous-nonzero"></a></dt>
+<dd><p>Optional indicators, aligned with <code>m</code>,
+that the preceding signed update was non-zero.</p></dd>
+
+
+<dt id="arg-cumulative-settlement">cumulative_settlement<a class="anchor" aria-label="anchor" href="#arg-cumulative-settlement"></a></dt>
+<dd><p>Optional positive integer settlement horizon
+<code>H</code>. It is required for count-cumulative preparation.</p></dd>
+
+
+<dt id="arg-retraction">retraction<a class="anchor" aria-label="anchor" href="#arg-retraction"></a></dt>
+<dd><p>Optional list of linelist-retraction sufficient statistics
+from <code>.linelist_retraction_stats()</code>. When supplied, the engine carries the
+cure-model observation block (see 31_retraction_likelihood.R). Default NULL.</p></dd>
+
+
+<dt id="arg-resolution-mode">resolution_mode<a class="anchor" aria-label="anchor" href="#arg-resolution-mode"></a></dt>
+<dd><p><code>0L</code> when the resolution observed is a RETRACTION (the
+default), <code>1L</code> when it is a CONFIRMATION. Sets the support of the resolution
+lag and what a resolved row means for the nowcast target.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

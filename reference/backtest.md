@@ -89,6 +89,12 @@ backtest(
   Passed to
   [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md).
 
+  A `tbl_now` carrying a revision process needs nothing extra: the
+  revision model is fitted at each as-of date, and the truth follows the
+  inferred mode: confirmed records for `confirmation_only` / `both`, and
+  records never retracted for `retraction_only` – the settled count the
+  model targets.
+
 ## Value
 
 A `backtest_class` object.

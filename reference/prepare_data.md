@@ -18,6 +18,11 @@ prepare_data(
   gp_boundary_frac = 0.62,
   ar_sigma_max = 1,
   is_confirmation = FALSE,
+  cumulative_levels = NULL,
+  cumulative_previous_nonzero = NULL,
+  cumulative_settlement = NULL,
+  retraction = NULL,
+  resolution_mode = 0L,
   ...
 )
 ```
@@ -77,9 +82,36 @@ prepare_data(
 
 - is_confirmation:
 
-  If TRUE, the data are count-cumulative signed increments and the
-  engine is built for the confirmation (Skellam / SkNB) likelihood
-  instead of the standard count likelihood. Default FALSE.
+  Deprecated legacy switch. `TRUE` now errors; use the dedicated
+  `count_cumulative` model component and cumulative arguments.
+
+- cumulative_levels:
+
+  Optional cumulative levels aligned row-for-row with `m`; used only by
+  the dedicated count-cumulative composites.
+
+- cumulative_previous_nonzero:
+
+  Optional indicators, aligned with `m`, that the preceding signed
+  update was non-zero.
+
+- cumulative_settlement:
+
+  Optional positive integer settlement horizon `H`. It is required for
+  count-cumulative preparation.
+
+- retraction:
+
+  Optional list of linelist-retraction sufficient statistics from
+  `.linelist_retraction_stats()`. When supplied, the engine carries the
+  cure-model observation block (see 31_retraction_likelihood.R). Default
+  NULL.
+
+- resolution_mode:
+
+  `0L` when the resolution observed is a RETRACTION (the default), `1L`
+  when it is a CONFIRMATION. Sets the support of the resolution lag and
+  what a resolved row means for the nowcast target.
 
 - ...:
 

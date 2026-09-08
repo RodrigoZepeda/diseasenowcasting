@@ -1,7 +1,6 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/404.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/LICENSE-text.html</loc></url>
-<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/REVISION_CONFIRMATION_MODEL.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/SKILL.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/articles/Benchmark.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.html</loc></url>
@@ -9,11 +8,11 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/articles/LLM_Usage.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/articles/Nowcasting_at_the_start_of_an_Epidemic.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/articles/Revision_processes.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/articles/Understanding_Priors.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/articles/index.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/articles/introduction.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/authors.html</loc></url>
-<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/diseasenowcasting-tidy-spec.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/index.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/news/index.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.html</loc></url>
@@ -22,8 +21,8 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/best_model_name.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/best_score.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/comparison_scores.html</loc></url>
-<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/confirmation_process.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/covid_colombia.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/cumulative_process.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_delay.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/custom_epidemic.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/default_priors.html</loc></url>
@@ -39,13 +38,15 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/likelihood.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/load_nowcast.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/model.html</loc></url>
-<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/model_parameters.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_diagnostic.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_twostage.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/parameters.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/prepare_data.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/priors.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/reexports.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_delay.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_process.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/sample.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/save_nowcast.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/score.html</loc></url>
@@ -54,7 +55,6 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/surprise.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/surprise.list.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/theme_diseasenowcasting.html</loc></url>
-<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/tidy.nowcast.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_delay.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/validate_custom_epidemic.html</loc></url>
 </urlset>

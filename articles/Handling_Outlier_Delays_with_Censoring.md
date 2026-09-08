@@ -23,7 +23,7 @@ In general the workflow is:
     outliers and which correspond to true values.
 
 4.  The
-    [`censor_delays_above()`](https://rodrigozepeda.github.io/tbl.now/reference/censor_delays_above.html)
+    [`censor_reporting_delays_above()`](https://rodrigozepeda.github.io/tbl.now/reference/censoring.html)
     function turns extreme delays into upper bounds.
 
 5.  Model is re-updated using the censored data consequently improving
@@ -131,8 +131,8 @@ nc_updated <- update(initial_ncast, new_data_tbl)
 #>   expects (P(D >= d) = 0.00055).
 #> ! Surprising reporting delay of 99 days (1 report): longer than the model
 #>   expects (P(D >= d) = 0.00087).
-#> ℹ If these are outliers, treat them as censored with `censor_delays_above()`
-#>   and re-fit.
+#> ℹ If these are outliers, treat them as censored with
+#>   `tbl.now::censor_reporting_delays_above()` and re-fit.
 #> ℹ See all flagged delays with `extreme_values(nc)`.
 ```
 
@@ -167,41 +167,41 @@ We follow the warning’s advice: we **flag as censored** every report
 whose delay exceeds a sensible bound (here 99 days as reported by
 [`extreme_values()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/extreme_values.md)).
 The function
-[`censor_delays_above()`](https://rodrigozepeda.github.io/tbl.now/reference/censor_delays_above.html)
-works by setting `.is_censored = TRUE` in the `tbl_now` for reports
+[`censor_reporting_delays_above()`](https://rodrigozepeda.github.io/tbl.now/reference/censoring.html)
+works by setting the report-censoring flag in the `tbl_now` for reports
 greater than the `max_delay`. Extreme delays are thus turned into upper
 bounds. The
 [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
-then reads the `.is_censored` flag automatically.
+then reads the `.is_censored_report` flag automatically.
 
 ``` r
 
-new_data_tbl_censored <- censor_delays_above(new_data_tbl, max_delay = 99)
+new_data_tbl_censored <- tbl.now::censor_reporting_delays_above(new_data_tbl, max_delay = 99)
 
-#Adds column `.is_censored`:
+# Adds column `.is_censored_report`:
 new_data_tbl_censored
 ```
 
     #> # A tibble:  7,798 × 8
     #> # Data type: "count-incidence"
     #> # Frequency: Event: `days` | Report: `days`
-    #>    .is_censored  notification_date diagnosis_date sex          n .event_num
-    #>    <lgl>         <date>            <date>         <chr>    <int>      <dbl>
-    #>    [is_censored] [event_date]      [report_date]  [...]  [cases]      [...]
-    #>  1 FALSE         2020-03-02        2020-03-06     Female       1          0
-    #>  2 FALSE         2020-03-03        2020-03-14     Female       1          1
-    #>  3 FALSE         2020-03-06        2020-03-09     Male         1          4
-    #>  4 FALSE         2020-03-07        2020-03-09     Female       1          5
-    #>  5 FALSE         2020-03-08        2020-03-11     Female       2          6
-    #>  6 FALSE         2020-03-09        2020-03-11     Female       1          7
-    #>  7 FALSE         2020-03-09        2020-03-11     Male         2          7
-    #>  8 FALSE         2020-03-10        2020-03-11     Female       1          8
-    #>  9 FALSE         2020-03-10        2020-03-12     Female       2          8
-    #> 10 FALSE         2020-03-10        2020-03-13     Male         1          8
+    #>    .is_censored_report  notification_date diagnosis_date sex        n .event_num
+    #>    <lgl>                <date>            <date>         <chr>  <int>      <dbl>
+    #>    [is_censored_report] [event_date]      [report_date]  [...]  [cas…      [...]
+    #>  1 FALSE                2020-03-02        2020-03-06     Female     1          0
+    #>  2 FALSE                2020-03-03        2020-03-14     Female     1          1
+    #>  3 FALSE                2020-03-06        2020-03-09     Male       1          4
+    #>  4 FALSE                2020-03-07        2020-03-09     Female     1          5
+    #>  5 FALSE                2020-03-08        2020-03-11     Female     2          6
+    #>  6 FALSE                2020-03-09        2020-03-11     Female     1          7
+    #>  7 FALSE                2020-03-09        2020-03-11     Male       2          7
+    #>  8 FALSE                2020-03-10        2020-03-11     Female     1          8
+    #>  9 FALSE                2020-03-10        2020-03-12     Female     2          8
+    #> 10 FALSE                2020-03-10        2020-03-13     Male       1          8
     #> # ────────────────────────────────────────────────────────────────────────────────
     #> # Now: 2020-09-01 | Event date: "notification_date" | Report date:
     #> # "diagnosis_date"
-    #> # Right-censored indicator: ".is_censored"
+    #> # left-censored indicator: ".is_censored_report"
     #> # T. effects (lazy): [event_date] day_of_week
     #> # ────────────────────────────────────────────────────────────────────────────────
     #> # ℹ 7,788 more rows
@@ -222,12 +222,12 @@ literally.
 #Previous
 coef(nc_updated)
 #>     delay_mu  delay_sigma       phi_nb mu_intercept log_gp_alpha   log_gp_ell 
-#>    2.2038885    9.4014684    0.1163241    7.6319443    1.2491609   -1.6613317
+#>    2.2038885    9.4014684    0.1163514    7.6301597    1.2491421   -1.6613061
 
 #Updated
 coef(nc_updated_censored)
 #>     delay_mu  delay_sigma       phi_nb mu_intercept log_gp_alpha   log_gp_ell 
-#>   2.21249391   9.39874394   0.07725975   7.65454383   1.23644661  -1.63696766
+#>   2.21249391   9.39874394   0.07725793   7.65705063   1.23662511  -1.63723758
 ```
 
 Which also affects predictions:
@@ -238,37 +238,37 @@ Which also affects predictions:
 pred_previous <- predict(nc_updated) 
 summary(pred_previous) |> tail(6)
 #>         mean  median       sd      mad     q2.5      q5    q10     q25     q50
-#> 179 10694.38 10202.0 2525.602 1999.286 7298.875 7722.60 8170.4 9003.25 10202.0
-#> 180 11044.44 10541.5 2753.292 2278.015 7164.925 7549.70 8164.9 9216.75 10541.5
-#> 181 10766.30 10208.5 3308.333 2589.361 6085.425 6562.80 7296.4 8657.00 10208.5
-#> 182 10596.68  9971.0 3738.150 3088.997 5263.875 5877.65 6580.8 8134.75  9971.0
-#> 183 12537.80 11967.5 3945.864 3450.010 6641.750 7303.90 8241.4 9812.25 11967.5
-#> 184 12239.32 11696.5 4210.472 3697.604 5496.275 6451.40 7582.3 9492.75 11696.5
-#>          q75     q90      q95    q97.5 .event_num
-#> 179 11811.00 13767.7 15241.10 16647.15        178
-#> 180 12341.50 14464.3 16057.75 17662.00        179
-#> 181 12261.25 14508.5 16688.35 18763.27        180
-#> 182 12366.00 15045.5 17181.30 19415.30        181
-#> 183 14551.25 17436.4 19613.40 22166.62        182
-#> 184 14515.50 17494.0 19793.55 21752.22        183
+#> 179 10621.87 10208.5 2436.004 1943.689 7263.625 7627.00 8088.7 9011.25 10208.5
+#> 180 11158.63 10642.0 2840.630 2311.373 6995.325 7543.15 8182.7 9257.00 10642.0
+#> 181 10851.00 10266.0 3303.548 2703.521 6074.425 6688.90 7413.9 8647.50 10266.0
+#> 182 10566.95  9995.0 3505.949 3057.862 5240.650 5922.15 6687.5 8154.00  9995.0
+#> 183 12605.03 12043.0 3992.945 3344.004 6608.850 7502.15 8366.4 9973.50 12043.0
+#> 184 12238.81 11649.0 4321.819 3662.763 5719.650 6552.60 7448.7 9342.50 11649.0
+#>          q75     q90      q95    q97.5 .event_num event_date
+#> 179 11674.25 13639.3 15143.35 16549.02        178 2020-08-27
+#> 180 12493.00 14904.3 16391.60 18002.75        179 2020-08-28
+#> 181 12349.75 14836.7 17059.35 19110.97        180 2020-08-29
+#> 182 12415.00 14976.4 17010.30 18923.38        181 2020-08-30
+#> 183 14481.00 17553.6 19772.10 22790.27        182 2020-08-31
+#> 184 14284.00 17821.2 19995.90 22310.22        183 2020-09-01
 
 #Updated
 pred_censored <- predict(nc_updated_censored)
 summary(pred_censored) |> tail(6)
-#>         mean  median       sd      mad     q2.5      q5    q10     q25     q50
-#> 179 10718.00 10238.5 2400.787 1929.604 7345.550 7744.95 8176.3 9107.00 10238.5
-#> 180 11225.55 10683.5 2956.454 2446.290 7121.725 7622.90 8138.5 9212.25 10683.5
-#> 181 10836.18 10305.5 3094.822 2871.055 6155.900 6692.35 7459.9 8652.75 10305.5
-#> 182 10870.68 10148.0 3748.603 3274.322 5500.950 6123.15 6883.6 8243.50 10148.0
-#> 183 12600.18 12041.0 4071.793 3629.405 6577.825 7185.80 8099.4 9840.50 12041.0
-#> 184 12339.74 11799.0 4365.927 3799.904 5565.925 6421.65 7618.6 9373.75 11799.0
-#>          q75     q90      q95    q97.5 .event_num
-#> 179 11832.00 13970.7 15453.65 16619.03        178
-#> 180 12632.00 14748.2 16619.90 18734.40        179
-#> 181 12552.50 14827.4 16672.00 18195.77        180
-#> 182 12803.25 15822.6 17725.55 19685.60        181
-#> 183 14787.50 17702.7 19935.70 22050.37        182
-#> 184 14546.75 17657.5 20027.95 22402.47        183
+#>         mean  median       sd      mad     q2.5      q5    q10      q25     q50
+#> 179 10745.81 10445.0 2322.839 2114.188 7323.950 7671.65 8163.8  9095.75 10445.0
+#> 180 11119.24 10652.5 2771.554 2298.771 7045.800 7596.85 8096.9  9237.75 10652.5
+#> 181 10900.04 10327.5 3253.262 2767.273 5947.975 6803.55 7457.9  8660.00 10327.5
+#> 182 10794.08 10288.0 3545.292 3191.296 5440.875 6073.00 6883.8  8306.00 10288.0
+#> 183 12787.52 12174.0 4020.706 3564.912 6748.600 7420.50 8339.8 10026.50 12174.0
+#> 184 12375.19 11851.0 4167.569 3812.506 5582.525 6654.85 7794.3  9491.25 11851.0
+#>          q75     q90      q95    q97.5 .event_num event_date
+#> 179 11967.25 13643.8 15006.40 16232.67        178 2020-08-27
+#> 180 12417.75 14742.6 16143.50 17705.32        179 2020-08-28
+#> 181 12516.00 14969.0 16853.50 19175.27        180 2020-08-29
+#> 182 12710.00 15118.3 16875.15 18630.30        181 2020-08-30
+#> 183 14901.50 17901.3 20192.50 22214.62        182 2020-08-31
+#> 184 14655.75 17629.5 19624.75 22286.75        183 2020-09-01
 ```
 
 ## 4) Does it nowcast better? Backtest
@@ -295,8 +295,8 @@ rbind(
   censored = score(bt_cens,  report = F)[,c("wis","coverage_50","coverage_90")]
 )
 #>               wis coverage_50 coverage_90
-#> plain    211.3629         0.5         0.5
-#> censored 206.6438         0.5         0.5
+#> plain    196.0584         0.5         0.5
+#> censored 206.6658         0.5         0.5
 ```
 
 Censoring these outlier delays result in a **lower (better) WIS** and a
@@ -317,8 +317,9 @@ In general the workflow is:
     correspond to true values. This has to be done by a human as no
     automated system will know when something flagged as noise is real.
 
-4.  Use `censor_delays_above(tn, bound)` turning the delays into an
-    upper bound. Or modify the `tbl_now` directly (column `is_censored`)
+4.  Use `tbl.now::censor_reporting_delays_above(tn, bound)` to turn the
+    delays into an upper bound. Or modify the `tbl_now` directly (column
+    `is_censored`)
 
 5.  Re-fit -\> the delay distribution is no longer distorted.
 

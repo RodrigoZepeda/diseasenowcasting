@@ -47,7 +47,7 @@
 
     <a class="navbar-brand me-2" href="index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -218,7 +218,7 @@
 </tbody>
 </table>
 </div>
-<p><sub><sup><b>†</b></sup><em>Arbitrary</em> means you supply your own custom R function: any distribution for the delay, any function <code>f(t)</code> for the epidemic process (not just a choice from a built-in menu). <code>epinowcast</code> is very flexible through parametric families and model formulas, but does not take arbitrary user-defined functions. <sup><b>‡</b></sup><code>NobBS</code> requires JAGS and <code>epinowcast</code> requires CmdStan (an external Stan toolchain); <code>nowcaster</code> runs entirely in R but depends on the (non-CRAN) <code>INLA</code> package. <sup><b>§</b></sup><code>nowcaster</code> stratifies by age/region structure only, not arbitrary user-defined strata; <code>diseasenowcasting</code> allows any combination of strata columns. <sup>🚧</sup> In development for <code>diseasenowcasting</code> (extending a nowcast into a forward forecast / scenario projection). Counts that revise <em>downward</em> (e.g. a positive later re-classified as negative) are supported from version 2.0.0 via <code><a href="reference/confirmation_process.html">confirmation_process()</a></code> — see below. </sub></p>
+<p><sub><sup><b>†</b></sup><em>Arbitrary</em> means you supply your own custom R function: any distribution for the delay, any function <code>f(t)</code> for the epidemic process (not just a choice from a built-in menu). <code>epinowcast</code> is very flexible through parametric families and model formulas, but does not take arbitrary user-defined functions. <sup><b>‡</b></sup><code>NobBS</code> requires JAGS and <code>epinowcast</code> requires CmdStan (an external Stan toolchain); <code>nowcaster</code> runs entirely in R but depends on the (non-CRAN) <code>INLA</code> package. <sup><b>§</b></sup><code>nowcaster</code> stratifies by age/region structure only, not arbitrary user-defined strata; <code>diseasenowcasting</code> allows any combination of strata columns. <sup>🚧</sup> In development for <code>diseasenowcasting</code> (extending a nowcast into a forward forecast / scenario projection). Counts that revise <em>downward</em> (e.g. a positive later re-classified as negative) are supported from version 2.0.0 via <code><a href="reference/revision_process.html">revision_process()</a></code> — see below. </sub></p>
 </div>
 <div class="section level2">
 <h2 id="installing">Installing<a class="anchor" aria-label="anchor" href="#installing"></a>
@@ -308,7 +308,7 @@
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/score.html">score</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                     model      wis overprediction underprediction dispersion</span></span>
-<span><span class="co">#&gt; 1       HSGP/nb/LogNormal 11.05991              0        6.722222   4.337685</span></span>
+<span><span class="co">#&gt; 1       HSGP/nb/LogNormal 11.40569              0        7.240741   4.164954</span></span>
 <span><span class="co">#&gt; 2 AR1/nb/GeneralizedGamma 11.54056              0        8.203704   3.336852</span></span>
 <span><span class="co">#&gt;   coverage_50 coverage_90       ape      mse n</span></span>
 <span><span class="co">#&gt; 1           0           1 0.7115873 1139.417 3</span></span>
@@ -337,15 +337,15 @@
 <span><span class="co"># Get the scores for all the models</span></span>
 <span><span class="fu"><a href="reference/comparison_scores.html">comparison_scores</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                      model      wis overprediction underprediction dispersion</span></span>
-<span><span class="co">#&gt; 1        HSGP/nb/Dirichlet 8.295708     0.06666667        5.147778   3.081264</span></span>
-<span><span class="co">#&gt; 2        HSGP/nb/LogNormal 8.448542     0.06666667        5.220000   3.161875</span></span>
-<span><span class="co">#&gt; 3         AR1/nb/Dirichlet 8.512125     0.06666667        5.819444   2.626014</span></span>
+<span><span class="co">#&gt; 1        HSGP/nb/Dirichlet 8.256750     0.06666667        5.097778   3.092306</span></span>
+<span><span class="co">#&gt; 2        HSGP/nb/LogNormal 8.384931     0.06666667        5.236667   3.081597</span></span>
+<span><span class="co">#&gt; 3         AR1/nb/Dirichlet 8.580958     0.06666667        5.891667   2.622625</span></span>
 <span><span class="co">#&gt; 4 HSGP/nb/GeneralizedGamma 8.624472     0.06666667        5.330000   3.227806</span></span>
 <span><span class="co">#&gt; 5         AR1/nb/LogNormal 8.916250     0.05555556        5.916111   2.944583</span></span>
 <span><span class="co">#&gt;   coverage_50 coverage_90       ape   mse  n</span></span>
-<span><span class="co">#&gt; 1         0.3         0.9 0.7641435 676.1 10</span></span>
+<span><span class="co">#&gt; 1         0.3         0.9 0.7627546 667.4 10</span></span>
 <span><span class="co">#&gt; 2         0.2         0.9 0.7904566 664.6 10</span></span>
-<span><span class="co">#&gt; 3         0.0         0.8 0.7887334 650.7 10</span></span>
+<span><span class="co">#&gt; 3         0.0         0.8 0.7998651 666.8 10</span></span>
 <span><span class="co">#&gt; 4         0.1         0.9 0.7989751 738.0 10</span></span>
 <span><span class="co">#&gt; 5         0.1         0.8 0.7658455 714.1 10</span></span>
 <span><span class="co">#&gt;  [ reached 'max' / getOption("max.print") -- omitted 4 rows ]</span></span>
@@ -357,7 +357,7 @@
 <div class="section level2">
 <h2 id="counts-that-can-revise-downward-count-cumulative-data">Counts that can revise downward (count-cumulative data)<a class="anchor" aria-label="anchor" href="#counts-that-can-revise-downward-count-cumulative-data"></a>
 </h2>
-<p>Some surveillance streams report a <strong>running cumulative total</strong> for each event-time that is re-reported over time and can be revised <strong>downward</strong> as well as upward — for example when a suspected case is later re-classified as negative. The <a href="https://github.com/cdcepi/FluSight-forecast-hub" class="external-link">FluSight</a> influenza hospitalisation data shipped with <code>tbl.now</code> is one such stream. <code>diseasenowcasting</code> handles these with a <strong>confirmation process</strong>: attach <code><a href="reference/confirmation_process.html">confirmation_process()</a></code> to your <code><a href="reference/model.html">model()</a></code> and <code><a href="reference/nowcast.html">nowcast()</a></code> automatically switches to the signed-increment (Skellam / SkNB) likelihood when the data are <code>"count-cumulative"</code>.</p>
+<p>Some surveillance streams report a <strong>running cumulative total</strong> for each event-time that is re-reported over time and can be revised <strong>downward</strong> as well as upward — for example when a suspected case is later re-classified as negative. The <a href="https://github.com/cdcepi/FluSight-forecast-hub" class="external-link">FluSight</a> influenza hospitalisation data shipped with <code>tbl.now</code> is one such stream. <code>diseasenowcasting</code> handles these with a <strong>revision process</strong>: attach <code><a href="reference/revision_process.html">revision_process()</a></code> to your <code><a href="reference/model.html">model()</a></code> and <code><a href="reference/nowcast.html">nowcast()</a></code> automatically switches to the signed-increment (Skellam / SkNB) likelihood when the data are <code>"count-cumulative"</code>.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">flusight</span>, package <span class="op">=</span> <span class="st">"tbl.now"</span><span class="op">)</span></span>
 <span></span>
@@ -378,7 +378,7 @@
 <span>  likelihood   <span class="op">=</span> <span class="fu"><a href="reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  epidemic     <span class="op">=</span> <span class="fu"><a href="reference/epidemic_process.html">ar1_epidemic</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  delay        <span class="op">=</span> <span class="fu"><a href="reference/delay_process.html">lognormal_delay</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  confirmation <span class="op">=</span> <span class="fu"><a href="reference/confirmation_process.html">confirmation_process</a></span><span class="op">(</span><span class="op">)</span>   <span class="co"># &lt;- models the up- and down-revisions</span></span>
+<span>  cumulative <span class="op">=</span> <span class="fu"><a href="reference/cumulative_process.html">cumulative_process</a></span><span class="op">(</span><span class="op">)</span>   <span class="co"># &lt;- models the up- and down-revisions</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">flu_ncast</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">flu_tbl</span>, <span class="va">flu_model</span>, n_draws <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
@@ -388,7 +388,7 @@
 <em>Confirmation nowcast for cumulative influenza hospitalisations in California.</em>
 </p>
 </div>
-<p>The confirmation probability <code>p</code> — the chance a report is genuine and never retracted — is estimated with a strong data-informed prior by default; pass <code>confirmation_process(p = 0.98)</code> to hold it fixed, or your own <code><a href="reference/priors.html">beta_prior()</a></code> to change the prior. For several locations at once, declare the location column as <code>strata</code>: a single stratified <code><a href="reference/nowcast.html">nowcast()</a></code> then shares the delay and confirmation structure across locations (which is both faster and, on FluSight, sharper than a separate fit per location).</p>
+<p>The confirmation probability <code>p</code> — the chance a report is genuine and never retracted — is estimated with a strong data-informed prior by default; pass <code>revision_process(p = 0.98)</code> to hold it fixed, or your own <code><a href="reference/priors.html">beta_prior()</a></code> to change the prior. For several locations at once, declare the location column as <code>strata</code>: a single stratified <code><a href="reference/nowcast.html">nowcast()</a></code> then shares the delay and confirmation structure across locations (which is both faster and, on FluSight, sharper than a separate fit per location).</p>
 </div>
 <div class="section level2">
 <h2 id="handling-extreme-delays">Handling extreme delays<a class="anchor" aria-label="anchor" href="#handling-extreme-delays"></a>
@@ -423,7 +423,7 @@
 <code class="sourceCode R"><span><span class="fu"><a href="reference/save_nowcast.html">save_nowcast</a></span><span class="op">(</span><span class="va">ncast</span>, <span class="st">"dengue_nowcast.rds"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">restored</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/load_nowcast.html">load_nowcast</a></span><span class="op">(</span><span class="st">"dengue_nowcast.rds"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">restored</span><span class="op">)</span>               <span class="co"># predict() / autoplot() / coef() / tidy() / model_parameters() all work</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">restored</span><span class="op">)</span>               <span class="co"># predict() / autoplot() / coef() / parameters() all work</span></span>
 <span><span class="fu"><a href="reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">restored</span><span class="op">@</span><span class="va">data</span>, <span class="va">restored</span><span class="op">@</span><span class="va">model</span><span class="op">)</span>   <span class="co"># or re-fit from the bundled data</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -504,6 +504,7 @@
 <li><a href="https://app.codecov.io/gh/RodrigoZepeda/diseasenowcasting" class="external-link"><img src="https://codecov.io/gh/RodrigoZepeda/diseasenowcasting/graph/badge.svg" alt="Codecov test coverage"></a></li>
 <li><a href="https://github.com/RodrigoZepeda/diseasenowcasting/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/RodrigoZepeda/diseasenowcasting/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
 <li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
+<li><a href="https://RodrigoZepeda.r-universe.dev/diseasenowcasting" class="external-link"><img src="https://RodrigoZepeda.r-universe.dev/diseasenowcasting/badges/version" alt="R-universe version"></a></li>
 </ul>
 </div>
 

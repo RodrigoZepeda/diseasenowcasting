@@ -13,6 +13,8 @@
   diseasenowcasting](https://rodrigozepeda.github.io/diseasenowcasting/articles/Understanding_Priors.md):
 - [Handling Outlier Delays with
   Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.md):
+- [Revision processes: when a report is not yet a
+  case](https://rodrigozepeda.github.io/diseasenowcasting/articles/Revision_processes.md):
 
 ### Applications
 

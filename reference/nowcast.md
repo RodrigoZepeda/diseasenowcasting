@@ -49,10 +49,10 @@ nowcast(
 
 - type:
 
-  `"two_stage"` (default; delay-imputation pooling), `"one_stage"` (a
-  single joint fit), or `"auto"` (per delay: dirichlet one-stage, all
-  other delays two-stage – the better choice for each in our
-  experiments).
+  `"two_stage"` (default; reporting-delay imputation pooling),
+  `"one_stage"` (a single joint fit), or `"auto"` (per reporting-delay
+  family: Dirichlet one-stage, all other delays two-stage – the better
+  choice for each in our experiments).
 
 - now:
 
@@ -91,7 +91,7 @@ nowcast(
   `"none"` (or `"None"`) to disable, or pre-attach your own effects to
   the `tbl_now` with
   [`tbl.now::add_temporal_effects()`](https://rodrigozepeda.github.io/tbl.now/reference/add_temporal_effects.html) +
-  [`tbl.now::compute_temporal_effects()`](https://rodrigozepeda.github.io/tbl.now/reference/compute_temporal_effects.html).
+  [`tbl.now::compute_temporal_effects()`](https://rodrigozepeda.github.io/tbl.now/reference/add_temporal_effects.html).
 
 - prior_only:
 
@@ -119,6 +119,41 @@ nowcast(
 ## Value
 
 A `nowcast_class` object.
+
+## Revision processes
+
+A revision process – reports that are later **confirmed** or
+**retracted** – is a row-level mechanism for linelist and
+count-incidence data. It is detected from the data, not requested by an
+argument. `nowcast()` attaches one when the `tbl_now` carries
+`revision_date` / `revision_type` (see
+[`tbl.now::add_revision_date()`](https://rodrigozepeda.github.io/tbl.now/reference/add.html)).
+The mode (`confirmation_only` / `retraction_only` / `both`) is read from
+`unique(revision_type)` over the full data, so it is stable across as-of
+dates. Configure `p` and the lag with
+`model(revision = revision_process(...))`, which always wins over the
+detected default; assert the mode with `revision_process(mode = )`.
+Revision-date censoring is likewise data metadata: set
+`is_censored_revision` when constructing the `tbl_now`. There is no
+`nowcast()` column-name argument for it. Count-cumulative revisions
+instead use
+[`cumulative_process()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/cumulative_process.md)
+and do not estimate a separate revision probability `p`.
+
+## One-stage and two-stage revision
+
+With `type = "one_stage"`, the epidemic process, event-to-report delay,
+report-to-revision delay, and revision probability `p` are estimated in
+one joint objective. With `type = "two_stage"`, Stage 1 estimates the
+event-to-report delay and draws `K` imputations from its Laplace
+approximation. Each Stage-2 fit conditions on one imputed
+reporting-delay distribution and jointly estimates the epidemic process,
+revision delay, and `p`. Posterior draws within a Stage-2 fit propagate
+revision uncertainty; pooling across the fits additionally propagates
+reporting-delay uncertainty. This is the same stepwise boundary used by
+the original event-to-report model: `two_stage` separates the reporting
+process from the downstream model, while the revision block remains
+downstream of a report.
 
 ## Overdispersion (`phi`)
 

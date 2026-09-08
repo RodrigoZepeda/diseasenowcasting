@@ -230,16 +230,16 @@ comparison_scores(nc)  # the ranked scoreboard
 #>               model      wis overprediction underprediction dispersion
 #> 1 HSGP/nb/LogNormal 18.60444              0        6.000000  12.604444
 #> 2  SIR/nb/Dirichlet 21.49708              0        9.388889  12.108194
-#> 3 HSGP/nb/Dirichlet 22.08194              0       13.333333   8.748611
+#> 3 HSGP/nb/Dirichlet 22.09319              0       13.388889   8.704306
 #> 4  SIR/nb/LogNormal 22.12306              0       12.000000  10.123056
-#> 5  AR1/nb/Dirichlet 25.44486              0       16.388889   9.055972
+#> 5  AR1/nb/Dirichlet 24.27819              0       14.944444   9.333750
 #> 6  AR1/nb/LogNormal 28.04625              0       20.500000   7.546250
 #>   coverage_50 coverage_90       ape     mse n
 #> 1           1           1 0.5346535 2916.00 1
 #> 2           0           1 0.6386139 4160.25 1
 #> 3           0           1 0.6138614 3844.00 1
 #> 4           0           1 0.5643564 3249.00 1
-#> 5           0           1 0.7772277 6162.25 1
+#> 5           0           1 0.7673267 6006.25 1
 #> 6           0           1 0.7970297 6480.25 1
 best_score(nc)         # just the winner's row
 #>               model      wis overprediction underprediction dispersion
