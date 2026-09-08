@@ -61,10 +61,9 @@ Suggests:
     almanac,
     RTMBode
 Additional_repositories:
-    https://kaskr.r-universe.dev
-Remotes:
-    RodrigoZepeda/tbl.now,
-    DavisVaughan/almanac
+    https://kaskr.r-universe.dev,
+    https://davisvaughan.r-universe.dev,
+    https://rodrigozepeda.r-universe.dev
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 LazyData: true
