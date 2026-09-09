@@ -1,8 +1,8 @@
 # Load a nowcast saved with [`save_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/save_nowcast.md)
 
-Restores a `nowcast_class` from a bundle written by
+Restores the common `tbl_nowcast` result from a bundle written by
 [`save_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/save_nowcast.md).
-The result works with
+The native fit is restored into `@fit`. The result works with
 [`predict()`](https://rdrr.io/r/stats/predict.html),
 [`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html),
 [`coef()`](https://rdrr.io/r/stats/coef.html),
@@ -38,7 +38,8 @@ load_nowcast(file, rebuild = FALSE)
 
 ## Value
 
-A `nowcast_class` object.
+A diseasenowcasting subclass of
+[tbl.now::tbl_nowcast](https://rodrigozepeda.github.io/tbl.now/reference/tbl_nowcast.html).
 
 ## See also
 

@@ -1,28 +1,26 @@
-# The metric `auto_nowcast()` used to pick the winner
+# Fitting times recorded by `auto_nowcast()`
 
-The metric
+Fitting times recorded by
 [`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
-used to pick the winner
 
 ## Usage
 
 ``` r
-selection_metric(nc)
+selection_timings(nc)
 ```
 
 ## Arguments
 
 - nc:
 
-  A `nowcast_class` returned by
+  A result returned by
   [`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md).
 
 ## Value
 
-The scoringutils score-column name supplied to
-[`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md).
-Consult the result's `relative_score` comparison field to determine
-whether its relative skill was used.
+A list with `backtest` (one row per attempted retrospective fit),
+`refit` (the full-data refit attempts), and `total_seconds` for the
+complete automatic-selection call.
 
 ## See also
 

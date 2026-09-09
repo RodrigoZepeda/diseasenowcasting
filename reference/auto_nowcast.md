@@ -4,10 +4,9 @@ Takes a `tbl_now` and **chooses a model for you**: it builds a grid of
 candidate models (epidemic process x reporting-delay family) sized to
 how much data you have,
 [`backtest()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.md)s
-them over several historical dates,
-[`score()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md)s
-them, keeps the best one, and refits it on the full data. The returned
-object is an ordinary
+them over several historical dates, converts the canonical backtest to a
+scoringutils forecast, keeps the best one, and refits it on the full
+data. The returned object is an ordinary
 [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
 result (so
 [`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html),
@@ -19,7 +18,9 @@ the ranked scoreboard attached in its `comparison` slot.
 ``` r
 auto_nowcast(
   data,
-  metric = c("wis", "ape", "mse", "coverage", "coverage_50", "coverage_90"),
+  metric = "wis",
+  relative_score = TRUE,
+  tie_break = c("epidemic_priority", "fastest"),
   type = c("auto", "two_stage", "one_stage"),
   sir = NULL,
   ar = NULL,
@@ -50,14 +51,25 @@ auto_nowcast(
 
 - metric:
 
-  Selection criterion. `"wis"` (default, lowest Weighted Interval
-  Score), `"ape"` (lowest absolute percentage error of the median),
-  `"mse"` (lowest mean squared error), or one of the calibration
-  criteria, which pick the model whose empirical interval coverage is
-  closest to nominal: `"coverage_50"` (smallest `|0.50 - coverage_50|`),
-  `"coverage_90"` (smallest `|0.90 - coverage_90|`), or `"coverage"`
-  (smallest `|0.50 - coverage_50| + |0.90 - coverage_90|`, i.e. both
-  intervals jointly).
+  A single score column produced by
+  [`scoringutils::score()`](https://epiforecasts.io/scoringutils/reference/score.html)
+  to minimise. Default `"wis"`.
+
+- relative_score:
+
+  Logical. When `TRUE` (the default), select on the corresponding
+  relative skill from
+  [`scoringutils::add_relative_skill()`](https://epiforecasts.io/scoringutils/reference/add_relative_skill.html)
+  rather than on the raw mean score. This makes comparisons fair when
+  models are not all available for exactly the same targets.
+
+- tie_break:
+
+  How to break effectively equal selection scores. `"epidemic_priority"`
+  (default) prefers HSGP, then AR(1), then SIR, then a custom epidemic
+  process. `"fastest"` prefers the candidate with the lowest median
+  elapsed time per successful retrospective fit. The unused rule is
+  applied second, followed by candidate-grid order for determinism.
 
 - type:
 
@@ -148,10 +160,13 @@ auto_nowcast(
 
 ## Value
 
-A `nowcast_class` (as from
+A diseasenowcasting subclass of
+[tbl.now::tbl_nowcast](https://rodrigozepeda.github.io/tbl.now/reference/tbl_nowcast.html)
+(as from
 [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md))
-for the selected model, with the model-selection scoreboard in its
-`comparison` slot: `list(scores, chosen, metric, max_time)`.
+for the selected model, with the model-selection scoreboard retained on
+the diseasenowcasting subclass and its native fit:
+`list(scores, chosen, metric, relative_score, tie_break, timings, max_time)`.
 
 ## Details
 
@@ -193,9 +208,11 @@ Backtesting is the expensive step – set a
 
 ## See also
 
+[diseasenowcasting_workflows](https://rodrigozepeda.github.io/diseasenowcasting/reference/diseasenowcasting_workflows.md),
 [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md),
 [`backtest()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.md),
-[`score()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md)
+[`scoringutils::score()`](https://epiforecasts.io/scoringutils/reference/score.html),
+[`scoringutils::add_relative_skill()`](https://epiforecasts.io/scoringutils/reference/add_relative_skill.html)
 
 ## Examples
 
@@ -219,33 +236,46 @@ nc <- auto_nowcast(tn,
                    temporal_effects = "none")
 #> ℹ auto_nowcast: comparing 6 candidate models (1 likelihood x 3 epidemic
 #>   processes x 2 delays) over 2 backtest dates; max_time = 35.
-#> ℹ Running 12 backtest cells sequentially.
-#> • For a large grid, set a parallel plan first:
-#>   `future::plan(future::multisession, workers = N)`.
-#> ✔ auto_nowcast: selected HSGP/nb/LogNormal (best wis).
+#> ℹ Backtesting "SIR/nb/LogNormal" at 1990-12-17.
+#> ℹ Backtesting "SIR/nb/Dirichlet" at 1990-12-17.
+#> ℹ Backtesting "AR1/nb/LogNormal" at 1990-12-17.
+#> ℹ Backtesting "AR1/nb/Dirichlet" at 1990-12-17.
+#> ℹ Backtesting "HSGP/nb/LogNormal" at 1990-12-17.
+#> ℹ Backtesting "HSGP/nb/Dirichlet" at 1990-12-17.
+#> ℹ Backtesting "SIR/nb/LogNormal" at 1990-12-24.
+#> ℹ Backtesting "SIR/nb/Dirichlet" at 1990-12-24.
+#> ℹ Backtesting "AR1/nb/LogNormal" at 1990-12-24.
+#> ℹ Backtesting "AR1/nb/Dirichlet" at 1990-12-24.
+#> ℹ Backtesting "HSGP/nb/LogNormal" at 1990-12-24.
+#> ℹ Backtesting "HSGP/nb/Dirichlet" at 1990-12-24.
+#> ✔ auto_nowcast: selected HSGP/nb/LogNormal (best relative wis; ties by
+#>   epidemic_priority) in 7.41 seconds.
 # future::plan(future::sequential)
 best_model_name(nc)    # the winning model's label
 #> [1] "HSGP/nb/LogNormal"
 comparison_scores(nc)  # the ranked scoreboard
-#>               model      wis overprediction underprediction dispersion
-#> 1 HSGP/nb/LogNormal 18.60444              0        6.000000  12.604444
-#> 2  SIR/nb/Dirichlet 21.49708              0        9.388889  12.108194
-#> 3 HSGP/nb/Dirichlet 22.09319              0       13.388889   8.704306
-#> 4  SIR/nb/LogNormal 22.12306              0       12.000000  10.123056
-#> 5  AR1/nb/Dirichlet 24.27819              0       14.944444   9.333750
-#> 6  AR1/nb/LogNormal 28.04625              0       20.500000   7.546250
-#>   coverage_50 coverage_90       ape     mse n
-#> 1           1           1 0.5346535 2916.00 1
-#> 2           0           1 0.6386139 4160.25 1
-#> 3           0           1 0.6138614 3844.00 1
-#> 4           0           1 0.5643564 3249.00 1
-#> 5           0           1 0.7673267 6006.25 1
-#> 6           0           1 0.7970297 6480.25 1
+#> # A tibble: 6 × 16
+#>   model               wis overprediction underprediction dispersion     bias
+#>   <chr>             <dbl>          <dbl>           <dbl>      <dbl>    <dbl>
+#> 1 HSGP/nb/LogNormal 0.151         0.0132         0.0433      0.0941 -0.0424 
+#> 2 HSGP/nb/Dirichlet 0.371         0.0433         0.00377     0.324   0.0864 
+#> 3 SIR/nb/LogNormal  0.529         0.101          0.0580      0.370   0.00169
+#> 4 SIR/nb/Dirichlet  0.719         0.139          0.00753     0.572   0.103  
+#> 5 AR1/nb/Dirichlet  0.784         0.107          0.0179      0.659   0.0424 
+#> 6 AR1/nb/LogNormal  0.788         0.105          0.0733      0.609  -0.0314 
+#> # ℹ 10 more variables: interval_coverage_50 <dbl>, interval_coverage_90 <dbl>,
+#> #   ae_median <dbl>, wis_relative_skill <dbl>, median_fit_seconds <dbl>,
+#> #   total_fit_seconds <dbl>, successful_fits <int>, epidemic_priority <int>,
+#> #   grid_order <int>, selection_score <dbl>
 best_score(nc)         # just the winner's row
-#>               model      wis overprediction underprediction dispersion
-#> 1 HSGP/nb/LogNormal 18.60444              0               6   12.60444
-#>   coverage_50 coverage_90       ape  mse n
-#> 1           1           1 0.5346535 2916 1
+#> # A tibble: 1 × 16
+#>   model               wis overprediction underprediction dispersion    bias
+#>   <chr>             <dbl>          <dbl>           <dbl>      <dbl>   <dbl>
+#> 1 HSGP/nb/LogNormal 0.151         0.0132          0.0433     0.0941 -0.0424
+#> # ℹ 10 more variables: interval_coverage_50 <dbl>, interval_coverage_90 <dbl>,
+#> #   ae_median <dbl>, wis_relative_skill <dbl>, median_fit_seconds <dbl>,
+#> #   total_fit_seconds <dbl>, successful_fits <int>, epidemic_priority <int>,
+#> #   grid_order <int>, selection_score <dbl>
 selection_metric(nc)   # which metric chose it
 #> [1] "wis"
 winner <- best_model(nc)  # the model() object, to reuse elsewhere

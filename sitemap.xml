@@ -28,10 +28,12 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/default_priors.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/delay_process.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/diseasenowcasting-package.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/diseasenowcasting_workflows.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/dn_palette.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/epidemic_process.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/extreme_values.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/fit.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/fit_check.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/fix_param.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/index.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/infer_max_time.html</loc></url>
@@ -49,8 +51,8 @@
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/revision_process.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/sample.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/save_nowcast.html</loc></url>
-<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/score.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/selection_metric.html</loc></url>
+<url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/selection_timings.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/summarise_nowcast_matrix.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/surprise.html</loc></url>
 <url><loc>https://rodrigozepeda.github.io/diseasenowcasting/reference/surprise.list.html</loc></url>

@@ -12,7 +12,8 @@ fit(
   data,
   priors = NULL,
   init = NULL,
-  control = list(iter.max = 500, eval.max = 1000, rel.tol = 1e-09)
+  control = list(iter.max = 500, eval.max = 1000, rel.tol = 1e-09),
+  warn = TRUE
 )
 ```
 
@@ -41,6 +42,13 @@ fit(
 - control:
 
   `nlminb` control list.
+
+- warn:
+
+  If `TRUE`, warn when the returned joint fit does not pass the
+  optimizer adequacy checks. Internal warm-start and imputation fits set
+  this to `FALSE` and report only diagnostics for the fits that affect
+  the result.
 
 ## Value
 

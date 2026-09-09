@@ -1,6 +1,14 @@
-# Backtest one or more nowcast models across a set of as-of dates
+# Backtest one or more diseasenowcasting models
 
-Backtest one or more nowcast models across a set of as-of dates
+`backtest()` translates native
+[`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
+specifications into labelled
+[`tbl.now::engine_diseasenowcasting()`](https://rodrigozepeda.github.io/tbl.now/reference/nowcast_engines.html)
+specifications and delegates the full retrospective workflow to
+[`tbl.now::nowcast_backtest()`](https://rodrigozepeda.github.io/tbl.now/reference/nowcast_backtest.html).
+The returned object is therefore the common `nowcast_backtest` result
+used by `tbl.now` for tidying, forecast conversion, scoring, weighting,
+and ensembling.
 
 ## Usage
 
@@ -10,14 +18,18 @@ backtest(
   models = diseasenowcasting::model(),
   dates = NULL,
   type = c("two_stage", "one_stage", "auto"),
-  n_dates = 20L,
-  max_delay = NULL,
-  return_simulations = FALSE,
+  horizon = NULL,
+  n_dates = 4L,
   n_draws = 1000L,
   K = 25L,
   np_spread = 1,
-  recent = FALSE,
-  seed = sample.int(.Machine$integer.max, 1),
+  seed = NULL,
+  keep_draws = FALSE,
+  on_error = c("warn", "abort"),
+  verbose = TRUE,
+  truth_axis = NULL,
+  truth_type = NULL,
+  quantile_levels = tbl.now::nowcast_quantile_levels(),
   ...
 )
 ```
@@ -26,104 +38,95 @@ backtest(
 
 - data:
 
-  A `tbl_now` (the full data; its eventual counts are the truth).
+  A
+  [tbl.now::tbl_now](https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html)
+  holding the full data, including observations that arrived after the
+  retrospective nowcast dates.
 
 - models:
 
   A
   [`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
-  object or a list of them. With several models the backtest can rank
-  them (see
-  [`score()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md)).
+  or list of models. Names on the list become the canonical method
+  labels; unnamed models receive labels from their component names.
+  Labels must be unique.
 
 - dates:
 
-  A vector of as-of dates. If `NULL`, a default grid spanning the
-  observed range (interior points) is sampled.
+  Retrospective nowcast origins, passed as `now_dates` to
+  [`tbl.now::nowcast_backtest()`](https://rodrigozepeda.github.io/tbl.now/reference/nowcast_backtest.html).
 
 - type:
 
-  `"two_stage"` (default), `"one_stage"`, or `"auto"` (per delay:
-  dirichlet one-stage, all other delays two-stage).
+  `"two_stage"`, `"one_stage"`, or `"auto"`, passed to every
+  diseasenowcasting engine.
+
+- horizon:
+
+  Number of time units of hindsight used by `tbl.now` when
+  `dates = NULL`. `NULL` uses `4` for ordinary data and the largest
+  model settlement horizon for count-cumulative data (26 for its
+  automatic model).
 
 - n_dates:
 
-  If `dates` is `NULL`, how many to sample. Default 20.
-
-- max_delay:
-
-  Truth-completeness horizon (in event units). Event dates within
-  `max_delay` units of the last report do not yet have a fully observed
-  eventual count, so the backtest **excludes** them (their "truth" would
-  still be accruing). Default `NULL` uses the 99th percentile of the
-  observed reporting delays. Pass a number to override, or `Inf` to
-  evaluate every date regardless of completeness.
-
-- return_simulations:
-
-  If TRUE, also keep the pooled draw matrix per (date, model). Default
-  FALSE (summaries only: mean/median/sd/quantiles).
+  Number of automatic retrospective origins. Ignored when `dates` is
+  supplied. Default `4`.
 
 - n_draws:
 
-  Posterior draws per nowcast.
+  Posterior draws per fit.
 
 - K, np_spread:
 
-  Two-stage controls passed through.
-
-- recent:
-
-  When `dates` is `NULL`, choose the **most recent** `n_dates`
-  complete-truth as-of dates rather than spreading them across the whole
-  history (default `FALSE`). Useful when the backtest is meant to judge
-  how a model does on *recent* dynamics (e.g. for model selection ahead
-  of a present-day nowcast).
+  Native two-stage fitting controls passed to every engine.
 
 - seed:
 
-  Optional base RNG seed.
+  Optional base seed. `tbl.now` derives a stable seed for each
+  model/date fit from this value.
+
+- keep_draws:
+
+  Whether the canonical backtest retains posterior draws.
+
+- on_error:
+
+  Either `"warn"` to record and skip failed cells or `"abort"`.
+
+- verbose:
+
+  Whether to report progress.
+
+- truth_axis, truth_type:
+
+  Canonical scoring truth controls passed to
+  [`tbl.now::nowcast_backtest()`](https://rodrigozepeda.github.io/tbl.now/reference/nowcast_backtest.html).
+  When both are `NULL`, they follow the native estimand: reported totals
+  without a revision process, confirmed cases for confirmation/both
+  modes, and still-standing cases for retraction-only mode.
+
+- quantile_levels:
+
+  Quantile probabilities requested from every model.
 
 - ...:
 
-  Passed to
-  [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md).
-
-  A `tbl_now` carrying a revision process needs nothing extra: the
-  revision model is fitted at each as-of date, and the truth follows the
-  inferred mode: confirmed records for `confirmation_only` / `both`, and
-  records never retracted for `retraction_only` – the settled count the
-  model targets.
+  Additional arguments passed to every
+  [`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
+  fit through its engine specification.
 
 ## Value
 
-A `backtest_class` object.
+A
+[tbl.now::nowcast_backtest](https://rodrigozepeda.github.io/tbl.now/reference/nowcast_backtest.html)
+object.
 
-## Details
+## See also
 
-`backtest()` evaluates one nowcast per (as-of date x model) cell and
-these cells are **embarrassingly parallel**. The work is dispatched with
-future.apply, so parallelism is controlled by the future plan you set
-*before* calling `backtest()`:
-
-    library(future)
-    plan(multisession, workers = 4)   # 4 parallel R sessions
-    bt <- backtest(data, models, dates = my_dates)
-    plan(sequential)                  # back to serial when done
-
-With the default plan (`sequential`) the cells run one at a time. For a
-grid of many dates x models, `plan(multisession, workers = N)` (or
-`plan(multicore)` on Linux/macOS) gives a near-linear speed-up up to the
-number of physical cores. Each worker needs the package available, which
-is automatic for an installed package; with `devtools::load_all()` use
-`plan(multisession)` so workers re-load it.
-
-## Examples
-
-``` r
-if (interactive() && requireNamespace("tbl.now", quietly = TRUE)) {
-  # future::plan(future::multisession, workers = 4)   # opt in to parallelism
-  # bt <- backtest(my_tbl_now, list(model_a, model_b), dates = my_dates)
-  # future::plan("sequential")
-}
-```
+[diseasenowcasting_workflows](https://rodrigozepeda.github.io/diseasenowcasting/reference/diseasenowcasting_workflows.md)
+for the native/common ownership boundary;
+[`tbl.now::score_nowcast()`](https://rodrigozepeda.github.io/tbl.now/reference/score_nowcast.html),
+[`tbl.now::nowcast_weights()`](https://rodrigozepeda.github.io/tbl.now/reference/nowcast_weights.html),
+[`tbl.now::nowcast_ensemble()`](https://rodrigozepeda.github.io/tbl.now/reference/nowcast_ensemble.html),
+[`fit_check()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/fit_check.md)

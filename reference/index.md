@@ -6,7 +6,7 @@
   : Automatically select and fit the best nowcasting model
 
 - [`backtest()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.md)
-  : Backtest one or more nowcast models across a set of as-of dates
+  : Backtest one or more diseasenowcasting models
 
 - [`best_model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/best_model.md)
   :
@@ -55,6 +55,9 @@
   [`dirichlet_delay()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/delay_process.md)
   : Delay distribution for the Bayesian Nowcast
 
+- [`diseasenowcasting_workflows`](https://rodrigozepeda.github.io/diseasenowcasting/reference/diseasenowcasting_workflows.md)
+  : Native and cross-engine workflows
+
 - [`dn_palette()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/dn_palette.md)
   : diseasenowcasting colour palette
 
@@ -71,6 +74,9 @@
 
 - [`fit()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/fit.md)
   : Fit a nowcast model with the RTMB engine
+
+- [`fit_check()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/fit_check.md)
+  : Check RTMB optimizer diagnostics for a fitted nowcast
 
 - [`fix_param()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/fix_param.md)
   : Hard-fix a parameter in a prior bundle (treat as data, drop from
@@ -149,15 +155,18 @@
 - [`save_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/save_nowcast.md)
   : Save a fitted nowcast to disk
 
-- [`score()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md)
-  : Score a backtest: WIS, APE, MSE per model (and rank them)
-
 - [`selection_metric()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/selection_metric.md)
   :
 
   The metric
   [`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
   used to pick the winner
+
+- [`selection_timings()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/selection_timings.md)
+  :
+
+  Fitting times recorded by
+  [`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
 
 - [`summarise_nowcast_matrix()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/summarise_nowcast_matrix.md)
   : Quantile-table summary of a pooled nowcast draws matrix

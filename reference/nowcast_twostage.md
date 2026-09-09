@@ -94,5 +94,7 @@ nowcast_twostage(
 ## Value
 
 A list with `quantiles`, `median`, pooled `draws`, the `rung` used
-(`"multi"`, `"anchored"`, or `"onestage"`), and `n_samp` (imputations
-pooled).
+(`"multi"`, `"anchored"`, or `"onestage"`), `n_samp` (imputations
+pooled), and `fit_diagnostics`. The latter records the requested and
+retained imputation counts plus warm, Stage-1, fallback, exclusion, and
+retained-fit diagnostics.

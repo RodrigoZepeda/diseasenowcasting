@@ -2,8 +2,9 @@
 
 The single
 [`comparison_scores()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/comparison_scores.md)
-row belonging to the winning model – its WIS, APE, MSE and interval
-coverage – rather than the whole table.
+row belonging to the winning model, including its scoringutils metrics,
+selection score, and retrospective fit timing, rather than the whole
+table.
 
 ## Usage
 

@@ -27,7 +27,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -88,6 +88,27 @@ corresponds to when the case was registered in the system.
 Template Model Builder <a href="https://cran.r-project.org/web/packages/RTMB/index.html" class="external-link"><code>RTMB</code></a>)
 to infer the cases that have not yet been reported thus providing a
 prediction of the final number of cases.</p>
+<div class="section level2">
+<h2 id="native-modelling-and-the-shared-workflow">Native modelling and the shared workflow<a class="anchor" aria-label="anchor" href="#native-modelling-and-the-shared-workflow"></a>
+</h2>
+<p>Use <code>diseasenowcasting</code>’s native interface when specifying
+the statistical model: <code><a href="../reference/model.html">model()</a></code>, <code><a href="../reference/nowcast.html">nowcast()</a></code>, and
+<code><a href="../reference/auto_nowcast.html">auto_nowcast()</a></code> expose its epidemic, delay, likelihood,
+revision, and cumulative-process choices. Use <code><a href="../reference/fit_check.html">fit_check()</a></code>
+and <code><a href="../reference/nowcast_diagnostic.html">nowcast_diagnostic()</a></code> for diagnostics that are
+specifically about the RTMB fit.</p>
+<p>The returned object is already a <code><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_nowcast.html" class="external-link">tbl.now::tbl_nowcast</a></code>.
+Plotting, tidying, predictive scoring, ensembling, saving, and loading
+therefore use the common result directly. Likewise,
+<code><a href="../reference/backtest.html">backtest()</a></code> is a convenience for translating native
+<code><a href="../reference/model.html">model()</a></code> specifications into <code>tbl.now</code> engines;
+it returns a canonical <code>nowcast_backtest</code>, not a second
+native backtest class. That result can be passed directly to the
+scoringutils <code>as_forecast_quantile()</code>,
+<code><a href="https://rodrigozepeda.github.io/tbl.now/reference/score_nowcast.html" class="external-link">as_forecast_point()</a></code>, or <code>as_forecast_sample()</code>
+methods. See <code><a href="../reference/diseasenowcasting_workflows.html">?diseasenowcasting_workflows</a></code> for the full
+boundary and examples.</p>
+</div>
 <div class="section level2">
 <h2 id="your-data-the-tbl_now-format">Your data: the <code>tbl_now</code> format<a class="anchor" aria-label="anchor" href="#your-data-the-tbl_now-format"></a>
 </h2>
@@ -232,20 +253,20 @@ the errorbar has the 90% credible intervals.</em>
 <span></span>
 <span><span class="co">#This creates a summary of mean and quantiles</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">pred_dengue</span><span class="op">)</span> </span></code></pre></div>
-<pre><code><span><span class="co">#&gt;         mean median        sd     mad q2.5  q5 q10 q25 q50    q75 q90 q95 q97.5</span></span>
-<span><span class="co">#&gt; 154 108.4865    108  1.425424  1.4826  107 107 107 107 108 109.00 110 111   112</span></span>
-<span><span class="co">#&gt; 155  89.1460     89  2.332038  1.4826   86  86  87  87  89  90.00  92  93    95</span></span>
-<span><span class="co">#&gt; 156  68.0295     67  4.248489  2.9652   63  63  64  65  67  70.00  73  75    77</span></span>
-<span><span class="co">#&gt; 157  45.2005     44  6.878587  5.9304   36  37  38  40  44  48.00  54  58    63</span></span>
-<span><span class="co">#&gt; 158  39.9620     37 13.517874 10.3782   23  25  27  31  37  46.00  55  63    71</span></span>
-<span><span class="co">#&gt; 159  35.2170     32 18.017331 14.8260   12  14  17  23  32  43.25  57  69    80</span></span>
-<span><span class="co">#&gt;     .event_num stratum event_date</span></span>
-<span><span class="co">#&gt; 154         47   Total 1990-11-26</span></span>
-<span><span class="co">#&gt; 155         48   Total 1990-12-03</span></span>
-<span><span class="co">#&gt; 156         49   Total 1990-12-10</span></span>
-<span><span class="co">#&gt; 157         50   Total 1990-12-17</span></span>
-<span><span class="co">#&gt; 158         51   Total 1990-12-24</span></span>
-<span><span class="co">#&gt; 159         52   Total 1990-12-31</span></span></code></pre>
+<pre><code><span><span class="co">#&gt;         mean median        sd     mad q2.5  q5 q10 q25 q50 q75 q90    q95</span></span>
+<span><span class="co">#&gt; 154 108.6180    108  1.515990  1.4826  107 107 107 108 108 109 111 111.00</span></span>
+<span><span class="co">#&gt; 155  89.1175     89  2.426239  1.4826   86  86  87  87  89  90  92  93.00</span></span>
+<span><span class="co">#&gt; 156  68.2195     67  4.286083  2.9652   63  63  64  65  67  70  73  76.00</span></span>
+<span><span class="co">#&gt; 157  45.5855     44  7.797056  5.9304   36  37  38  41  44  49  55  58.05</span></span>
+<span><span class="co">#&gt; 158  40.4260     37 14.853681 10.3782   24  25  27  31  37  46  57  63.05</span></span>
+<span><span class="co">#&gt; 159  36.3720     32 18.817696 14.8260   12  14  17  24  32  44  59  70.00</span></span>
+<span><span class="co">#&gt;       q97.5 .event_num stratum event_date</span></span>
+<span><span class="co">#&gt; 154 112.000         47   Total 1990-11-26</span></span>
+<span><span class="co">#&gt; 155  95.000         48   Total 1990-12-03</span></span>
+<span><span class="co">#&gt; 156  78.025         49   Total 1990-12-10</span></span>
+<span><span class="co">#&gt; 157  64.000         50   Total 1990-12-17</span></span>
+<span><span class="co">#&gt; 158  71.000         51   Total 1990-12-24</span></span>
+<span><span class="co">#&gt; 159  80.000         52   Total 1990-12-31</span></span></code></pre>
 <p>Additionally the <code><a href="../reference/nowcast_diagnostic.html">nowcast_diagnostic()</a></code> shows the fitted
 distribution for the delay, the smoothed epidemic process as well as the
 aggregated nowcast (for the sum of all strata):</p>
@@ -357,36 +378,41 @@ possible:</p>
 <span><span class="va">backtest_mpox</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/backtest.html">backtest</a></span><span class="op">(</span></span>
 <span>  <span class="va">mpox_tbl</span>,</span>
 <span>  models  <span class="op">=</span> <span class="va">models_to_compare</span>,</span>
-<span>  n_dates <span class="op">=</span> <span class="fl">5</span> <span class="co">#Test 3 dates at random from the mpox data</span></span>
+<span>  dates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2022-07-18"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2022-08-15"</span><span class="op">)</span>, by <span class="op">=</span> <span class="st">"week"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">#This closes the plan multisession opened above</span></span>
 <span><span class="co">#plan(sequential)   </span></span></code></pre></div>
-<p>We can then plot the Weighted Interval Score (WIS) and interval
-coverage:</p>
+<p>The backtest is already in the common <code>tbl.now</code> format.
+Convert it directly to a scoringutils quantile forecast and compute any
+supported metrics:</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Plot scoring metrics</span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">backtest_mpox</span><span class="op">)</span></span></code></pre></div>
-<p><img src="introduction_files/figure-html/scoreplot-1.png" class="r-plt" alt="" width="672" style="display: block; margin: auto;"></p>
-<p>Or obtain it via <code><a href="../reference/score.html">score()</a></code>:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Rank by Weighted Interval Score (WIS) -- lower is better</span></span>
-<span><span class="fu"><a href="../reference/score.html">score</a></span><span class="op">(</span><span class="va">backtest_mpox</span><span class="op">)</span></span>
-<span><span class="co">#&gt;               model      wis overprediction underprediction dispersion</span></span>
-<span><span class="co">#&gt; 1  SIR/nb/LogNormal 12.08038       0.000000        9.938889   2.141493</span></span>
-<span><span class="co">#&gt; 2  AR1/nb/LogNormal 12.97285       2.916667        2.583333   7.472847</span></span>
-<span><span class="co">#&gt; 3 HSGP/nb/LogNormal 12.97531       1.972222        4.694444   6.308646</span></span>
-<span><span class="co">#&gt;   coverage_50 coverage_90       ape    mse n</span></span>
-<span><span class="co">#&gt; 1        0.50        0.75 0.4370294 1734.5 4</span></span>
-<span><span class="co">#&gt; 2        0.25        1.00 6.3857230 1297.5 4</span></span>
-<span><span class="co">#&gt; 3        0.50        1.00 1.3918787 1759.5 4</span></span></code></pre></div>
-<p>The <code><a href="../reference/score.html">score()</a></code> output shows WIS, absolute percentage error
-(APE), and empirical coverage at 50 % and 90 %. A well-calibrated
-nowcast should have the lowest WIS and coverage close to these
+<code class="sourceCode R"><span><span class="va">backtest_scores</span> <span class="op">&lt;-</span> <span class="va">backtest_mpox</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">scoringutils</span><span class="fu">::</span><span class="fu"><a href="https://epiforecasts.io/scoringutils/reference/as_forecast_quantile.html" class="external-link">as_forecast_quantile</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">scoringutils</span><span class="fu">::</span><span class="fu"><a href="https://epiforecasts.io/scoringutils/reference/score.html" class="external-link">score</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">relative_scores</span> <span class="op">&lt;-</span> <span class="va">backtest_scores</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">scoringutils</span><span class="fu">::</span><span class="fu"><a href="https://epiforecasts.io/scoringutils/reference/add_relative_skill.html" class="external-link">add_relative_skill</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="st">"wis"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">scoringutils</span><span class="fu">::</span><span class="fu"><a href="https://epiforecasts.io/scoringutils/reference/summarise_scores.html" class="external-link">summarise_scores</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span></span>
+<span><span class="va">relative_scores</span></span>
+<span><span class="co">#&gt; Key: &lt;model&gt;</span></span>
+<span><span class="co">#&gt;                model      wis overprediction underprediction dispersion    bias</span></span>
+<span><span class="co">#&gt;               &lt;char&gt;    &lt;num&gt;          &lt;num&gt;           &lt;num&gt;      &lt;num&gt;   &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:  AR1/nb/LogNormal 3.574333     0.07555556        1.953067   1.545711 -0.5036</span></span>
+<span><span class="co">#&gt; 2: HSGP/nb/LogNormal 4.707104     0.31093333        2.534133   1.862038 -0.5088</span></span>
+<span><span class="co">#&gt; 3:  SIR/nb/LogNormal 4.251703     0.02311111        3.079600   1.148992 -0.5408</span></span>
+<span><span class="co">#&gt;    interval_coverage_50 interval_coverage_90 ae_median wis_relative_skill</span></span>
+<span><span class="co">#&gt;                   &lt;num&gt;                &lt;num&gt;     &lt;num&gt;              &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:                0.472                0.736     8.120          0.8610422</span></span>
+<span><span class="co">#&gt; 2:                0.424                0.744    10.360          1.1339221</span></span>
+<span><span class="co">#&gt; 3:                0.424                0.696     9.408          1.0242178</span></span></code></pre></div>
+<p>The scoringutils output includes WIS and its decomposition, median
+absolute error, interval coverage, and relative WIS. A well-calibrated
+nowcast should have low WIS and coverage close to the nominal
 levels.</p>
 <blockquote>
 <p>In this specific test we would choose the SIR for having the lowest
-WIS at essentially the same coverage as HGSP. Note however that for the
+WIS at essentially the same coverage as HSGP. Note however that for the
 tutorial we only used 5 historical dates which is too low to reach a
 definite conslusion.</p>
 </blockquote>
@@ -402,7 +428,7 @@ retracted when it turns out not to be a case at all.</p>
 <code>diseasenowcasting</code> nowcasts the number that actually settles
 rather than the raw report count. There is no argument to pass: the
 process is <strong>detected</strong> from the data.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># One date, plus what the result was: "confirmed", "retracted" or "pending".</span></span>
 <span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rodrigozepeda.github.io/tbl.now/reference/tbl_now.html" class="external-link">tbl_now</a></span><span class="op">(</span><span class="va">linelist</span>, event_date <span class="op">=</span> <span class="va">onset</span>, report_date <span class="op">=</span> <span class="va">reported</span>,</span>
 <span>               revision_date <span class="op">=</span> <span class="va">result</span>, revision_type <span class="op">=</span> <span class="va">outcome</span>,</span>
@@ -424,7 +450,7 @@ the ones you care about — are corrected properly.</p>
 probability, and <code><a href="../reference/parameters.html">parameters()</a></code> gives its uncertainty
 (<code><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy()</a></code> on a nowcast gives you the predicted counts
 instead):</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/parameters.html">parameters</a></span><span class="op">(</span><span class="va">nc</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">type</span> <span class="op">==</span> <span class="st">"resolution"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                 term estimate conf.low conf.high       type</span></span>
 <span><span class="co">#&gt;  prob_not_retracted    0.8512   0.8399    0.8619 resolution</span></span></code></pre></div>
@@ -446,7 +472,7 @@ crossed with the delay families), backtests them, scores them, and
 is an ordinary nowcast, with the ranked comparison stored alongside
 it.</p>
 <p>Here we use all the dengue data up to 1994:</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#All dengue observed as of January 1994</span></span>
 <span><span class="va">dengue_94</span> <span class="op">&lt;-</span> <span class="va">denguedat</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">onset_week</span>  <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1994-01-01"</span><span class="op">)</span> <span class="op">&amp;</span></span>
@@ -463,13 +489,14 @@ it.</p>
 candidates in parallel, set a <code><a href="https://future.futureverse.org/reference/plan.html" class="external-link">future::plan()</a></code> before the
 call and restore it afterwards (left commented here so the vignette
 stays single-process):</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Uncomment to run candidates in parallel:</span></span>
 <span><span class="co"># library(future)</span></span>
 <span><span class="co"># plan(multisession, workers = max(parallel::detectCores() - 1, 1))</span></span>
 <span><span class="va">auto_ncast</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/auto_nowcast.html">auto_nowcast</a></span><span class="op">(</span></span>
 <span>  <span class="va">dengue_tbl_94</span>,</span>
-<span>  metric         <span class="op">=</span> <span class="st">"wis"</span>,   <span class="co"># rank candidates by Weighted Interval Score</span></span>
+<span>  metric         <span class="op">=</span> <span class="st">"wis"</span>,   <span class="co"># rank candidates by relative WIS (the default)</span></span>
+<span>  relative_score <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  n_dates        <span class="op">=</span> <span class="fl">10</span>,      <span class="co"># backtest at 10 historical dates (raise for a firmer choice)</span></span>
 <span>  n_draws_select <span class="op">=</span> <span class="fl">150</span>,     <span class="co"># draws while comparing (small =&gt; fast)</span></span>
 <span>  n_draws        <span class="op">=</span> <span class="fl">500</span>,     <span class="co"># draws for the final fit of the winner</span></span>
@@ -477,37 +504,58 @@ stays single-process):</p>
 <span><span class="op">)</span></span>
 <span><span class="co"># plan(sequential)</span></span></code></pre></div>
 <p>We can show the scores of the models to see the best performer:</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/comparison_scores.html">comparison_scores</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span>  <span class="co"># every candidate, ranked best-first</span></span>
-<span><span class="co">#&gt;                      model       wis overprediction underprediction dispersion</span></span>
-<span><span class="co">#&gt; 1 HSGP/nb/GeneralizedGamma  8.345028     0.05555556        4.031111   4.258361</span></span>
-<span><span class="co">#&gt; 2        HSGP/nb/Dirichlet  8.645306     0.30000000        3.845556   4.499750</span></span>
-<span><span class="co">#&gt; 3        HSGP/nb/LogNormal  9.602722     0.10555556        3.816667   5.680500</span></span>
-<span><span class="co">#&gt; 4         AR1/nb/Dirichlet  9.636514     0.17777778        4.518889   4.939847</span></span>
-<span><span class="co">#&gt; 5  AR1/nb/GeneralizedGamma  9.722528     0.08888889        4.527778   5.105861</span></span>
-<span><span class="co">#&gt; 6         AR1/nb/LogNormal 10.218333     0.20000000        5.275556   4.742778</span></span>
-<span><span class="co">#&gt; 7  SIR/nb/GeneralizedGamma 22.519042     0.00000000       19.019444   3.499597</span></span>
-<span><span class="co">#&gt; 8         SIR/nb/LogNormal 22.853764     0.00000000       19.950556   2.903208</span></span>
-<span><span class="co">#&gt; 9         SIR/nb/Dirichlet 23.095069     0.00000000       19.756111   3.338958</span></span>
-<span><span class="co">#&gt;   coverage_50 coverage_90       ape      mse  n</span></span>
-<span><span class="co">#&gt; 1         0.3         1.0 0.3818904  494.725 10</span></span>
-<span><span class="co">#&gt; 2         0.4         1.0 0.3745044  565.550 10</span></span>
-<span><span class="co">#&gt; 3         0.5         1.0 0.3800479  565.475 10</span></span>
-<span><span class="co">#&gt; 4         0.4         0.9 0.4148512  642.125 10</span></span>
-<span><span class="co">#&gt; 5         0.5         0.9 0.4268592  717.675 10</span></span>
-<span><span class="co">#&gt; 6         0.5         0.9 0.4322367  735.050 10</span></span>
-<span><span class="co">#&gt; 7         0.2         0.7 0.6925159 2763.825 10</span></span>
-<span><span class="co">#&gt; 8         0.1         0.5 0.7198249 2707.225 10</span></span>
-<span><span class="co">#&gt; 9         0.2         0.6 0.6977445 2758.925 10</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 9 × 16</span></span></span>
+<span><span class="co">#&gt;   model                   wis overprediction underprediction dispersion     bias</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                 <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> HSGP/nb/Dirichlet    0.072<span style="text-decoration: underline;">9</span>        0.005<span style="text-decoration: underline;">85</span>         0.027<span style="text-decoration: underline;">7</span>      0.039<span style="text-decoration: underline;">4</span> -<span style="color: #BB0000;">0.003</span><span style="color: #BB0000; text-decoration: underline;">84</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> HSGP/nb/LogNormal    0.072<span style="text-decoration: underline;">9</span>        0.004<span style="text-decoration: underline;">18</span>         0.029<span style="text-decoration: underline;">5</span>      0.039<span style="text-decoration: underline;">3</span> -<span style="color: #BB0000;">0.010</span><span style="color: #BB0000; text-decoration: underline;">2</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> HSGP/nb/Generalized… 0.075<span style="text-decoration: underline;">5</span>        0.004<span style="text-decoration: underline;">46</span>         0.030<span style="text-decoration: underline;">2</span>      0.040<span style="text-decoration: underline;">9</span> -<span style="color: #BB0000;">0.008</span><span style="color: #BB0000; text-decoration: underline;">53</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> AR1/nb/LogNormal     0.139         0.045<span style="text-decoration: underline;">4</span>          0.004<span style="text-decoration: underline;">43</span>     0.089<span style="text-decoration: underline;">4</span>  0.007<span style="text-decoration: underline;">83</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> AR1/nb/Dirichlet     0.144         0.050<span style="text-decoration: underline;">3</span>          0.001<span style="text-decoration: underline;">07</span>     0.092<span style="text-decoration: underline;">4</span>  0.018<span style="text-decoration: underline;">3</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> AR1/nb/GeneralizedG… 0.144         0.047<span style="text-decoration: underline;">9</span>          0.004<span style="text-decoration: underline;">42</span>     0.091<span style="text-decoration: underline;">9</span>  0.009<span style="text-decoration: underline;">43</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span> SIR/nb/GeneralizedG… 0.279         0               0.256       0.023<span style="text-decoration: underline;">7</span> -<span style="color: #BB0000;">0.030</span><span style="color: #BB0000; text-decoration: underline;">5</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">8</span> SIR/nb/Dirichlet     0.294         0               0.274       0.019<span style="text-decoration: underline;">5</span> -<span style="color: #BB0000;">0.029</span><span style="color: #BB0000; text-decoration: underline;">3</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">9</span> SIR/nb/LogNormal     0.295         0               0.276       0.018<span style="text-decoration: underline;">6</span> -<span style="color: #BB0000;">0.031</span><span style="color: #BB0000; text-decoration: underline;">2</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 10 more variables: interval_coverage_50 &lt;dbl&gt;, interval_coverage_90 &lt;dbl&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   ae_median &lt;dbl&gt;, wis_relative_skill &lt;dbl&gt;, median_fit_seconds &lt;dbl&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   total_fit_seconds &lt;dbl&gt;, successful_fits &lt;int&gt;, epidemic_priority &lt;int&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   grid_order &lt;int&gt;, selection_score &lt;dbl&gt;</span></span></span>
+<span><span class="fu"><a href="../reference/selection_timings.html">selection_timings</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span>  <span class="co"># retrospective fits, refits, and total seconds</span></span>
+<span><span class="co">#&gt; $backtest</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 90 × 5</span></span></span>
+<span><span class="co">#&gt;    .method                  .now       elapsed_seconds success error</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                    <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> SIR/nb/LogNormal         1993-09-27            5.40 TRUE    <span style="color: #BB0000;">NA</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> SIR/nb/GeneralizedGamma  1993-09-27           11.7  TRUE    <span style="color: #BB0000;">NA</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> SIR/nb/Dirichlet         1993-09-27            2.13 TRUE    <span style="color: #BB0000;">NA</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> AR1/nb/LogNormal         1993-09-27            2.97 TRUE    <span style="color: #BB0000;">NA</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> AR1/nb/GeneralizedGamma  1993-09-27            8.93 TRUE    <span style="color: #BB0000;">NA</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> AR1/nb/Dirichlet         1993-09-27            1.56 TRUE    <span style="color: #BB0000;">NA</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> HSGP/nb/LogNormal        1993-09-27            3.59 TRUE    <span style="color: #BB0000;">NA</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> HSGP/nb/GeneralizedGamma 1993-09-27           14.1  TRUE    <span style="color: #BB0000;">NA</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> HSGP/nb/Dirichlet        1993-09-27            1.24 TRUE    <span style="color: #BB0000;">NA</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> SIR/nb/LogNormal         1993-10-04            5.39 TRUE    <span style="color: #BB0000;">NA</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 80 more rows</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $refit</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 4</span></span></span>
+<span><span class="co">#&gt;   model             elapsed_seconds success error</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> HSGP/nb/Dirichlet            1.82 TRUE    <span style="color: #BB0000;">NA</span>   </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $total_seconds</span></span>
+<span><span class="co">#&gt; [1] 560.586</span></span></code></pre></div>
 <p><code><a href="../reference/best_model.html">best_model()</a></code> hands back the winning <code><a href="../reference/model.html">model()</a></code>
 object, so you can reuse the same specification on other data (or feed
 it to <code><a href="../reference/nowcast.html">nowcast()</a></code> / <code><a href="../reference/backtest.html">backtest()</a></code>):</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">winner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_model.html">best_model</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span></span>
 <span><span class="va">winner</span></span></code></pre></div>
 <p>Because the result is a normal nowcast, everything else just
 works:</p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">auto_ncast</span><span class="op">)</span></span></code></pre></div>
 <div class="figure" style="text-align: center">
 <img src="introduction_files/figure-html/auto-plot-1.png" class="r-plt" alt="_Nowcast from the model auto_nowcast() selected._" width="672"><p class="caption">
@@ -523,7 +571,7 @@ it the next batch of reports with <code><a href="https://rdrr.io/r/stats/update.
 re-run the selection. <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> warm-refits the
 <em>same</em> winning model and scores the incoming reports against the
 fitted delay, warning if any arrive far later than expected:</p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># A few more weeks of dengue, observed as of 1994-04-01:</span></span>
 <span><span class="va">dengue_apr</span> <span class="op">&lt;-</span> <span class="va">denguedat</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">onset_week</span>  <span class="op">&lt;=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"1994-04-01"</span><span class="op">)</span> <span class="op">&amp;</span></span>
@@ -539,39 +587,19 @@ fitted delay, warning if any arrive far later than expected:</p>
 <span></span>
 <span><span class="va">auto_ncast_updated</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">auto_ncast</span>, <span class="va">dengue_tbl_apr</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning: <span style="color: #BBBB00;">!</span> Surprising reporting delay of 11 weeks (1 report): longer than the model</span></span>
-<span><span class="co">#&gt;   expects (P(D &gt;= d) = 3e-06).</span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Surprising reporting delay of 10 weeks (1 report): longer than the model</span></span>
-<span><span class="co">#&gt;   expects (P(D &gt;= d) = 1.4e-05).</span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Surprising reporting delay of 9 weeks (2 reports): longer than the model</span></span>
-<span><span class="co">#&gt;   expects (P(D &gt;= d) = 6e-05).</span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Surprising reporting delay of 8 weeks (5 reports): longer than the model</span></span>
-<span><span class="co">#&gt;   expects (P(D &gt;= d) = 0.00026).</span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Surprising reporting delay of 7 weeks (3 reports): longer than the model</span></span>
-<span><span class="co">#&gt;   expects (P(D &gt;= d) = 0.0011).</span></span>
-<span><span class="co">#&gt; <span style="color: #BBBB00;">!</span> Surprising reporting delay of 6 weeks (2 reports): longer than the model</span></span>
-<span><span class="co">#&gt;   expects (P(D &gt;= d) = 0.0045).</span></span>
+<span><span class="co">#&gt;   expects (P(D &gt;= d) = 0.0095).</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> If these are outliers, treat them as censored with</span></span>
 <span><span class="co">#&gt;   `tbl.now::censor_reporting_delays_above()` and re-fit.</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> See all flagged delays with `extreme_values(nc)`.</span></span></code></pre></div>
 <p>Any reports with surprising delays are collected by
 <code><a href="../reference/extreme_values.html">extreme_values()</a></code> (it returns <code>NULL</code> when nothing
 looks off):</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/extreme_values.html">extreme_values</a></span><span class="op">(</span><span class="va">auto_ncast_updated</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   delay weight mean_tail_prob cdf_prob      lpd relative_surprise direction</span></span>
-<span><span class="co">#&gt; 1     6      2       0.004489 0.995511  -5.0076            0.0169      long</span></span>
-<span><span class="co">#&gt; 2     7      3       0.001099 0.998901  -6.3799            0.0043      long</span></span>
-<span><span class="co">#&gt; 3     8      5       0.000260 0.999740  -7.7970            0.0010      long</span></span>
-<span><span class="co">#&gt; 4     9      2       0.000060 0.999940  -9.2440            0.0002      long</span></span>
-<span><span class="co">#&gt; 5    10      1       0.000014 0.999986 -10.7111            0.0001      long</span></span>
-<span><span class="co">#&gt; 6    11      1       0.000003 0.999997 -12.1919            0.0000      long</span></span>
+<span><span class="co">#&gt;   delay weight mean_tail_prob cdf_prob     lpd relative_surprise direction</span></span>
+<span><span class="co">#&gt; 1    11      1       0.009547 0.990453 -6.2334            0.0042      long</span></span>
 <span><span class="co">#&gt;   surprise level</span></span>
-<span><span class="co">#&gt; 1    delay  0.99</span></span>
-<span><span class="co">#&gt; 2    delay  0.99</span></span>
-<span><span class="co">#&gt; 3    delay  0.99</span></span>
-<span><span class="co">#&gt; 4    delay  0.99</span></span>
-<span><span class="co">#&gt; 5    delay  0.99</span></span>
-<span><span class="co">#&gt; 6    delay  0.99</span></span></code></pre></div>
+<span><span class="co">#&gt; 1    delay  0.99</span></span></code></pre></div>
 <p>See the vignette on <a href="Handling_Outlier_Delays_with_Censoring.html">Handling Outlier
 Delays with Censoring</a> for what to do when a delay <em>is</em>
 flagged.</p>
@@ -586,7 +614,7 @@ only to obtain scoring truth; <code>historical_now</code> is the
 information cutoff; and <code>event_date</code> identifies the weeks
 being nowcast. Starting near September 2023 avoids interpreting the
 between-season gap as a reporting delay.</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">flusight</span>, package <span class="op">=</span> <span class="st">"tbl.now"</span><span class="op">)</span></span>
 <span><span class="va">historical_now</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2024-01-27"</span><span class="op">)</span></span>
 <span><span class="va">full_data</span> <span class="op">&lt;-</span> <span class="va">flusight</span> <span class="op">|&gt;</span></span>
@@ -622,7 +650,7 @@ clock</strong>, map the observed publication weeks to consecutive
 synthetic weeks before constructing the <code>tbl_now</code>; retain the
 real dates in separate columns for the as-of filter and scoring
 join.</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">publication_weeks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">full_data</span><span class="op">$</span><span class="va">as_of</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">publication_index</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">publication_weeks</span><span class="op">)</span> <span class="op">-</span> <span class="fl">1L</span>,</span>
 <span>                              <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">publication_weeks</span><span class="op">)</span><span class="op">)</span></span>
@@ -644,7 +672,7 @@ join.</p>
 The cumulative-level model and the two signed hurdle models share the
 same collapsed retraction kernel; the zero-truncated Poisson magnitude
 has no dispersion parameter.</p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">level_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/model.html">model</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="../reference/epidemic_process.html">ar1_epidemic</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="../reference/delay_process.html">lognormal_delay</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  cumulative <span class="op">=</span> <span class="fu"><a href="../reference/cumulative_process.html">cumulative_process</a></span><span class="op">(</span></span>
@@ -694,7 +722,7 @@ the <code><a href="../reference/model.html">model()</a></code> specification, th
 and each fit’s parameters together with its Laplace mode and precision.
 That is all <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> needs, so a reloaded nowcast behaves
 exactly like the original (any number of draws, no re-fitting):</p>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">saved</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rds"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/save_nowcast.html">save_nowcast</a></span><span class="op">(</span><span class="va">auto_ncast</span>, <span class="va">saved</span><span class="op">)</span></span>
 <span></span>
@@ -705,7 +733,7 @@ exactly like the original (any number of draws, no re-fitting):</p>
 <p>Because the input data travels in the bundle, you can also
 <strong>re-fit</strong> the saved model later (on the original data, or
 on a newer extract):</p>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/nowcast.html">nowcast</a></span><span class="op">(</span><span class="va">restored</span><span class="op">@</span><span class="va">data</span>, <span class="va">restored</span><span class="op">@</span><span class="va">model</span><span class="op">)</span>   <span class="co"># re-runs the optimisation</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -715,7 +743,7 @@ on a newer extract):</p>
 fitting a nowcast with <code><a href="../reference/nowcast.html">nowcast()</a></code>, inspecting results with
 <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> / <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> /
 <code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code>, and comparing models with
-<code><a href="../reference/backtest.html">backtest()</a></code> / <code><a href="../reference/score.html">score()</a></code>.</p>
+<code><a href="../reference/backtest.html">backtest()</a></code> / <code>score()</code>.</p>
 <p>Depending on what you want to do next, check out the following
 vignettes:</p>
 <ul>
@@ -755,7 +783,7 @@ families, and the Laplace-approximation inference that powers
 <code>RTMB</code>.</p></li>
 </ul>
 <p>See <code><a href="../reference/nowcast.html">?nowcast</a></code>, <code><a href="../reference/backtest.html">?backtest</a></code>,
-<code><a href="../reference/score.html">?score</a></code>, and <code><a href="../reference/model.html">?model</a></code> for full documentation.</p>
+<code>?score</code>, and <code><a href="../reference/model.html">?model</a></code> for full documentation.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

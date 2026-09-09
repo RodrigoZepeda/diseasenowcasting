@@ -11,7 +11,7 @@ the joint epidemic fit is added in later phases."><meta property="og:image" cont
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,7 +57,8 @@ the joint epidemic fit is added in later phases.</p>
 <span>  <span class="va">data</span>,</span>
 <span>  priors <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  init <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>iter.max <span class="op">=</span> <span class="fl">500</span>, eval.max <span class="op">=</span> <span class="fl">1000</span>, rel.tol <span class="op">=</span> <span class="fl">1e-09</span><span class="op">)</span></span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>iter.max <span class="op">=</span> <span class="fl">500</span>, eval.max <span class="op">=</span> <span class="fl">1000</span>, rel.tol <span class="op">=</span> <span class="fl">1e-09</span><span class="op">)</span>,</span>
+<span>  warn <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -83,6 +84,12 @@ the joint epidemic fit is added in later phases.</p>
 
 <dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>
 <dd><p><code>nlminb</code> control list.</p></dd>
+
+
+<dt id="arg-warn">warn<a class="anchor" aria-label="anchor" href="#arg-warn"></a></dt>
+<dd><p>If <code>TRUE</code>, warn when the returned joint fit does not pass the
+optimizer adequacy checks. Internal warm-start and imputation fits set this
+to <code>FALSE</code> and report only diagnostics for the fits that affect the result.</p></dd>
 
 </dl></div>
     <div class="section level2">

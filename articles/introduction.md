@@ -12,6 +12,36 @@ Model Builder
 infer the cases that have not yet been reported thus providing a
 prediction of the final number of cases.
 
+## Native modelling and the shared workflow
+
+Use `diseasenowcasting`’s native interface when specifying the
+statistical model:
+[`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md),
+[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md),
+and
+[`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
+expose its epidemic, delay, likelihood, revision, and cumulative-process
+choices. Use
+[`fit_check()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/fit_check.md)
+and
+[`nowcast_diagnostic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_diagnostic.md)
+for diagnostics that are specifically about the RTMB fit.
+
+The returned object is already a
+[`tbl.now::tbl_nowcast`](https://rodrigozepeda.github.io/tbl.now/reference/tbl_nowcast.html).
+Plotting, tidying, predictive scoring, ensembling, saving, and loading
+therefore use the common result directly. Likewise,
+[`backtest()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.md)
+is a convenience for translating native
+[`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
+specifications into `tbl.now` engines; it returns a canonical
+`nowcast_backtest`, not a second native backtest class. That result can
+be passed directly to the scoringutils `as_forecast_quantile()`,
+[`as_forecast_point()`](https://rodrigozepeda.github.io/tbl.now/reference/score_nowcast.html),
+or `as_forecast_sample()` methods. See
+[`?diseasenowcasting_workflows`](https://rodrigozepeda.github.io/diseasenowcasting/reference/diseasenowcasting_workflows.md)
+for the full boundary and examples.
+
 ## Your data: the `tbl_now` format
 
 `diseasenowcasting` works with data organised as a `tbl_now` object from
@@ -191,20 +221,20 @@ pred_dengue <- predict(nc_dengue)
 summary(pred_dengue) 
 ```
 
-    #>         mean median        sd     mad q2.5  q5 q10 q25 q50    q75 q90 q95 q97.5
-    #> 154 108.4865    108  1.425424  1.4826  107 107 107 107 108 109.00 110 111   112
-    #> 155  89.1460     89  2.332038  1.4826   86  86  87  87  89  90.00  92  93    95
-    #> 156  68.0295     67  4.248489  2.9652   63  63  64  65  67  70.00  73  75    77
-    #> 157  45.2005     44  6.878587  5.9304   36  37  38  40  44  48.00  54  58    63
-    #> 158  39.9620     37 13.517874 10.3782   23  25  27  31  37  46.00  55  63    71
-    #> 159  35.2170     32 18.017331 14.8260   12  14  17  23  32  43.25  57  69    80
-    #>     .event_num stratum event_date
-    #> 154         47   Total 1990-11-26
-    #> 155         48   Total 1990-12-03
-    #> 156         49   Total 1990-12-10
-    #> 157         50   Total 1990-12-17
-    #> 158         51   Total 1990-12-24
-    #> 159         52   Total 1990-12-31
+    #>         mean median        sd     mad q2.5  q5 q10 q25 q50 q75 q90    q95
+    #> 154 108.6180    108  1.515990  1.4826  107 107 107 108 108 109 111 111.00
+    #> 155  89.1175     89  2.426239  1.4826   86  86  87  87  89  90  92  93.00
+    #> 156  68.2195     67  4.286083  2.9652   63  63  64  65  67  70  73  76.00
+    #> 157  45.5855     44  7.797056  5.9304   36  37  38  41  44  49  55  58.05
+    #> 158  40.4260     37 14.853681 10.3782   24  25  27  31  37  46  57  63.05
+    #> 159  36.3720     32 18.817696 14.8260   12  14  17  24  32  44  59  70.00
+    #>       q97.5 .event_num stratum event_date
+    #> 154 112.000         47   Total 1990-11-26
+    #> 155  95.000         48   Total 1990-12-03
+    #> 156  78.025         49   Total 1990-12-10
+    #> 157  64.000         50   Total 1990-12-17
+    #> 158  71.000         51   Total 1990-12-24
+    #> 159  80.000         52   Total 1990-12-31
 
 Additionally the
 [`nowcast_diagnostic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_diagnostic.md)
@@ -345,49 +375,46 @@ models_to_compare <- list(
 backtest_mpox <- backtest(
   mpox_tbl,
   models  = models_to_compare,
-  n_dates = 5 #Test 3 dates at random from the mpox data
+  dates = seq(as.Date("2022-07-18"), as.Date("2022-08-15"), by = "week")
 )
 
 #This closes the plan multisession opened above
 #plan(sequential)   
 ```
 
-We can then plot the Weighted Interval Score (WIS) and interval
-coverage:
+The backtest is already in the common `tbl.now` format. Convert it
+directly to a scoringutils quantile forecast and compute any supported
+metrics:
 
 ``` r
 
-# Plot scoring metrics
-autoplot(backtest_mpox)
+backtest_scores <- backtest_mpox |>
+  scoringutils::as_forecast_quantile() |>
+  scoringutils::score()
+
+relative_scores <- backtest_scores |>
+  scoringutils::add_relative_skill(metric = "wis") |>
+  scoringutils::summarise_scores(by = "model")
+relative_scores
+#> Key: <model>
+#>                model      wis overprediction underprediction dispersion    bias
+#>               <char>    <num>          <num>           <num>      <num>   <num>
+#> 1:  AR1/nb/LogNormal 3.574333     0.07555556        1.953067   1.545711 -0.5036
+#> 2: HSGP/nb/LogNormal 4.707104     0.31093333        2.534133   1.862038 -0.5088
+#> 3:  SIR/nb/LogNormal 4.251703     0.02311111        3.079600   1.148992 -0.5408
+#>    interval_coverage_50 interval_coverage_90 ae_median wis_relative_skill
+#>                   <num>                <num>     <num>              <num>
+#> 1:                0.472                0.736     8.120          0.8610422
+#> 2:                0.424                0.744    10.360          1.1339221
+#> 3:                0.424                0.696     9.408          1.0242178
 ```
 
-![](introduction_files/figure-html/scoreplot-1.png)
-
-Or obtain it via
-[`score()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md):
-
-``` r
-
-# Rank by Weighted Interval Score (WIS) -- lower is better
-score(backtest_mpox)
-#>               model      wis overprediction underprediction dispersion
-#> 1  SIR/nb/LogNormal 12.08038       0.000000        9.938889   2.141493
-#> 2  AR1/nb/LogNormal 12.97285       2.916667        2.583333   7.472847
-#> 3 HSGP/nb/LogNormal 12.97531       1.972222        4.694444   6.308646
-#>   coverage_50 coverage_90       ape    mse n
-#> 1        0.50        0.75 0.4370294 1734.5 4
-#> 2        0.25        1.00 6.3857230 1297.5 4
-#> 3        0.50        1.00 1.3918787 1759.5 4
-```
-
-The
-[`score()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md)
-output shows WIS, absolute percentage error (APE), and empirical
-coverage at 50 % and 90 %. A well-calibrated nowcast should have the
-lowest WIS and coverage close to these levels.
+The scoringutils output includes WIS and its decomposition, median
+absolute error, interval coverage, and relative WIS. A well-calibrated
+nowcast should have low WIS and coverage close to the nominal levels.
 
 > In this specific test we would choose the SIR for having the lowest
-> WIS at essentially the same coverage as HGSP. Note however that for
+> WIS at essentially the same coverage as HSGP. Note however that for
 > the tutorial we only used 5 historical dates which is too low to reach
 > a definite conslusion.
 
@@ -486,7 +513,8 @@ vignette stays single-process):
 # plan(multisession, workers = max(parallel::detectCores() - 1, 1))
 auto_ncast <- auto_nowcast(
   dengue_tbl_94,
-  metric         = "wis",   # rank candidates by Weighted Interval Score
+  metric         = "wis",   # rank candidates by relative WIS (the default)
+  relative_score = TRUE,
   n_dates        = 10,      # backtest at 10 historical dates (raise for a firmer choice)
   n_draws_select = 150,     # draws while comparing (small => fast)
   n_draws        = 500,     # draws for the final fit of the winner
@@ -500,26 +528,47 @@ We can show the scores of the models to see the best performer:
 ``` r
 
 comparison_scores(auto_ncast)  # every candidate, ranked best-first
-#>                      model       wis overprediction underprediction dispersion
-#> 1 HSGP/nb/GeneralizedGamma  8.345028     0.05555556        4.031111   4.258361
-#> 2        HSGP/nb/Dirichlet  8.645306     0.30000000        3.845556   4.499750
-#> 3        HSGP/nb/LogNormal  9.602722     0.10555556        3.816667   5.680500
-#> 4         AR1/nb/Dirichlet  9.636514     0.17777778        4.518889   4.939847
-#> 5  AR1/nb/GeneralizedGamma  9.722528     0.08888889        4.527778   5.105861
-#> 6         AR1/nb/LogNormal 10.218333     0.20000000        5.275556   4.742778
-#> 7  SIR/nb/GeneralizedGamma 22.519042     0.00000000       19.019444   3.499597
-#> 8         SIR/nb/LogNormal 22.853764     0.00000000       19.950556   2.903208
-#> 9         SIR/nb/Dirichlet 23.095069     0.00000000       19.756111   3.338958
-#>   coverage_50 coverage_90       ape      mse  n
-#> 1         0.3         1.0 0.3818904  494.725 10
-#> 2         0.4         1.0 0.3745044  565.550 10
-#> 3         0.5         1.0 0.3800479  565.475 10
-#> 4         0.4         0.9 0.4148512  642.125 10
-#> 5         0.5         0.9 0.4268592  717.675 10
-#> 6         0.5         0.9 0.4322367  735.050 10
-#> 7         0.2         0.7 0.6925159 2763.825 10
-#> 8         0.1         0.5 0.7198249 2707.225 10
-#> 9         0.2         0.6 0.6977445 2758.925 10
+#> # A tibble: 9 × 16
+#>   model                   wis overprediction underprediction dispersion     bias
+#>   <chr>                 <dbl>          <dbl>           <dbl>      <dbl>    <dbl>
+#> 1 HSGP/nb/Dirichlet    0.0729        0.00585         0.0277      0.0394 -0.00384
+#> 2 HSGP/nb/LogNormal    0.0729        0.00418         0.0295      0.0393 -0.0102 
+#> 3 HSGP/nb/Generalized… 0.0755        0.00446         0.0302      0.0409 -0.00853
+#> 4 AR1/nb/LogNormal     0.139         0.0454          0.00443     0.0894  0.00783
+#> 5 AR1/nb/Dirichlet     0.144         0.0503          0.00107     0.0924  0.0183 
+#> 6 AR1/nb/GeneralizedG… 0.144         0.0479          0.00442     0.0919  0.00943
+#> 7 SIR/nb/GeneralizedG… 0.279         0               0.256       0.0237 -0.0305 
+#> 8 SIR/nb/Dirichlet     0.294         0               0.274       0.0195 -0.0293 
+#> 9 SIR/nb/LogNormal     0.295         0               0.276       0.0186 -0.0312 
+#> # ℹ 10 more variables: interval_coverage_50 <dbl>, interval_coverage_90 <dbl>,
+#> #   ae_median <dbl>, wis_relative_skill <dbl>, median_fit_seconds <dbl>,
+#> #   total_fit_seconds <dbl>, successful_fits <int>, epidemic_priority <int>,
+#> #   grid_order <int>, selection_score <dbl>
+selection_timings(auto_ncast)  # retrospective fits, refits, and total seconds
+#> $backtest
+#> # A tibble: 90 × 5
+#>    .method                  .now       elapsed_seconds success error
+#>    <chr>                    <date>               <dbl> <lgl>   <chr>
+#>  1 SIR/nb/LogNormal         1993-09-27            5.40 TRUE    NA   
+#>  2 SIR/nb/GeneralizedGamma  1993-09-27           11.7  TRUE    NA   
+#>  3 SIR/nb/Dirichlet         1993-09-27            2.13 TRUE    NA   
+#>  4 AR1/nb/LogNormal         1993-09-27            2.97 TRUE    NA   
+#>  5 AR1/nb/GeneralizedGamma  1993-09-27            8.93 TRUE    NA   
+#>  6 AR1/nb/Dirichlet         1993-09-27            1.56 TRUE    NA   
+#>  7 HSGP/nb/LogNormal        1993-09-27            3.59 TRUE    NA   
+#>  8 HSGP/nb/GeneralizedGamma 1993-09-27           14.1  TRUE    NA   
+#>  9 HSGP/nb/Dirichlet        1993-09-27            1.24 TRUE    NA   
+#> 10 SIR/nb/LogNormal         1993-10-04            5.39 TRUE    NA   
+#> # ℹ 80 more rows
+#> 
+#> $refit
+#> # A tibble: 1 × 4
+#>   model             elapsed_seconds success error
+#>   <chr>                       <dbl> <lgl>   <chr>
+#> 1 HSGP/nb/Dirichlet            1.82 TRUE    NA   
+#> 
+#> $total_seconds
+#> [1] 560.586
 ```
 
 [`best_model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/best_model.md)
@@ -576,17 +625,7 @@ dengue_tbl_apr <- tbl_now(
 
 auto_ncast_updated <- update(auto_ncast, dengue_tbl_apr)
 #> Warning: ! Surprising reporting delay of 11 weeks (1 report): longer than the model
-#>   expects (P(D >= d) = 3e-06).
-#> ! Surprising reporting delay of 10 weeks (1 report): longer than the model
-#>   expects (P(D >= d) = 1.4e-05).
-#> ! Surprising reporting delay of 9 weeks (2 reports): longer than the model
-#>   expects (P(D >= d) = 6e-05).
-#> ! Surprising reporting delay of 8 weeks (5 reports): longer than the model
-#>   expects (P(D >= d) = 0.00026).
-#> ! Surprising reporting delay of 7 weeks (3 reports): longer than the model
-#>   expects (P(D >= d) = 0.0011).
-#> ! Surprising reporting delay of 6 weeks (2 reports): longer than the model
-#>   expects (P(D >= d) = 0.0045).
+#>   expects (P(D >= d) = 0.0095).
 #> ℹ If these are outliers, treat them as censored with
 #>   `tbl.now::censor_reporting_delays_above()` and re-fit.
 #> ℹ See all flagged delays with `extreme_values(nc)`.
@@ -599,20 +638,10 @@ Any reports with surprising delays are collected by
 ``` r
 
 extreme_values(auto_ncast_updated)
-#>   delay weight mean_tail_prob cdf_prob      lpd relative_surprise direction
-#> 1     6      2       0.004489 0.995511  -5.0076            0.0169      long
-#> 2     7      3       0.001099 0.998901  -6.3799            0.0043      long
-#> 3     8      5       0.000260 0.999740  -7.7970            0.0010      long
-#> 4     9      2       0.000060 0.999940  -9.2440            0.0002      long
-#> 5    10      1       0.000014 0.999986 -10.7111            0.0001      long
-#> 6    11      1       0.000003 0.999997 -12.1919            0.0000      long
+#>   delay weight mean_tail_prob cdf_prob     lpd relative_surprise direction
+#> 1    11      1       0.009547 0.990453 -6.2334            0.0042      long
 #>   surprise level
 #> 1    delay  0.99
-#> 2    delay  0.99
-#> 3    delay  0.99
-#> 4    delay  0.99
-#> 5    delay  0.99
-#> 6    delay  0.99
 ```
 
 See the vignette on [Handling Outlier Delays with
@@ -780,8 +809,7 @@ inspecting results with
 [`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html),
 and comparing models with
 [`backtest()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.md)
-/
-[`score()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md).
+/ `score()`.
 
 Depending on what you want to do next, check out the following
 vignettes:
@@ -834,7 +862,6 @@ vignettes:
 See
 [`?nowcast`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md),
 [`?backtest`](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.md),
-[`?score`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md),
-and
+`?score`, and
 [`?model`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
 for full documentation.

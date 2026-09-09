@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -135,7 +135,10 @@ full-series posterior); values &gt; 1 widen the simplex spread.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A list with <code>quantiles</code>, <code>median</code>, pooled <code>draws</code>, the <code>rung</code> used
-(<code>"multi"</code>, <code>"anchored"</code>, or <code>"onestage"</code>), and <code>n_samp</code> (imputations pooled).</p>
+(<code>"multi"</code>, <code>"anchored"</code>, or <code>"onestage"</code>), <code>n_samp</code> (imputations pooled),
+and <code>fit_diagnostics</code>. The latter records the requested and retained
+imputation counts plus warm, Stage-1, fallback, exclusion, and retained-fit
+diagnostics.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

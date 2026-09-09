@@ -32,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -299,7 +299,7 @@
 <code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span></code></pre></div>
 <p><img src="reference/figures/README-unnamed-chunk-4-1.png" alt="" width="100%"> You can access these quantities directly with <code>score</code></p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/score.html">score</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu">score</span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                     model      wis overprediction underprediction dispersion</span></span>
 <span><span class="co">#&gt; 1       HSGP/nb/LogNormal 11.40569              0        7.240741   4.164954</span></span>
 <span><span class="co">#&gt; 2 AR1/nb/GeneralizedGamma 11.54056              0        8.203704   3.336852</span></span>
@@ -440,7 +440,7 @@
 <div class="section level2">
 <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a>
 </h2>
-<p>A good place to start is the <strong><a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/introduction.html">Introduction to diseasenowcasting</a></strong>, which walks through building a <code>tbl_now</code>, fitting with <code><a href="reference/nowcast.html">nowcast()</a></code>, inspecting results with <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> / <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> / <code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code>, and comparing models with <code><a href="reference/backtest.html">backtest()</a></code> / <code><a href="reference/score.html">score()</a></code>.</p>
+<p>A good place to start is the <strong><a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/introduction.html">Introduction to diseasenowcasting</a></strong>, which walks through building a <code>tbl_now</code>, fitting with <code><a href="reference/nowcast.html">nowcast()</a></code>, inspecting results with <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> / <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> / <code><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot()</a></code>, and comparing models with <code><a href="reference/backtest.html">backtest()</a></code> / <code>score()</code>.</p>
 <p>From there, depending on what you want to do next:</p>
 <ul>
 <li><p><strong><a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Nowcasting_at_the_start_of_an_Epidemic.html">Nowcasting at the Start of an Epidemic</a></strong> — A worked, end-to-end case study of monitoring an outbreak in real time: choosing a model when data are scarce, reading the nowcast as the epidemic grows, and using the prior to encode what you already believe before much data has arrived.</p></li>
@@ -451,7 +451,7 @@
 <li><p><strong><a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Benchmark.html">Benchmark (diseasenowcasting vs NobBS and epinowcast)</a></strong> — <em>How does it compare?</em> A reproducible backtest comparing <code>diseasenowcasting</code> against the <code>NobBS</code> and <code>epinowcast</code> packages.</p></li>
 <li><p><strong><a href="https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.html">Mathematical Foundations of diseasenowcasting</a></strong> — <em>Under the hood.</em> The censored likelihood, the epidemic processes (HSGP, AR(1), SIR), the delay families, and the Laplace-approximation inference that powers <code>RTMB</code>.</p></li>
 </ul>
-<p>See <code><a href="reference/nowcast.html">?nowcast</a></code>, <code><a href="reference/backtest.html">?backtest</a></code>, <code><a href="reference/score.html">?score</a></code>, and <code><a href="reference/model.html">?model</a></code> for the full function documentation.</p>
+<p>See <code><a href="reference/nowcast.html">?nowcast</a></code>, <code><a href="reference/backtest.html">?backtest</a></code>, <code>?score</code>, and <code><a href="reference/model.html">?model</a></code> for the full function documentation.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

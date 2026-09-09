@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">diseasenowcasting</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -487,7 +487,7 @@
 <div class="section level3">
 <h3 id="score">score()<a class="anchor" aria-label="anchor" href="#score"></a></h3>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/score.html">score</a></span><span class="op">(</span><span class="va">bt</span>, metric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wis"</span>, <span class="st">"ape"</span>, <span class="st">"mse"</span><span class="op">)</span>, report <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu">score</span><span class="op">(</span><span class="va">bt</span>, metric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wis"</span>, <span class="st">"ape"</span>, <span class="st">"mse"</span><span class="op">)</span>, report <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="co"># Returns data.frame: model, wis, ape, mse, coverage_50, coverage_90</span></span>
 <span><span class="co"># Sorted best-first by `metric`; cli report printed if report=TRUE</span></span>
 <span><span class="co"># Accepts a backtest_class or a predict() data.frame</span></span></code></pre></div>
@@ -738,7 +738,7 @@
 <span><span class="fu">plan</span><span class="op">(</span><span class="fu">future</span><span class="fu">::</span><span class="va"><a href="https://future.futureverse.org/reference/multisession.html" class="external-link">multisession</a></span>, workers <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span>
 <span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/backtest.html">backtest</a></span><span class="op">(</span><span class="va">tn</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">mdl</span>, <span class="fu"><a href="reference/model.html">model</a></span><span class="op">(</span><span class="fu"><a href="reference/likelihood.html">nb_likelihood</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="reference/epidemic_process.html">ar1_epidemic</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="reference/delay_process.html">lognormal_delay</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>               dates <span class="op">=</span> <span class="va">my_dates</span>, type <span class="op">=</span> <span class="st">"two_stage"</span>, K <span class="op">=</span> <span class="fl">5</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/score.html">score</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span>
+<span><span class="fu">score</span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/autoplot.html" class="external-link">autoplot</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 6. Update as new data arrive (warm-start)</span></span>

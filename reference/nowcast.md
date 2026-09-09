@@ -3,13 +3,14 @@
 The main entry point. Takes a `tbl_now` (from the tbl.now package) and a
 [`model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md),
 fits the latent-epidemic + reporting-delay model as of a given date, and
-returns a `nowcast_class` object. Fitting only – the
-posterior-predictive nowcast is produced lazily by
-[`predict()`](https://rdrr.io/r/stats/predict.html); the latent
-incidence by
-[`mean()`](https://rdrr.io/r/base/mean.html)/[`median()`](https://rdrr.io/r/stats/median.html)/[`quantile()`](https://rdrr.io/r/stats/quantile.html);
-the parameter estimates by
-[`coef()`](https://rdrr.io/r/stats/coef.html).
+returns the common
+[tbl.now::tbl_nowcast](https://rodrigozepeda.github.io/tbl.now/reference/tbl_nowcast.html)
+result. Predictive draws and quantiles are materialised in that result;
+the untouched native fit is retained in `@fit` for
+[`predict()`](https://rdrr.io/r/stats/predict.html),
+[`mean()`](https://rdrr.io/r/base/mean.html)/[`median()`](https://rdrr.io/r/stats/median.html)/[`quantile()`](https://rdrr.io/r/stats/quantile.html),
+[`coef()`](https://rdrr.io/r/stats/coef.html), and model-specific
+diagnostics.
 
 ## Usage
 
@@ -27,6 +28,7 @@ nowcast(
   floor_sig_frac = 0.08,
   temporal_effects = "auto",
   prior_only = FALSE,
+  quantile_levels = tbl.now::nowcast_quantile_levels(),
   seed = sample.int(.Machine$integer.max, 1),
   ...
 )
@@ -99,12 +101,18 @@ nowcast(
   their **priors** only, returning the prior-predictive latent
   incidence. Useful for understanding what a prior implies *before*
   seeing data (e.g. how the SIR `R0` prior or the AR(1) `phi` prior
-  reshapes the epidemic). The result is a normal `nowcast_class`, so
-  [`predict()`](https://rdrr.io/r/stats/predict.html) /
+  reshapes the epidemic). The result uses the same common grammar as an
+  ordinary fit, so [`predict()`](https://rdrr.io/r/stats/predict.html) /
   [`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html)
   / [`median()`](https://rdrr.io/r/stats/median.html) /
   [`quantile()`](https://rdrr.io/r/stats/quantile.html) all work; `data`
   only supplies the time grid. Default `FALSE`.
+
+- quantile_levels:
+
+  Probabilities at which to summarise the predictive draws in the
+  returned
+  [tbl.now::tbl_nowcast](https://rodrigozepeda.github.io/tbl.now/reference/tbl_nowcast.html).
 
 - seed:
 
@@ -118,7 +126,14 @@ nowcast(
 
 ## Value
 
-A `nowcast_class` object.
+A diseasenowcasting subclass of
+[tbl.now::tbl_nowcast](https://rodrigozepeda.github.io/tbl.now/reference/tbl_nowcast.html).
+The native fitted model is retained in `@fit`; diseasenowcasting
+operations unwrap it automatically. The `@fit_diagnostics` property
+(also available at `@metadata$diseasenowcasting$fit_diagnostics`)
+records the resolved fitting stage, imputation retention, optimizer
+adequacy, curvature, and any Laplace-precision regularization used for
+prediction.
 
 ## Revision processes
 
@@ -163,6 +178,16 @@ The negative-binomial overdispersion prior is **not** an argument of
 default
 [`nb_likelihood()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/likelihood.md)
 already uses `lognormal_prior(log(20), 0.5)`.
+
+## See also
+
+[diseasenowcasting_workflows](https://rodrigozepeda.github.io/diseasenowcasting/reference/diseasenowcasting_workflows.md)
+for when to use native modelling operations versus the shared `tbl.now`
+result workflow;
+[`backtest()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.md)
+and
+[`auto_nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/auto_nowcast.md)
+for retrospective comparison and automatic selection.
 
 ## Examples
 

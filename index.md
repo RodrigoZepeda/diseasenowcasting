@@ -449,8 +449,7 @@ inspecting results with
 [`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html),
 and comparing models with
 [`backtest()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.md)
-/
-[`score()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md).
+/ `score()`.
 
 From there, depending on what you want to do next:
 
@@ -500,7 +499,6 @@ From there, depending on what you want to do next:
 See
 [`?nowcast`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md),
 [`?backtest`](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.md),
-[`?score`](https://rodrigozepeda.github.io/diseasenowcasting/reference/score.md),
-and
+`?score`, and
 [`?model`](https://rodrigozepeda.github.io/diseasenowcasting/reference/model.md)
 for the full function documentation.
