@@ -107,7 +107,7 @@
 #'         p                = beta_prior(20, 3),
 #'         stratified_p     = TRUE))
 #'
-#' @seealso [model()], [revision_delay], [delay_process], [nowcast()]
+#' @seealso [model()], [revision_distributions], [delay_process], [nowcast()]
 #' @export
 revision_process <- function(revision_delay = lognormal_delay(),
                                p = numeric(0), stratified_p = FALSE,
@@ -206,28 +206,28 @@ revision_process_class <- S7::new_class(
 #' revision_process(gamma_revision(shape = log(3), rate = 2))
 #'
 #' @seealso [revision_process()], [delay_process], [nowcast()]
-#' @name revision_delay
+#' @name revision_distributions
 NULL
 
-#' @rdname revision_delay
+#' @rdname revision_distributions
 #' @export
 lognormal_revision <- function(mu = numeric(0), sigma = numeric(0)) {
   lognormal_delay(mu = mu, sigma = sigma)
 }
 
-#' @rdname revision_delay
+#' @rdname revision_distributions
 #' @export
 gamma_revision <- function(shape = numeric(0), rate = numeric(0)) {
   gamma_delay(shape = shape, rate = rate)
 }
 
-#' @rdname revision_delay
+#' @rdname revision_distributions
 #' @export
 generalized_gamma_revision <- function(mu = numeric(0), sigma = numeric(0), Q = numeric(0)) {
   generalized_gamma_delay(mu = mu, sigma = sigma, Q = Q)
 }
 
-#' @rdname revision_delay
+#' @rdname revision_distributions
 #' @export
 dirichlet_revision <- function(alpha = numeric(0), bins = numeric(0)) {
   dirichlet_delay(alpha = alpha, bins = bins)

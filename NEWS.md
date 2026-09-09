@@ -1,3 +1,54 @@
+# 2.4.1
+
+This release removes three things `diseasenowcasting` was duplicating from
+`tbl.now`. All three were invisible in normal use and none change results.
+
+## `covid_colombia` moved to tbl.now
+
+The `covid_colombia` dataset is gone from this package; it now lives in
+`tbl.now`, alongside the other example datasets (`denguedat`, `mpoxdat`,
+`flusight`, ...). The two copies were byte-identical, and shipping the same
+35,501-row data frame from two packages that are always attached together only
+made `?covid_colombia` and `data(covid_colombia)` ambiguous.
+
+Nothing changes for users: `diseasenowcasting` depends on `tbl.now`, so
+`library(diseasenowcasting)` still puts `covid_colombia` on the search path.
+Code that qualified the name as `diseasenowcasting::covid_colombia` must now
+say `tbl.now::covid_colombia`.
+
+`LazyData` was dropped from `DESCRIPTION` along with the now-empty `data/`
+directory.
+
+## `?revision_delay` pointed at the wrong package
+
+`diseasenowcasting` and `tbl.now` both documented a help topic named
+`revision_delay`, meaning different things: the revision-lag *distributions*
+here (`lognormal_revision()`, `dirichlet_revision()`, ...) and the
+confirmed-vs-retracted *diagnostic* there (`diagnose_revision_delay()`,
+`plot_revision_delay()`). With both packages attached -- which is always, since
+one depends on the other -- `?revision_delay` prompted for a disambiguation and
+then resolved to `tbl.now`, so a user who had just called `lognormal_revision()`
+was shown the wrong page.
+
+This package's topic is now `revision_distributions`; `?revision_delay`
+unambiguously means `tbl.now`'s. No function was renamed, and
+`?lognormal_revision` and its siblings still land on the right page. Only a
+literal `?revision_delay` or a `[revision_delay]` doc link needs updating.
+
+## `dn_palette()` no longer keeps its own copy of the colours
+
+All eight `dn_palette()` colours were the `tbl.now::tbl_now_palette()` defaults
+hard-coded a second time under different role names (`reported` for `epidemic`,
+`accent` for `reporting`, and so on). Nowcast plots are routinely drawn beside
+`tbl_now` plots in one document, so the copy would have stopped matching the
+moment `tbl.now` retuned a colour -- silently, with no error to notice.
+
+`dn_palette()` now reads `tbl.now::tbl_now_palette()` and renames the roles.
+The returned values, names, order and `n` behaviour are unchanged, so plots
+render identically. `theme_diseasenowcasting()` and the `autoplot()` bar
+colours, which had their own hard-coded copies of the same two hexes, now go
+through `dn_palette()` as well; the `color` argument still accepts any colour.
+
 # 2.4.0
 
 ## Documentation: vignettes split into CRAN vignettes and website articles

@@ -1,6 +1,6 @@
 Package: diseasenowcasting
 Title: Nowcast Time Series of Epidemiological Cases
-Version: 2.4.0
+Version: 2.4.1
 Authors@R:
     c(person("Rodrigo", "Zepeda-Tello", role = c("aut", "cre"),
              email = "rzepeda17@gmail.com",
@@ -66,5 +66,4 @@ Additional_repositories:
     https://rodrigozepeda.r-universe.dev
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-LazyData: true
 Config/roxygen2/version: 8.1.0

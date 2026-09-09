@@ -117,5 +117,5 @@ model(nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
 
 }
 \seealso{
-\code{\link[=model]{model()}}, \link{revision_delay}, \link{delay_process}, \code{\link[=nowcast]{nowcast()}}
+\code{\link[=model]{model()}}, \link{revision_distributions}, \link{delay_process}, \code{\link[=nowcast]{nowcast()}}
 }

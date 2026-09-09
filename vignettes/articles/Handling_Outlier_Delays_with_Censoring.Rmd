@@ -50,7 +50,7 @@ Colombia's COVID-19 data (`covid_colombia`) the bulk of reports arrive within a
 week or two, but a handful take **more than 100 days**:
 
 ```{r delay-hist1}
-data(covid_colombia)
+data(covid_colombia, package = "tbl.now")
 
 tbl_covid <- covid_colombia |> 
   tbl_now(event_date  = notification_date,

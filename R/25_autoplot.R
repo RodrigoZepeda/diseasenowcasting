@@ -1,18 +1,12 @@
 # =============================================================================
 # Colour palette + autoplot() methods
 # =============================================================================
-# Colour palette derived from the diseasenowcasting hex-sticker logo:
-#   Primary green  #5F7E62  (reported bars, main epidemic line)
-#   Dark charcoal  #262626  (navbar, background accents)
-#   Burnt orange   #DA6529  (accent, SIR, surprise)
-#   Heading green  #334335  (axis titles, headings)
-#   Light sage     #A8BFA9  (predicted / not-yet-reported bars)
-#   Mid sage       #7A9E7E  (AR1 model)
-#   Pale orange    #E8956A  (lighter accent)
-#   Slate grey     #607060  (secondary model lines)
-#
-# Extended palette for multi-model plots (backtest comparisons):
-#   These extend the green-charcoal-orange family naturally.
+# The colours themselves live in `tbl.now::tbl_now_palette()`, which this
+# package depends on; `dn_palette()` only renames the roles.  A nowcast plot is
+# routinely drawn next to a `tbl_now` plot in the same document, so a second
+# hard-coded copy of the hexes would silently stop matching the moment `tbl.now`
+# retuned its defaults -- with no error to notice.  Everything below that needs
+# a colour goes through `dn_palette()` for that reason.
 # =============================================================================
 
 # ── Exported colour palette ───────────────────────────────────────────────────
@@ -25,21 +19,28 @@
 #'
 #' @param n Number of colours to return (1-8). If `NULL`, returns all 8.
 #' @returns A named character vector of hex colour codes.
+#' @seealso [tbl.now::tbl_now_palette()], which supplies the colours.
 #' @export
 dn_palette <- function(n = NULL) {
+  # Same colours as `tbl.now`, renamed for what a nowcast plot draws rather than
+  # for what a `tbl_now` declares. Read from `tbl_now_palette()` rather than
+  # copied so the two packages cannot drift apart.
+  tn  <- tbl.now::tbl_now_palette()
   pal <- c(
-    reported       = "#5F7E62",   # dark sage green  -- reported bars / main model
-    predicted      = "#A8BFA9",   # light sage        -- predicted/unreported bars
-    accent         = "#B85348",   # burnt orange      -- SIR, surprise, accent
-    dark           = "#262626",   # charcoal          -- backgrounds, text
-    heading        = "#334335",   # deep green        -- headings, axes
-    mid            = "#7A9E7E",   # mid sage          -- AR1 / second model
-    pale_accent    = "#e78b7f",   # pale orange       -- third model / highlight
-    slate          = "#607060"    # slate grey-green  -- fourth model
+    reported       = tn[["epidemic"]],        # dark sage green  -- reported bars / main model
+    predicted      = tn[["epidemic_light"]],  # light sage        -- predicted/unreported bars
+    accent         = tn[["reporting"]],       # burnt orange      -- SIR, surprise, accent
+    dark           = tn[["ink"]],             # charcoal          -- backgrounds, text
+    heading        = tn[["epidemic_dark"]],   # deep green        -- headings, axes
+    mid            = tn[["epidemic_mid"]],    # mid sage          -- AR1 / second model
+    pale_accent    = tn[["reporting_light"]], # pale orange       -- third model / highlight
+    slate          = tn[["ink_muted"]]        # slate grey-green  -- fourth model
   )
   if (is.null(n)) return(pal)
   if (n > length(pal)) {
-    extra <- grDevices::colorRampPalette(c("#5F7E62", "#B85348", "#262626"))(n - length(pal))
+    extra <- grDevices::colorRampPalette(
+      unname(pal[c("reported", "accent", "dark")])
+    )(n - length(pal))
     return(c(pal, stats::setNames(extra, paste0("extra", seq_along(extra)))))
   }
   pal[seq_len(n)]
@@ -57,8 +58,9 @@ theme_diseasenowcasting <- function(base_size = 11) {
       legend.position      = "top",
       legend.justification = "right",
       legend.direction     = "horizontal",
-      axis.title           = ggplot2::element_text(colour = "#334335"),
-      strip.text           = ggplot2::element_text(colour = "#334335", face = "bold"),
+      axis.title           = ggplot2::element_text(colour = dn_palette()[["heading"]]),
+      strip.text           = ggplot2::element_text(colour = dn_palette()[["heading"]],
+                                                   face = "bold"),
       panel.grid.minor     = ggplot2::element_blank()
     )
 }
@@ -98,7 +100,8 @@ ggplot2::autoplot
 #'   counts per stratum.
 #' @param quantiles Length-2 numeric vector for the error-bar quantiles.
 #'   Default `c(0.05, 0.95)`.
-#' @param color Primary colour for the bars (default `"#5F7E62"`).
+#' @param color Primary colour for the bars (default the `reported`
+#'   colour of [dn_palette()]).
 #' @param date_breaks Passed to `scale_x_date(date_breaks = ...)`.  E.g.
 #'   `"1 month"`.  Only used when `event_dates` is supplied.
 #' @param title Optional plot title.
@@ -111,7 +114,7 @@ ggplot2::autoplot
 S7::method(autoplot, nowcast_prediction_class) <- function(
     object, event_dates = NULL, strata_names = NULL,
     strata_draws = NULL, observed_strata = NULL,
-    quantiles = c(0.05, 0.95), color = "#5F7E62",
+    quantiles = c(0.05, 0.95), color = dn_palette()[["reported"]],
     date_breaks = NULL, title = NULL, previous_times = 15, ...) {
 
   draws   <- object@draws                    # [n_draws x max_time] total
@@ -280,7 +283,8 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
 #' @param object A `nowcast_class` object.
 #' @param n_draws Number of posterior draws.
 #' @param quantiles Length-2 quantile vector for error bars (default `c(0.05, 0.95)`).
-#' @param color Bar fill colour (default `"#5F7E62"`).
+#' @param color Bar fill colour (default the `reported` colour of
+#'   [dn_palette()]).
 #' @param date_breaks Passed to `scale_x_date()`, e.g. `"1 month"`.
 #' @param title Optional title string.
 #' @param previous_times Number of most recent event-times to display: only the
@@ -292,7 +296,7 @@ S7::method(autoplot, nowcast_prediction_class) <- function(
 #' @noRd
 S7::method(autoplot, nowcast_class) <- function(object, n_draws = NULL,
                                                  quantiles = c(0.05, 0.95),
-                                                 color = "#5F7E62",
+                                                 color = dn_palette()[["reported"]],
                                                  date_breaks = NULL,
                                                  title = NULL,
                                                  previous_times = 15,
