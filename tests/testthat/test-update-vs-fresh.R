@@ -53,7 +53,10 @@ test_that("update() target matches a fresh nowcast() on the same data", {
   expect_equal(nc_updated@target, nc_fresh@target)
 
   # Updated object is a valid nowcast
-  expect_true(S7::S7_inherits(nc_updated, diseasenowcasting:::nowcast_class))
+  expect_true(S7::S7_inherits(
+    nc_updated,
+    diseasenowcasting:::diseasenowcasting_result_class
+  ))
   expect_length(nc_updated@fits, 1L)
 })
 

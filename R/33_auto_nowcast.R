@@ -3,15 +3,16 @@
 # =============================================================================
 # Builds a candidate grid of (epidemic process x delay family) models sized to
 # the amount of data, backtests them over several historical dates, scores them
-# (WIS or interval coverage), selects the winner, and refits it on the full data.
+# through scoringutils, selects the winner, and refits it on the full data.
 # =============================================================================
 
 #' Automatically select and fit the best nowcasting model
 #'
 #' Takes a `tbl_now` and **chooses a model for you**: it builds a grid of
 #' candidate models (epidemic process x reporting-delay family) sized to how much
-#' data you have, [backtest()]s them over several historical dates, [score()]s
-#' them, keeps the best one, and refits it on the full data.  The returned object
+#' data you have, [backtest()]s them over several historical dates, converts the
+#' canonical backtest to a scoringutils forecast, keeps the best one, and refits
+#' it on the full data. The returned object
 #' is an ordinary [nowcast()] result (so `autoplot()`, `predict()`, etc. work),
 #' with the ranked scoreboard attached in its `comparison` slot.
 #'
@@ -48,13 +49,17 @@
 #' `future::plan(multisession)`) for parallel speed-up.
 #'
 #' @param data A `tbl_now` object (`tbl.now::tbl_now()`).
-#' @param metric Selection criterion. `"wis"` (default, lowest Weighted Interval
-#'   Score), `"ape"` (lowest absolute percentage error of the median), `"mse"`
-#'   (lowest mean squared error), or one of the calibration criteria, which pick
-#'   the model whose empirical interval coverage is closest to nominal:
-#'   `"coverage_50"` (smallest `|0.50 - coverage_50|`), `"coverage_90"` (smallest
-#'   `|0.90 - coverage_90|`), or `"coverage"` (smallest
-#'   `|0.50 - coverage_50| + |0.90 - coverage_90|`, i.e. both intervals jointly).
+#' @param metric A single score column produced by [scoringutils::score()] to
+#'   minimise. Default `"wis"`.
+#' @param relative_score Logical. When `TRUE` (the default), select on the
+#'   corresponding relative skill from [scoringutils::add_relative_skill()]
+#'   rather than on the raw mean score. This makes comparisons fair when models
+#'   are not all available for exactly the same targets.
+#' @param tie_break How to break effectively equal selection scores.
+#'   `"epidemic_priority"` (default) prefers HSGP, then AR(1), then SIR, then a
+#'   custom epidemic process. `"fastest"` prefers the candidate with the lowest
+#'   median elapsed time per successful retrospective fit. The unused rule is
+#'   applied second, followed by candidate-grid order for determinism.
 #' @param type Stage strategy used for *both* the backtest and the final fit:
 #'   `"auto"` (default), `"two_stage"`, or `"one_stage"` (see [nowcast()]).
 #' @param sir,ar,hsgp Optional epidemic-process components (e.g.
@@ -89,11 +94,13 @@
 #' @param ... Passed through to [backtest()] and [nowcast()] (e.g.
 #'   `temporal_effects`).
 #'
-#' @returns A `nowcast_class` (as from [nowcast()]) for the selected model, with
-#'   the model-selection scoreboard in its `comparison` slot:
-#'   `list(scores, chosen, metric, max_time)`.
+#' @returns A diseasenowcasting subclass of [tbl.now::tbl_nowcast] (as from
+#'   [nowcast()]) for the selected model, with the model-selection scoreboard
+#'   retained on the diseasenowcasting subclass and its native fit:
+#'   `list(scores, chosen, metric, relative_score, tie_break, timings, max_time)`.
 #'
-#' @seealso [nowcast()], [backtest()], [score()]
+#' @seealso [diseasenowcasting_workflows], [nowcast()], [backtest()], [scoringutils::score()],
+#'   [scoringutils::add_relative_skill()]
 #'
 #' @examples
 #' \donttest{
@@ -122,8 +129,8 @@
 #' }
 #' @export
 auto_nowcast <- function(data,
-                         metric = c("wis", "ape", "mse", "coverage",
-                                    "coverage_50", "coverage_90"),
+                         metric = "wis", relative_score = TRUE,
+                         tie_break = c("epidemic_priority", "fastest"),
                          type   = c("auto", "two_stage", "one_stage"),
                          sir = NULL, ar = NULL, hsgp = NULL,
                          delays = NULL, likelihood = nb_likelihood(),
@@ -133,8 +140,17 @@ auto_nowcast <- function(data,
                          min_ar = 15L, min_hsgp = 30L,
                          now = NULL, seed = sample.int(.Machine$integer.max, 1),
                          verbose = TRUE, ...) {
-  metric <- match.arg(metric)
+  if (!is.character(metric) || length(metric) != 1L || is.na(metric) ||
+      !nzchar(metric)) {
+    cli::cli_abort("{.arg metric} must be one non-empty score-column name.")
+  }
+  if (!is.logical(relative_score) || length(relative_score) != 1L ||
+      is.na(relative_score)) {
+    cli::cli_abort("{.arg relative_score} must be `TRUE` or `FALSE`.")
+  }
+  tie_break <- match.arg(tie_break)
   type   <- match.arg(type)
+  auto_started <- proc.time()[["elapsed"]]
   if (!is.null(seed)) set.seed(seed)
 
   # -- 1. candidate epidemic processes, sized to the series length -------------
@@ -184,65 +200,83 @@ auto_nowcast <- function(data,
       if (!is.null(models)) " + custom models" else "",
       ") over {n_dates} backtest date{?s}; max_time = {max_time}.")))
 
-  # -- 4. backtest the grid (fast config) and score ----------------------------
-  # backtest() already swallows per-cell fit failures (a candidate that fails to
-  # converge on a given as-of date simply contributes no row there), so one bad
-  # combination never aborts the search.  It *can* abort outright, though, when
-  # the series is too short to offer any complete-truth backtest date -- so we
-  # wrap it: a failed backtest just means "no scores", and we refit the grid
-  # directly below rather than erroring out.
-  # Selection backtest dates are spread across the observed history (backtest()'s
-  # default).  Spreading beats biasing to the most recent dates: the recent dates
-  # are consecutive (little diversity) and tend to favour reactive models (AR1 /
-  # SIR) that then lose to a smoother process at the censored d*=0 target.  Pass
-  # `recent = TRUE` through `...` to override.
+  # -- 4. backtest the grid and score through scoringutils ---------------------
+  # The canonical backtest already knows its predictions, truth, origins and
+  # method labels. Its scoringutils coercion is therefore the authoritative
+  # route for both ordinary and relative scores.
   bt <- tryCatch(
     backtest(data, models = grid, type = type, n_dates = n_dates,
-             n_draws = n_draws_select, K = K_select, seed = seed, ...),
+             n_draws = n_draws_select, K = K_select, seed = seed,
+             verbose = verbose, ...),
     error = function(e) NULL)
 
-  # Fair comparison: score every candidate on the SAME as-of dates.  Because a
-  # candidate that failed on some date has no row there, averaging each model
-  # over only the dates it happened to survive would reward a model that got
-  # lucky on an easy subset.  So we restrict scoring to the dates where ALL
-  # converged candidates produced a forecast (the intersection -- the same fair
-  # set the package's own benchmark uses).  If that set is empty (candidates
-  # converged on disjoint dates), keep every date and let score() average per
-  # model.
   scores <- NULL
   if (!is.null(bt)) {
-    res <- bt@results
-    if (!is.null(res) && nrow(res) > 0) {
-      ok       <- res[is.finite(res$final), , drop = FALSE]
-      by_model <- split(as.character(ok$date_run), ok$model)
-      common   <- if (length(by_model)) Reduce(intersect, by_model) else character(0)
-      if (length(common) > 0)
-        bt@results <- res[as.character(res$date_run) %in% common, , drop = FALSE]
+    forecast <- scoringutils::as_forecast_quantile(bt)
+    scored <- scoringutils::score(forecast)
+    available_metrics <- scoringutils::get_metrics(scored)
+    if (!metric %in% available_metrics) {
+      cli::cli_abort(c(
+        "The requested {.arg metric} {.val {metric}} was not produced by scoringutils.",
+        "i" = "Available score columns: {.val {available_metrics}}."
+      ))
     }
-    # score() returns one row per model with wis, ape, mse, coverage_50/90.  Guard
-    # the pathological case where every cell failed (nothing to score).
-    scores <- tryCatch(score(bt, metric = "wis", report = FALSE),
-                       error = function(e) NULL)
+
+    selection_column <- metric
+    if (isTRUE(relative_score)) {
+      selection_column <- paste0(metric, "_relative_skill")
+      if (length(unique(scored$model)) > 1L) {
+        scored <- scoringutils::add_relative_skill(
+          scored, compare = "model", metric = metric, test_type = NULL
+        )
+      } else {
+        scored[[selection_column]] <- 1
+      }
+    }
+
+    score_frame <- as.data.frame(scored)
+    metric_columns <- intersect(
+      c(scoringutils::get_metrics(scored), selection_column),
+      colnames(score_frame)
+    )
+    scores <- score_frame |>
+      dplyr::group_by(.data$model) |>
+      dplyr::summarise(
+        dplyr::across(
+          dplyr::all_of(metric_columns),
+          ~ mean(.x, na.rm = TRUE)
+        ),
+        .groups = "drop"
+      )
+
+    fit_times <- bt$timings |>
+      dplyr::filter(.data$success) |>
+      dplyr::group_by(.data$.method) |>
+      dplyr::summarise(
+        median_fit_seconds = stats::median(.data$elapsed_seconds),
+        total_fit_seconds = sum(.data$elapsed_seconds),
+        successful_fits = dplyr::n(),
+        .groups = "drop"
+      ) |>
+      dplyr::rename(model = ".method")
+
+    candidate_info <- dplyr::tibble(
+      model = grid_labels,
+      epidemic_priority = vapply(grid, .auto_epidemic_priority, integer(1L)),
+      grid_order = seq_along(grid)
+    )
+    scores <- scores |>
+      dplyr::left_join(fit_times, by = "model") |>
+      dplyr::left_join(candidate_info, by = "model") |>
+      dplyr::mutate(selection_score = .data[[selection_column]])
   }
 
-  # -- 5. rank the candidates by the chosen metric -----------------------------
-  # wis / ape / mse: smaller is better.  Coverage metrics: smallest miss from the
-  # nominal level -- coverage_50 |0.50 - cov50|, coverage_90 |0.90 - cov90|, and
-  # coverage the combined |0.50 - cov50| + |0.90 - cov90|.  `order()` keeps the
-  # full ranking (best first) so we can fall through to the next-best model if
-  # the top pick fails to refit.
+  # -- 5. rank, resolving effectively equal scores deterministically -----------
   if (is.null(scores) || nrow(scores) == 0) {
     ranked_labels <- character(0)
   } else {
-    ord <- switch(metric,
-      wis         = order(scores$wis),
-      ape         = order(scores$ape),
-      mse         = order(scores$mse),
-      coverage_50 = order(abs(scores$coverage_50 - 0.50)),
-      coverage_90 = order(abs(scores$coverage_90 - 0.90)),
-      coverage    = order(abs(scores$coverage_50 - 0.50) +
-                          abs(scores$coverage_90 - 0.90)))
-    ranked_labels <- scores$model[ord]
+    scores <- .rank_auto_scores(scores, tie_break = tie_break)
+    ranked_labels <- scores$model
   }
 
   # -- 6. refit the best-ranked candidate that converges on the full data ------
@@ -255,12 +289,25 @@ auto_nowcast <- function(data,
   ranked_idx <- c(ranked_idx, setdiff(seq_along(grid), ranked_idx))
   ranked_idx <- ranked_idx[!is.na(ranked_idx)]
 
-  nc <- NULL; chosen_idx <- NA_integer_
+  nc <- NULL
+  chosen_idx <- NA_integer_
+  refit_timings <- list()
   for (i in ranked_idx) {
+    refit_error <- NA_character_
+    refit_started <- proc.time()[["elapsed"]]
     nc <- tryCatch(
       nowcast(data, model = grid[[i]], type = type, n_draws = n_draws,
               K = K, now = now, seed = seed, ...),
-      error = function(e) NULL)
+      error = function(e) {
+        refit_error <<- conditionMessage(e)
+        NULL
+      })
+    refit_timings[[length(refit_timings) + 1L]] <- dplyr::tibble(
+      model = grid_labels[[i]],
+      elapsed_seconds = unname(proc.time()[["elapsed"]] - refit_started),
+      success = !is.null(nc),
+      error = refit_error
+    )
     if (!is.null(nc)) { chosen_idx <- i; break }
   }
   if (is.null(nc))
@@ -270,17 +317,101 @@ auto_nowcast <- function(data,
 
   winner_label <- grid_labels[chosen_idx]
   top_label    <- if (length(ranked_labels)) ranked_labels[[1L]] else winner_label
+  refit_timings <- dplyr::bind_rows(refit_timings)
+  total_elapsed <- unname(proc.time()[["elapsed"]] - auto_started)
   if (verbose) {
     if (!identical(winner_label, top_label))
       cli::cli_warn(c("!" = paste0(
         "auto_nowcast: best-scoring model {.val {top_label}} failed to refit on ",
         "the full data; using next-best {.val {winner_label}}.")))
-    cli::cli_inform(c("v" = "auto_nowcast: selected {.strong {winner_label}} (best {metric})."))
+    score_name <- if (isTRUE(relative_score)) paste("relative", metric) else metric
+    cli::cli_inform(c(
+      "v" = paste0(
+        "auto_nowcast: selected {.strong {winner_label}} (best {score_name}; ",
+        "ties by {tie_break}) in {round(total_elapsed, 2)} seconds."
+      )
+    ))
   }
 
-  nc@comparison <- list(scores = scores, chosen = winner_label,
-                        metric = metric, max_time = max_time)
-  nc
+  quantile_levels <- sort(unique(nc@predictions$.quantile_level))
+  native_nc <- .unwrap_nowcast(nc)
+  native_nc@comparison <- list(
+    scores = scores,
+    chosen = winner_label,
+    metric = metric,
+    relative_score = relative_score,
+    tie_break = tie_break,
+    timings = list(
+      backtest = if (is.null(bt)) NULL else bt$timings,
+      refit = refit_timings,
+      total_seconds = total_elapsed
+    ),
+    max_time = max_time
+  )
+  .as_diseasenowcasting_result(
+    native_nc,
+    n_draws = native_nc@n_draws,
+    quantile_levels = quantile_levels
+  )
+}
+
+#' Epidemic-process preference used only for tied selection scores
+#' @keywords internal
+#' @noRd
+.auto_epidemic_priority <- function(candidate) {
+  epidemic <- candidate@epidemic
+  if (S7::S7_inherits(epidemic, hsgp_epidemic_class)) return(1L)
+  if (S7::S7_inherits(epidemic, ar1_epidemic_class)) return(2L)
+  if (S7::S7_inherits(epidemic, sir_epidemic_class)) return(3L)
+  4L
+}
+
+#' Rank auto-nowcast candidates, using policy only inside score ties
+#' @keywords internal
+#' @noRd
+.rank_auto_scores <- function(scores, tie_break, tolerance = 1e-8) {
+  scores <- scores[order(scores$selection_score, na.last = TRUE), , drop = FALSE]
+  if (nrow(scores) < 2L) return(scores)
+
+  tie_group <- integer(nrow(scores))
+  group <- 1L
+  anchor <- scores$selection_score[[1L]]
+  tie_group[[1L]] <- group
+  for (i in 2:nrow(scores)) {
+    current <- scores$selection_score[[i]]
+    same <- is.finite(anchor) && is.finite(current) &&
+      abs(current - anchor) <= tolerance * max(1, abs(anchor), abs(current))
+    if (!same) {
+      group <- group + 1L
+      anchor <- current
+    }
+    tie_group[[i]] <- group
+  }
+  scores$.tie_group <- tie_group
+
+  order_one_group <- function(part) {
+    if (identical(tie_break, "fastest")) {
+      part[order(
+        part$median_fit_seconds,
+        part$epidemic_priority,
+        part$grid_order,
+        na.last = TRUE
+      ), , drop = FALSE]
+    } else {
+      part[order(
+        part$epidemic_priority,
+        part$median_fit_seconds,
+        part$grid_order,
+        na.last = TRUE
+      ), , drop = FALSE]
+    }
+  }
+
+  pieces <- split(scores, scores$.tie_group)
+  scores <- dplyr::bind_rows(lapply(pieces, order_one_group))
+  scores$.tie_group <- NULL
+  rownames(scores) <- NULL
+  scores
 }
 
 # -----------------------------------------------------------------------------
@@ -289,8 +420,7 @@ auto_nowcast <- function(data,
 
 # Pull the `comparison` slot, erroring clearly if `nc` is a plain nowcast().
 .auto_comparison <- function(nc) {
-  if (!S7::S7_inherits(nc, nowcast_class))
-    cli::cli_abort("{.arg nc} must be a {.cls nowcast_class} object (from {.fn auto_nowcast}).")
+  nc <- .unwrap_nowcast(nc, "nc")
   cmp <- nc@comparison
   if (is.null(cmp))
     cli::cli_abort(c(
@@ -321,21 +451,22 @@ best_model_name <- function(nc) {
 #' @seealso [auto_nowcast()], [best_model_name()]
 #' @export
 best_model <- function(nc) {
-  if (!S7::S7_inherits(nc, nowcast_class))
-    cli::cli_abort("{.arg nc} must be a {.cls nowcast_class} object.")
+  nc <- .unwrap_nowcast(nc, "nc")
   nc@model
 }
 
 #' The model-selection scoreboard from `auto_nowcast()`
 #'
 #' The ranked table of candidate models that [auto_nowcast()] backtested, one row
-#' per model, best-first by the selection `metric`.  Columns include `model` (the
-#' label), `wis` (and its decomposition), `ape`, `mse`, and `coverage_50` /
-#' `coverage_90` (see [score()]).
+#' per model, best-first by the selected raw or relative scoringutils metric.
+#' In addition to scoringutils metrics, it includes `selection_score`, median
+#' and total retrospective fit seconds, successful-fit count, epidemic priority,
+#' and original grid order.
 #'
 #' @param nc A `nowcast_class` returned by [auto_nowcast()].
 #' @returns A `data.frame`, one row per candidate model.
-#' @seealso [auto_nowcast()], [best_score()], [score()]
+#' @seealso [auto_nowcast()], [best_score()], [selection_timings()],
+#'   [scoringutils::score()]
 #' @export
 comparison_scores <- function(nc) {
   .auto_comparison(nc)$scores
@@ -344,8 +475,10 @@ comparison_scores <- function(nc) {
 #' The metric `auto_nowcast()` used to pick the winner
 #'
 #' @param nc A `nowcast_class` returned by [auto_nowcast()].
-#' @returns A string: `"wis"`, `"ape"`, `"mse"`, `"coverage"`, `"coverage_50"`,
-#'   or `"coverage_90"`.
+#' @returns The scoringutils score-column name supplied to [auto_nowcast()].
+#'   Consult the result's
+#'   `relative_score` comparison field to determine whether its relative skill
+#'   was used.
 #' @seealso [auto_nowcast()], [comparison_scores()]
 #' @export
 selection_metric <- function(nc) {
@@ -354,8 +487,9 @@ selection_metric <- function(nc) {
 
 #' The scoreboard row for the model `auto_nowcast()` chose
 #'
-#' The single [comparison_scores()] row belonging to the winning model -- its
-#' WIS, APE, MSE and interval coverage -- rather than the whole table.
+#' The single [comparison_scores()] row belonging to the winning model,
+#' including its scoringutils metrics, selection score, and retrospective fit
+#' timing, rather than the whole table.
 #'
 #' @param nc A `nowcast_class` returned by [auto_nowcast()].
 #' @returns A one-row `data.frame`.
@@ -367,4 +501,16 @@ best_score <- function(nc) {
   row    <- scores[scores$model == cmp$chosen, , drop = FALSE]
   rownames(row) <- NULL
   row
+}
+
+#' Fitting times recorded by `auto_nowcast()`
+#'
+#' @param nc A result returned by [auto_nowcast()].
+#' @returns A list with `backtest` (one row per attempted retrospective fit),
+#'   `refit` (the full-data refit attempts), and `total_seconds` for the complete
+#'   automatic-selection call.
+#' @seealso [auto_nowcast()], [comparison_scores()]
+#' @export
+selection_timings <- function(nc) {
+  .auto_comparison(nc)$timings
 }

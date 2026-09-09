@@ -4,8 +4,8 @@
 # prior_only draws epidemic-process parameters from their PRIORS (ignoring the
 # likelihood) and reconstructs the latent incidence, so users can see "what does
 # this prior yield" -- e.g. how moving the SIR R0 prior or the AR(1) phi prior
-# reshapes the epidemic.  The result is a normal nowcast_class, so predict() /
-# autoplot() / median() / quantile() all work.
+# reshapes the epidemic. The result uses the same common tbl_nowcast grammar as
+# an ordinary fit, so predict() / autoplot() / median() / quantile() all work.
 # =============================================================================
 
 # Prior distribution code (num_id) -> name, for sampling from default_priors() entries.

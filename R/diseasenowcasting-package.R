@@ -26,9 +26,7 @@ NULL
 # Non-standard evaluation elsewhere is handled in the code itself, so it needs
 # no declarations here:
 #   * dplyr/ggplot2 data-masking uses the rlang `.data` pronoun (`aes(x = .data$delay)`);
-#   * tbl.now tidy-select uses injection (`event_date = !!as.symbol("onset")`);
-#   * the backtest worker takes its row index as a real function argument
-#     (`future.apply::future_lapply(..., function(cell_row) ...)`).
+#   * tbl.now tidy-select uses injection (`event_date = !!as.symbol("onset")`).
 #
 # What remains below are the only variables with no lexical binding the static
 # checker can see: RTMB `getAll(params, objective_data)` drops every parameter /

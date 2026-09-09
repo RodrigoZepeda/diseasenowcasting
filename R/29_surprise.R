@@ -72,6 +72,19 @@ S7::method(surprise, nowcast_class) <- function(object, new_data,
   .surprise_internal(fit, new_data, type, level, n_draws, seed)
 }
 
+S7::method(surprise, diseasenowcasting_result_class) <- function(
+    object, new_data, type = c("both", "count", "delay"), level = 0.99,
+    n_draws = 500L, seed = sample.int(.Machine$integer.max, 1)) {
+  surprise(
+    .unwrap_nowcast(object),
+    new_data = new_data,
+    type = type,
+    level = level,
+    n_draws = n_draws,
+    seed = seed
+  )
+}
+
 #' Surprise score on a raw fit() result
 #' @method surprise list
 #' @param object A list returned by [fit()].

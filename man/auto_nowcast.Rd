@@ -6,7 +6,9 @@
 \usage{
 auto_nowcast(
   data,
-  metric = c("wis", "ape", "mse", "coverage", "coverage_50", "coverage_90"),
+  metric = "wis",
+  relative_score = TRUE,
+  tie_break = c("epidemic_priority", "fastest"),
   type = c("auto", "two_stage", "one_stage"),
   sir = NULL,
   ar = NULL,
@@ -30,13 +32,19 @@ auto_nowcast(
 \arguments{
 \item{data}{A \code{tbl_now} object (\code{tbl.now::tbl_now()}).}
 
-\item{metric}{Selection criterion. \code{"wis"} (default, lowest Weighted Interval
-Score), \code{"ape"} (lowest absolute percentage error of the median), \code{"mse"}
-(lowest mean squared error), or one of the calibration criteria, which pick
-the model whose empirical interval coverage is closest to nominal:
-\code{"coverage_50"} (smallest \verb{|0.50 - coverage_50|}), \code{"coverage_90"} (smallest
-\verb{|0.90 - coverage_90|}), or \code{"coverage"} (smallest
-\verb{|0.50 - coverage_50| + |0.90 - coverage_90|}, i.e. both intervals jointly).}
+\item{metric}{A single score column produced by \code{\link[scoringutils:score]{scoringutils::score()}} to
+minimise. Default \code{"wis"}.}
+
+\item{relative_score}{Logical. When \code{TRUE} (the default), select on the
+corresponding relative skill from \code{\link[scoringutils:add_relative_skill]{scoringutils::add_relative_skill()}}
+rather than on the raw mean score. This makes comparisons fair when models
+are not all available for exactly the same targets.}
+
+\item{tie_break}{How to break effectively equal selection scores.
+\code{"epidemic_priority"} (default) prefers HSGP, then AR(1), then SIR, then a
+custom epidemic process. \code{"fastest"} prefers the candidate with the lowest
+median elapsed time per successful retrospective fit. The unused rule is
+applied second, followed by candidate-grid order for determinism.}
 
 \item{type}{Stage strategy used for \emph{both} the backtest and the final fit:
 \code{"auto"} (default), \code{"two_stage"}, or \code{"one_stage"} (see \code{\link[=nowcast]{nowcast()}}).}
@@ -87,15 +95,17 @@ AR(1) and HSGP become candidates (defaults 15 and 30).}
 \code{temporal_effects}).}
 }
 \value{
-A \code{nowcast_class} (as from \code{\link[=nowcast]{nowcast()}}) for the selected model, with
-the model-selection scoreboard in its \code{comparison} slot:
-\code{list(scores, chosen, metric, max_time)}.
+A diseasenowcasting subclass of \link[tbl.now:tbl_nowcast]{tbl.now::tbl_nowcast} (as from
+\code{\link[=nowcast]{nowcast()}}) for the selected model, with the model-selection scoreboard
+retained on the diseasenowcasting subclass and its native fit:
+\code{list(scores, chosen, metric, relative_score, tie_break, timings, max_time)}.
 }
 \description{
 Takes a \code{tbl_now} and \strong{chooses a model for you}: it builds a grid of
 candidate models (epidemic process x reporting-delay family) sized to how much
-data you have, \code{\link[=backtest]{backtest()}}s them over several historical dates, \code{\link[=score]{score()}}s
-them, keeps the best one, and refits it on the full data.  The returned object
+data you have, \code{\link[=backtest]{backtest()}}s them over several historical dates, converts the
+canonical backtest to a scoringutils forecast, keeps the best one, and refits
+it on the full data. The returned object
 is an ordinary \code{\link[=nowcast]{nowcast()}} result (so \code{autoplot()}, \code{predict()}, etc. work),
 with the ranked scoreboard attached in its \code{comparison} slot.
 }
@@ -158,5 +168,6 @@ winner <- best_model(nc)  # the model() object, to reuse elsewhere
 }
 }
 \seealso{
-\code{\link[=nowcast]{nowcast()}}, \code{\link[=backtest]{backtest()}}, \code{\link[=score]{score()}}
+\link{diseasenowcasting_workflows}, \code{\link[=nowcast]{nowcast()}}, \code{\link[=backtest]{backtest()}}, \code{\link[scoringutils:score]{scoringutils::score()}},
+\code{\link[scoringutils:add_relative_skill]{scoringutils::add_relative_skill()}}
 }

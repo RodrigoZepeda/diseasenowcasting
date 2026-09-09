@@ -5,7 +5,8 @@ test_that("nowcast() fits a tbl_now and the accessors work", {
   mdl <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
   nc  <- nowcast(tn, mdl, type = "one_stage", n_draws = 400, seed = 1)
 
-  expect_true(S7::S7_inherits(nc, diseasenowcasting:::nowcast_class))
+  expect_true(S7::S7_inherits(nc, diseasenowcasting:::diseasenowcasting_result_class))
+  expect_true(S7::S7_inherits(nc@fit, diseasenowcasting:::nowcast_class))
   expect_length(nc@fits, 1L)
 
   # coef() = parameter estimates
@@ -77,7 +78,8 @@ test_that("update() merges new data and refits to a longer series", {
   # update() now warns about surprising new data; not what this test checks.
   nc2 <- suppressWarnings(update(nc, new_rows, compute_surprise = FALSE))
 
-  expect_true(S7::S7_inherits(nc2, diseasenowcasting:::nowcast_class))
+  expect_true(S7::S7_inherits(nc2, diseasenowcasting:::diseasenowcasting_result_class))
+  expect_true(S7::S7_inherits(nc2@fit, diseasenowcasting:::nowcast_class))
   expect_true(nc2@target > nc@target)                 # series grew
   expect_true(is.finite(coef(nc2)["delay_mu"]))
 })

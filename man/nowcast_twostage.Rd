@@ -58,7 +58,10 @@ full-series posterior); values > 1 widen the simplex spread.}
 }
 \value{
 A list with \code{quantiles}, \code{median}, pooled \code{draws}, the \code{rung} used
-(\code{"multi"}, \code{"anchored"}, or \code{"onestage"}), and \code{n_samp} (imputations pooled).
+(\code{"multi"}, \code{"anchored"}, or \code{"onestage"}), \code{n_samp} (imputations pooled),
+and \code{fit_diagnostics}. The latter records the requested and retained
+imputation counts plus warm, Stage-1, fallback, exclusion, and retained-fit
+diagnostics.
 }
 \description{
 Two-stage multiple-imputation nowcast

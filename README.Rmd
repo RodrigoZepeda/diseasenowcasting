@@ -87,9 +87,8 @@ You can install `diseasenowcasting` (and its companion data package
 [`pak`](https://pak.r-lib.org/):
 
 ```{r, eval = FALSE}
-# install.packages("pak") # <- uncomment if you do not have `pak`
-pak::pkg_install("RodrigoZepeda/tbl.now")
-pak::pkg_install("RodrigoZepeda/diseasenowcasting")
+install.packages("diseasenowcasting", repos = c("https://rodrigozepeda.r-universe.dev",
+getOption("repos")))
 ```
 
 ## Example
@@ -183,15 +182,20 @@ model_2 <- model(
 bt <- backtest(dengue_tbl, list(model_1, model_2), n_dates = 3)
 ```
 
-And get the scores
+Plot the backtest
 
 ```{r}
 autoplot(bt)
 ```
-You can access these quantities directly with `score`
+The returned object is a `tbl.now::nowcast_backtest`, so it can be converted and
+scored directly with scoringutils. Relative WIS is available without any
+diseasenowcasting-specific score implementation:
 
 ```{r}
-score(bt)
+relative_scores <- bt |>
+  scoringutils::as_forecast_quantile() |>
+  scoringutils::score() |>
+  scoringutils::add_relative_skill(metric = "wis")
 ```
 
 ## Automatic model selection
@@ -202,7 +206,8 @@ much data you have, backtests them, and refits the single best one. The result i
 an ordinary nowcast, with the ranked comparison attached.
 
 ```{r auto, eval = TRUE}
-# Compares epidemic processes x delay families and keeps the best (default by WIS)
+# Compares epidemic processes x delay families and keeps the best (default by
+# relative WIS). Equal scores prefer HSGP, then AR, SIR, and custom processes.
 # here we use n_dates = 10 just as an example. Set to higher. 
 # In real life this number represents how many dates are used to compare 
 # the nowcasts
@@ -384,4 +389,3 @@ From there, depending on what you want to do next:
 
 See `?nowcast`, `?backtest`, `?score`, and `?model` for the full function
 documentation.
-

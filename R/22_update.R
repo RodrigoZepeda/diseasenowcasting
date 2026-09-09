@@ -140,19 +140,43 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
     }
   }
 
-  collected <- if (object@type == "one_stage")
-      list(fits = list(fit(object@model, engine, priors = priors, init = warm)),
-           rung = "onestage", target = engine$max_time)
-    else
-      .collect_nowcast_fits(object@model, engine, priors, type = "two_stage",
-                            K = K, np_spread = np_spread, warm_inits = warm)
+  collected <- .collect_nowcast_fits(
+    object@model, engine, priors,
+    type = if (object@type == "one_stage") "one_stage" else "two_stage",
+    K = K, np_spread = np_spread, warm_inits = warm
+  )
 
   new_nc <- nowcast_class(model = object@model, data = merged, now = prepared$now, type = object@type,
                           fits = collected$fits, rung = collected$rung, target = collected$target,
                           engine = engine, priors = priors, phi = object@phi, n_draws = object@n_draws,
+                          fit_diagnostics = collected$diagnostics %||% list(),
                           revision_mode = object@revision_mode)
   if (!is.null(extreme_values)) attr(new_nc, "surprise") <- extreme_values
   new_nc
+}
+
+# This method is specific to the diseasenowcasting subclass. It does not touch
+# tbl.now's `update.tbl_now` method for input data.
+S7::method(update, diseasenowcasting_result_class) <- function(
+    object, new_data, now = NULL, K = 25L, np_spread = 1,
+    compute_surprise = TRUE, surprise_level = 0.99, ...) {
+  native <- stats::update(
+    .unwrap_nowcast(object),
+    new_data = new_data,
+    now = now,
+    K = K,
+    np_spread = np_spread,
+    compute_surprise = compute_surprise,
+    surprise_level = surprise_level,
+    ...
+  )
+  result <- .as_diseasenowcasting_result(
+    native,
+    n_draws = native@n_draws,
+    quantile_levels = sort(unique(object@predictions$.quantile_level))
+  )
+  attr(result, "surprise") <- attr(native, "surprise")
+  result
 }
 
 #' Surprising (extreme) values flagged during the last `update()`
@@ -166,6 +190,14 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
 #' @returns A `data.frame` of flagged surprises, or `NULL`.
 #' @export
 extreme_values <- function(nc) {
+  if (S7::S7_inherits(nc, diseasenowcasting_result_class)) {
+    native <- nc@fit
+    result_surprise <- attr(nc, "surprise")
+    if (!is.null(result_surprise)) {
+      attr(native, "surprise") <- result_surprise
+    }
+    nc <- native
+  }
   surprises <- attr(nc, "surprise")
   if (is.null(surprises)) return(NULL)
 

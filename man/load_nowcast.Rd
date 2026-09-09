@@ -15,10 +15,11 @@ the live tape; custom delays/epidemics require \code{library(RTMB)}.  Default
 \code{FALSE} -- the stored mode + precision already drive \code{\link[=predict]{predict()}}.}
 }
 \value{
-A \code{nowcast_class} object.
+A diseasenowcasting subclass of \link[tbl.now:tbl_nowcast]{tbl.now::tbl_nowcast}.
 }
 \description{
-Restores a \code{nowcast_class} from a bundle written by \code{\link[=save_nowcast]{save_nowcast()}}.  The
+Restores the common \code{tbl_nowcast} result from a bundle written by
+\code{\link[=save_nowcast]{save_nowcast()}}. The native fit is restored into \verb{@fit}. The
 result works with \code{\link[=predict]{predict()}}, \code{\link[=autoplot]{autoplot()}}, \code{\link[=coef]{coef()}}, \code{\link[=parameters]{parameters()}},
 \code{\link[=mean]{mean()}}/\code{\link[=median]{median()}}/\code{\link[=quantile]{quantile()}} straight away (sampling from the stored
 Laplace mode + precision).  To re-fit it -- on the same or new data -- pass the

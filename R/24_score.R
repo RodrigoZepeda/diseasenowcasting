@@ -1,90 +1,92 @@
 # =============================================================================
-# score() -- WIS / APE / MSE for a backtest, with multi-model ranking
-# =============================================================================
-# Scores the d*=0 nowcast (the newest event per as-of date) against the eventual
-# truth.  WIS via scoringutils; APE (mean absolute percentage error) and MSE
-# (mean squared error of the median point forecast) computed directly.  With
-# several models, ranks them by the chosen metric and reports via cli.
+# fit_check() -- RTMB-specific fit quality, separate from predictive scoring
 # =============================================================================
 
-#' Score a backtest: WIS, APE, MSE per model (and rank them)
+#' Check RTMB optimizer diagnostics for a fitted nowcast
 #'
-#' @param object A `backtest_class`.
-#' @param metric Metric to RANK models by: `"wis"` (default), `"ape"`, or `"mse"`.
-#'   All three are always reported; `metric` only chooses the ranking.
-#' @param report If TRUE (default), print the ranked comparison via cli.
-#' @returns A data.frame, one row per model, with `wis`, its decomposition
-#'   (`overprediction`, `underprediction`, `dispersion`), `ape`, `mse`,
-#'   `coverage_50`, and `coverage_90`, sorted best-first by `metric`.
+#' Predictive accuracy belongs to [tbl.now::score_nowcast()] and
+#' [tbl.now::nowcast_backtest()]. `fit_check()` deliberately reports only
+#' diagnostics specific to the RTMB optimization performed by
+#' diseasenowcasting.
+#'
+#' @param object A result from [nowcast()] or [auto_nowcast()]. Native
+#'   diseasenowcasting operations unwrap the common result automatically.
+#' @param warn If `TRUE`, warn when any retained fit fails the common optimizer
+#'   adequacy predicate: finite objective and derivatives, optimizer code zero,
+#'   box-constrained KKT residual, positive-definite curvature on the locally
+#'   free subspace, and a quadratic objective-gap estimate no larger than
+#'   `0.01`.
+#'
+#' @returns A data frame with one row per retained RTMB fit and columns `fit`,
+#'   `rung`, `convergence`, `objective`, raw and projected gradients, quadratic
+#'   objective gap, Hessian status, any Laplace-precision regularization used
+#'   for prediction, overall status, and diagnostic reasons.
+#' @seealso [diseasenowcasting_workflows] for the distinction between native fit
+#'   diagnostics and predictive scoring; [nowcast_diagnostic()],
+#'   [tbl.now::score_nowcast()], [tbl.now::nowcast_backtest()]
 #' @export
-score <- function(object, metric = c("wis", "ape", "mse"), report = TRUE) {
-  stopifnot(S7::S7_inherits(object, backtest_class))
-  metric <- match.arg(metric)
-  results <- object@results
-  if (is.null(results) || nrow(results) == 0) cli::cli_abort("Backtest has no results to score.")
+fit_check <- function(object, warn = TRUE) {
+  native <- .unwrap_nowcast(object, "object")
 
-  quantile_names <- c("q2.5", "q5", "q10", "q25", "q50", "q75", "q90", "q95", "q97.5")
-  quantile_levels <- c(0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975)
-
-  # d*=0 target: keep only the NEWEST event-time per (model, as-of date), since
-  # that is the most-censored nowcast we want to score.  Drop rows with no truth.
-  results <- results[is.finite(results$final), , drop = FALSE]
-  newest <- do.call(rbind, by(results, list(results$model, results$date_run),
-    function(model_date_block) {
-      newest_row <- which.max(model_date_block$.event_num)
-      model_date_block[newest_row, , drop = FALSE]
-    }))
-
-  # -- WIS via scoringutils ----------------------------------------------------
-  # scoringutils wants one row per (model, date_run, quantile_level), so pivot the
-  # wide q2.5..q97.5 columns into that long form.
-  quantile_long <- do.call(rbind, lapply(seq_along(quantile_names), function(q_index) {
-    data.frame(model = newest$model, date_run = newest$date_run, observed = newest$final,
-               predicted = newest[[quantile_names[q_index]]],
-               quantile_level = quantile_levels[q_index])
-  }))
-  wis_tbl <- tryCatch({
-    forecast <- scoringutils::as_forecast_quantile(quantile_long, observed = "observed",
-      predicted = "predicted", quantile_level = "quantile_level",
-      forecast_unit = c("model", "date_run"))
-    scored_per_date  <- scoringutils::score(forecast)
-    scored_per_model <- scoringutils::summarise_scores(scored_per_date, by = "model")
-    data.frame(model = scored_per_model$model, wis = scored_per_model$wis,
-               overprediction  = scored_per_model$overprediction,
-               underprediction = scored_per_model$underprediction,
-               dispersion      = scored_per_model$dispersion,
-               coverage_50 = scored_per_model$interval_coverage_50,
-               coverage_90 = scored_per_model$interval_coverage_90)
-  }, error = function(e) {
-    cli::cli_warn("scoringutils WIS failed: {conditionMessage(e)}")
-    data.frame(model = unique(newest$model), wis = NA_real_,
-               overprediction = NA_real_, underprediction = NA_real_, dispersion = NA_real_,
-               coverage_50 = NA_real_, coverage_90 = NA_real_)
-  })
-
-  # -- APE (mean absolute % error) and MSE of the median point forecast --------
-  point_tbl <- do.call(rbind, by(newest, newest$model, function(model_block) {
-    median_forecast <- model_block$q50
-    truth           <- model_block$final
-    # APE guards against divide-by-zero with pmax(truth, 1).
-    abs_pct_error <- mean(abs(median_forecast - truth) / pmax(truth, 1), na.rm = TRUE)
-    mean_sq_error <- mean((median_forecast - truth)^2, na.rm = TRUE)
-    data.frame(model = model_block$model[1], ape = abs_pct_error, mse = mean_sq_error,
-               n = nrow(model_block))
-  }))
-
-  out <- merge(wis_tbl, point_tbl, by = "model")
-  out <- out[order(out[[metric]]), , drop = FALSE]
-  rownames(out) <- NULL
-
-  if (report) {
-    cli::cli_h2("Backtest scores (d*=0, ranked by {metric}, n = {max(out$n)} dates)")
-    for (i in seq_len(nrow(out))) {
-      marker <- if (i == 1) cli::col_green(cli::symbol$tick) else " "
-      cli::cli_text("{marker} {out$model[i]}: WIS {round(out$wis[i], 2)} | APE {round(out$ape[i], 3)} | ",
-                    "MSE {round(out$mse[i], 1)} | cov50 {round(out$coverage_50[i], 2)} cov90 {round(out$coverage_90[i], 2)}")
+  out <- do.call(rbind, lapply(seq_along(native@fits), function(i) {
+    candidate <- native@fits[[i]]
+    summary <- .fit_diagnostic_summary(candidate)
+    laplace_fits <- native@fit_diagnostics$laplace_sampling$fits %||% list()
+    laplace <- if (length(laplace_fits) >= i) laplace_fits[[i]] else list()
+    regularized <- isTRUE(laplace$applied)
+    status <- if (regularized) "warning" else summary$status
+    reasons <- summary$reasons
+    if (regularized) {
+      reasons <- c(
+        reasons,
+        paste0(
+          "Laplace precision regularized by ", laplace$method,
+          if (isTRUE((laplace$ridge %||% 0) > 0)) {
+            paste0(" (ridge ", signif(laplace$ridge, 4), ")")
+          } else if (isTRUE((laplace$eigenvalue_floor %||% 0) > 0)) {
+            paste0(
+              " (eigenvalue floor ",
+              signif(laplace$eigenvalue_floor, 4), ")"
+            )
+          } else {
+            ""
+          }
+        )
+      )
     }
-    cli::cli_alert_success("Best by {metric}: {out$model[1]}")
+    data.frame(
+      fit = i,
+      rung = native@rung,
+      convergence = summary$convergence,
+      objective = summary$objective,
+      max_gradient = summary$max_gradient,
+      projected_gradient = summary$projected_gradient,
+      quadratic_gap = summary$quadratic_gap,
+      hessian_positive_definite = summary$hessian_positive_definite,
+      hessian_status = summary$hessian_status,
+      laplace_regularized = as.logical(laplace$applied %||% NA),
+      laplace_regularization = as.character(laplace$method %||% "unknown"),
+      laplace_ridge = as.numeric(laplace$ridge %||% NA_real_),
+      laplace_eigenvalue_floor = as.numeric(
+        laplace$eigenvalue_floor %||% NA_real_
+      ),
+      fit_status = status,
+      gradient_status = as.character(candidate$gradient_status %||% "unknown"),
+      reasons = paste(reasons, collapse = "; "),
+      stringsAsFactors = FALSE
+    )
+  }))
+
+  if (isTRUE(warn)) {
+    applicable <- out$rung != "prior"
+    problematic <- applicable & out$fit_status != "pass"
+    if (any(problematic)) {
+      cli::cli_warn(c(
+        "{sum(problematic)} of {nrow(out)} retained RTMB fit{?s} failed the optimizer diagnostic check.",
+        "i" = "Inspect {.code fit_check(object, warn = FALSE)} and {.fn nowcast_diagnostic}."
+      ))
+    }
   }
+
   out
 }

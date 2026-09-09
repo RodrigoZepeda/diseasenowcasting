@@ -7,7 +7,8 @@
 save_nowcast(object, file)
 }
 \arguments{
-\item{object}{A \code{nowcast_class} from \code{\link[=nowcast]{nowcast()}} or \code{\link[=auto_nowcast]{auto_nowcast()}}.}
+\item{object}{A result from \code{\link[=nowcast]{nowcast()}} or \code{\link[=auto_nowcast]{auto_nowcast()}}. The native fit
+stored in \code{object@fit} is serialized automatically.}
 
 \item{file}{Path to write (a single \code{.rds} file).}
 }

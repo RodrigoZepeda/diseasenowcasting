@@ -220,9 +220,15 @@ eval_dates <- as.Date(c("2020-04-15", "2020-05-01",
 bt_plain   <- backtest(new_data_tbl, dates = eval_dates)
 bt_cens    <- backtest(new_data_tbl_censored, dates = eval_dates)
 
+score_backtest <- function(x) {
+  x |>
+    scoringutils::as_forecast_quantile() |>
+    scoringutils::score() |>
+    scoringutils::summarise_scores(by = "model")
+}
 rbind(
-  plain    = score(bt_plain, report = F)[,c("wis","coverage_50","coverage_90")],
-  censored = score(bt_cens,  report = F)[,c("wis","coverage_50","coverage_90")]
+  plain = score_backtest(bt_plain),
+  censored = score_backtest(bt_cens)
 )
 ```
 

@@ -1,10 +1,9 @@
 # =============================================================================
 # nowcast S7 class + the main user-facing nowcast() call
 # =============================================================================
-# nowcast() takes a tbl_now and a model(), FITS the nowcast model (one- or
-# two-stage), and returns a `nowcast` object holding the fit(s).  It does NOT
-# draw the posterior-predictive nowcast -- that is deferred to predict() (and the
-# latent-incidence summaries mean()/median()/quantile()).
+# nowcast() takes a tbl_now and a model(), fits the native model, eagerly draws
+# its public prediction, and returns a diseasenowcasting subclass of
+# tbl.now::tbl_nowcast. The untouched native object is retained in `@fit`.
 # =============================================================================
 
 #' The fitted nowcast object
@@ -24,6 +23,7 @@ nowcast_class <- S7::new_class(
     priors = S7::class_list,
     phi    = S7::class_any,      # NB overdispersion prior (for update())
     n_draws = S7::class_numeric, # default posterior draws for predict/summaries
+    fit_diagnostics = S7::new_property(S7::class_list, default = list()),
     # Which outcomes the fit modelled: "none", "confirmation_only",
     # "retraction_only" or "both".  Recorded rather than re-derived so a saved fit
     # reports the mode it was FITTED under, even if its data are later subset.
@@ -38,10 +38,10 @@ nowcast_class <- S7::new_class(
 #'
 #' The main entry point.  Takes a `tbl_now` (from the tbl.now package) and a
 #' [model()], fits the latent-epidemic + reporting-delay model as of a given
-#' date, and returns a `nowcast_class` object.  Fitting only -- the
-#' posterior-predictive nowcast is produced lazily by [predict()]; the latent
-#' incidence by [mean()]/[median()]/[quantile()]; the parameter estimates by
-#' [coef()].
+#' date, and returns the common [tbl.now::tbl_nowcast] result. Predictive draws
+#' and quantiles are materialised in that result; the untouched native fit is
+#' retained in `@fit` for [predict()], [mean()]/[median()]/[quantile()],
+#' [coef()], and model-specific diagnostics.
 #'
 #' @param data A `tbl_now` object (`tbl.now::tbl_now()`).
 #' @param model A [model()] object.  Default: `model()` (NB + HSGP + Dirichlet).
@@ -98,18 +98,29 @@ nowcast_class <- S7::new_class(
 #'   parameters from their **priors** only, returning the prior-predictive latent
 #'   incidence.  Useful for understanding what a prior implies *before* seeing
 #'   data (e.g. how the SIR `R0` prior or the AR(1) `phi` prior reshapes the
-#'   epidemic).  The result is a normal `nowcast_class`, so `predict()` /
-#'   `autoplot()` / `median()` / `quantile()` all work; `data` only supplies the
-#'   time grid.  Default `FALSE`.
+#'   epidemic). The result uses the same common grammar as an ordinary fit, so
+#'   `predict()` / `autoplot()` / `median()` / `quantile()` all work; `data`
+#'   only supplies the time grid. Default `FALSE`.
+#' @param quantile_levels Probabilities at which to summarise the predictive
+#'   draws in the returned [tbl.now::tbl_nowcast].
 #' @param seed Optional RNG seed (imputation draws).
 #' @param ... Passed to [prepare_data()] (e.g. `gp_boundary_frac`).
-#' @returns A `nowcast_class` object.
+#' @returns A diseasenowcasting subclass of [tbl.now::tbl_nowcast]. The native
+#'   fitted model is retained in `@fit`; diseasenowcasting operations unwrap it
+#'   automatically. The `@fit_diagnostics` property (also available at
+#'   `@metadata$diseasenowcasting$fit_diagnostics`) records the resolved fitting
+#'   stage, imputation retention, optimizer adequacy, curvature, and any
+#'   Laplace-precision regularization used for prediction.
 #'
 #' @section Overdispersion (`phi`):
 #' The negative-binomial overdispersion prior is **not** an argument of
 #' `nowcast()`.  Set it on the likelihood instead, e.g.
 #' `model(nb_likelihood(phi = lognormal_prior(log(5), 0.5)), ...)`.  The default
 #' `nb_likelihood()` already uses `lognormal_prior(log(20), 0.5)`.
+#'
+#' @seealso [diseasenowcasting_workflows] for when to use native modelling
+#'   operations versus the shared `tbl.now` result workflow; [backtest()] and
+#'   [auto_nowcast()] for retrospective comparison and automatic selection.
 #'
 #' @examples
 #' if (requireNamespace("tbl.now", quietly = TRUE)) {
@@ -124,6 +135,7 @@ nowcast <- function(data, model = diseasenowcasting::model(),
                     floor_mu = 0.08, floor_sig_frac = 0.08,
                     temporal_effects = "auto",
                     prior_only = FALSE,
+                    quantile_levels = tbl.now::nowcast_quantile_levels(),
                     seed = sample.int(.Machine$integer.max, 1), ...) {
   if ("revision_censored" %in% names(list(...))) {
     cli::cli_abort(c(
@@ -234,11 +246,20 @@ nowcast <- function(data, model = diseasenowcasting::model(),
   engine$min_event    <- prepared$min_event
   engine$event_unit   <- as.character(prepared$event_unit)
   engine$strata_levels <- prepared$strata_levels
-  nowcast_class(model = model, data = data, now = prepared$now,
-                type = if (isTRUE(prior_only)) "prior_only" else type,
-                fits = collected$fits, rung = collected$rung, target = collected$target,
-                engine = engine, priors = priors, phi = phi, n_draws = as.integer(n_draws),
-                revision_mode = revision_mode)
+  native_fit <- nowcast_class(
+    model = model, data = data, now = prepared$now,
+    type = if (isTRUE(prior_only)) "prior_only" else type,
+    fits = collected$fits, rung = collected$rung, target = collected$target,
+    engine = engine, priors = priors, phi = phi, n_draws = as.integer(n_draws),
+    fit_diagnostics = collected$diagnostics %||% list(),
+    revision_mode = revision_mode
+  )
+  .as_diseasenowcasting_result(
+    native_fit,
+    n_draws = n_draws,
+    seed = seed,
+    quantile_levels = quantile_levels
+  )
 }
 
 #' The NB overdispersion prior carried by a model's likelihood (or `NULL`).
@@ -327,6 +348,7 @@ nowcast_prediction_class <- S7::new_class(
     observed_strata  = S7::class_any,     # [max_time x n_strata] observed per stratum (or NULL)
     estimand = S7::new_property(S7::class_any, default = NULL),
     cumulative_reconstruction = S7::new_property(S7::class_any, default = NULL),
-    negative_projection_count = S7::new_property(S7::class_numeric, default = 0)
+    negative_projection_count = S7::new_property(S7::class_numeric, default = 0),
+    laplace_sampling = S7::new_property(S7::class_list, default = list())
   )
 )

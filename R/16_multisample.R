@@ -48,7 +48,10 @@
 #' @param probs Quantile probabilities to report.
 #' @param seed Optional RNG seed.
 #' @returns A list with `quantiles`, `median`, pooled `draws`, the `rung` used
-#'   (`"multi"`, `"anchored"`, or `"onestage"`), and `n_samp` (imputations pooled).
+#'   (`"multi"`, `"anchored"`, or `"onestage"`), `n_samp` (imputations pooled),
+#'   and `fit_diagnostics`. The latter records the requested and retained
+#'   imputation counts plus warm, Stage-1, fallback, exclusion, and retained-fit
+#'   diagnostics.
 #' @export
 nowcast_twostage <- function(model, m, X = NULL, d_star = NULL, max_time = NULL,
                              target = NULL, delay_window = 120L, K = 25L,
@@ -65,121 +68,39 @@ nowcast_twostage <- function(model, m, X = NULL, d_star = NULL, max_time = NULL,
   prepared_data <- prepare_data(model, m, X = X, d_star = d_star, max_time = max_time, delay_only = FALSE)
   priors_full   <- default_priors(model, prepared_data, phi = phi)
 
-  # Pool a list of [draws x max_time] matrices into the harness nowcast format.
-  pool_and_summarise <- function(draws_list, rung, n_imputations) {
-    pooled_draws <- if (is.list(draws_list)) do.call(rbind, draws_list) else draws_list
-    target_draws <- pooled_draws[, target]
-    list(nowcast = summarise_nowcast_matrix(pooled_draws), M = pooled_draws,
-         quantiles = quantile(target_draws, probs = probs, na.rm = TRUE),
-         median = stats::median(target_draws, na.rm = TRUE),
-         rung = rung, n_samp = n_imputations, target = target,
-         observed = { cc <- prepared_data$case_counts
-                      if (is.matrix(cc)) rowSums(cc)[target] else cc[target] })
+  # Keep this legacy matrix interface on exactly the same fitting cascade and
+  # adequacy policy as `nowcast(tbl_now, type = "two_stage")`.  In particular,
+  # warm and Stage-1 fits are diagnostic inputs, only adequate Stage-2 fits are
+  # pooled, and any warning describes the final retained/excluded collection.
+  collected <- .collect_nowcast_fits(
+    model, prepared_data, priors_full,
+    type = "two_stage", K = K,
+    floor_mu = floor_mu, floor_sig_frac = floor_sig_frac,
+    np_spread = np_spread, delay_window = delay_window
+  )
+
+  draws_per_fit <- if (identical(collected$rung, "multi")) {
+    n_draws_per
+  } else {
+    n_draws_per * K
   }
+  pooled <- .pool_fit_draws(
+    collected$fits, target = target, n_draws = draws_per_fit
+  )
+  collected$diagnostics$laplace_sampling <- pooled$laplace_sampling
+  .warn_laplace_sampling(collected$diagnostics)
+  target_draws <- pooled$M[, target]
+  case_counts <- prepared_data$case_counts
 
-  # -- Stage A: warm one-stage fit (free delay) --------------------------------
-  warm_inits <- tryCatch({
-    warm_fit <- fit(model, prepared_data, priors = priors_full)
-    if (warm_fit$convergence == 0) warm_fit$parList else NULL
-  }, error = function(e) NULL)
-
-  is_nonparametric <- model@delay@num_id == 4L
-  is_gengamma      <- model@delay@num_id == 3L
-
-  # -- Two-stage DIRICHLET (non-parametric) ------------------------------------
-  # Stage 1: NP delay-only fit on the FULL series (so the simplex dimension
-  # n_bins matches Stage-2 -- the Dirichlet simplex cannot be windowed).  Impute
-  # K simplices by sampling delay_logits from the Stage-1 Laplace posterior with
-  # the covariance inflated by `np_spread` (the delay-only Laplace is
-  # over-confident).  HARD-FIX each simplex in a warm Stage-2 fit (fast: Gstar
-  # precomputed, PMF dropped) and pool the newest-event nowcast draws.
-  if (is_nonparametric && !is.null(warm_inits)) {
-    np_pool <- tryCatch({
-      delay_data   <- prepare_data(model, m, X = X, d_star = d_star, max_time = max_time, delay_only = TRUE)
-      stage1       <- fit(model, delay_data, priors = default_priors(model, delay_data))
-      logits_mode  <- as.numeric(stage1$delay_logits)
-      hessian      <- methods::as(stage1$obj$he(logits_mode), "sparseMatrix")
-      precision    <- hessian / np_spread                       # inflate covariance by np_spread
-      logit_draws  <- .sample_mvnorm_precision(logits_mode, precision, K)
-      warm_epidemic_inits <- warm_inits[setdiff(names(warm_inits), "delay_logits")]
-      pooled_draws <- list(); n_converged <- 0L
-      for (k in seq_len(K)) {
-        exp_logits <- exp(logit_draws[, k])
-        imputed_simplex <- c(exp_logits, 1) / (sum(exp_logits) + 1)
-        imputation_priors <- fix_param(priors_full, "delay_probs", imputed_simplex)
-        imputation_draws <- tryCatch({
-          imputation_fit <- fit(model, prepared_data, priors = imputation_priors, init = warm_epidemic_inits)
-          if (imputation_fit$convergence != 0) NULL
-          else .nowcast_draws(imputation_fit, target = target, n_draws = n_draws_per)$M
-        }, error = function(e) NULL)
-        # Keep only imputations whose Stage-2 fit converged.
-      if (!is.null(imputation_draws)) {
-        pooled_draws[[length(pooled_draws) + 1]] <- imputation_draws
-        n_converged <- n_converged + 1L
-      }
-      }
-      if (n_converged >= 1L) pool_and_summarise(pooled_draws, "multi", n_converged) else NULL
-    }, error = function(e) NULL)
-    if (!is.null(np_pool)) return(np_pool)
-  }
-
-  # -- Stage 1 (parametric): windowed delay-only estimate + SEs -----------------
-  delay_estimate <- if (is_nonparametric) NULL else tryCatch({
-    window <- .window_delay_m(m, max_time, delay_window)
-    delay_data   <- prepare_data(model, window$m, max_time = window$max_time, delay_only = TRUE)
-    delay_priors <- default_priors(model, delay_data)
-    delay_fit    <- fit(model, delay_data, priors = delay_priors)
-    list(mu = delay_fit$delay_mu, sigma = delay_fit$delay_sigma,
-         mu_sd = delay_fit$delay_mu_sd, sigma_sd = delay_fit$delay_sigma_sd, shape_Q = delay_fit$delay_Q)
-  }, error = function(e) NULL)
-
-  # -- Rung 1: multiple imputation ---------------------------------------------
-  if (!is.null(delay_estimate) && !is.null(warm_inits)) {
-    spread_mu    <- max(floor_mu, if (is.finite(delay_estimate$mu_sd)) delay_estimate$mu_sd else 0)
-    spread_sigma <- max(floor_sig_frac * delay_estimate$sigma,
-                        if (is.finite(delay_estimate$sigma_sd)) delay_estimate$sigma_sd else 0)
-    imputed_mu    <- rnorm(K, delay_estimate$mu, spread_mu)
-    imputed_sigma <- pmax(0.05, rnorm(K, delay_estimate$sigma, spread_sigma))
-    warm_epidemic_inits <- warm_inits[setdiff(names(warm_inits),
-                                              c("delay_mu", "log_delay_sigma_excess", "delay_Q"))]
-    pooled_draws <- list(); n_converged <- 0L
-    for (k in seq_len(K)) {
-      imputation_priors <- fix_param(fix_param(priors_full, "delay_mu", imputed_mu[k]),
-                                     "delay_sigma", imputed_sigma[k])
-      # GenGamma: also fix the shape Q (at its Stage-1 estimate) so the delay is
-      # FULLY fixed -> Gstar is precomputed as data and the expensive pgamma CDF
-      # is not re-evaluated each optimiser step (huge speedup for GG).
-      if (is_gengamma && is.finite(delay_estimate$shape_Q %||% NA))
-        imputation_priors <- fix_param(imputation_priors, "delay_Q", delay_estimate$shape_Q)
-      imputation_draws <- tryCatch({
-        imputation_fit <- fit(model, prepared_data, priors = imputation_priors, init = warm_epidemic_inits)
-        if (imputation_fit$convergence != 0) NULL
-        else .nowcast_draws(imputation_fit, target = target, n_draws = n_draws_per)$M
-      }, error = function(e) NULL)
-      # Keep only imputations whose Stage-2 fit converged.
-      if (!is.null(imputation_draws)) {
-        pooled_draws[[length(pooled_draws) + 1]] <- imputation_draws
-        n_converged <- n_converged + 1L
-      }
-    }
-    if (n_converged >= 1L) return(pool_and_summarise(pooled_draws, "multi", n_converged))
-  }
-
-  # -- Rung 2: anchored prior (delay free, recentred) --------------------------
-  if (!is.null(delay_estimate)) {
-    anchored_priors <- default_priors(model, prepared_data, phi = phi,
-      delay_mu    = normal_prior(delay_estimate$mu, max(0.10, delay_estimate$mu_sd %||% 0.10)),
-      delay_sigma = gamma_prior(4, 4 / max(0.5, delay_estimate$sigma)))
-    anchored_draws <- tryCatch({
-      anchored_fit <- fit(model, prepared_data, priors = anchored_priors, init = warm_inits)
-      if (anchored_fit$convergence != 0) NULL
-      else .nowcast_draws(anchored_fit, target = target, n_draws = n_draws_per * K)$M
-    }, error = function(e) NULL)
-    if (!is.null(anchored_draws)) return(pool_and_summarise(anchored_draws, "anchored", 1L))
-  }
-
-  # -- Rung 3: plain one-stage -------------------------------------------------
-  onestage_fit   <- fit(model, prepared_data, priors = priors_full)
-  onestage_draws <- .nowcast_draws(onestage_fit, target = target, n_draws = n_draws_per * K)$M
-  pool_and_summarise(onestage_draws, "onestage", 1L)
+  list(
+    nowcast = summarise_nowcast_matrix(pooled$M),
+    M = pooled$M,
+    quantiles = quantile(target_draws, probs = probs, na.rm = TRUE),
+    median = stats::median(target_draws, na.rm = TRUE),
+    rung = collected$rung,
+    n_samp = if (identical(collected$rung, "multi")) length(collected$fits) else 1L,
+    target = target,
+    observed = if (is.matrix(case_counts)) rowSums(case_counts)[target] else case_counts[target],
+    fit_diagnostics = collected$diagnostics
+  )
 }

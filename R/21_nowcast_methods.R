@@ -115,7 +115,11 @@ S7::method(predict, nowcast_class) <- function(object, n_draws = NULL,
     observed_strata = if (ncol(cc_mat) > 1L) cc_mat else NULL,
     estimand = pooled$estimand,
     cumulative_reconstruction = pooled$cumulative_reconstruction,
-    negative_projection_count = pooled$negative_projection_count
+    negative_projection_count = pooled$negative_projection_count,
+    # Mocked/third-party pool implementations written before sampling
+    # diagnostics may omit this field. Preserve the class contract with an
+    # empty, explicitly unknown diagnostic rather than rejecting the result.
+    laplace_sampling = pooled$laplace_sampling %||% list()
   )
   if (summary) return(summary(pred))
   pred
@@ -301,4 +305,31 @@ S7::method(print, nowcast_class) <- function(x, ...) {
         "  ... {nrow(board) - show_n} more; see {.fn comparison_scores}."))
   }
   invisible(x)
+}
+
+# The public result inherits tbl.now::tbl_nowcast. Register native operations
+# only on our subclass and unwrap its `@fit`; never install methods on the
+# shared tbl_nowcast class.
+S7::method(coef, diseasenowcasting_result_class) <- function(object, ...) {
+  stats::coef(.unwrap_nowcast(object), ...)
+}
+
+S7::method(predict, diseasenowcasting_result_class) <- function(object, ...) {
+  stats::predict(.unwrap_nowcast(object), ...)
+}
+
+S7::method(mean, diseasenowcasting_result_class) <- function(x, ...) {
+  mean(.unwrap_nowcast(x), ...)
+}
+
+S7::method(median, diseasenowcasting_result_class) <- function(x, ...) {
+  stats::median(.unwrap_nowcast(x), ...)
+}
+
+S7::method(quantile, diseasenowcasting_result_class) <- function(x, ...) {
+  stats::quantile(.unwrap_nowcast(x), ...)
+}
+
+S7::method(summary, diseasenowcasting_result_class) <- function(object, ...) {
+  summary(.unwrap_nowcast(object), ...)
 }

@@ -1,3 +1,136 @@
+# 2.4.0
+
+## Breaking: fitted nowcasts now use the common `tbl.now` result grammar
+
+`nowcast()` and `auto_nowcast()` now return a diseasenowcasting subclass of
+`tbl.now::tbl_nowcast`. Predictive draws and requested quantiles are materialised
+in the public result, while the complete native model fit is retained in `@fit`.
+Native operations such as `predict()`, `coef()`, `parameters()`, `update()`,
+`surprise()`, and model diagnostics unwrap that fit automatically.
+
+The same object now works directly with the common `tbl.now` workflow:
+`tidy()`, `as_tibble()`, `autoplot()`, `score_nowcast()`, forecast conversion,
+weighting, and ensembling need no explicit adapter. `nowcast()` gains
+`quantile_levels` so direct calls and `tbl.now::run_nowcast()` preserve the same
+requested quantile grid. Event axes retain their original numeric, daily, or
+weekly representation, and declared strata are reconstructed from the
+authoritative input data rather than from lossy display labels where possible.
+
+The result's standard `tbl_nowcast` properties are the source of truth for the
+data, event axis, strata, and analysis date. Namespaced metadata is reserved for
+diseasenowcasting prediction semantics and fit diagnostics. Model type, fitting
+rung, revision mode, and automatic-selection evidence remain available on the
+diseasenowcasting subclass and its retained native fit.
+
+## Breaking: backtesting and predictive scoring delegate to `tbl.now`
+
+`backtest()` now translates one or more native `model()` specifications into
+labelled `tbl.now::engine_diseasenowcasting()` specifications and returns
+`tbl.now::nowcast_backtest()` directly. This replaces the package-local
+backtest class and makes canonical tidying, plotting, forecast conversion,
+scoring, weighting, and ensembling available immediately.
+
+The revised interface supports canonical `horizon`, `keep_draws`, `on_error`,
+`verbose`, `truth_axis`, `truth_type`, and `quantile_levels` controls. Explicit
+model-list names become method labels; inferred labels describe the model
+components, and duplicate labels are rejected. Default truth semantics match
+the fitted estimand: confirmed cases for confirmation/both revision modes,
+still-standing cases for retraction-only mode, and reported totals otherwise.
+Automatic backtest dates for count-cumulative models respect their settlement
+horizon.
+
+The exported package-local `score()` has been removed. Predictive evaluation
+belongs to `tbl.now::score_nowcast()` and `scoringutils`; the new `fit_check()`
+reports only RTMB optimizer and Laplace diagnostics.
+
+## Optimizer and Laplace diagnostics
+
+Joint fits now use one structured adequacy predicate throughout low-level
+fitting, the two-stage collector, final warnings, prediction metadata, and
+`fit_check()`. It requires a finite objective and derivatives, a successful
+optimizer path, the box-constrained KKT conditions, positive-definite curvature
+on the locally free subspace, finite reconstructed incidence, and a
+curvature-scaled estimate of remaining objective improvement
+`0.5 * r' H^(-1) r <= 0.01`. The raw maximum gradient remains available for
+debugging but is no longer treated as a parameterization-independent
+convergence criterion.
+
+L-BFGS-B refinement now optimizes the centered objective
+`Q(theta) - Q(theta_start)`. Its stopping and acceptance rules therefore do not
+depend on an inferentially irrelevant additive constant in the negative log
+posterior. A successful base `nlminb` solve is not invalidated by a later
+line-search termination after an accepted improvement, and a successful polish
+can rehabilitate the optimizer path. Both solver codes, centered objective
+change, acceptance tolerance, and before/after gradients are retained for
+auditability.
+
+Cold initialization attempts are first classified by the common adequacy
+predicate; the adequate candidate with the lowest negative log posterior is
+then selected. If none is adequate, the lowest-objective candidate is retained
+only as an explicitly degraded fit or internal initializer. This replaces
+selection by the smallest unscaled gradient.
+
+Internal warm, Stage-1, and discarded imputation fits no longer emit end-user
+warnings. In two-stage fitting, only adequate Stage-2 fits contribute draws,
+and at most one aggregate warning describes exclusions or a degraded retained
+fit. `fit()` gains `warn` for controlling warnings from direct low-level joint
+fits. The legacy matrix interface `nowcast_twostage()` now uses the same fitting
+cascade and adequacy policy as `nowcast(type = "two_stage")`.
+
+Laplace sampling records whether the original precision admitted a Cholesky
+factorization and whether a diagonal ridge, non-finite repair, or eigenvalue
+floor was required. Strictly complementary active box coordinates are held
+fixed and sampling uses the certified free-coordinate precision. Any altered
+precision is visible in result metadata and causes `fit_check()` to report a
+warning rather than an unqualified pass.
+
+Two-stage results now expose an auditable `fit_diagnostics` record containing
+the requested and resolved fitting type; requested, attempted, retained, and
+excluded imputation counts; exclusion reasons; warm-fit use and status;
+Stage-1 Hessian/Laplace status; fallback information; retained-fit diagnostics;
+and Laplace-sampling regularization. The same record is available at
+`@fit_diagnostics` and `@metadata$diseasenowcasting$fit_diagnostics`.
+
+## Automatic model selection
+
+`auto_nowcast()` keeps native model-grid construction and full-data refit
+fallbacks but now evaluates its canonical backtest through `scoringutils`.
+Selection defaults to pairwise relative skill for the requested metric, which
+avoids rewarding a model merely because it succeeded on an easier subset of
+targets. Set `relative_score = FALSE` to use the raw mean score.
+
+Effectively tied scores are deterministic. The default
+`tie_break = "epidemic_priority"` prefers HSGP, then AR(1), SIR, and custom
+epidemic processes; `tie_break = "fastest"` instead prefers the smallest median
+successful retrospective fit time. The unused rule and original candidate-grid
+order provide secondary tie-breaks. Failed retrospective cells are skipped,
+and a failed full-data winner falls through to the next-ranked candidate.
+
+Backtest cell durations, full-data refit attempts, and total selection time are
+recorded and exposed by the new `selection_timings()` function.
+`comparison_scores()`, `best_score()`, and `selection_metric()` now report the
+canonical scoringutils-based selection evidence.
+
+## Updating, persistence, dependencies, and documentation
+
+`update()` preserves the common public result while warm-starting the retained
+native model through the same one- or two-stage collector. `save_nowcast()` now
+accepts the public common result, and `load_nowcast()` restores that result
+grammar together with its event axis, strata, quantile levels, fit diagnostics,
+and automatic-selection evidence. The stored native mode and precision still
+support prediction without rebuilding the RTMB tape.
+
+The minimum `tbl.now` version is now 0.35.3. `future` is now suggested rather
+than imported because parallel execution is owned by the canonical backtest
+workflow; `future.apply` is no longer imported, and `generics` is suggested for
+interoperability tests and workflows.
+
+New `?diseasenowcasting_workflows` documentation explains the boundary between
+native modelling/diagnostics and common cross-engine result operations. The
+README, introductory material, model-selection documentation, and
+outlier-censoring vignette have been updated for the common result, canonical
+backtest, scoringutils relative-skill, and fit-diagnostic workflows.
+
 # 2.3.0
 
 ## Breaking: tbl.now revision vocabulary is now the package vocabulary
