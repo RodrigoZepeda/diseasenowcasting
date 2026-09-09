@@ -221,20 +221,20 @@ pred_dengue <- predict(nc_dengue)
 summary(pred_dengue) 
 ```
 
-    #>         mean median        sd     mad q2.5  q5 q10 q25   q50 q75 q90 q95 q97.5
-    #> 154 108.5105  108.0  1.445315  1.4826  107 107 107 107 108.0 109 110 111   112
-    #> 155  89.0225   89.0  2.279823  1.4826   86  86  87  87  89.0  90  92  93    95
-    #> 156  68.1355   67.0  3.910855  2.9652   63  63  64  65  67.0  70  73  75    78
-    #> 157  45.3270   44.0  7.311621  5.9304   36  37  38  40  44.0  49  54  58    63
-    #> 158  40.0205   37.5 13.198150  9.6369   23  25  27  31  37.5  46  56  63    74
-    #> 159  36.3165   33.0 18.945469 14.8260   12  14  17  23  33.0  45  60  72    82
-    #>     .event_num stratum event_date
-    #> 154         47   Total 1990-11-26
-    #> 155         48   Total 1990-12-03
-    #> 156         49   Total 1990-12-10
-    #> 157         50   Total 1990-12-17
-    #> 158         51   Total 1990-12-24
-    #> 159         52   Total 1990-12-31
+    #>         mean median        sd     mad q2.5  q5 q10 q25 q50 q75 q90    q95
+    #> 154 108.6180    108  1.515990  1.4826  107 107 107 108 108 109 111 111.00
+    #> 155  89.1175     89  2.426239  1.4826   86  86  87  87  89  90  92  93.00
+    #> 156  68.2195     67  4.286083  2.9652   63  63  64  65  67  70  73  76.00
+    #> 157  45.5855     44  7.797056  5.9304   36  37  38  41  44  49  55  58.05
+    #> 158  40.4260     37 14.853681 10.3782   24  25  27  31  37  46  57  63.05
+    #> 159  36.3720     32 18.817696 14.8260   12  14  17  24  32  44  59  70.00
+    #>       q97.5 .event_num stratum event_date
+    #> 154 112.000         47   Total 1990-11-26
+    #> 155  95.000         48   Total 1990-12-03
+    #> 156  78.025         49   Total 1990-12-10
+    #> 157  64.000         50   Total 1990-12-17
+    #> 158  71.000         51   Total 1990-12-24
+    #> 159  80.000         52   Total 1990-12-31
 
 Additionally the
 [`nowcast_diagnostic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_diagnostic.md)
@@ -399,19 +399,19 @@ relative_scores
 #> Key: <model>
 #>                model      wis overprediction underprediction dispersion
 #>               <char>    <num>          <num>           <num>      <num>
-#> 1:  AR1/nb/LogNormal 2.803296     0.11689815        1.337674  1.3487240
-#> 2: HSGP/nb/LogNormal 3.973474     0.39062500        1.786227  1.7966218
-#> 3:  SIR/nb/LogNormal 3.518060     0.02604167        2.674653  0.8173655
+#> 1:  AR1/nb/LogNormal 2.810670     0.11111111        1.350000  1.3495587
+#> 2: HSGP/nb/LogNormal 4.116668     0.48263889        1.693229  1.9408001
+#> 3:  SIR/nb/LogNormal 3.463451     0.03009259        2.594734  0.8386241
 #>          bias interval_coverage_50 interval_coverage_90 ae_median
 #>         <num>                <num>                <num>     <num>
-#> 1: -0.4395833            0.5416667            0.7395833  5.901042
-#> 2: -0.4250000            0.5520833            0.7500000  8.135417
-#> 3: -0.4776042            0.5000000            0.7083333  7.218750
+#> 1: -0.4333333            0.5416667            0.7395833  5.906250
+#> 2: -0.4161458            0.5416667            0.7500000  8.520833
+#> 3: -0.4723958            0.5104167            0.6666667  7.119792
 #>    wis_relative_skill
 #>                 <num>
-#> 1:          0.8253182
-#> 2:          1.1698302
-#> 3:          1.0357519
+#> 1:          0.8213374
+#> 2:          1.2029778
+#> 3:          1.0120938
 ```
 
 The scoringutils output includes WIS and its decomposition, median
@@ -544,12 +544,12 @@ comparison_scores(auto_ncast)  # every candidate, ranked best-first
 #> # A tibble: 6 × 16
 #>   model                    wis overprediction underprediction dispersion    bias
 #>   <chr>                  <dbl>          <dbl>           <dbl>      <dbl>   <dbl>
-#> 1 HSGP/nb/GeneralizedGa… 0.376        0.0126           0.118       0.245 -0.0132
-#> 2 AR1/nb/GeneralizedGam… 0.494        0                0.289       0.205 -0.0507
-#> 3 HSGP/nb/LogNormal      0.510        0.142            0.0952      0.273 -0.004 
-#> 4 AR1/nb/LogNormal       0.545        0.00111          0.350       0.193 -0.0462
-#> 5 SIR/nb/GeneralizedGam… 1.50         0                1.39        0.117 -0.0712
-#> 6 SIR/nb/LogNormal       1.52         0                1.40        0.120 -0.0708
+#> 1 HSGP/nb/LogNormal      0.360       0.00648            0.154      0.200 -0.0275
+#> 2 HSGP/nb/GeneralizedGa… 0.410       0.0291             0.161      0.220 -0.0192
+#> 3 AR1/nb/GeneralizedGam… 0.519       0.000741           0.318      0.200 -0.047 
+#> 4 AR1/nb/LogNormal       0.568       0                  0.392      0.175 -0.0552
+#> 5 SIR/nb/LogNormal       1.48        0                  1.36       0.120 -0.0702
+#> 6 SIR/nb/GeneralizedGam… 1.49        0                  1.37       0.125 -0.0713
 #> # ℹ 10 more variables: interval_coverage_50 <dbl>, interval_coverage_90 <dbl>,
 #> #   ae_median <dbl>, wis_relative_skill <dbl>, median_fit_seconds <dbl>,
 #> #   total_fit_seconds <dbl>, successful_fits <int>, epidemic_priority <int>,
@@ -559,33 +559,33 @@ selection_timings(auto_ncast)  # retrospective fits, refits, and total seconds
 #> # A tibble: 18 × 5
 #>    .method                  .now       elapsed_seconds success error
 #>    <chr>                    <date>               <dbl> <lgl>   <chr>
-#>  1 SIR/nb/LogNormal         1991-11-18           1.15  TRUE    NA   
-#>  2 SIR/nb/GeneralizedGamma  1991-11-18           2.56  TRUE    NA   
-#>  3 AR1/nb/LogNormal         1991-11-18           0.690 TRUE    NA   
-#>  4 AR1/nb/GeneralizedGamma  1991-11-18           2.04  TRUE    NA   
-#>  5 HSGP/nb/LogNormal        1991-11-18           0.553 TRUE    NA   
-#>  6 HSGP/nb/GeneralizedGamma 1991-11-18           2.63  TRUE    NA   
-#>  7 SIR/nb/LogNormal         1991-11-25           1.21  TRUE    NA   
-#>  8 SIR/nb/GeneralizedGamma  1991-11-25           2.20  TRUE    NA   
-#>  9 AR1/nb/LogNormal         1991-11-25           0.681 TRUE    NA   
-#> 10 AR1/nb/GeneralizedGamma  1991-11-25           2.39  TRUE    NA   
-#> 11 HSGP/nb/LogNormal        1991-11-25           0.630 TRUE    NA   
-#> 12 HSGP/nb/GeneralizedGamma 1991-11-25           1.61  TRUE    NA   
-#> 13 SIR/nb/LogNormal         1991-12-02           1.02  TRUE    NA   
-#> 14 SIR/nb/GeneralizedGamma  1991-12-02           2.07  TRUE    NA   
-#> 15 AR1/nb/LogNormal         1991-12-02           0.604 TRUE    NA   
-#> 16 AR1/nb/GeneralizedGamma  1991-12-02           1.86  TRUE    NA   
-#> 17 HSGP/nb/LogNormal        1991-12-02           0.517 TRUE    NA   
-#> 18 HSGP/nb/GeneralizedGamma 1991-12-02           1.41  TRUE    NA   
+#>  1 SIR/nb/LogNormal         1991-11-18           2.04  TRUE    NA   
+#>  2 SIR/nb/GeneralizedGamma  1991-11-18           3.96  TRUE    NA   
+#>  3 AR1/nb/LogNormal         1991-11-18           1.15  TRUE    NA   
+#>  4 AR1/nb/GeneralizedGamma  1991-11-18           3.15  TRUE    NA   
+#>  5 HSGP/nb/LogNormal        1991-11-18           0.879 TRUE    NA   
+#>  6 HSGP/nb/GeneralizedGamma 1991-11-18           2.69  TRUE    NA   
+#>  7 SIR/nb/LogNormal         1991-11-25           2.10  TRUE    NA   
+#>  8 SIR/nb/GeneralizedGamma  1991-11-25           3.49  TRUE    NA   
+#>  9 AR1/nb/LogNormal         1991-11-25           1.52  TRUE    NA   
+#> 10 AR1/nb/GeneralizedGamma  1991-11-25           3.50  TRUE    NA   
+#> 11 HSGP/nb/LogNormal        1991-11-25           1.09  TRUE    NA   
+#> 12 HSGP/nb/GeneralizedGamma 1991-11-25           2.58  TRUE    NA   
+#> 13 SIR/nb/LogNormal         1991-12-02           1.96  TRUE    NA   
+#> 14 SIR/nb/GeneralizedGamma  1991-12-02           3.49  TRUE    NA   
+#> 15 AR1/nb/LogNormal         1991-12-02           1.17  TRUE    NA   
+#> 16 AR1/nb/GeneralizedGamma  1991-12-02           3.04  TRUE    NA   
+#> 17 HSGP/nb/LogNormal        1991-12-02           0.945 TRUE    NA   
+#> 18 HSGP/nb/GeneralizedGamma 1991-12-02           3.20  TRUE    NA   
 #> 
 #> $refit
 #> # A tibble: 1 × 4
-#>   model                    elapsed_seconds success error
-#>   <chr>                              <dbl> <lgl>   <chr>
-#> 1 HSGP/nb/GeneralizedGamma            1.59 TRUE    NA   
+#>   model             elapsed_seconds success error
+#>   <chr>                       <dbl> <lgl>   <chr>
+#> 1 HSGP/nb/LogNormal            1.18 TRUE    NA   
 #> 
 #> $total_seconds
-#> [1] 28.586
+#> [1] 44.954
 ```
 
 [`best_model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/best_model.md)
@@ -642,19 +642,19 @@ dengue_tbl_apr <- tbl_now(
 
 auto_ncast_updated <- update(auto_ncast, dengue_tbl_apr)
 #> Warning: ! Surprising reporting delay of 13 weeks (2 reports): longer than the model
-#>   expects (P(D >= d) = 2e-06).
+#>   expects (P(D >= d) = 2.9e-05).
 #> ! Surprising reporting delay of 12 weeks (1 report): longer than the model
-#>   expects (P(D >= d) = 7e-06).
+#>   expects (P(D >= d) = 5.6e-05).
 #> ! Surprising reporting delay of 11 weeks (5 reports): longer than the model
-#>   expects (P(D >= d) = 2.4e-05).
+#>   expects (P(D >= d) = 0.00011).
 #> ! Surprising reporting delay of 10 weeks (7 reports): longer than the model
-#>   expects (P(D >= d) = 7.7e-05).
+#>   expects (P(D >= d) = 0.00023).
 #> ! Surprising reporting delay of 8 weeks (1 report): longer than the model
-#>   expects (P(D >= d) = 0.00082).
+#>   expects (P(D >= d) = 0.0011).
 #> ! Surprising reporting delay of 7 weeks (14 reports): longer than the model
-#>   expects (P(D >= d) = 0.0027).
+#>   expects (P(D >= d) = 0.0026).
 #> ! Surprising reporting delay of 6 weeks (11 reports): longer than the model
-#>   expects (P(D >= d) = 0.0085).
+#>   expects (P(D >= d) = 0.0064).
 #> ℹ If these are outliers, treat them as censored with
 #>   `tbl.now::censor_reporting_delays_above()` and re-fit.
 #> ℹ See all flagged delays with `extreme_values(nc)`.
@@ -668,13 +668,13 @@ Any reports with surprising delays are collected by
 
 extreme_values(auto_ncast_updated)
 #>   delay weight mean_tail_prob cdf_prob      lpd relative_surprise direction
-#> 1     6     11       0.008500 0.991500  -4.5789            0.0281      long
-#> 2     7     14       0.002667 0.997333  -5.7175            0.0090      long
-#> 3     8      1       0.000824 0.999176  -6.8802            0.0028      long
-#> 4    10      7       0.000077 0.999923  -9.2396            0.0003      long
-#> 5    11      5       0.000024 0.999976 -10.4254            0.0001      long
-#> 6    12      1       0.000007 0.999993 -11.6113            0.0000      long
-#> 7    13      2       0.000002 0.999998 -12.7951            0.0000      long
+#> 1     6     11       0.006445 0.993555  -5.0725            0.0162      long
+#> 2     7     14       0.002609 0.997391  -6.0402            0.0062      long
+#> 3     8      1       0.001111 0.998889  -6.9546            0.0025      long
+#> 4    10      7       0.000230 0.999770  -8.6399            0.0005      long
+#> 5    11      5       0.000111 0.999889  -9.4196            0.0002      long
+#> 6    12      1       0.000056 0.999944 -10.1626            0.0001      long
+#> 7    13      2       0.000029 0.999971 -10.8724            0.0000      long
 #>   surprise level
 #> 1    delay  0.99
 #> 2    delay  0.99
