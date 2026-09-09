@@ -26,6 +26,7 @@
 #' @export
 nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machine$integer.max, 1),
                                previous_times = 30) {
+  object <- .unwrap_nowcast(object)
   if (!is.null(seed)) set.seed(seed)
   n_draws <- n_draws %||% min(object@n_draws, 500L)
 

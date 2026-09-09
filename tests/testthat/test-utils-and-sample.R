@@ -1,5 +1,39 @@
 # Tests for internal utilities and sample() dispatch (R/01_utils.R, R/08_sample.R)
 
+test_that("Laplace sampling regularises unusable precision directions", {
+  indefinite <- Matrix::Matrix(matrix(c(1, 2, 2, 1), 2L), sparse = TRUE)
+  draws <- diseasenowcasting:::.sample_mvnorm_precision(c(0, 0), indefinite, 8L)
+  expect_equal(dim(draws), c(2L, 8L))
+  expect_true(all(is.finite(draws)))
+  regularization <- attr(draws, "laplace_regularization")
+  expect_true(regularization$applied)
+  expect_false(regularization$original_cholesky)
+  expect_true(regularization$method %in% c(
+    "diagonal_ridge", "eigenvalue_floor"
+  ))
+  expect_true(
+    regularization$ridge > 0 || regularization$eigenvalue_floor > 0
+  )
+
+  non_finite <- Matrix::Matrix(matrix(c(1, NaN, NaN, 1), 2L), sparse = TRUE)
+  expect_warning(
+    fallback_draws <- diseasenowcasting:::.sample_mvnorm_precision(
+      c(0, 0), non_finite, 8L
+    ),
+    "non-finite curvature"
+  )
+  expect_equal(dim(fallback_draws), c(2L, 8L))
+  expect_true(all(is.finite(fallback_draws)))
+  fallback_regularization <- attr(
+    fallback_draws, "laplace_regularization"
+  )
+  expect_true(fallback_regularization$applied)
+  expect_identical(
+    fallback_regularization$method,
+    "nonfinite_repair_and_eigenvalue_floor"
+  )
+})
+
 test_that(".wtd_median matches stats::median for uniform weights", {
   set.seed(1)
   x <- sort(runif(20))

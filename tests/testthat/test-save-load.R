@@ -15,7 +15,10 @@ test_that("a one-stage nowcast round-trips: predict/coef/parameters match", {
                 type = "one_stage", n_draws = 200, seed = 1)
   nc2 <- suppressMessages(.roundtrip(nc))
 
-  expect_true(S7::S7_inherits(nc2, diseasenowcasting:::nowcast_class))
+  expect_true(S7::S7_inherits(
+    nc2,
+    diseasenowcasting:::diseasenowcasting_result_class
+  ))
   # same seed -> identical draws (same stored mode + precision + reconstruct)
   expect_equal(predict(nc,  summary = TRUE, seed = 7)$median,
                predict(nc2, summary = TRUE, seed = 7)$median)
@@ -43,6 +46,11 @@ test_that("two-stage (multiple fits) and Dirichlet round-trip", {
                    type = "two_stage", K = 3, n_draws = 150, seed = 1)
   nc_ts2 <- suppressMessages(.roundtrip(nc_ts))
   expect_length(nc_ts2@fits, length(nc_ts@fits))
+  expect_identical(nc_ts2@fit_diagnostics, nc_ts@fit_diagnostics)
+  expect_identical(
+    nc_ts2@metadata$diseasenowcasting$fit_diagnostics,
+    nc_ts@fit_diagnostics
+  )
   expect_equal(predict(nc_ts, summary = TRUE, seed = 7)$median,
                predict(nc_ts2, summary = TRUE, seed = 7)$median)
 
@@ -85,7 +93,10 @@ test_that("a loaded model can be re-fit, and rebuild = TRUE restores a live tape
   # re-fit straight from the loaded model + bundled tbl_now
   nc2 <- load_nowcast(f)
   refit <- nowcast(nc2@data, nc2@model, type = "one_stage", n_draws = 80, seed = 1)
-  expect_true(S7::S7_inherits(refit, diseasenowcasting:::nowcast_class))
+  expect_true(S7::S7_inherits(
+    refit,
+    diseasenowcasting:::diseasenowcasting_result_class
+  ))
 
   # rebuild = TRUE re-tapes the objective (no re-optimization)
   ncr <- load_nowcast(f, rebuild = TRUE)

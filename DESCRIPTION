@@ -32,12 +32,10 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Depends:
     R (>= 4.2.0),
-    tbl.now (>= 0.35.1)
+    tbl.now (>= 0.35.3)
 Imports:
     cli,
     dplyr,
-    future,
-    future.apply,
     ggplot2,
     lifecycle,
     Matrix,
@@ -50,6 +48,8 @@ Imports:
     stats,
     utils
 Suggests:
+    future,
+    generics,
     withr,
     testthat (>= 3.0.0),
     knitr,

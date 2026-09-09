@@ -13,8 +13,9 @@ best_score(nc)
 A one-row \code{data.frame}.
 }
 \description{
-The single \code{\link[=comparison_scores]{comparison_scores()}} row belonging to the winning model -- its
-WIS, APE, MSE and interval coverage -- rather than the whole table.
+The single \code{\link[=comparison_scores]{comparison_scores()}} row belonging to the winning model,
+including its scoringutils metrics, selection score, and retrospective fit
+timing, rather than the whole table.
 }
 \seealso{
 \code{\link[=auto_nowcast]{auto_nowcast()}}, \code{\link[=comparison_scores]{comparison_scores()}}, \code{\link[=best_model_name]{best_model_name()}}

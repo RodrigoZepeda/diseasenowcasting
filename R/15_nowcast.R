@@ -34,22 +34,79 @@
 #' @noRd
 .sample_mvnorm_precision <- function(mean_vector, precision_matrix, n_samples) {
   standard_normal <- matrix(rnorm(length(mean_vector) * n_samples), ncol = n_samples)
-  cholesky <- tryCatch(Matrix::Cholesky(precision_matrix, super = TRUE), error = function(e) NULL)
+  regularization <- list(
+    applied = FALSE, method = "none", ridge = 0,
+    eigenvalue_floor = 0, original_cholesky = TRUE
+  )
+  cholesky <- tryCatch(
+    suppressWarnings(Matrix::Cholesky(precision_matrix, super = TRUE)),
+    error = function(e) NULL
+  )
   if (is.null(cholesky)) {
-    diagonal_scale <- mean(abs(Matrix::diag(precision_matrix))) + 1e-8
-    for (ridge_exponent in -6:0) {
+    regularization$original_cholesky <- FALSE
+    diagonal_scale <- mean(abs(Matrix::diag(precision_matrix)), na.rm = TRUE)
+    if (!is.finite(diagonal_scale) || diagonal_scale <= 0) diagonal_scale <- 1
+    # Some otherwise usable RTMB modes have substantially negative curvature
+    # in a weakly identified direction.  Because public results now
+    # materialise their draws eagerly, keep increasing the ridge until the
+    # Laplace precision is usable rather than failing result construction.
+    for (ridge_exponent in -6:6) {
       ridge <- diagonal_scale * 10^ridge_exponent
       ridged_precision <- precision_matrix +
         Matrix::Diagonal(nrow(precision_matrix), x = ridge)
-      cholesky <- tryCatch(Matrix::Cholesky(ridged_precision, super = TRUE), error = function(e) NULL)
-      if (!is.null(cholesky)) break
+      cholesky <- tryCatch(
+        suppressWarnings(Matrix::Cholesky(ridged_precision, super = TRUE)),
+        error = function(e) NULL
+      )
+      if (!is.null(cholesky)) {
+        regularization$applied <- TRUE
+        regularization$method <- "diagonal_ridge"
+        regularization$ridge <- ridge
+        break
+      }
     }
-    if (is.null(cholesky))
-      cli::cli_abort("Posterior precision is not positive-definite even after ridging.")
+    if (is.null(cholesky)) {
+      dense_precision <- as.matrix(Matrix::forceSymmetric(precision_matrix))
+      repaired_nonfinite <- FALSE
+      if (any(!is.finite(dense_precision))) {
+        repaired_nonfinite <- TRUE
+        finite_diagonal <- diag(dense_precision)[is.finite(diag(dense_precision)) &
+                                                   diag(dense_precision) > 0]
+        fallback_scale <- stats::median(finite_diagonal, na.rm = TRUE)
+        if (!is.finite(fallback_scale) || fallback_scale <= 0) fallback_scale <- 1
+        dense_precision[!is.finite(dense_precision)] <- 0
+        invalid_diagonal <- !is.finite(diag(dense_precision)) |
+          diag(dense_precision) <= 0
+        diag(dense_precision)[invalid_diagonal] <- fallback_scale
+        cli::cli_warn(c(
+          "Posterior precision contained non-finite curvature; using a regularised diagonal fallback for affected entries.",
+          "i" = "The fitted mode is retained, but posterior uncertainty for weakly identified directions is approximate."
+        ))
+      }
+      eig <- eigen(dense_precision, symmetric = TRUE)
+      eigen_floor <- max(abs(eig$values), 1) * sqrt(.Machine$double.eps)
+      # Project only the unusable curvature directions onto a small positive
+      # floor. This is the dense analogue of the ridge safeguard above and is
+      # reserved for fits for which sparse Cholesky cannot produce a factor.
+      scaled_normal <- standard_normal / sqrt(pmax(eig$values, eigen_floor))
+      draws <- mean_vector + as.matrix(eig$vectors %*% scaled_normal)
+      regularization$applied <- TRUE
+      regularization$method <- if (repaired_nonfinite) {
+        "nonfinite_repair_and_eigenvalue_floor"
+      } else {
+        "eigenvalue_floor"
+      }
+      regularization$ridge <- 0
+      regularization$eigenvalue_floor <- eigen_floor
+      attr(draws, "laplace_regularization") <- regularization
+      return(draws)
+    }
   }
   standard_normal <- Matrix::solve(cholesky, standard_normal, system = "Lt")
   standard_normal <- Matrix::solve(cholesky, standard_normal, system = "Pt")
-  mean_vector + as.matrix(standard_normal)
+  draws <- mean_vector + as.matrix(standard_normal)
+  attr(draws, "laplace_regularization") <- regularization
+  draws
 }
 
 #' Overflow-safe posterior-predictive count draw (port of `epidemic_rng`)
@@ -391,7 +448,37 @@ summarise_nowcast_matrix <- function(draws_matrix) {
     }
   }
   parameter_names <- names(mode_vector)
-  parameter_draws <- .sample_mvnorm_precision(as.numeric(mode_vector), precision_matrix, n_draws)
+  free_coordinates <- fit$diagnostic$free_coordinates %||% logical()
+  if (length(free_coordinates) == length(mode_vector) &&
+      any(!free_coordinates)) {
+    # A strictly complementary active box coordinate is locally fixed in the
+    # constrained Laplace approximation. Sample only the free block whose
+    # positive curvature was certified by `.joint_fit_diagnostic()`.
+    parameter_draws <- matrix(
+      rep(as.numeric(mode_vector), n_draws),
+      nrow = length(mode_vector), ncol = n_draws
+    )
+    laplace_regularization <- list(
+      applied = FALSE, method = "none", ridge = 0,
+      eigenvalue_floor = 0, original_cholesky = TRUE
+    )
+    if (any(free_coordinates)) {
+      free_draws <- .sample_mvnorm_precision(
+        as.numeric(mode_vector)[free_coordinates],
+        precision_matrix[free_coordinates, free_coordinates, drop = FALSE],
+        n_draws
+      )
+      parameter_draws[free_coordinates, ] <- free_draws
+      laplace_regularization <- attr(free_draws, "laplace_regularization")
+    }
+    laplace_regularization$fixed_active_coordinates <- sum(!free_coordinates)
+  } else {
+    parameter_draws <- .sample_mvnorm_precision(
+      as.numeric(mode_vector), precision_matrix, n_draws
+    )
+    laplace_regularization <- attr(parameter_draws, "laplace_regularization")
+    laplace_regularization$fixed_active_coordinates <- 0L
+  }
 
   n_strata <- as.integer(data$num_strata %||% 1L)
   case_counts_mat <- if (is.matrix(data$case_counts)) data$case_counts else matrix(data$case_counts, n_time, n_strata)
@@ -542,5 +629,6 @@ summarise_nowcast_matrix <- function(draws_matrix) {
          sprintf("C_t(%d): finite-horizon settled retention",
                  as.integer(data$settlement_horizon)) else NULL,
        cumulative_reconstruction = cumulative_reconstruction,
-       negative_projection_count = projection_count)
+       negative_projection_count = projection_count,
+       laplace_regularization = laplace_regularization)
 }

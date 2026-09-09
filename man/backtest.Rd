@@ -2,96 +2,84 @@
 % Please edit documentation in R/23_backtest.R
 \name{backtest}
 \alias{backtest}
-\title{Backtest one or more nowcast models across a set of as-of dates}
+\title{Backtest one or more diseasenowcasting models}
 \usage{
 backtest(
   data,
   models = diseasenowcasting::model(),
   dates = NULL,
   type = c("two_stage", "one_stage", "auto"),
-  n_dates = 20L,
-  max_delay = NULL,
-  return_simulations = FALSE,
+  horizon = NULL,
+  n_dates = 4L,
   n_draws = 1000L,
   K = 25L,
   np_spread = 1,
-  recent = FALSE,
-  seed = sample.int(.Machine$integer.max, 1),
+  seed = NULL,
+  keep_draws = FALSE,
+  on_error = c("warn", "abort"),
+  verbose = TRUE,
+  truth_axis = NULL,
+  truth_type = NULL,
+  quantile_levels = tbl.now::nowcast_quantile_levels(),
   ...
 )
 }
 \arguments{
-\item{data}{A \code{tbl_now} (the full data; its eventual counts are the truth).}
+\item{data}{A \link[tbl.now:tbl_now]{tbl.now::tbl_now} holding the full data, including observations
+that arrived after the retrospective nowcast dates.}
 
-\item{models}{A \code{\link[=model]{model()}} object or a list of them.  With several models the
-backtest can rank them (see \code{\link[=score]{score()}}).}
+\item{models}{A \code{\link[=model]{model()}} or list of models. Names on the list become the
+canonical method labels; unnamed models receive labels from their component
+names. Labels must be unique.}
 
-\item{dates}{A vector of as-of dates.  If \code{NULL}, a default grid spanning the
-observed range (interior points) is sampled.}
+\item{dates}{Retrospective nowcast origins, passed as \code{now_dates} to
+\code{\link[tbl.now:nowcast_backtest]{tbl.now::nowcast_backtest()}}.}
 
-\item{type}{\code{"two_stage"} (default), \code{"one_stage"}, or \code{"auto"} (per delay:
-dirichlet one-stage, all other delays two-stage).}
+\item{type}{\code{"two_stage"}, \code{"one_stage"}, or \code{"auto"}, passed to every
+diseasenowcasting engine.}
 
-\item{n_dates}{If \code{dates} is \code{NULL}, how many to sample. Default 20.}
+\item{horizon}{Number of time units of hindsight used by \code{tbl.now} when
+\code{dates = NULL}. \code{NULL} uses \code{4} for ordinary data and the largest model
+settlement horizon for count-cumulative data (26 for its automatic model).}
 
-\item{max_delay}{Truth-completeness horizon (in event units).  Event dates
-within \code{max_delay} units of the last report do not yet have a fully
-observed eventual count, so the backtest \strong{excludes} them (their "truth"
-would still be accruing).  Default \code{NULL} uses the 99th percentile of the
-observed reporting delays.  Pass a number to override, or \code{Inf} to evaluate
-every date regardless of completeness.}
+\item{n_dates}{Number of automatic retrospective origins. Ignored when
+\code{dates} is supplied. Default \code{4}.}
 
-\item{return_simulations}{If TRUE, also keep the pooled draw matrix per
-(date, model).  Default FALSE (summaries only: mean/median/sd/quantiles).}
+\item{n_draws}{Posterior draws per fit.}
 
-\item{n_draws}{Posterior draws per nowcast.}
+\item{K, np_spread}{Native two-stage fitting controls passed to every engine.}
 
-\item{K, np_spread}{Two-stage controls passed through.}
+\item{seed}{Optional base seed. \code{tbl.now} derives a stable seed for each
+model/date fit from this value.}
 
-\item{recent}{When \code{dates} is \code{NULL}, choose the \strong{most recent} \code{n_dates}
-complete-truth as-of dates rather than spreading them across the whole
-history (default \code{FALSE}).  Useful when the backtest is meant to judge how a
-model does on \emph{recent} dynamics (e.g. for model selection ahead of a
-present-day nowcast).}
+\item{keep_draws}{Whether the canonical backtest retains posterior draws.}
 
-\item{seed}{Optional base RNG seed.}
+\item{on_error}{Either \code{"warn"} to record and skip failed cells or \code{"abort"}.}
 
-\item{...}{Passed to \code{\link[=nowcast]{nowcast()}}.
+\item{verbose}{Whether to report progress.}
 
-A \code{tbl_now} carrying a revision process needs nothing extra: the revision
-model is fitted at each as-of date, and the truth follows the inferred mode:
-confirmed records for \code{confirmation_only} / \code{both}, and records never
-retracted for \code{retraction_only} -- the settled count the model targets.}
+\item{truth_axis, truth_type}{Canonical scoring truth controls passed to
+\code{\link[tbl.now:nowcast_backtest]{tbl.now::nowcast_backtest()}}. When both are \code{NULL}, they follow the native
+estimand: reported totals without a revision process, confirmed cases for
+confirmation/both modes, and still-standing cases for retraction-only mode.}
+
+\item{quantile_levels}{Quantile probabilities requested from every model.}
+
+\item{...}{Additional arguments passed to every \code{\link[=nowcast]{nowcast()}} fit through its
+engine specification.}
 }
 \value{
-A \code{backtest_class} object.
+A \link[tbl.now:nowcast_backtest]{tbl.now::nowcast_backtest} object.
 }
 \description{
-Backtest one or more nowcast models across a set of as-of dates
+\code{backtest()} translates native \code{\link[=model]{model()}} specifications into labelled
+\code{\link[tbl.now:engine_diseasenowcasting]{tbl.now::engine_diseasenowcasting()}} specifications and delegates the full
+retrospective workflow to \code{\link[tbl.now:nowcast_backtest]{tbl.now::nowcast_backtest()}}. The returned object
+is therefore the common \code{nowcast_backtest} result used by \code{tbl.now} for
+tidying, forecast conversion, scoring, weighting, and ensembling.
 }
-\details{
-\code{backtest()} evaluates one nowcast per (as-of date x model) cell and these
-cells are \strong{embarrassingly parallel}.  The work is dispatched with
-\pkg{future.apply}, so parallelism is controlled by the
-\pkg{future} plan you set \emph{before} calling \code{backtest()}:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{library(future)
-plan(multisession, workers = 4)   # 4 parallel R sessions
-bt <- backtest(data, models, dates = my_dates)
-plan(sequential)                  # back to serial when done
-}\if{html}{\out{</div>}}
-
-With the default plan (\code{sequential}) the cells run one at a time.  For a grid
-of many dates x models, \code{plan(multisession, workers = N)} (or
-\code{plan(multicore)} on Linux/macOS) gives a near-linear speed-up up to the
-number of physical cores.  Each worker needs the package available, which is
-automatic for an installed package; with \code{devtools::load_all()} use
-\code{plan(multisession)} so workers re-load it.
-}
-\examples{
-if (interactive() && requireNamespace("tbl.now", quietly = TRUE)) {
-  # future::plan(future::multisession, workers = 4)   # opt in to parallelism
-  # bt <- backtest(my_tbl_now, list(model_a, model_b), dates = my_dates)
-  # future::plan("sequential")
-}
+\seealso{
+\link{diseasenowcasting_workflows} for the native/common ownership
+boundary; \code{\link[tbl.now:score_nowcast]{tbl.now::score_nowcast()}}, \code{\link[tbl.now:nowcast_weights]{tbl.now::nowcast_weights()}},
+\code{\link[tbl.now:nowcast_ensemble]{tbl.now::nowcast_ensemble()}}, \code{\link[=fit_check]{fit_check()}}
 }

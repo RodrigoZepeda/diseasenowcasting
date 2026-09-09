@@ -17,6 +17,7 @@ SKILL.md
 CUSTOM_COMPONENTS_PLAN.md
 CENSORED_POINT*.md
 SUPPLEMENT*.md
+GRADIENT_STABILITY_REVIEW.md
 Dockerfile
 
 # Development scratch: analysis scripts, diagnostics and their generated

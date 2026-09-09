@@ -1,11 +1,11 @@
-# Tests for: backtest max_delay cutoff, surprise-at-update warnings, and
+# Tests for: canonical backtest date handling, surprise-at-update warnings, and
 # censored-delay (m_censored) support.
 
 suppressMessages(library(tbl.now))
 
-# ── TASK 1: backtest max_delay ───────────────────────────────────────────────
+# ── TASK 1: canonical backtest dates ─────────────────────────────────────────
 
-test_that("backtest excludes evaluation dates without complete truth", {
+test_that("backtest delegates default horizon date selection", {
   set.seed(1)
   start <- as.Date("2020-01-01")
   df <- data.frame(onset = start + rep(0:70, each = 3))
@@ -13,15 +13,15 @@ test_that("backtest excludes evaluation dates without complete truth", {
   tn <- tbl_now(df, event_date = onset, report_date = reported,
                 data_type = "linelist", verbose = FALSE)
   mdl <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
-  bt  <- suppressWarnings(backtest(tn, mdl, n_dates = 5, type = "one_stage",
-                                   n_draws = 100, seed = 1))
-  # The most recent evaluation date must leave room for its truth to complete.
-  last_eval   <- max(as.Date(bt@results$date_run))
-  last_report <- max(df$reported)
-  expect_true(last_eval < last_report)
+  bt <- suppressWarnings(backtest(
+    tn, mdl, horizon = 5, type = "one_stage", n_draws = 100,
+    seed = 1, verbose = FALSE
+  ))
+  expect_s3_class(bt, "nowcast_backtest")
+  expect_lte(max(as.Date(bt$now_dates)), as.Date(tbl.now::get_now(tn)) - 5)
 })
 
-test_that("backtest with max_delay = Inf keeps user-supplied recent dates", {
+test_that("backtest keeps explicit canonical now dates", {
   set.seed(2)
   start <- as.Date("2020-01-01")
   df <- data.frame(onset = start + rep(0:50, each = 3))
@@ -30,9 +30,11 @@ test_that("backtest with max_delay = Inf keeps user-supplied recent dates", {
                 data_type = "linelist", verbose = FALSE)
   mdl <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
   recent <- start + c(45, 49)
-  bt <- suppressWarnings(backtest(tn, mdl, dates = recent, max_delay = Inf,
-                                  type = "one_stage", n_draws = 100, seed = 1))
-  expect_setequal(as.Date(unique(bt@results$date_run)), recent)
+  bt <- suppressWarnings(backtest(
+    tn, mdl, dates = recent, type = "one_stage", n_draws = 100,
+    seed = 1, verbose = FALSE
+  ))
+  expect_setequal(as.Date(bt$now_dates), recent)
 })
 
 # ── TASK 3: censored delays (m_censored) ─────────────────────────────────────

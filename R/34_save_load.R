@@ -23,7 +23,8 @@
 #' all [predict()] needs.  The input `tbl_now` and the `model()` specification
 #' are saved too, so the loaded object can also be re-fit.
 #'
-#' @param object A `nowcast_class` from [nowcast()] or [auto_nowcast()].
+#' @param object A result from [nowcast()] or [auto_nowcast()]. The native fit
+#'   stored in `object@fit` is serialized automatically.
 #' @param file Path to write (a single `.rds` file).
 #' @returns `file`, invisibly.
 #' @seealso [load_nowcast()]
@@ -45,8 +46,12 @@
 #' }
 #' @export
 save_nowcast <- function(object, file) {
-  if (!S7::S7_inherits(object, nowcast_class))
-    cli::cli_abort("{.arg object} must be a {.cls nowcast} (from {.fn nowcast} or {.fn auto_nowcast}).")
+  quantile_levels <- if (S7::S7_inherits(object, diseasenowcasting_result_class)) {
+    sort(unique(object@predictions$.quantile_level))
+  } else {
+    tbl.now::nowcast_quantile_levels()
+  }
+  object <- .unwrap_nowcast(object)
   if (!is.character(file) || length(file) != 1L)
     cli::cli_abort("{.arg file} must be a single file path.")
 
@@ -64,6 +69,8 @@ save_nowcast <- function(object, file) {
     priors     = object@priors,
     phi        = object@phi,
     n_draws    = object@n_draws,
+    fit_diagnostics = object@fit_diagnostics,
+    quantile_levels = quantile_levels,
     revision_mode = object@revision_mode,
     comparison = object@comparison,   # auto_nowcast() scoreboard, or NULL
     fits       = lapply(object@fits, .serialize_fit)
@@ -76,7 +83,8 @@ save_nowcast <- function(object, file) {
 
 #' Load a nowcast saved with [save_nowcast()]
 #'
-#' Restores a `nowcast_class` from a bundle written by [save_nowcast()].  The
+#' Restores the common `tbl_nowcast` result from a bundle written by
+#' [save_nowcast()]. The native fit is restored into `@fit`. The
 #' result works with [predict()], [autoplot()], [coef()], [parameters()],
 #' [mean()]/[median()]/[quantile()] straight away (sampling from the stored
 #' Laplace mode + precision).  To re-fit it -- on the same or new data -- pass the
@@ -88,7 +96,7 @@ save_nowcast <- function(object, file) {
 #'   re-optimization).  Needed only for `use_random` marginal fits or to inspect
 #'   the live tape; custom delays/epidemics require `library(RTMB)`.  Default
 #'   `FALSE` -- the stored mode + precision already drive [predict()].
-#' @returns A `nowcast_class` object.
+#' @returns A diseasenowcasting subclass of [tbl.now::tbl_nowcast].
 #' @seealso [save_nowcast()]
 #' @export
 load_nowcast <- function(file, rebuild = FALSE) {
@@ -102,12 +110,19 @@ load_nowcast <- function(file, rebuild = FALSE) {
   fits <- bundle$fits
   if (isTRUE(rebuild)) fits <- lapply(fits, .rebuild_fit_obj)
 
-  nowcast_class(
+  native <- nowcast_class(
     model = bundle$model, data = bundle$data, now = bundle$now,
     type = bundle$type, fits = fits, rung = bundle$rung, target = bundle$target,
     engine = bundle$engine, priors = bundle$priors, phi = bundle$phi,
     n_draws = as.integer(bundle$n_draws), comparison = bundle$comparison,
+    fit_diagnostics = bundle$fit_diagnostics %||% list(),
     revision_mode = bundle$revision_mode %||% "none")
+  .as_diseasenowcasting_result(
+    native,
+    n_draws = native@n_draws,
+    quantile_levels = bundle$quantile_levels %||%
+      tbl.now::nowcast_quantile_levels()
+  )
 }
 
 # -- internals ----------------------------------------------------------------

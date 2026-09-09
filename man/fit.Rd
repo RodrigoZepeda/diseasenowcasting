@@ -9,7 +9,8 @@ fit(
   data,
   priors = NULL,
   init = NULL,
-  control = list(iter.max = 500, eval.max = 1000, rel.tol = 1e-09)
+  control = list(iter.max = 500, eval.max = 1000, rel.tol = 1e-09),
+  warn = TRUE
 )
 }
 \arguments{
@@ -22,6 +23,10 @@ fit(
 \item{init}{Optional named init list.}
 
 \item{control}{\code{nlminb} control list.}
+
+\item{warn}{If \code{TRUE}, warn when the returned joint fit does not pass the
+optimizer adequacy checks. Internal warm-start and imputation fits set this
+to \code{FALSE} and report only diagnostics for the fits that affect the result.}
 }
 \value{
 A list with \code{par} (named estimates), \code{obj}, \code{opt}, \code{data}, \code{priors},

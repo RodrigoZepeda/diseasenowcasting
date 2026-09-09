@@ -211,8 +211,20 @@ test_that("nowcast() model selection is stable under mocked fits", {
     )
     list(fits = list(list(mock = TRUE)), rung = "mock", target = engine$max_time)
   }
+  fake_pool <- function(fits, target, n_draws = 20L) {
+    values <- matrix(1, nrow = n_draws, ncol = target)
+    list(
+      M = values,
+      lambda = values,
+      M_strata = NULL,
+      n_strata = 1L,
+      estimand = "eventual_count",
+      cumulative_reconstruction = NULL,
+      negative_projection_count = 0L
+    )
+  }
 
-  testthat::with_mocked_bindings({
+  suppressWarnings(testthat::with_mocked_bindings({
     ordinary <- nowcast(
       interplay_incidence("linelist", "none", units = "numeric"),
       model(), type = "auto", temporal_effects = "none"
@@ -229,7 +241,10 @@ test_that("nowcast() model selection is stable under mocked fits", {
       interplay_cumulative("retraction", units = "numeric"),
       model(), type = "auto", temporal_effects = "none"
     )
-  }, .collect_nowcast_fits = fake_collect, .package = "diseasenowcasting")
+  },
+  .collect_nowcast_fits = fake_collect,
+  .pool_fit_draws = fake_pool,
+  .package = "diseasenowcasting"))
 
   expect_equal(ordinary@type, "auto")
   expect_equal(retraction@revision_mode, "retraction_only")
@@ -243,6 +258,22 @@ test_that("nowcast() model selection is stable under mocked fits", {
   expect_true(captured[[4]]$cumulative_active)
   expect_true(captured[[4]]$count_cumulative)
   expect_true(all(vapply(captured, `[[`, character(1), "type") == "auto"))
+
+  results <- list(ordinary, retraction, both, cumulative)
+  for (result in results) {
+    expect_true(tbl.now::is_tbl_nowcast(result))
+    expect_identical(result@event_date, tbl.now::get_event_date(result@data))
+    expect_true(all(c(
+      result@event_date, result@strata, ".quantile_level", ".value"
+    ) %in% names(result@predictions)))
+    expect_true(all(c(
+      result@event_date, result@strata, ".draw", ".value"
+    ) %in% names(result@draws)))
+  }
+  expect_true(is.integer(ordinary@predictions[[ordinary@event_date]]))
+  expect_s3_class(retraction@predictions[[retraction@event_date]], "Date")
+  expect_s3_class(both@predictions[[both@event_date]], "Date")
+  expect_true(is.integer(cumulative@predictions[[cumulative@event_date]]))
 })
 
 test_that("count-cumulative revision semantics are locked down", {
@@ -264,6 +295,64 @@ test_that("count-cumulative revision semantics are locked down", {
     nowcast(interplay_cumulative("confirmation"), model(), temporal_effects = "none"),
     "cannot carry.*confirmed"
   )
+})
+
+test_that("direct and engine paths are identical under fixed predictive draws", {
+  x <- interplay_incidence(
+    data_type = "count-incidence", revision_state = "none",
+    strata = "none", covariates = "numeric", units = "days"
+  )
+  specification <- model(
+    poisson_likelihood(), sir_epidemic(), lognormal_delay()
+  )
+  fake_collect <- function(model, engine, priors, type, ...) {
+    list(fits = list(list(mock = TRUE)), rung = "mock", target = engine$max_time)
+  }
+  fake_pool <- function(fits, target, n_draws = 30L) {
+    values <- matrix(rep(seq_len(target), each = n_draws), nrow = n_draws)
+    list(M = values, lambda = values, M_strata = NULL, n_strata = 1L,
+         estimand = "eventual_count", cumulative_reconstruction = NULL,
+         negative_projection_count = 0L)
+  }
+
+  testthat::with_mocked_bindings({
+    direct <- nowcast(
+      x, specification, type = "one_stage", n_draws = 30L,
+      temporal_effects = "none", seed = 2026L
+    )
+    through_engine <- tbl.now::run_nowcast(
+      x,
+      tbl.now::engine_diseasenowcasting(
+        model = specification, type = "one_stage", n_draws = 30L,
+        temporal_effects = "none", seed = 2026L
+      ),
+      verbose = FALSE
+    )
+  },
+  .collect_nowcast_fits = fake_collect,
+  .pool_fit_draws = fake_pool,
+  .package = "diseasenowcasting")
+
+  expect_identical(through_engine@predictions, direct@predictions)
+  expect_identical(through_engine@draws, direct@draws)
+  expect_identical(through_engine@event_date, direct@event_date)
+  expect_identical(through_engine@strata, direct@strata)
+  expect_identical(through_engine@now, direct@now)
+})
+
+test_that("stratum labels containing the historical separator decode from data", {
+  source_rows <- data.frame(
+    site = c("north|east", "south"),
+    age_group = c("adult", "child")
+  )
+  decoded <- diseasenowcasting:::.split_diseasenowcasting_strata(
+    c("north|east|adult", "south|child"),
+    c("site", "age_group"),
+    data = source_rows
+  )
+
+  expect_identical(decoded$site, source_rows$site)
+  expect_identical(decoded$age_group, source_rows$age_group)
 })
 
 test_that("FluSight count-cumulative down-revisions feed cumulative_process", {

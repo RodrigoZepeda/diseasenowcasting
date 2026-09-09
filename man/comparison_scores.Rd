@@ -14,10 +14,12 @@ A \code{data.frame}, one row per candidate model.
 }
 \description{
 The ranked table of candidate models that \code{\link[=auto_nowcast]{auto_nowcast()}} backtested, one row
-per model, best-first by the selection \code{metric}.  Columns include \code{model} (the
-label), \code{wis} (and its decomposition), \code{ape}, \code{mse}, and \code{coverage_50} /
-\code{coverage_90} (see \code{\link[=score]{score()}}).
+per model, best-first by the selected raw or relative scoringutils metric.
+In addition to scoringutils metrics, it includes \code{selection_score}, median
+and total retrospective fit seconds, successful-fit count, epidemic priority,
+and original grid order.
 }
 \seealso{
-\code{\link[=auto_nowcast]{auto_nowcast()}}, \code{\link[=best_score]{best_score()}}, \code{\link[=score]{score()}}
+\code{\link[=auto_nowcast]{auto_nowcast()}}, \code{\link[=best_score]{best_score()}}, \code{\link[=selection_timings]{selection_timings()}},
+\code{\link[scoringutils:score]{scoringutils::score()}}
 }

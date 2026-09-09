@@ -164,6 +164,11 @@ S7::method(parameters, nowcast_class) <- function(x, conf.level = 0.95, ...) {
   out
 }
 
+S7::method(parameters, diseasenowcasting_result_class) <- function(
+    x, conf.level = 0.95, ...) {
+  parameters(.unwrap_nowcast(x), conf.level = conf.level, ...)
+}
+
 #' Back-transformed rows for a constrained parameter
 #'
 #' Applies a monotone `transform` to the estimate and to both interval endpoints,

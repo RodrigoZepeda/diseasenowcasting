@@ -27,3 +27,7 @@
 ^CENSORED_POINT_PROCESS_NEGBIN\.md$
 ^NEGBIN_CONFIRMATION_IMPLEMENTATION_PLAN\.md$
 ^\.covrignore$
+^AUDIT_INTERPLAY_PLAN\.md$
+^GRADIENT_STABILITY_REVIEW\.md$
+^main_identifiability_update\.tex$
+^main_journal_revised\.tex$

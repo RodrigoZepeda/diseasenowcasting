@@ -167,42 +167,42 @@ test_that("nowcast_twostage (direct) returns valid M matrix", {
 
 # ── 23_backtest.R / 24_score.R (79% → target 85%) ───────────────────────────
 
-test_that("backtest with return_simulations=TRUE populates @simulations", {
+test_that("backtest with keep_draws=TRUE populates canonical draws", {
   tn  <- .make_synth_tblnow(Tn = 80L, seed = 40)
   start <- min(tn$onset)
   bt  <- backtest(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                   dates = start + c(50, 65) - 1,
-                  type = "one_stage", n_draws = 200, return_simulations = TRUE, seed = 1)
-  expect_true(!is.null(bt@simulations))
-  expect_true(length(bt@simulations) > 0)
+                  type = "one_stage", n_draws = 200, keep_draws = TRUE,
+                  seed = 1, verbose = FALSE)
+  expect_s3_class(bt, "nowcast_backtest")
+  expect_true(!is.null(bt$draws))
+  expect_true(nrow(bt$draws) > 0)
 })
 
-test_that("score() with metric='ape' ranks models and returns finite values", {
+test_that("canonical backtest scores and weights several models", {
   tn  <- .make_synth_tblnow(Tn = 90L, seed = 41)
   start <- min(tn$onset)
   bt  <- backtest(tn, list(model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                            model(nb_likelihood(), ar1_epidemic(),  lognormal_delay())),
                   dates = start + c(50, 70) - 1,
-                  type = "one_stage", n_draws = 200, seed = 1)
-  sc_ape <- score(bt, metric = "ape",  report = FALSE)
-  sc_mse <- score(bt, metric = "mse",  report = FALSE)
-  expect_equal(nrow(sc_ape), 2L)
-  expect_true(all(is.finite(sc_ape$ape)))
-  expect_true(all(is.finite(sc_mse$mse)))
-  # sorted best-first
-  expect_true(sc_ape$ape[1] <= sc_ape$ape[2])
-  expect_true(sc_mse$mse[1] <= sc_mse$mse[2])
+                  type = "one_stage", n_draws = 200, seed = 1, verbose = FALSE)
+  expect_setequal(unique(bt$scores$.method), bt$methods)
+  expect_true(all(is.finite(bt$scores$wis)))
+  weights <- tbl.now::nowcast_weights(bt)
+  expect_equal(sum(weights), 1, tolerance = 1e-8)
 })
 
-test_that("autoplot(backtest) returns a ggplot with ribbon layers", {
+test_that("canonical backtest tidies its quantile predictions", {
   tn    <- .make_synth_tblnow(Tn = 80L, seed = 42)
   start <- min(tn$onset)
   bt    <- backtest(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                     dates = start + c(50, 65) - 1,
-                    type = "one_stage", n_draws = 200, seed = 1)
-  p <- autoplot(bt)
-  expect_s3_class(p, "ggplot")
-  expect_gt(length(p$layers), 0L)
+                    type = "one_stage", n_draws = 200, seed = 1,
+                    verbose = FALSE)
+  out <- generics::tidy(bt)
+  expect_s3_class(out, "tbl_df")
+  expect_true(all(c("method", "now", "event_date", "estimate", "wis") %in%
+                  names(out)))
 })
 
 # ── 17_prepare_from_tblnow.R (79% → target 88%) ─────────────────────────────

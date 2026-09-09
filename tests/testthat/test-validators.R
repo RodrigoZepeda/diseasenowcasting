@@ -79,22 +79,23 @@ test_that("two-stage with Dirichlet delay uses NP warm-init path", {
 
 # ── Additional backtest/score lines ──────────────────────────────────────────
 
-test_that("predict(backtest) returns a data.frame with key columns", {
+test_that("backtest carries canonical predictions", {
   tn    <- .make_synth_tblnow(Tn = 80L, seed = 51)
   start <- min(tn$onset)
   bt    <- backtest(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                     dates = start + c(50, 65) - 1,
-                    type = "one_stage", n_draws = 200, seed = 1)
-  pr <- predict(bt)
-  expect_true(is.data.frame(pr))
-  expect_true("median" %in% names(pr))
+                    type = "one_stage", n_draws = 200, seed = 1,
+                    verbose = FALSE)
+  expect_s3_class(bt$predictions, "data.frame")
+  expect_true(all(c(".method", ".now", ".quantile_level", ".value") %in%
+                  names(bt$predictions)))
 })
 
-test_that("score(backtest) with report=TRUE prints without error", {
+test_that("fit_check can warn or return diagnostics quietly", {
   tn    <- .make_synth_tblnow(Tn = 80L, seed = 52)
   start <- min(tn$onset)
-  bt    <- backtest(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
-                    dates = start + c(50) - 1,
-                    type = "one_stage", n_draws = 150, seed = 1)
-  expect_no_error(score(bt, report = TRUE))
+  nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
+                now = start + 50 - 1, type = "one_stage", n_draws = 150,
+                seed = 1)
+  expect_no_error(fit_check(nc, warn = FALSE))
 })

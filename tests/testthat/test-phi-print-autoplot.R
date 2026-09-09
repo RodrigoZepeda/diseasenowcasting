@@ -1,5 +1,5 @@
-# Tests for: phi moved to the likelihood, the bar-chart autoplot, sparse-recent
-# autoplot, and the cli print methods.
+# Tests for likelihood phi, delegated common plotting, canonical output over
+# sparse recent grids, and the common result printer.
 
 suppressMessages(library(tbl.now))
 
@@ -57,60 +57,52 @@ test_that("poisson_likelihood nowcast works (no phi)", {
   expect_true(all(is.finite(summary(predict(nc, seed = 2))$median)))
 })
 
-# ── TASK 2: autoplot bar columns (predicted_total + reported) ────────────────
+# ── TASK 2: delegated common autoplot ────────────────────────────────────────
 
-test_that("autoplot bar data has predicted_total (=median) and reported (=observed)", {
+test_that("autoplot uses the tbl.now common result method", {
   tn <- .daily_tn(Tn = 40L, seed = 4)
   nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                 type = "one_stage", n_draws = 150, seed = 1)
-  p  <- autoplot(nc, seed = 2)
+  p  <- autoplot(nc)
   expect_s3_class(p, "ggplot")
-  dat <- p$data
-  expect_true(all(c("reported", "predicted_total", "q_lo", "q_hi") %in% names(dat)))
-  # predicted_total >= reported at every event-time (median nowcast >= observed)
-  expect_true(all(dat$predicted_total + 1e-9 >= dat$reported))
-  # error-bar band brackets the median
-  expect_true(all(dat$q_hi + 1e-9 >= dat$q_lo))
+  expect_true(tbl.now::is_tbl_nowcast(nc))
+  expect_identical(nc@method, "diseasenowcasting")
 })
 
-# ── TASK 3: autoplot works when now >> last observed ─────────────────────────
+# ── TASK 3: common output works when now >> last observed ────────────────────
 
-test_that("autoplot spans the full grid when now is well past the last observation", {
+test_that("common predictions span the grid when now is past the last observation", {
   tn <- .daily_tn(Tn = 15L, seed = 5)             # onsets up to 2020-01-15
   nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                 type = "one_stage", n_draws = 120,
                 now = as.Date("2020-01-25"), seed = 1)   # 10 days past last onset
-  p   <- autoplot(nc, seed = 2, previous_times = NULL)    # full grid, not the last 15
-  dat <- p$data
-  expect_equal(nrow(dat), nc@target)              # one bar per event-time on the grid
-  # the most recent rows have no observed cases yet, but the model still produces
-  # a predictive distribution there (non-degenerate error bars)
-  last_rows <- dat[dat$event_index >= nc@target - 5, ]
-  expect_true(all(last_rows$reported == 0))
-  expect_true(any(last_rows$q_hi > 0))            # model has predictive mass
-  expect_true(all(is.finite(last_rows$predicted_total)))
+  event_col <- nc@event_date
+  expect_equal(length(unique(nc@predictions[[event_col]])), nc@target)
+  expect_equal(max(nc@predictions[[event_col]]), as.Date("2020-01-25"))
+  expect_true(all(is.finite(nc@predictions$.value)))
+  expect_s3_class(autoplot(nc), "ggplot")
 })
 
-test_that("autoplot previous_times keeps only the most recent event-times", {
+test_that("common quantile rows are complete over the fitted event grid", {
   tn <- .daily_tn(Tn = 40L, seed = 7)
   nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                 type = "one_stage", n_draws = 120, seed = 1)
-  full <- nrow(autoplot(nc, seed = 2, previous_times = NULL)$data)
-  expect_gt(full, 15L)                                   # grid is longer than the default window
-  expect_equal(nrow(autoplot(nc, seed = 2)$data), 15L)               # default window
-  expect_equal(nrow(autoplot(nc, seed = 2, previous_times = 5L)$data), 5L)
-  expect_equal(nrow(autoplot(nc, seed = 2, previous_times = 1000L)$data), full) # caps at grid
+  event_col <- nc@event_date
+  levels <- sort(unique(nc@predictions$.quantile_level))
+  counts <- table(nc@predictions[[event_col]])
+  expect_equal(length(counts), nc@target)
+  expect_true(all(counts == length(levels)))
 })
 
-test_that("stratified autoplot with a recent gap facets and spans the grid", {
+test_that("stratified common output preserves strata and plots", {
   tn <- .daily_tn(Tn = 20L, seed = 6, strata = TRUE)
   nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                 type = "one_stage", n_draws = 120,
                 now = as.Date("2020-01-28"), seed = 1)
-  p  <- autoplot(nc, seed = 2)
+  p  <- autoplot(nc)
   expect_s3_class(p, "ggplot")
-  expect_true(inherits(p$facet, "FacetWrap"))
-  expect_setequal(unique(p$data$stratum), c("A", "B"))
+  expect_identical(nc@strata, "grp")
+  expect_setequal(unique(nc@predictions$grp), c("A", "B"))
 })
 
 # ── TASK 4: pretty cli printing ──────────────────────────────────────────────
@@ -124,15 +116,14 @@ test_that("print(model) runs for all component combinations", {
                               strata_pooling = "hierarchical")))
 })
 
-test_that("print(nowcast) shows the model spec without drawing the nowcast", {
+test_that("print(nowcast) uses the common tbl_nowcast summary", {
   tn <- .daily_tn(seed = 7)
   nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()),
                 type = "one_stage", n_draws = 120, seed = 1)
-  out <- cli::cli_fmt(print(nc))
-  expect_true(any(grepl("diseasenowcasting", out)))
-  expect_true(any(grepl("NegBin / HSGP / LogNormal", out)))
-  # Printing must NOT compute the posterior-predictive nowcast (kept cheap).
-  expect_false(any(grepl("Newest event", out)))
+  out <- capture.output(print(nc))
+  expect_true(any(grepl("tbl_nowcast", out, fixed = TRUE)))
+  expect_true(any(grepl("diseasenowcasting", out, fixed = TRUE)))
+  expect_true(any(grepl("quantile levels", out, fixed = TRUE)))
   # print returns the object invisibly
   expect_identical(suppressMessages(print(nc)), nc)
 })

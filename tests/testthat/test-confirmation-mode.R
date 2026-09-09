@@ -389,8 +389,11 @@ test_that("future confirmations are pending as of the backtest date", {
   expect_equal(sum(engine$n_positive_by_stratum), 2)
   expect_equal(sum(engine$standing_counts), 8)
 
-  # Full-data backtest truth for confirmation-only data is confirmed cases only.
-  truth <- diseasenowcasting:::.revision_truth_source(data)
+  # The native wrapper selects the canonical revision/confirmed estimand, whose
+  # full-data truth is obtained from tbl.now rather than a local truth builder.
+  truth_controls <- diseasenowcasting:::.backtest_truth_defaults(data)
+  expect_identical(truth_controls, list(axis = "revision", type = "confirmed"))
+  truth <- tbl.now::get_latest_revised_cases(data, type = "confirmed")
   expect_equal(sum(truth$n), 5)
 })
 

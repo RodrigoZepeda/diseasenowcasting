@@ -23,6 +23,22 @@ knitr::opts_chunk$set(
 `diseasenowcasting` is an R package for nowcasting time series of epidemiological cases. Epidemiologic surveillance tools usually have an intrinsic delay between the **true date of an event** (`event_date`) and the **report date for that event** (`report_date`). Some examples include the true date being symptom onset or testing time and the report date corresponds to when the case was registered in the system.
 `diseasenowcasting` uses censored Bayesian models (via R's Template Model Builder [`RTMB`](https://cran.r-project.org/web/packages/RTMB/index.html)) to infer the cases that have not yet been reported thus providing a prediction of the final number of cases.
 
+## Native modelling and the shared workflow
+
+Use `diseasenowcasting`'s native interface when specifying the statistical
+model: `model()`, `nowcast()`, and `auto_nowcast()` expose its epidemic, delay,
+likelihood, revision, and cumulative-process choices. Use `fit_check()` and
+`nowcast_diagnostic()` for diagnostics that are specifically about the RTMB fit.
+
+The returned object is already a `tbl.now::tbl_nowcast`. Plotting, tidying,
+predictive scoring, ensembling, saving, and loading therefore use the common
+result directly. Likewise, `backtest()` is a convenience for translating native
+`model()` specifications into `tbl.now` engines; it returns a canonical
+`nowcast_backtest`, not a second native backtest class. That result can be passed
+directly to the scoringutils `as_forecast_quantile()`, `as_forecast_point()`, or
+`as_forecast_sample()` methods. See `?diseasenowcasting_workflows` for the full
+boundary and examples.
+
 ## Your data: the `tbl_now` format
 
 `diseasenowcasting` works with data organised as a `tbl_now` object from the companion
@@ -241,34 +257,33 @@ models_to_compare <- list(
 backtest_mpox <- backtest(
   mpox_tbl,
   models  = models_to_compare,
-  n_dates = 5 #Test 3 dates at random from the mpox data
+  dates = seq(as.Date("2022-07-18"), as.Date("2022-08-15"), by = "week")
 )
 
 #This closes the plan multisession opened above
 #plan(sequential)   
 ```
 
-We can then plot the Weighted Interval Score (WIS) and interval coverage:
+The backtest is already in the common `tbl.now` format. Convert it directly to
+a scoringutils quantile forecast and compute any supported metrics:
 
-```{r scoreplot}
-# Plot scoring metrics
-autoplot(backtest_mpox)
+```{r backtest-score}
+backtest_scores <- backtest_mpox |>
+  scoringutils::as_forecast_quantile() |>
+  scoringutils::score()
+
+relative_scores <- backtest_scores |>
+  scoringutils::add_relative_skill(metric = "wis") |>
+  scoringutils::summarise_scores(by = "model")
+relative_scores
 ```
 
-Or obtain it via `score()`:
-
-```{r score}
-# Rank by Weighted Interval Score (WIS) -- lower is better
-score(backtest_mpox)
-```
-
-
-The `score()` output shows WIS, absolute percentage error (APE), and empirical
-coverage at 50 % and 90 %.  A well-calibrated nowcast should have the lowest
-WIS and coverage close to these levels. 
+The scoringutils output includes WIS and its decomposition, median absolute
+error, interval coverage, and relative WIS. A well-calibrated nowcast should
+have low WIS and coverage close to the nominal levels.
 
 > In this specific test we would choose the SIR for
-having the lowest WIS at essentially the same coverage as HGSP. Note however that
+having the lowest WIS at essentially the same coverage as HSGP. Note however that
 for the tutorial  we only used 5 historical dates which is too low to reach
 a definite conslusion.
 
@@ -353,7 +368,8 @@ commented here so the vignette stays single-process):
 # plan(multisession, workers = max(parallel::detectCores() - 1, 1))
 auto_ncast <- auto_nowcast(
   dengue_tbl_94,
-  metric         = "wis",   # rank candidates by Weighted Interval Score
+  metric         = "wis",   # rank candidates by relative WIS (the default)
+  relative_score = TRUE,
   n_dates        = 10,      # backtest at 10 historical dates (raise for a firmer choice)
   n_draws_select = 150,     # draws while comparing (small => fast)
   n_draws        = 500,     # draws for the final fit of the winner
@@ -366,6 +382,7 @@ We can show the scores of the models to see the best performer:
 
 ```{r auto-result}
 comparison_scores(auto_ncast)  # every candidate, ranked best-first
+selection_timings(auto_ncast)  # retrospective fits, refits, and total seconds
 ```
 
 `best_model()` hands back the winning `model()` object, so you can reuse the same

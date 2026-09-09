@@ -45,6 +45,7 @@ test_that("hurdle ZTPoisson supports fit, prediction, save/load, and update", {
     data, .ztp_workflow_model(), now = first_now, type = "two_stage",
     temporal_effects = "none", n_draws = 40L, seed = 11L
   )
+  expect_true(tbl.now::is_tbl_nowcast(fitted))
   expect_identical(fitted@rung, "onestage")
   expect_false(fitted@fits[[1L]]$use_random)
   expect_lte(fitted@fits[[1L]]$max_gradient, 0.1)
@@ -55,6 +56,18 @@ test_that("hurdle ZTPoisson supports fit, prediction, save/load, and update", {
   expect_match(prediction@estimand, "C_t\\(6\\)")
   expect_match(prediction@cumulative_reconstruction, "anchored sequential")
   expect_gte(prediction@negative_projection_count, 0L)
+  expect_identical(
+    fitted@metadata$diseasenowcasting$estimand,
+    prediction@estimand
+  )
+  expect_identical(
+    fitted@metadata$diseasenowcasting$cumulative_reconstruction,
+    prediction@cumulative_reconstruction
+  )
+  expect_gte(
+    fitted@metadata$diseasenowcasting$negative_projection_count,
+    0L
+  )
 
   path <- tempfile(fileext = ".rds")
   expect_invisible(suppressMessages(save_nowcast(fitted, path)))
@@ -94,13 +107,13 @@ test_that("hurdle ZTPoisson supports prior-only and finite-horizon backtesting",
 
   evaluation_date <- as.Date("2023-01-07") + 12L * 7L
   evaluated <- suppressWarnings(backtest(
-    data, specification, dates = evaluation_date, max_delay = Inf,
+    data, specification, dates = evaluation_date,
     type = "one_stage", n_draws = 20L, seed = 23L,
-    temporal_effects = "none"
+    temporal_effects = "none", verbose = FALSE
   ))
-  expect_s7_class(evaluated, backtest_class)
-  expect_true(nrow(evaluated@results) > 0L)
-  expect_true(all(is.finite(evaluated@results$truth)))
+  expect_s3_class(evaluated, "nowcast_backtest")
+  expect_true(nrow(evaluated$scores) > 0L)
+  expect_true(all(is.finite(evaluated$scores$.observed)))
 })
 
 test_that("cumulative-level fits use Laplace while hurdle fits use MAP", {

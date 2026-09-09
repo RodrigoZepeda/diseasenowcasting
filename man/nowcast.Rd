@@ -17,6 +17,7 @@ nowcast(
   floor_sig_frac = 0.08,
   temporal_effects = "auto",
   prior_only = FALSE,
+  quantile_levels = tbl.now::nowcast_quantile_levels(),
   seed = sample.int(.Machine$integer.max, 1),
   ...
 )
@@ -57,24 +58,32 @@ does not already carry computed temporal effects}.  Use \code{"none"} (or
 parameters from their \strong{priors} only, returning the prior-predictive latent
 incidence.  Useful for understanding what a prior implies \emph{before} seeing
 data (e.g. how the SIR \code{R0} prior or the AR(1) \code{phi} prior reshapes the
-epidemic).  The result is a normal \code{nowcast_class}, so \code{predict()} /
-\code{autoplot()} / \code{median()} / \code{quantile()} all work; \code{data} only supplies the
-time grid.  Default \code{FALSE}.}
+epidemic). The result uses the same common grammar as an ordinary fit, so
+\code{predict()} / \code{autoplot()} / \code{median()} / \code{quantile()} all work; \code{data}
+only supplies the time grid. Default \code{FALSE}.}
+
+\item{quantile_levels}{Probabilities at which to summarise the predictive
+draws in the returned \link[tbl.now:tbl_nowcast]{tbl.now::tbl_nowcast}.}
 
 \item{seed}{Optional RNG seed (imputation draws).}
 
 \item{...}{Passed to \code{\link[=prepare_data]{prepare_data()}} (e.g. \code{gp_boundary_frac}).}
 }
 \value{
-A \code{nowcast_class} object.
+A diseasenowcasting subclass of \link[tbl.now:tbl_nowcast]{tbl.now::tbl_nowcast}. The native
+fitted model is retained in \verb{@fit}; diseasenowcasting operations unwrap it
+automatically. The \verb{@fit_diagnostics} property (also available at
+\verb{@metadata$diseasenowcasting$fit_diagnostics}) records the resolved fitting
+stage, imputation retention, optimizer adequacy, curvature, and any
+Laplace-precision regularization used for prediction.
 }
 \description{
 The main entry point.  Takes a \code{tbl_now} (from the tbl.now package) and a
 \code{\link[=model]{model()}}, fits the latent-epidemic + reporting-delay model as of a given
-date, and returns a \code{nowcast_class} object.  Fitting only -- the
-posterior-predictive nowcast is produced lazily by \code{\link[=predict]{predict()}}; the latent
-incidence by \code{\link[=mean]{mean()}}/\code{\link[=median]{median()}}/\code{\link[=quantile]{quantile()}}; the parameter estimates by
-\code{\link[=coef]{coef()}}.
+date, and returns the common \link[tbl.now:tbl_nowcast]{tbl.now::tbl_nowcast} result. Predictive draws
+and quantiles are materialised in that result; the untouched native fit is
+retained in \verb{@fit} for \code{\link[=predict]{predict()}}, \code{\link[=mean]{mean()}}/\code{\link[=median]{median()}}/\code{\link[=quantile]{quantile()}},
+\code{\link[=coef]{coef()}}, and model-specific diagnostics.
 }
 \section{Revision processes}{
 
@@ -124,4 +133,9 @@ if (requireNamespace("tbl.now", quietly = TRUE)) {
   # nc <- nowcast(data, model(nb_likelihood(), hsgp_epidemic(), lognormal_delay()))
   # predict(nc); median(nc); coef(nc)
 }
+}
+\seealso{
+\link{diseasenowcasting_workflows} for when to use native modelling
+operations versus the shared \code{tbl.now} result workflow; \code{\link[=backtest]{backtest()}} and
+\code{\link[=auto_nowcast]{auto_nowcast()}} for retrospective comparison and automatic selection.
 }

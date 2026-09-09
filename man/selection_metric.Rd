@@ -10,8 +10,10 @@ selection_metric(nc)
 \item{nc}{A \code{nowcast_class} returned by \code{\link[=auto_nowcast]{auto_nowcast()}}.}
 }
 \value{
-A string: \code{"wis"}, \code{"ape"}, \code{"mse"}, \code{"coverage"}, \code{"coverage_50"},
-or \code{"coverage_90"}.
+The scoringutils score-column name supplied to \code{\link[=auto_nowcast]{auto_nowcast()}}.
+Consult the result's
+\code{relative_score} comparison field to determine whether its relative skill
+was used.
 }
 \description{
 The metric \code{auto_nowcast()} used to pick the winner

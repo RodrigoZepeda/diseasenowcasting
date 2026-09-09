@@ -25,11 +25,22 @@ test_that("auto_nowcast selects a model and returns a nowcast with a scoreboard"
   nc <- auto_nowcast(tn, n_dates = 2L, n_draws_select = 120L, n_draws = 200L,
                      temporal_effects = "none", verbose = FALSE)
 
-  expect_true(S7::S7_inherits(nc, diseasenowcasting:::nowcast_class))
+  expect_true(S7::S7_inherits(
+    nc,
+    diseasenowcasting:::diseasenowcasting_result_class
+  ))
   expect_type(nc@comparison, "list")
-  expect_true(all(c("scores", "chosen", "metric", "max_time") %in% names(nc@comparison)))
+  expect_true(all(c(
+    "scores", "chosen", "metric", "relative_score", "tie_break", "timings",
+    "max_time"
+  ) %in% names(nc@comparison)))
   expect_gt(nrow(nc@comparison$scores), 1L)        # a real grid was compared
   expect_true(nc@comparison$chosen %in% nc@comparison$scores$model)
+  expect_true(nc@comparison$relative_score)
+  expect_true(all(c(
+    "wis_relative_skill", "selection_score", "median_fit_seconds"
+  ) %in% names(nc@comparison$scores)))
+  expect_true(is.numeric(selection_timings(nc)$total_seconds))
   # predict() works on the returned object (it is a normal nowcast)
   expect_s3_class(tryCatch(predict(nc, summary = TRUE), error = function(e) e), "data.frame")
 })
@@ -47,18 +58,19 @@ test_that("auto_nowcast force-includes an explicitly supplied epidemic process",
   expect_true(any(grepl("^SIR/", nc@comparison$scores$model)))
 })
 
-test_that("auto_nowcast compares likelihoods, custom models, and the ape metric", {
+test_that("auto_nowcast compares likelihoods, custom models, and raw scoringutils metrics", {
   skip_on_cran()
   tn <- .make_synth_tblnow(Tn = 45L, seed = 9)
   custom_mod <- model(nb_likelihood(), sir_epidemic(), lognormal_delay())
 
-  nc <- auto_nowcast(tn, metric = "ape",
+  nc <- auto_nowcast(tn, metric = "ae_median", relative_score = FALSE,
                      likelihood = list(nb_likelihood(), poisson_likelihood()),
                      delays = list(lognormal_delay()), models = custom_mod,
                      n_dates = 2L, n_draws_select = 120L, n_draws = 200L,
                      temporal_effects = "none", verbose = FALSE)
 
-  expect_equal(nc@comparison$metric, "ape")
+  expect_equal(nc@comparison$metric, "ae_median")
+  expect_false(nc@comparison$relative_score)
   expect_true(any(grepl("/poisson/", nc@comparison$scores$model)))   # poisson compared
   expect_true(any(grepl("/nb/",      nc@comparison$scores$model)))   # nb compared
   expect_true(nc@comparison$chosen %in% nc@comparison$scores$model)
@@ -98,50 +110,60 @@ test_that("auto_nowcast accessors expose the comparison and the winning model", 
   expect_true(S7::S7_inherits(best_model(plain), diseasenowcasting:::model_class))
 })
 
-test_that("auto_nowcast coverage metrics pick the best-calibrated model", {
-  skip_on_cran()
-  tn <- .make_synth_tblnow(Tn = 50L, seed = 13)
-
-  # The miss-from-nominal each coverage metric minimises (see auto_nowcast()).
-  miss <- list(
-    coverage_50 = function(s) abs(s$coverage_50 - 0.50),
-    coverage_90 = function(s) abs(s$coverage_90 - 0.90),
-    coverage    = function(s) abs(s$coverage_50 - 0.50) + abs(s$coverage_90 - 0.90))
-
-  for (m in names(miss)) {
-    nc <- auto_nowcast(tn, metric = m, delays = list(lognormal_delay(), dirichlet_delay()),
-                       n_dates = 2L, n_draws_select = 100L, n_draws = 150L,
-                       temporal_effects = "none", verbose = FALSE)
-
-    expect_identical(selection_metric(nc), m)              # metric recorded verbatim
-    sb <- comparison_scores(nc)
-    chosen_miss <- miss[[m]](sb)[sb$model == best_model_name(nc)]
-    # the chosen model is the argmin of that metric's miss (ties allowed)
-    expect_equal(chosen_miss, min(miss[[m]](sb), na.rm = TRUE))
-  }
+test_that("auto_nowcast validates selection controls before fitting", {
+  tn <- .make_synth_tblnow(Tn = 40L, seed = 15)
+  expect_error(auto_nowcast(tn, metric = "", verbose = FALSE), "non-empty")
+  expect_error(auto_nowcast(tn, relative_score = NA, verbose = FALSE),
+               "relative_score")
+  expect_error(auto_nowcast(tn, tie_break = "random", verbose = FALSE),
+               "should be one of")
 })
 
-test_that("auto_nowcast rejects an unknown metric", {
-  tn <- .make_synth_tblnow(Tn = 40L, seed = 15)
-  expect_error(auto_nowcast(tn, metric = "coverage_95", verbose = FALSE),
-               "should be one of")
+test_that("score ties use epidemic priority or speed only as requested", {
+  tied <- data.frame(
+    model = c("custom", "sir", "ar", "hsgp"),
+    selection_score = c(1, 1 + 1e-10, 1, 1),
+    median_fit_seconds = c(1, 2, 3, 4),
+    epidemic_priority = c(4L, 3L, 2L, 1L),
+    grid_order = 1:4
+  )
+
+  by_process <- diseasenowcasting:::.rank_auto_scores(
+    tied, tie_break = "epidemic_priority"
+  )
+  expect_equal(by_process$model, c("hsgp", "ar", "sir", "custom"))
+
+  by_speed <- diseasenowcasting:::.rank_auto_scores(
+    tied, tie_break = "fastest"
+  )
+  expect_equal(by_speed$model, c("custom", "sir", "ar", "hsgp"))
+
+  not_tied <- tied
+  not_tied$selection_score <- c(4, 3, 2, 1)
+  expect_equal(
+    diseasenowcasting:::.rank_auto_scores(
+      not_tied, tie_break = "fastest"
+    )$model,
+    c("hsgp", "ar", "sir", "custom")
+  )
 })
 
 test_that("auto_nowcast falls back to the next-best model when the winner fails to refit", {
   skip_on_cran()
   tn <- .make_synth_tblnow(Tn = 50L, seed = 23)
 
-  # Mock nowcast() so the FIRST full-data refit (the top-ranked candidate) throws.
-  # backtest() always passes a concrete `now`; only the final refit leaves it
-  # NULL, so we can target the refit and let every backtest fit run normally.
+  # Mock nowcast() so the FIRST full-data refit (the top-ranked candidate)
+  # throws. Selection and final fits use distinct draw counts, which identifies
+  # the refit without depending on how the canonical engine passes `now`.
   real_nowcast <- get("nowcast", asNamespace("diseasenowcasting"))
   refit_calls  <- 0L
   fail_first_refit <- function(data, model, ..., now = NULL) {
-    if (is.null(now)) {
+    dots <- list(...)
+    if (identical(as.integer(dots$n_draws), 150L)) {
       refit_calls <<- refit_calls + 1L
       if (refit_calls == 1L) stop("simulated refit failure")
     }
-    real_nowcast(data, model, ..., now = now)
+    do.call(real_nowcast, c(list(data = data, model = model, now = now), dots))
   }
 
   nc <- testthat::with_mocked_bindings(
@@ -155,26 +177,29 @@ test_that("auto_nowcast falls back to the next-best model when the winner fails 
   # The top pick failed but auto_nowcast still returned a usable nowcast from the
   # next-best candidate (the refit was retried at least once).
   expect_gte(refit_calls, 2L)
-  expect_true(S7::S7_inherits(nc, diseasenowcasting:::nowcast_class))
+  expect_true(S7::S7_inherits(
+    nc,
+    diseasenowcasting:::diseasenowcasting_result_class
+  ))
   expect_true(nc@comparison$chosen %in% nc@comparison$scores$model)
   expect_s3_class(tryCatch(predict(nc, summary = TRUE), error = function(e) e),
                   "data.frame")
 })
 
-test_that("printing an auto_nowcast result shows the scoreboard", {
+test_that("auto_nowcast uses common printing and retains its scoreboard", {
   skip_on_cran()
   tn <- .make_synth_tblnow(Tn = 45L, seed = 17)
   nc <- auto_nowcast(tn, n_dates = 2L, n_draws_select = 100L, n_draws = 150L,
                      temporal_effects = "none", verbose = FALSE)
 
-  out <- cli::cli_fmt(print(nc))
-  expect_true(any(grepl("auto_nowcast", out)))
-  expect_true(any(grepl("Selected", out)))
-  expect_true(any(grepl(best_model_name(nc), out, fixed = TRUE)))
+  out <- capture.output(print(nc))
+  expect_true(any(grepl("tbl_nowcast", out, fixed = TRUE)))
+  expect_true(best_model_name(nc) %in% comparison_scores(nc)$model)
+  expect_identical(nc@comparison, nc@fit@comparison)
 
-  # a plain nowcast prints without the auto_nowcast block
+  # A plain fit uses the same common-result printer.
   plain <- nowcast(tn, model(nb_likelihood(), ar1_epidemic(), lognormal_delay()),
                    type = "one_stage", temporal_effects = "none", n_draws = 80)
-  out_plain <- cli::cli_fmt(print(plain))
-  expect_false(any(grepl("auto_nowcast", out_plain)))
+  out_plain <- capture.output(print(plain))
+  expect_true(any(grepl("tbl_nowcast", out_plain, fixed = TRUE)))
 })
