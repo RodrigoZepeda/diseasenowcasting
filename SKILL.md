@@ -176,8 +176,7 @@ yet retracted” automatically. - `p = 1` with observed retractions errors
 falls back to the ordinary count model.
 
 Full treatment: `vignette("Validation_processes")`; derivation in
-[`vignette("Mathematics")`](https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.md)
-section 8.
+`vignette("Mathematics")` section 8.
 
 ## 2b. Custom components (user-defined delays & epidemic processes)
 

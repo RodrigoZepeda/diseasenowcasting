@@ -71,7 +71,7 @@
 team</h4>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/vignettes/Benchmark.Rmd" class="external-link"><code>vignettes/Benchmark.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/vignettes/articles/Benchmark.Rmd" class="external-link"><code>vignettes/articles/Benchmark.Rmd</code></a></small>
       <div class="d-none name"><code>Benchmark.Rmd</code></div>
     </div>
 
@@ -211,11 +211,138 @@ footnote under each table notes any competitor that failed to fit on
 some dates.</p>
 </div>
 <div class="section level2">
-<h2 id="nobbs">Nobbs<a class="anchor" aria-label="anchor" href="#nobbs"></a>
+<h2 id="results-by-disease">Results by disease<a class="anchor" aria-label="anchor" href="#results-by-disease"></a>
 </h2>
 <div class="section level3">
-<h3 id="dengue-fever-weekly-colombia">Dengue fever (weekly, Colombia)<a class="anchor" aria-label="anchor" href="#dengue-fever-weekly-colombia"></a>
+<h3 id="dengue-fever-weekly-puerto-rico">Dengue fever (weekly, Puerto Rico)<a class="anchor" aria-label="anchor" href="#dengue-fever-weekly-puerto-rico"></a>
 </h3>
+<table style="width:100%;" class="table">
+<caption>Dengue: every diseasenowcasting model (50 common evaluation
+dates).</caption>
+<colgroup>
+<col width="14%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Model</th>
+<th align="left">WIS</th>
+<th align="left">Overprediction</th>
+<th align="left">Underprediction</th>
+<th align="left">Dispersion</th>
+<th align="left">Bias</th>
+<th align="left">Cov50</th>
+<th align="left">Cov90</th>
+<th align="left">Time (s)</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">own HSGP/nb/GeneralizedGamma</td>
+<td align="left"><strong>7.0</strong></td>
+<td align="left">1.5</td>
+<td align="left">1.6</td>
+<td align="left">4.0</td>
+<td align="left"><strong>0.00</strong></td>
+<td align="left"><strong>0.62</strong></td>
+<td align="left"><strong>0.92</strong></td>
+<td align="left">6.96</td>
+</tr>
+<tr class="even">
+<td align="left">own HSGP/nb/LogNormal</td>
+<td align="left">7.1</td>
+<td align="left">1.4</td>
+<td align="left"><strong>1.5</strong></td>
+<td align="left">4.1</td>
+<td align="left">0.03</td>
+<td align="left"><strong>0.60</strong></td>
+<td align="left"><strong>0.94</strong></td>
+<td align="left">5.06</td>
+</tr>
+<tr class="odd">
+<td align="left">own HSGP/nb/Dirichlet</td>
+<td align="left">7.6</td>
+<td align="left">1.9</td>
+<td align="left"><strong>1.5</strong></td>
+<td align="left">4.2</td>
+<td align="left">0.01</td>
+<td align="left"><strong>0.62</strong></td>
+<td align="left"><strong>0.90</strong></td>
+<td align="left"><strong>4.09</strong></td>
+</tr>
+<tr class="even">
+<td align="left">own AR1/nb/GeneralizedGamma</td>
+<td align="left">13.3</td>
+<td align="left">1.0</td>
+<td align="left">7.0</td>
+<td align="left">5.3</td>
+<td align="left">-0.12</td>
+<td align="left"><strong>0.68</strong></td>
+<td align="left"><strong>0.94</strong></td>
+<td align="left">76.96</td>
+</tr>
+<tr class="odd">
+<td align="left">own AR1/nb/Dirichlet</td>
+<td align="left">13.7</td>
+<td align="left">1.8</td>
+<td align="left">5.8</td>
+<td align="left">6.1</td>
+<td align="left">0.08</td>
+<td align="left"><strong>0.66</strong></td>
+<td align="left"><strong>0.94</strong></td>
+<td align="left">13.34</td>
+</tr>
+<tr class="even">
+<td align="left">own AR1/nb/LogNormal</td>
+<td align="left">13.8</td>
+<td align="left">1.4</td>
+<td align="left">6.7</td>
+<td align="left">5.7</td>
+<td align="left"><strong>0.00</strong></td>
+<td align="left"><strong>0.70</strong></td>
+<td align="left"><strong>0.96</strong></td>
+<td align="left">17.59</td>
+</tr>
+<tr class="odd">
+<td align="left">own SIR/nb/Dirichlet</td>
+<td align="left">14.6</td>
+<td align="left">1.4</td>
+<td align="left">9.7</td>
+<td align="left">3.6</td>
+<td align="left">-0.29</td>
+<td align="left">0.42</td>
+<td align="left">0.86</td>
+<td align="left">20.09</td>
+</tr>
+<tr class="even">
+<td align="left">own SIR/nb/LogNormal</td>
+<td align="left">16.3</td>
+<td align="left"><strong>0.6</strong></td>
+<td align="left">11.5</td>
+<td align="left">4.1</td>
+<td align="left">-0.49</td>
+<td align="left">0.38</td>
+<td align="left">0.80</td>
+<td align="left">29.56</td>
+</tr>
+<tr class="odd">
+<td align="left">own SIR/nb/GeneralizedGamma</td>
+<td align="left">16.5</td>
+<td align="left"><strong>0.6</strong></td>
+<td align="left">12.5</td>
+<td align="left"><strong>3.4</strong></td>
+<td align="left">-0.52</td>
+<td align="left">0.34</td>
+<td align="left">0.68</td>
+<td align="left">104.60</td>
+</tr>
+</tbody>
+</table>
 <table style="width:100%;" class="table">
 <caption>Dengue: diseasenowcasting vs NobBS (50 common evaluation
 dates).</caption>
@@ -346,13 +473,140 @@ dates).</caption>
 <td align="left">16.5</td>
 <td align="left"><strong>0.6</strong></td>
 <td align="left">12.5</td>
+<td align="left"><strong>3.4</strong></td>
+<td align="left">-0.52</td>
+<td align="left">0.34</td>
+<td align="left">0.68</td>
+<td align="left">104.60</td>
+</tr>
+</tbody>
+</table>
+<table style="width:100%;" class="table">
+<caption>Dengue: diseasenowcasting vs epinowcast (50 common evaluation
+dates).</caption>
+<colgroup>
+<col width="14%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Model</th>
+<th align="left">WIS</th>
+<th align="left">Overprediction</th>
+<th align="left">Underprediction</th>
+<th align="left">Dispersion</th>
+<th align="left">Bias</th>
+<th align="left">Cov50</th>
+<th align="left">Cov90</th>
+<th align="left">Time (s)</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">own HSGP/nb/GeneralizedGamma</td>
+<td align="left"><strong>7.0</strong></td>
+<td align="left">1.5</td>
+<td align="left">1.6</td>
+<td align="left">4.0</td>
+<td align="left"><strong>0.00</strong></td>
+<td align="left"><strong>0.62</strong></td>
+<td align="left"><strong>0.92</strong></td>
+<td align="left">6.96</td>
+</tr>
+<tr class="even">
+<td align="left">own HSGP/nb/LogNormal</td>
+<td align="left">7.1</td>
+<td align="left">1.4</td>
+<td align="left"><strong>1.5</strong></td>
+<td align="left">4.1</td>
+<td align="left">0.03</td>
+<td align="left"><strong>0.60</strong></td>
+<td align="left"><strong>0.94</strong></td>
+<td align="left">5.06</td>
+</tr>
+<tr class="odd">
+<td align="left">own HSGP/nb/Dirichlet</td>
+<td align="left">7.6</td>
+<td align="left">1.9</td>
+<td align="left"><strong>1.5</strong></td>
+<td align="left">4.2</td>
+<td align="left">0.01</td>
+<td align="left"><strong>0.62</strong></td>
+<td align="left"><strong>0.90</strong></td>
+<td align="left"><strong>4.09</strong></td>
+</tr>
+<tr class="even">
+<td align="left">own AR1/nb/GeneralizedGamma</td>
+<td align="left">13.3</td>
+<td align="left">1.0</td>
+<td align="left">7.0</td>
+<td align="left">5.3</td>
+<td align="left">-0.12</td>
+<td align="left"><strong>0.68</strong></td>
+<td align="left"><strong>0.94</strong></td>
+<td align="left">76.96</td>
+</tr>
+<tr class="odd">
+<td align="left">own AR1/nb/Dirichlet</td>
+<td align="left">13.7</td>
+<td align="left">1.8</td>
+<td align="left">5.8</td>
+<td align="left">6.1</td>
+<td align="left">0.08</td>
+<td align="left"><strong>0.66</strong></td>
+<td align="left"><strong>0.94</strong></td>
+<td align="left">13.34</td>
+</tr>
+<tr class="even">
+<td align="left">own AR1/nb/LogNormal</td>
+<td align="left">13.8</td>
+<td align="left">1.4</td>
+<td align="left">6.7</td>
+<td align="left">5.7</td>
+<td align="left"><strong>0.00</strong></td>
+<td align="left"><strong>0.70</strong></td>
+<td align="left"><strong>0.96</strong></td>
+<td align="left">17.59</td>
+</tr>
+<tr class="odd">
+<td align="left">own SIR/nb/Dirichlet</td>
+<td align="left">14.6</td>
+<td align="left">1.4</td>
+<td align="left">9.7</td>
+<td align="left">3.6</td>
+<td align="left">-0.29</td>
+<td align="left">0.42</td>
+<td align="left">0.86</td>
+<td align="left">20.09</td>
+</tr>
+<tr class="even">
+<td align="left">own SIR/nb/LogNormal</td>
+<td align="left">16.3</td>
+<td align="left"><strong>0.6</strong></td>
+<td align="left">11.5</td>
+<td align="left">4.1</td>
+<td align="left">-0.49</td>
+<td align="left">0.38</td>
+<td align="left">0.80</td>
+<td align="left">29.56</td>
+</tr>
+<tr class="odd">
+<td align="left">own SIR/nb/GeneralizedGamma</td>
+<td align="left">16.5</td>
+<td align="left"><strong>0.6</strong></td>
+<td align="left">12.5</td>
 <td align="left">3.4</td>
 <td align="left">-0.52</td>
 <td align="left">0.34</td>
 <td align="left">0.68</td>
 <td align="left">104.60</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">Epinowcast (LogNormal, RE)</td>
 <td align="left">16.5</td>
 <td align="left">4.7</td>
@@ -363,7 +617,7 @@ dates).</caption>
 <td align="left">0.30</td>
 <td align="left">75.65</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">Epinowcast (LogNormal, RW)</td>
 <td align="left">17.2</td>
 <td align="left">5.5</td>
@@ -373,17 +627,6 @@ dates).</caption>
 <td align="left">0.20</td>
 <td align="left">0.28</td>
 <td align="left">76.31</td>
-</tr>
-<tr class="odd">
-<td align="left">baselinenowcast</td>
-<td align="left">17.4</td>
-<td align="left">1.9</td>
-<td align="left">5.9</td>
-<td align="left">9.5</td>
-<td align="left">0.19</td>
-<td align="left"><strong>0.56</strong></td>
-<td align="left">0.82</td>
-<td align="left">14.65</td>
 </tr>
 <tr class="even">
 <td align="left">Epinowcast (Gamma, RW)</td>
@@ -409,6 +652,144 @@ dates).</caption>
 </tr>
 </tbody>
 </table>
+<table style="width:100%;" class="table">
+<caption>Dengue: diseasenowcasting vs baselinenowcast (50 common
+evaluation dates).</caption>
+<colgroup>
+<col width="14%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Model</th>
+<th align="left">WIS</th>
+<th align="left">Overprediction</th>
+<th align="left">Underprediction</th>
+<th align="left">Dispersion</th>
+<th align="left">Bias</th>
+<th align="left">Cov50</th>
+<th align="left">Cov90</th>
+<th align="left">Time (s)</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">own HSGP/nb/GeneralizedGamma</td>
+<td align="left"><strong>7.0</strong></td>
+<td align="left">1.5</td>
+<td align="left">1.6</td>
+<td align="left">4.0</td>
+<td align="left"><strong>0.00</strong></td>
+<td align="left"><strong>0.62</strong></td>
+<td align="left"><strong>0.92</strong></td>
+<td align="left">6.96</td>
+</tr>
+<tr class="even">
+<td align="left">own HSGP/nb/LogNormal</td>
+<td align="left">7.1</td>
+<td align="left">1.4</td>
+<td align="left"><strong>1.5</strong></td>
+<td align="left">4.1</td>
+<td align="left">0.03</td>
+<td align="left"><strong>0.60</strong></td>
+<td align="left"><strong>0.94</strong></td>
+<td align="left">5.06</td>
+</tr>
+<tr class="odd">
+<td align="left">own HSGP/nb/Dirichlet</td>
+<td align="left">7.6</td>
+<td align="left">1.9</td>
+<td align="left"><strong>1.5</strong></td>
+<td align="left">4.2</td>
+<td align="left">0.01</td>
+<td align="left"><strong>0.62</strong></td>
+<td align="left"><strong>0.90</strong></td>
+<td align="left"><strong>4.09</strong></td>
+</tr>
+<tr class="even">
+<td align="left">own AR1/nb/GeneralizedGamma</td>
+<td align="left">13.3</td>
+<td align="left">1.0</td>
+<td align="left">7.0</td>
+<td align="left">5.3</td>
+<td align="left">-0.12</td>
+<td align="left"><strong>0.68</strong></td>
+<td align="left"><strong>0.94</strong></td>
+<td align="left">76.96</td>
+</tr>
+<tr class="odd">
+<td align="left">own AR1/nb/Dirichlet</td>
+<td align="left">13.7</td>
+<td align="left">1.8</td>
+<td align="left">5.8</td>
+<td align="left">6.1</td>
+<td align="left">0.08</td>
+<td align="left"><strong>0.66</strong></td>
+<td align="left"><strong>0.94</strong></td>
+<td align="left">13.34</td>
+</tr>
+<tr class="even">
+<td align="left">own AR1/nb/LogNormal</td>
+<td align="left">13.8</td>
+<td align="left">1.4</td>
+<td align="left">6.7</td>
+<td align="left">5.7</td>
+<td align="left"><strong>0.00</strong></td>
+<td align="left"><strong>0.70</strong></td>
+<td align="left"><strong>0.96</strong></td>
+<td align="left">17.59</td>
+</tr>
+<tr class="odd">
+<td align="left">own SIR/nb/Dirichlet</td>
+<td align="left">14.6</td>
+<td align="left">1.4</td>
+<td align="left">9.7</td>
+<td align="left">3.6</td>
+<td align="left">-0.29</td>
+<td align="left">0.42</td>
+<td align="left">0.86</td>
+<td align="left">20.09</td>
+</tr>
+<tr class="even">
+<td align="left">own SIR/nb/LogNormal</td>
+<td align="left">16.3</td>
+<td align="left"><strong>0.6</strong></td>
+<td align="left">11.5</td>
+<td align="left">4.1</td>
+<td align="left">-0.49</td>
+<td align="left">0.38</td>
+<td align="left">0.80</td>
+<td align="left">29.56</td>
+</tr>
+<tr class="odd">
+<td align="left">own SIR/nb/GeneralizedGamma</td>
+<td align="left">16.5</td>
+<td align="left"><strong>0.6</strong></td>
+<td align="left">12.5</td>
+<td align="left"><strong>3.4</strong></td>
+<td align="left">-0.52</td>
+<td align="left">0.34</td>
+<td align="left">0.68</td>
+<td align="left">104.60</td>
+</tr>
+<tr class="even">
+<td align="left">baselinenowcast</td>
+<td align="left">17.4</td>
+<td align="left">1.9</td>
+<td align="left">5.9</td>
+<td align="left">9.5</td>
+<td align="left">0.19</td>
+<td align="left"><strong>0.56</strong></td>
+<td align="left">0.82</td>
+<td align="left">14.65</td>
+</tr>
+</tbody>
+</table>
 <blockquote>
 <p><em>Convergence over the 50 evaluation dates: Epinowcast (LogNormal,
 point) failed on 50 of 50 dates; Epinowcast (Gamma, point) failed on 50
@@ -425,6 +806,133 @@ both NobBS and the best Epinowcast variant on WIS. Best model:
 <div class="section level3">
 <h3 id="mpox-daily-usa">Mpox (daily, USA)<a class="anchor" aria-label="anchor" href="#mpox-daily-usa"></a>
 </h3>
+<table style="width:100%;" class="table">
+<caption>Mpox: every diseasenowcasting model (49 common evaluation
+dates).</caption>
+<colgroup>
+<col width="14%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+<col width="10%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Model</th>
+<th align="left">WIS</th>
+<th align="left">Overprediction</th>
+<th align="left">Underprediction</th>
+<th align="left">Dispersion</th>
+<th align="left">Bias</th>
+<th align="left">Cov50</th>
+<th align="left">Cov90</th>
+<th align="left">Time (s)</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">own HSGP/nb/GeneralizedGamma</td>
+<td align="left"><strong>13.3</strong></td>
+<td align="left">2.4</td>
+<td align="left">1.9</td>
+<td align="left">9.0</td>
+<td align="left">0.31</td>
+<td align="left">0.45</td>
+<td align="left"><strong>0.94</strong></td>
+<td align="left">0.79</td>
+</tr>
+<tr class="even">
+<td align="left">own AR1/nb/GeneralizedGamma</td>
+<td align="left">13.5</td>
+<td align="left">3.2</td>
+<td align="left">1.7</td>
+<td align="left"><strong>8.6</strong></td>
+<td align="left">0.39</td>
+<td align="left">0.37</td>
+<td align="left"><strong>0.94</strong></td>
+<td align="left">0.83</td>
+</tr>
+<tr class="odd">
+<td align="left">own AR1/nb/LogNormal</td>
+<td align="left">13.8</td>
+<td align="left">3.3</td>
+<td align="left">1.7</td>
+<td align="left">8.8</td>
+<td align="left">0.38</td>
+<td align="left">0.39</td>
+<td align="left"><strong>0.92</strong></td>
+<td align="left">0.79</td>
+</tr>
+<tr class="even">
+<td align="left">own HSGP/nb/LogNormal</td>
+<td align="left">14.1</td>
+<td align="left">2.5</td>
+<td align="left">1.8</td>
+<td align="left">9.7</td>
+<td align="left">0.33</td>
+<td align="left">0.45</td>
+<td align="left"><strong>0.96</strong></td>
+<td align="left">0.73</td>
+</tr>
+<tr class="odd">
+<td align="left">own SIR/nb/GeneralizedGamma</td>
+<td align="left">16.3</td>
+<td align="left"><strong>1.2</strong></td>
+<td align="left">0.8</td>
+<td align="left">14.3</td>
+<td align="left"><strong>0.10</strong></td>
+<td align="left"><strong>0.88</strong></td>
+<td align="left"><strong>1.00</strong></td>
+<td align="left">1.46</td>
+</tr>
+<tr class="even">
+<td align="left">own SIR/nb/LogNormal</td>
+<td align="left">16.9</td>
+<td align="left">1.3</td>
+<td align="left">0.9</td>
+<td align="left">14.7</td>
+<td align="left">0.12</td>
+<td align="left"><strong>0.88</strong></td>
+<td align="left"><strong>1.00</strong></td>
+<td align="left">1.38</td>
+</tr>
+<tr class="odd">
+<td align="left">own HSGP/nb/Dirichlet</td>
+<td align="left">20.0</td>
+<td align="left">4.1</td>
+<td align="left">1.7</td>
+<td align="left">14.3</td>
+<td align="left">0.40</td>
+<td align="left">0.41</td>
+<td align="left">0.88</td>
+<td align="left"><strong>0.72</strong></td>
+</tr>
+<tr class="even">
+<td align="left">own AR1/nb/Dirichlet</td>
+<td align="left">21.1</td>
+<td align="left">4.6</td>
+<td align="left">1.4</td>
+<td align="left">15.1</td>
+<td align="left">0.40</td>
+<td align="left">0.37</td>
+<td align="left">0.88</td>
+<td align="left">0.79</td>
+</tr>
+<tr class="odd">
+<td align="left">own SIR/nb/Dirichlet</td>
+<td align="left">26.1</td>
+<td align="left">2.4</td>
+<td align="left"><strong>0.6</strong></td>
+<td align="left">23.1</td>
+<td align="left">0.32</td>
+<td align="left"><strong>0.86</strong></td>
+<td align="left"><strong>1.00</strong></td>
+<td align="left">1.39</td>
+</tr>
+</tbody>
+</table>
 <table style="width:100%;" class="table">
 <caption>Mpox: diseasenowcasting vs NobBS (49 common evaluation
 dates).</caption>
@@ -903,6 +1411,133 @@ of Epinowcast.</p>
 <div class="section level3">
 <h3 id="covid-19-daily-colombia">COVID-19 (daily, Colombia)<a class="anchor" aria-label="anchor" href="#covid-19-daily-colombia"></a>
 </h3>
+<table class="table">
+<caption>COVID-19: every diseasenowcasting model (50 common evaluation
+dates).</caption>
+<colgroup>
+<col width="15%">
+<col width="12%">
+<col width="11%">
+<col width="11%">
+<col width="12%">
+<col width="11%">
+<col width="3%">
+<col width="11%">
+<col width="11%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Model</th>
+<th align="left">WIS</th>
+<th align="left">Overprediction</th>
+<th align="left">Underprediction</th>
+<th align="left">Dispersion</th>
+<th align="left">Bias</th>
+<th align="left">Cov50</th>
+<th align="left">Cov90</th>
+<th align="left">Time (s)</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">own HSGP/nb/GeneralizedGamma</td>
+<td align="left"><strong>699.0</strong></td>
+<td align="left">258.6</td>
+<td align="left">162.9</td>
+<td align="left">277.4</td>
+<td align="left">0.07</td>
+<td align="left">0.32</td>
+<td align="left">0.76</td>
+<td align="left">4.17</td>
+</tr>
+<tr class="even">
+<td align="left">own HSGP/nb/LogNormal</td>
+<td align="left">811.5</td>
+<td align="left">346.3</td>
+<td align="left">129.1</td>
+<td align="left">336.1</td>
+<td align="left"><strong>0.06</strong></td>
+<td align="left">0.28</td>
+<td align="left">0.88</td>
+<td align="left">3.30</td>
+</tr>
+<tr class="odd">
+<td align="left">own SIR/nb/Dirichlet</td>
+<td align="left">970.0</td>
+<td align="left">497.2</td>
+<td align="left">200.4</td>
+<td align="left"><strong>272.4</strong></td>
+<td align="left">0.28</td>
+<td align="left">0.34</td>
+<td align="left">0.68</td>
+<td align="left">15.41</td>
+</tr>
+<tr class="even">
+<td align="left">own SIR/nb/GeneralizedGamma</td>
+<td align="left">1037.9</td>
+<td align="left">506.9</td>
+<td align="left">228.6</td>
+<td align="left">302.4</td>
+<td align="left">0.13</td>
+<td align="left">0.44</td>
+<td align="left">0.74</td>
+<td align="left">44.89</td>
+</tr>
+<tr class="odd">
+<td align="left">own HSGP/nb/Dirichlet</td>
+<td align="left">1065.9</td>
+<td align="left">643.3</td>
+<td align="left"><strong>92.4</strong></td>
+<td align="left">330.2</td>
+<td align="left">0.50</td>
+<td align="left">0.14</td>
+<td align="left">0.54</td>
+<td align="left">3.60</td>
+</tr>
+<tr class="even">
+<td align="left">own SIR/nb/LogNormal</td>
+<td align="left">1511.0</td>
+<td align="left">881.1</td>
+<td align="left">211.5</td>
+<td align="left">418.4</td>
+<td align="left">0.27</td>
+<td align="left">0.36</td>
+<td align="left">0.70</td>
+<td align="left">21.56</td>
+</tr>
+<tr class="odd">
+<td align="left">own AR1/nb/LogNormal</td>
+<td align="left">1642.9</td>
+<td align="left"><strong>82.3</strong></td>
+<td align="left">752.0</td>
+<td align="left">808.6</td>
+<td align="left">-0.31</td>
+<td align="left">0.38</td>
+<td align="left"><strong>0.96</strong></td>
+<td align="left"><strong>1.89</strong></td>
+</tr>
+<tr class="even">
+<td align="left">own AR1/nb/GeneralizedGamma</td>
+<td align="left">1665.1</td>
+<td align="left">84.3</td>
+<td align="left">826.8</td>
+<td align="left">754.0</td>
+<td align="left">-0.33</td>
+<td align="left">0.30</td>
+<td align="left"><strong>0.96</strong></td>
+<td align="left">2.17</td>
+</tr>
+<tr class="odd">
+<td align="left">own AR1/nb/Dirichlet</td>
+<td align="left">1686.2</td>
+<td align="left">103.4</td>
+<td align="left">731.2</td>
+<td align="left">851.6</td>
+<td align="left">-0.30</td>
+<td align="left">0.26</td>
+<td align="left"><strong>0.96</strong></td>
+<td align="left">2.71</td>
+</tr>
+</tbody>
+</table>
 <table class="table">
 <caption>COVID-19: diseasenowcasting vs NobBS (50 common evaluation
 dates).</caption>

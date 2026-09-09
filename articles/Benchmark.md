@@ -83,9 +83,24 @@ NobBS**; (3) **`diseasenowcasting` vs epinowcast**; and (4)
 for `Cov90`). The footnote under each table notes any competitor that
 failed to fit on some dates.
 
-## Nobbs
+## Results by disease
 
-### Dengue fever (weekly, Colombia)
+### Dengue fever (weekly, Puerto Rico)
+
+| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+| own HSGP/nb/GeneralizedGamma | **7.0** | 1.5 | 1.6 | 4.0 | **0.00** | **0.62** | **0.92** | 6.96 |
+| own HSGP/nb/LogNormal | 7.1 | 1.4 | **1.5** | 4.1 | 0.03 | **0.60** | **0.94** | 5.06 |
+| own HSGP/nb/Dirichlet | 7.6 | 1.9 | **1.5** | 4.2 | 0.01 | **0.62** | **0.90** | **4.09** |
+| own AR1/nb/GeneralizedGamma | 13.3 | 1.0 | 7.0 | 5.3 | -0.12 | **0.68** | **0.94** | 76.96 |
+| own AR1/nb/Dirichlet | 13.7 | 1.8 | 5.8 | 6.1 | 0.08 | **0.66** | **0.94** | 13.34 |
+| own AR1/nb/LogNormal | 13.8 | 1.4 | 6.7 | 5.7 | **0.00** | **0.70** | **0.96** | 17.59 |
+| own SIR/nb/Dirichlet | 14.6 | 1.4 | 9.7 | 3.6 | -0.29 | 0.42 | 0.86 | 20.09 |
+| own SIR/nb/LogNormal | 16.3 | **0.6** | 11.5 | 4.1 | -0.49 | 0.38 | 0.80 | 29.56 |
+| own SIR/nb/GeneralizedGamma | 16.5 | **0.6** | 12.5 | **3.4** | -0.52 | 0.34 | 0.68 | 104.60 |
+
+Dengue: every diseasenowcasting model (50 common evaluation dates).
+{.table style="width:100%;"}
 
 | Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
 |:---|:---|:---|:---|:---|:---|:---|:---|:---|
@@ -98,15 +113,45 @@ failed to fit on some dates.
 | own AR1/nb/LogNormal | 13.8 | 1.4 | 6.7 | 5.7 | **0.00** | **0.70** | **0.96** | 17.59 |
 | own SIR/nb/Dirichlet | 14.6 | 1.4 | 9.7 | 3.6 | -0.29 | 0.42 | 0.86 | 20.09 |
 | own SIR/nb/LogNormal | 16.3 | **0.6** | 11.5 | 4.1 | -0.49 | 0.38 | 0.80 | 29.56 |
-| own SIR/nb/GeneralizedGamma | 16.5 | **0.6** | 12.5 | 3.4 | -0.52 | 0.34 | 0.68 | 104.60 |
-| Epinowcast (LogNormal, RE) | 16.5 | 4.7 | 10.5 | 1.2 | -0.29 | 0.24 | 0.30 | 75.65 |
-| Epinowcast (LogNormal, RW) | 17.2 | 5.5 | 10.2 | 1.5 | -0.22 | 0.20 | 0.28 | 76.31 |
-| baselinenowcast | 17.4 | 1.9 | 5.9 | 9.5 | 0.19 | **0.56** | 0.82 | 14.65 |
-| Epinowcast (Gamma, RW) | 23.7 | 13.7 | 9.4 | **0.6** | 0.18 | 0.06 | 0.10 | 17.66 |
-| Epinowcast (Gamma, RE) | 31.0 | 9.5 | 20.6 | 1.0 | -0.11 | 0.04 | 0.12 | 25.18 |
+| own SIR/nb/GeneralizedGamma | 16.5 | **0.6** | 12.5 | **3.4** | -0.52 | 0.34 | 0.68 | 104.60 |
 
 Dengue: diseasenowcasting vs NobBS (50 common evaluation dates). {.table
 style="width:100%;"}
+
+| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+| own HSGP/nb/GeneralizedGamma | **7.0** | 1.5 | 1.6 | 4.0 | **0.00** | **0.62** | **0.92** | 6.96 |
+| own HSGP/nb/LogNormal | 7.1 | 1.4 | **1.5** | 4.1 | 0.03 | **0.60** | **0.94** | 5.06 |
+| own HSGP/nb/Dirichlet | 7.6 | 1.9 | **1.5** | 4.2 | 0.01 | **0.62** | **0.90** | **4.09** |
+| own AR1/nb/GeneralizedGamma | 13.3 | 1.0 | 7.0 | 5.3 | -0.12 | **0.68** | **0.94** | 76.96 |
+| own AR1/nb/Dirichlet | 13.7 | 1.8 | 5.8 | 6.1 | 0.08 | **0.66** | **0.94** | 13.34 |
+| own AR1/nb/LogNormal | 13.8 | 1.4 | 6.7 | 5.7 | **0.00** | **0.70** | **0.96** | 17.59 |
+| own SIR/nb/Dirichlet | 14.6 | 1.4 | 9.7 | 3.6 | -0.29 | 0.42 | 0.86 | 20.09 |
+| own SIR/nb/LogNormal | 16.3 | **0.6** | 11.5 | 4.1 | -0.49 | 0.38 | 0.80 | 29.56 |
+| own SIR/nb/GeneralizedGamma | 16.5 | **0.6** | 12.5 | 3.4 | -0.52 | 0.34 | 0.68 | 104.60 |
+| Epinowcast (LogNormal, RE) | 16.5 | 4.7 | 10.5 | 1.2 | -0.29 | 0.24 | 0.30 | 75.65 |
+| Epinowcast (LogNormal, RW) | 17.2 | 5.5 | 10.2 | 1.5 | -0.22 | 0.20 | 0.28 | 76.31 |
+| Epinowcast (Gamma, RW) | 23.7 | 13.7 | 9.4 | **0.6** | 0.18 | 0.06 | 0.10 | 17.66 |
+| Epinowcast (Gamma, RE) | 31.0 | 9.5 | 20.6 | 1.0 | -0.11 | 0.04 | 0.12 | 25.18 |
+
+Dengue: diseasenowcasting vs epinowcast (50 common evaluation dates).
+{.table style="width:100%;"}
+
+| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+| own HSGP/nb/GeneralizedGamma | **7.0** | 1.5 | 1.6 | 4.0 | **0.00** | **0.62** | **0.92** | 6.96 |
+| own HSGP/nb/LogNormal | 7.1 | 1.4 | **1.5** | 4.1 | 0.03 | **0.60** | **0.94** | 5.06 |
+| own HSGP/nb/Dirichlet | 7.6 | 1.9 | **1.5** | 4.2 | 0.01 | **0.62** | **0.90** | **4.09** |
+| own AR1/nb/GeneralizedGamma | 13.3 | 1.0 | 7.0 | 5.3 | -0.12 | **0.68** | **0.94** | 76.96 |
+| own AR1/nb/Dirichlet | 13.7 | 1.8 | 5.8 | 6.1 | 0.08 | **0.66** | **0.94** | 13.34 |
+| own AR1/nb/LogNormal | 13.8 | 1.4 | 6.7 | 5.7 | **0.00** | **0.70** | **0.96** | 17.59 |
+| own SIR/nb/Dirichlet | 14.6 | 1.4 | 9.7 | 3.6 | -0.29 | 0.42 | 0.86 | 20.09 |
+| own SIR/nb/LogNormal | 16.3 | **0.6** | 11.5 | 4.1 | -0.49 | 0.38 | 0.80 | 29.56 |
+| own SIR/nb/GeneralizedGamma | 16.5 | **0.6** | 12.5 | **3.4** | -0.52 | 0.34 | 0.68 | 104.60 |
+| baselinenowcast | 17.4 | 1.9 | 5.9 | 9.5 | 0.19 | **0.56** | 0.82 | 14.65 |
+
+Dengue: diseasenowcasting vs baselinenowcast (50 common evaluation
+dates). {.table style="width:100%;"}
 
 > *Convergence over the 50 evaluation dates: Epinowcast (LogNormal,
 > point) failed on 50 of 50 dates; Epinowcast (Gamma, point) failed on
@@ -122,6 +167,21 @@ WIS. Best model: **HSGP / LogNormal** (WIS \approx 7, cov90 \approx
 0.94).
 
 ### Mpox (daily, USA)
+
+| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+| own HSGP/nb/GeneralizedGamma | **13.3** | 2.4 | 1.9 | 9.0 | 0.31 | 0.45 | **0.94** | 0.79 |
+| own AR1/nb/GeneralizedGamma | 13.5 | 3.2 | 1.7 | **8.6** | 0.39 | 0.37 | **0.94** | 0.83 |
+| own AR1/nb/LogNormal | 13.8 | 3.3 | 1.7 | 8.8 | 0.38 | 0.39 | **0.92** | 0.79 |
+| own HSGP/nb/LogNormal | 14.1 | 2.5 | 1.8 | 9.7 | 0.33 | 0.45 | **0.96** | 0.73 |
+| own SIR/nb/GeneralizedGamma | 16.3 | **1.2** | 0.8 | 14.3 | **0.10** | **0.88** | **1.00** | 1.46 |
+| own SIR/nb/LogNormal | 16.9 | 1.3 | 0.9 | 14.7 | 0.12 | **0.88** | **1.00** | 1.38 |
+| own HSGP/nb/Dirichlet | 20.0 | 4.1 | 1.7 | 14.3 | 0.40 | 0.41 | 0.88 | **0.72** |
+| own AR1/nb/Dirichlet | 21.1 | 4.6 | 1.4 | 15.1 | 0.40 | 0.37 | 0.88 | 0.79 |
+| own SIR/nb/Dirichlet | 26.1 | 2.4 | **0.6** | 23.1 | 0.32 | **0.86** | **1.00** | 1.39 |
+
+Mpox: every diseasenowcasting model (49 common evaluation dates).
+{.table style="width:100%;"}
 
 | Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
 |:---|:---|:---|:---|:---|:---|:---|:---|:---|
@@ -191,6 +251,21 @@ variants achieve the lowest WIS, roughly **2× better than NobBS** and
 well ahead of Epinowcast.
 
 ### COVID-19 (daily, Colombia)
+
+| Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+| own HSGP/nb/GeneralizedGamma | **699.0** | 258.6 | 162.9 | 277.4 | 0.07 | 0.32 | 0.76 | 4.17 |
+| own HSGP/nb/LogNormal | 811.5 | 346.3 | 129.1 | 336.1 | **0.06** | 0.28 | 0.88 | 3.30 |
+| own SIR/nb/Dirichlet | 970.0 | 497.2 | 200.4 | **272.4** | 0.28 | 0.34 | 0.68 | 15.41 |
+| own SIR/nb/GeneralizedGamma | 1037.9 | 506.9 | 228.6 | 302.4 | 0.13 | 0.44 | 0.74 | 44.89 |
+| own HSGP/nb/Dirichlet | 1065.9 | 643.3 | **92.4** | 330.2 | 0.50 | 0.14 | 0.54 | 3.60 |
+| own SIR/nb/LogNormal | 1511.0 | 881.1 | 211.5 | 418.4 | 0.27 | 0.36 | 0.70 | 21.56 |
+| own AR1/nb/LogNormal | 1642.9 | **82.3** | 752.0 | 808.6 | -0.31 | 0.38 | **0.96** | **1.89** |
+| own AR1/nb/GeneralizedGamma | 1665.1 | 84.3 | 826.8 | 754.0 | -0.33 | 0.30 | **0.96** | 2.17 |
+| own AR1/nb/Dirichlet | 1686.2 | 103.4 | 731.2 | 851.6 | -0.30 | 0.26 | **0.96** | 2.71 |
+
+COVID-19: every diseasenowcasting model (50 common evaluation dates).
+{.table}
 
 | Model | WIS | Overprediction | Underprediction | Dispersion | Bias | Cov50 | Cov90 | Time (s) |
 |:---|:---|:---|:---|:---|:---|:---|:---|:---|

@@ -264,10 +264,13 @@ band).\*](Nowcasting_at_the_start_of_an_Epidemic_files/figure-html/prior-sir-1.p
 
 ## 2) COVID-19 Colombia: example from 1 day to 3 months
 
-### 2.2 Fitting each model across the five windows
+### 2.2 Fitting each model across the four windows
 
-We fit SIR, AR1, and HSGP at each window using tight, epidemiologically
-informed priors for early windows and relaxing them as data accumulate.
+We fit SIR, AR1, and HSGP at four progressively longer windows – one
+week, three weeks, one month and three months of data – using tight,
+epidemiologically informed priors. Add more windows to the list below to
+trace the transition in finer steps; each extra window costs three more
+fits.
 
 ``` r
 
@@ -275,11 +278,8 @@ informed priors for early windows and relaxing them as data accumulate.
 t0 <- as.Date("2020-03-09")    # first day with >0 cases in all models
 windows <- list(
   `1 week`   = t0,
-  `2 weeks`  = t0 + 6,
   `3 weeks`  = t0 + 13,
-  `4 weeks`  = t0 + 20,
   `1 month`  = t0 + 29,
-  `2 months`  = t0 + 59,
   `3 months` = t0 + 89
 )
 
@@ -319,7 +319,7 @@ all_results <- all_results |>
 
 ### 2.3 Comparing the three models across windows
 
-Thw following shows all the nowcasted values alongside the final
+The following shows all the nowcasted values alongside the final
 *truth*. Initially the SIR outperforms AR(1) and HGSP. As more data
 arrives HGSP takes over while the SIR model eventually blows up.
 
@@ -353,11 +353,11 @@ ggplot(plot_data, aes(x = days_to_nowcast)) +
   theme_diseasenowcasting()
 ```
 
-![\*Nowcast (median + 90% CI) for each epidemic model at five
+![\*Nowcast (median + 90% CI) for each epidemic model at four
 progressive observation
 windows.\*](Nowcasting_at_the_start_of_an_Epidemic_files/figure-html/covid-plots-1.png)
 
-*Nowcast (median + 90% CI) for each epidemic model at five progressive
+*Nowcast (median + 90% CI) for each epidemic model at four progressive
 observation windows.*
 
 ### 2.4 A rule of thumb

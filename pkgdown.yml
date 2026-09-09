@@ -2,16 +2,16 @@ pandoc: 3.8.3
 pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
-  Benchmark: Benchmark.html
+  articles/Benchmark: Benchmark.html
   Custom_delays_and_processes: Custom_delays_and_processes.html
-  Handling_Outlier_Delays_with_Censoring: Handling_Outlier_Delays_with_Censoring.html
+  articles/Handling_Outlier_Delays_with_Censoring: Handling_Outlier_Delays_with_Censoring.html
   introduction: introduction.html
-  LLM_Usage: LLM_Usage.html
-  Mathematics: Mathematics.html
+  articles/LLM_Usage: LLM_Usage.html
+  articles/Mathematics: Mathematics.html
   Nowcasting_at_the_start_of_an_Epidemic: Nowcasting_at_the_start_of_an_Epidemic.html
-  Revision_processes: Revision_processes.html
+  articles/Revision_processes: Revision_processes.html
   Understanding_Priors: Understanding_Priors.html
-last_built: 2026-09-09T10:09Z
+last_built: 2026-09-09T11:34Z
 urls:
   reference: https://rodrigozepeda.github.io/diseasenowcasting/reference
   article: https://rodrigozepeda.github.io/diseasenowcasting/articles

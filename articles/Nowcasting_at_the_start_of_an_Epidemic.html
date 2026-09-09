@@ -335,21 +335,20 @@ epidemics you consider plausible, <em>then</em> fit to data.</p>
 <h2 id="covid-19-colombia-example-from-1-day-to-3-months">2) COVID-19 Colombia: example from 1 day to 3 months<a class="anchor" aria-label="anchor" href="#covid-19-colombia-example-from-1-day-to-3-months"></a>
 </h2>
 <div class="section level3">
-<h3 id="fitting-each-model-across-the-five-windows">2.2 Fitting each model across the five windows<a class="anchor" aria-label="anchor" href="#fitting-each-model-across-the-five-windows"></a>
+<h3 id="fitting-each-model-across-the-four-windows">2.2 Fitting each model across the four windows<a class="anchor" aria-label="anchor" href="#fitting-each-model-across-the-four-windows"></a>
 </h3>
-<p>We fit SIR, AR1, and HSGP at each window using tight,
-epidemiologically informed priors for early windows and relaxing them as
-data accumulate.</p>
+<p>We fit SIR, AR1, and HSGP at four progressively longer windows – one
+week, three weeks, one month and three months of data – using tight,
+epidemiologically informed priors. Add more windows to the list below to
+trace the transition in finer steps; each extra window costs three more
+fits.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Starting date and progressive windows</span></span>
 <span><span class="va">t0</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2020-03-09"</span><span class="op">)</span>    <span class="co"># first day with &gt;0 cases in all models</span></span>
 <span><span class="va">windows</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  `1 week`   <span class="op">=</span> <span class="va">t0</span>,</span>
-<span>  `2 weeks`  <span class="op">=</span> <span class="va">t0</span> <span class="op">+</span> <span class="fl">6</span>,</span>
 <span>  `3 weeks`  <span class="op">=</span> <span class="va">t0</span> <span class="op">+</span> <span class="fl">13</span>,</span>
-<span>  `4 weeks`  <span class="op">=</span> <span class="va">t0</span> <span class="op">+</span> <span class="fl">20</span>,</span>
 <span>  `1 month`  <span class="op">=</span> <span class="va">t0</span> <span class="op">+</span> <span class="fl">29</span>,</span>
-<span>  `2 months`  <span class="op">=</span> <span class="va">t0</span> <span class="op">+</span> <span class="fl">59</span>,</span>
 <span>  `3 months` <span class="op">=</span> <span class="va">t0</span> <span class="op">+</span> <span class="fl">89</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -389,7 +388,7 @@ data accumulate.</p>
 <div class="section level3">
 <h3 id="comparing-the-three-models-across-windows">2.3 Comparing the three models across windows<a class="anchor" aria-label="anchor" href="#comparing-the-three-models-across-windows"></a>
 </h3>
-<p>Thw following shows all the nowcasted values alongside the final
+<p>The following shows all the nowcasted values alongside the final
 <em>truth</em>. Initially the SIR outperforms AR(1) and HGSP. As more
 data arrives HGSP takes over while the SIR model eventually blows
 up.</p>
@@ -421,8 +420,8 @@ up.</p>
 <span>       title <span class="op">=</span> <span class="st">"COVID-19 Colombia: nowcast by model and observation window"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="../reference/theme_diseasenowcasting.html">theme_diseasenowcasting</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <div class="figure" style="text-align: center">
-<img src="Nowcasting_at_the_start_of_an_Epidemic_files/figure-html/covid-plots-1.png" class="r-plt" alt="*Nowcast (median + 90% CI) for each epidemic model at five progressive observation windows.*" width="672"><p class="caption">
-<em>Nowcast (median + 90% CI) for each epidemic model at five
+<img src="Nowcasting_at_the_start_of_an_Epidemic_files/figure-html/covid-plots-1.png" class="r-plt" alt="*Nowcast (median + 90% CI) for each epidemic model at four progressive observation windows.*" width="672"><p class="caption">
+<em>Nowcast (median + 90% CI) for each epidemic model at four
 progressive observation windows.</em>
 </p>
 </div>

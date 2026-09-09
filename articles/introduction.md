@@ -221,20 +221,20 @@ pred_dengue <- predict(nc_dengue)
 summary(pred_dengue) 
 ```
 
-    #>         mean median        sd     mad q2.5  q5 q10 q25 q50 q75 q90    q95
-    #> 154 108.6180    108  1.515990  1.4826  107 107 107 108 108 109 111 111.00
-    #> 155  89.1175     89  2.426239  1.4826   86  86  87  87  89  90  92  93.00
-    #> 156  68.2195     67  4.286083  2.9652   63  63  64  65  67  70  73  76.00
-    #> 157  45.5855     44  7.797056  5.9304   36  37  38  41  44  49  55  58.05
-    #> 158  40.4260     37 14.853681 10.3782   24  25  27  31  37  46  57  63.05
-    #> 159  36.3720     32 18.817696 14.8260   12  14  17  24  32  44  59  70.00
-    #>       q97.5 .event_num stratum event_date
-    #> 154 112.000         47   Total 1990-11-26
-    #> 155  95.000         48   Total 1990-12-03
-    #> 156  78.025         49   Total 1990-12-10
-    #> 157  64.000         50   Total 1990-12-17
-    #> 158  71.000         51   Total 1990-12-24
-    #> 159  80.000         52   Total 1990-12-31
+    #>         mean median        sd     mad q2.5  q5 q10 q25   q50 q75 q90 q95 q97.5
+    #> 154 108.5105  108.0  1.445315  1.4826  107 107 107 107 108.0 109 110 111   112
+    #> 155  89.0225   89.0  2.279823  1.4826   86  86  87  87  89.0  90  92  93    95
+    #> 156  68.1355   67.0  3.910855  2.9652   63  63  64  65  67.0  70  73  75    78
+    #> 157  45.3270   44.0  7.311621  5.9304   36  37  38  40  44.0  49  54  58    63
+    #> 158  40.0205   37.5 13.198150  9.6369   23  25  27  31  37.5  46  56  63    74
+    #> 159  36.3165   33.0 18.945469 14.8260   12  14  17  23  33.0  45  60  72    82
+    #>     .event_num stratum event_date
+    #> 154         47   Total 1990-11-26
+    #> 155         48   Total 1990-12-03
+    #> 156         49   Total 1990-12-10
+    #> 157         50   Total 1990-12-17
+    #> 158         51   Total 1990-12-24
+    #> 159         52   Total 1990-12-31
 
 Additionally the
 [`nowcast_diagnostic()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast_diagnostic.md)
@@ -375,7 +375,7 @@ models_to_compare <- list(
 backtest_mpox <- backtest(
   mpox_tbl,
   models  = models_to_compare,
-  dates = seq(as.Date("2022-07-18"), as.Date("2022-08-15"), by = "week")
+  dates = seq(as.Date("2022-08-01"), as.Date("2022-08-15"), by = "week")
 )
 
 #This closes the plan multisession opened above
@@ -397,26 +397,32 @@ relative_scores <- backtest_scores |>
   scoringutils::summarise_scores(by = "model")
 relative_scores
 #> Key: <model>
-#>                model      wis overprediction underprediction dispersion    bias
-#>               <char>    <num>          <num>           <num>      <num>   <num>
-#> 1:  AR1/nb/LogNormal 3.574333     0.07555556        1.953067   1.545711 -0.5036
-#> 2: HSGP/nb/LogNormal 4.707104     0.31093333        2.534133   1.862038 -0.5088
-#> 3:  SIR/nb/LogNormal 4.251703     0.02311111        3.079600   1.148992 -0.5408
-#>    interval_coverage_50 interval_coverage_90 ae_median wis_relative_skill
-#>                   <num>                <num>     <num>              <num>
-#> 1:                0.472                0.736     8.120          0.8610422
-#> 2:                0.424                0.744    10.360          1.1339221
-#> 3:                0.424                0.696     9.408          1.0242178
+#>                model      wis overprediction underprediction dispersion
+#>               <char>    <num>          <num>           <num>      <num>
+#> 1:  AR1/nb/LogNormal 2.803296     0.11689815        1.337674  1.3487240
+#> 2: HSGP/nb/LogNormal 3.973474     0.39062500        1.786227  1.7966218
+#> 3:  SIR/nb/LogNormal 3.518060     0.02604167        2.674653  0.8173655
+#>          bias interval_coverage_50 interval_coverage_90 ae_median
+#>         <num>                <num>                <num>     <num>
+#> 1: -0.4395833            0.5416667            0.7395833  5.901042
+#> 2: -0.4250000            0.5520833            0.7500000  8.135417
+#> 3: -0.4776042            0.5000000            0.7083333  7.218750
+#>    wis_relative_skill
+#>                 <num>
+#> 1:          0.8253182
+#> 2:          1.1698302
+#> 3:          1.0357519
 ```
 
 The scoringutils output includes WIS and its decomposition, median
 absolute error, interval coverage, and relative WIS. A well-calibrated
 nowcast should have low WIS and coverage close to the nominal levels.
 
-> In this specific test we would choose the SIR for having the lowest
-> WIS at essentially the same coverage as HSGP. Note however that for
-> the tutorial we only used 5 historical dates which is too low to reach
-> a definite conslusion.
+> Read the table by picking the model with the lowest WIS whose coverage
+> is still close to nominal – a model that wins on WIS by being
+> overconfident is not the one you want in production. Note that for the
+> tutorial we only used 3 historical dates, which is far too few to
+> reach a definite conclusion; a real comparison would use dozens.
 
 ## When a report is not yet a case: the revision process
 
@@ -466,8 +472,8 @@ parameters(nc) |> filter(type == "resolution")
 #>  prob_not_retracted    0.8512   0.8399    0.8619 resolution
 ```
 
-See
-[`vignette("Revision_processes")`](https://rodrigozepeda.github.io/diseasenowcasting/articles/Revision_processes.md)
+See the [Revision processes
+article](https://rodrigozepeda.github.io/diseasenowcasting/articles/Revision_processes.html)
 for the full treatment, including per-stratum probabilities, censored
 revision dates, count-incidence data, and the shared revision-delay
 assumption used when both outcomes are recorded.
@@ -482,26 +488,31 @@ feasible, crossed with the delay families), backtests them, scores them,
 and **refits the single best one** on the full data. The result is an
 ordinary nowcast, with the ranked comparison stored alongside it.
 
-Here we use all the dengue data up to 1994:
+Here we use the dengue data up to January 1992:
 
 ``` r
 
-#All dengue observed as of January 1994
-dengue_94 <- denguedat |>
-  filter(onset_week  <= as.Date("1994-01-01") &
-         report_week <= as.Date("1994-01-01"))
+#All dengue observed as of January 1992
+dengue_92 <- denguedat |>
+  filter(onset_week  <= as.Date("1992-01-01") &
+         report_week <= as.Date("1992-01-01"))
 
-dengue_tbl_94 <- tbl_now(
-  dengue_94,
+dengue_tbl_92 <- tbl_now(
+  dengue_92,
   event_date  = onset_week,
   report_date = report_week,
   data_type   = "linelist",
-  now         = as.Date("1994-01-01")
+  now         = as.Date("1992-01-01")
 )
 ```
 
-Backtesting the whole grid is the expensive step. To run the candidates
-in parallel, set a
+Backtesting the whole grid is the expensive step: cost grows with the
+number of candidates (`delays` x epidemic processes), the number of
+backtest dates (`n_dates`), and – most steeply – the length of the
+series. The settings below are deliberately small so this vignette
+builds quickly; for a real selection keep the defaults (all three delay
+families, `n_dates = 6`, `n_draws = 2000`, `K = 25`). To run the
+candidates in parallel, set a
 [`future::plan()`](https://future.futureverse.org/reference/plan.html)
 before the call and restore it afterwards (left commented here so the
 vignette stays single-process):
@@ -512,13 +523,15 @@ vignette stays single-process):
 # library(future)
 # plan(multisession, workers = max(parallel::detectCores() - 1, 1))
 auto_ncast <- auto_nowcast(
-  dengue_tbl_94,
+  dengue_tbl_92,
   metric         = "wis",   # rank candidates by relative WIS (the default)
   relative_score = TRUE,
-  n_dates        = 10,      # backtest at 10 historical dates (raise for a firmer choice)
-  n_draws_select = 150,     # draws while comparing (small => fast)
-  n_draws        = 500,     # draws for the final fit of the winner
-  K              = 8        # delay imputations (small => fast)
+  delays         = list(lognormal_delay(), generalized_gamma_delay()),
+  n_dates        = 3,       # backtest at 3 historical dates (raise for a firmer choice)
+  n_draws_select = 100,     # draws while comparing (small => fast)
+  n_draws        = 300,     # draws for the final fit of the winner
+  K              = 5,       # delay imputations for the final fit
+  K_select       = 5        # delay imputations while comparing
 )
 # plan(sequential)
 ```
@@ -528,47 +541,51 @@ We can show the scores of the models to see the best performer:
 ``` r
 
 comparison_scores(auto_ncast)  # every candidate, ranked best-first
-#> # A tibble: 9 × 16
-#>   model                   wis overprediction underprediction dispersion     bias
-#>   <chr>                 <dbl>          <dbl>           <dbl>      <dbl>    <dbl>
-#> 1 HSGP/nb/Dirichlet    0.0729        0.00585         0.0277      0.0394 -0.00384
-#> 2 HSGP/nb/LogNormal    0.0729        0.00418         0.0295      0.0393 -0.0102 
-#> 3 HSGP/nb/Generalized… 0.0755        0.00446         0.0302      0.0409 -0.00853
-#> 4 AR1/nb/LogNormal     0.139         0.0454          0.00443     0.0894  0.00783
-#> 5 AR1/nb/Dirichlet     0.144         0.0503          0.00107     0.0924  0.0183 
-#> 6 AR1/nb/GeneralizedG… 0.144         0.0479          0.00442     0.0919  0.00943
-#> 7 SIR/nb/GeneralizedG… 0.279         0               0.256       0.0237 -0.0305 
-#> 8 SIR/nb/Dirichlet     0.294         0               0.274       0.0195 -0.0293 
-#> 9 SIR/nb/LogNormal     0.295         0               0.276       0.0186 -0.0312 
+#> # A tibble: 6 × 16
+#>   model                    wis overprediction underprediction dispersion    bias
+#>   <chr>                  <dbl>          <dbl>           <dbl>      <dbl>   <dbl>
+#> 1 HSGP/nb/GeneralizedGa… 0.376        0.0126           0.118       0.245 -0.0132
+#> 2 AR1/nb/GeneralizedGam… 0.494        0                0.289       0.205 -0.0507
+#> 3 HSGP/nb/LogNormal      0.510        0.142            0.0952      0.273 -0.004 
+#> 4 AR1/nb/LogNormal       0.545        0.00111          0.350       0.193 -0.0462
+#> 5 SIR/nb/GeneralizedGam… 1.50         0                1.39        0.117 -0.0712
+#> 6 SIR/nb/LogNormal       1.52         0                1.40        0.120 -0.0708
 #> # ℹ 10 more variables: interval_coverage_50 <dbl>, interval_coverage_90 <dbl>,
 #> #   ae_median <dbl>, wis_relative_skill <dbl>, median_fit_seconds <dbl>,
 #> #   total_fit_seconds <dbl>, successful_fits <int>, epidemic_priority <int>,
 #> #   grid_order <int>, selection_score <dbl>
 selection_timings(auto_ncast)  # retrospective fits, refits, and total seconds
 #> $backtest
-#> # A tibble: 90 × 5
+#> # A tibble: 18 × 5
 #>    .method                  .now       elapsed_seconds success error
 #>    <chr>                    <date>               <dbl> <lgl>   <chr>
-#>  1 SIR/nb/LogNormal         1993-09-27            5.40 TRUE    NA   
-#>  2 SIR/nb/GeneralizedGamma  1993-09-27           11.7  TRUE    NA   
-#>  3 SIR/nb/Dirichlet         1993-09-27            2.13 TRUE    NA   
-#>  4 AR1/nb/LogNormal         1993-09-27            2.97 TRUE    NA   
-#>  5 AR1/nb/GeneralizedGamma  1993-09-27            8.93 TRUE    NA   
-#>  6 AR1/nb/Dirichlet         1993-09-27            1.56 TRUE    NA   
-#>  7 HSGP/nb/LogNormal        1993-09-27            3.59 TRUE    NA   
-#>  8 HSGP/nb/GeneralizedGamma 1993-09-27           14.1  TRUE    NA   
-#>  9 HSGP/nb/Dirichlet        1993-09-27            1.24 TRUE    NA   
-#> 10 SIR/nb/LogNormal         1993-10-04            5.39 TRUE    NA   
-#> # ℹ 80 more rows
+#>  1 SIR/nb/LogNormal         1991-11-18           1.15  TRUE    NA   
+#>  2 SIR/nb/GeneralizedGamma  1991-11-18           2.56  TRUE    NA   
+#>  3 AR1/nb/LogNormal         1991-11-18           0.690 TRUE    NA   
+#>  4 AR1/nb/GeneralizedGamma  1991-11-18           2.04  TRUE    NA   
+#>  5 HSGP/nb/LogNormal        1991-11-18           0.553 TRUE    NA   
+#>  6 HSGP/nb/GeneralizedGamma 1991-11-18           2.63  TRUE    NA   
+#>  7 SIR/nb/LogNormal         1991-11-25           1.21  TRUE    NA   
+#>  8 SIR/nb/GeneralizedGamma  1991-11-25           2.20  TRUE    NA   
+#>  9 AR1/nb/LogNormal         1991-11-25           0.681 TRUE    NA   
+#> 10 AR1/nb/GeneralizedGamma  1991-11-25           2.39  TRUE    NA   
+#> 11 HSGP/nb/LogNormal        1991-11-25           0.630 TRUE    NA   
+#> 12 HSGP/nb/GeneralizedGamma 1991-11-25           1.61  TRUE    NA   
+#> 13 SIR/nb/LogNormal         1991-12-02           1.02  TRUE    NA   
+#> 14 SIR/nb/GeneralizedGamma  1991-12-02           2.07  TRUE    NA   
+#> 15 AR1/nb/LogNormal         1991-12-02           0.604 TRUE    NA   
+#> 16 AR1/nb/GeneralizedGamma  1991-12-02           1.86  TRUE    NA   
+#> 17 HSGP/nb/LogNormal        1991-12-02           0.517 TRUE    NA   
+#> 18 HSGP/nb/GeneralizedGamma 1991-12-02           1.41  TRUE    NA   
 #> 
 #> $refit
 #> # A tibble: 1 × 4
-#>   model             elapsed_seconds success error
-#>   <chr>                       <dbl> <lgl>   <chr>
-#> 1 HSGP/nb/Dirichlet            1.82 TRUE    NA   
+#>   model                    elapsed_seconds success error
+#>   <chr>                              <dbl> <lgl>   <chr>
+#> 1 HSGP/nb/GeneralizedGamma            1.59 TRUE    NA   
 #> 
 #> $total_seconds
-#> [1] 560.586
+#> [1] 28.586
 ```
 
 [`best_model()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/best_model.md)
@@ -610,22 +627,34 @@ against the fitted delay, warning if any arrive far later than expected:
 
 ``` r
 
-# A few more weeks of dengue, observed as of 1994-04-01:
+# A few more weeks of dengue, observed as of 1992-04-01:
 dengue_apr <- denguedat |>
-  filter(onset_week  <= as.Date("1994-04-01") &
-         report_week <= as.Date("1994-04-01"))
+  filter(onset_week  <= as.Date("1992-04-01") &
+         report_week <= as.Date("1992-04-01"))
 
 dengue_tbl_apr <- tbl_now(
   dengue_apr,
   event_date  = onset_week,
   report_date = report_week,
   data_type   = "linelist",
-  now         = as.Date("1994-04-01")
+  now         = as.Date("1992-04-01")
 )
 
 auto_ncast_updated <- update(auto_ncast, dengue_tbl_apr)
-#> Warning: ! Surprising reporting delay of 11 weeks (1 report): longer than the model
-#>   expects (P(D >= d) = 0.0095).
+#> Warning: ! Surprising reporting delay of 13 weeks (2 reports): longer than the model
+#>   expects (P(D >= d) = 2e-06).
+#> ! Surprising reporting delay of 12 weeks (1 report): longer than the model
+#>   expects (P(D >= d) = 7e-06).
+#> ! Surprising reporting delay of 11 weeks (5 reports): longer than the model
+#>   expects (P(D >= d) = 2.4e-05).
+#> ! Surprising reporting delay of 10 weeks (7 reports): longer than the model
+#>   expects (P(D >= d) = 7.7e-05).
+#> ! Surprising reporting delay of 8 weeks (1 report): longer than the model
+#>   expects (P(D >= d) = 0.00082).
+#> ! Surprising reporting delay of 7 weeks (14 reports): longer than the model
+#>   expects (P(D >= d) = 0.0027).
+#> ! Surprising reporting delay of 6 weeks (11 reports): longer than the model
+#>   expects (P(D >= d) = 0.0085).
 #> ℹ If these are outliers, treat them as censored with
 #>   `tbl.now::censor_reporting_delays_above()` and re-fit.
 #> ℹ See all flagged delays with `extreme_values(nc)`.
@@ -638,14 +667,26 @@ Any reports with surprising delays are collected by
 ``` r
 
 extreme_values(auto_ncast_updated)
-#>   delay weight mean_tail_prob cdf_prob     lpd relative_surprise direction
-#> 1    11      1       0.009547 0.990453 -6.2334            0.0042      long
+#>   delay weight mean_tail_prob cdf_prob      lpd relative_surprise direction
+#> 1     6     11       0.008500 0.991500  -4.5789            0.0281      long
+#> 2     7     14       0.002667 0.997333  -5.7175            0.0090      long
+#> 3     8      1       0.000824 0.999176  -6.8802            0.0028      long
+#> 4    10      7       0.000077 0.999923  -9.2396            0.0003      long
+#> 5    11      5       0.000024 0.999976 -10.4254            0.0001      long
+#> 6    12      1       0.000007 0.999993 -11.6113            0.0000      long
+#> 7    13      2       0.000002 0.999998 -12.7951            0.0000      long
 #>   surprise level
 #> 1    delay  0.99
+#> 2    delay  0.99
+#> 3    delay  0.99
+#> 4    delay  0.99
+#> 5    delay  0.99
+#> 6    delay  0.99
+#> 7    delay  0.99
 ```
 
-See the vignette on [Handling Outlier Delays with
-Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.md)
+See the article on [Handling Outlier Delays with
+Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.html)
 for what to do when a delay *is* flagged.
 
 ## Example 5 – Count-cumulative revisions and a historical origin
@@ -798,6 +839,77 @@ the saved model later (on the original data, or on a newer extract):
 nowcast(restored@data, restored@model)   # re-runs the optimisation
 ```
 
+## Combining diseasenowcasting models in an ensemble
+
+Different epidemic processes can fail in different ways. For example, an
+HSGP can follow a smooth epidemic curve while an AR(1) process reacts
+more locally. Because
+[`nowcast()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/nowcast.md)
+returns the common
+[`tbl.now::tbl_nowcast`](https://rodrigozepeda.github.io/tbl.now/reference/tbl_nowcast.html)
+result, its output can be passed **directly** to
+[`tbl.now::nowcast_ensemble()`](https://rodrigozepeda.github.io/tbl.now/reference/nowcast_ensemble.html);
+there is no need to refit the models through
+[`tbl.now::run_nowcast()`](https://rodrigozepeda.github.io/tbl.now/reference/run_nowcast.html)
+or convert their results.
+
+Here both members use the same likelihood and reporting-delay model, and
+differ only in their epidemic process:
+
+``` r
+
+hsgp_fit <- nowcast(
+  dengue_tbl,
+  model = model(
+    likelihood = nb_likelihood(),
+    epidemic   = hsgp_epidemic(),
+    delay      = lognormal_delay()
+  ),
+  n_draws = 1000,
+  seed = 101
+)
+
+ar1_fit <- nowcast(
+  dengue_tbl,
+  model = model(
+    likelihood = nb_likelihood(),
+    epidemic   = ar1_epidemic(),
+    delay      = lognormal_delay()
+  ),
+  n_draws = 1000,
+  seed = 102
+)
+```
+
+The default ensemble averages matching predictive quantiles from the two
+models. Naming the arguments also records useful member names in the
+result:
+
+``` r
+
+ensemble <- tbl.now::nowcast_ensemble(
+  HSGP = hsgp_fit,
+  AR1  = ar1_fit
+)
+
+autoplot(ensemble)
+```
+
+Both `diseasenowcasting` fits retain posterior draws, so they can also
+be combined as a mixture distribution. This preserves disagreement
+between the members as part of the ensemble uncertainty and will
+generally give wider intervals than averaging their quantiles:
+
+``` r
+
+pooled_ensemble <- tbl.now::nowcast_ensemble(
+  HSGP = hsgp_fit,
+  AR1  = ar1_fit,
+  type = "linear_pool",
+  n_draws = 4000
+)
+```
+
 ## Next steps
 
 This vignette covered the basics: building a `tbl_now`, fitting a
@@ -807,12 +919,13 @@ inspecting results with
 [`predict()`](https://rdrr.io/r/stats/predict.html) /
 [`summary()`](https://rdrr.io/r/base/summary.html) /
 [`autoplot()`](https://ggplot2.tidyverse.org/reference/autoplot.html),
-and comparing models with
+comparing models with
 [`backtest()`](https://rodrigozepeda.github.io/diseasenowcasting/reference/backtest.md)
-/ `score()`.
+/ `score()`, and combining structurally different fits with
+[`tbl.now::nowcast_ensemble()`](https://rodrigozepeda.github.io/tbl.now/reference/nowcast_ensemble.html).
 
-Depending on what you want to do next, check out the following
-vignettes:
+Depending on what you want to do next, check out the following vignettes
+and website articles:
 
 - **[Nowcasting at the Start of an
   Epidemic](https://rodrigozepeda.github.io/diseasenowcasting/articles/Nowcasting_at_the_start_of_an_Epidemic.md)**
@@ -830,31 +943,31 @@ vignettes:
   before fitting.
 
 - **[Custom delays and epidemic
-  processes](https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.html)**
+  processes](https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.md)**
   — Two examples on how to set **your own delays and epidemic
   processes**. Includes how to use ordinary differential equation
   models.
 
 - **[Handling Outlier Delays with
-  Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.md)**
+  Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.html)**
   — *Robustness to reporting glitches.* How the censored likelihood
   copes with unusually long reporting delays, and how to flag extreme
   delays in your surveillance stream.
 
 - **[Using alongside an
-  LLM](https://rodrigozepeda.github.io/diseasenowcasting/articles/LLM_Usage.md)**
+  LLM](https://rodrigozepeda.github.io/diseasenowcasting/articles/LLM_Usage.html)**
   — *Use AI.* How to use the
   [`SKILL.md`](https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/SKILL.md)
   to teach a Large Language Model how to you develop your nowcasts with
   `diseasenowcasting`.
 
 - **[Benchmark (diseasenowcasting vs NobBS and
-  epinowcast)](https://rodrigozepeda.github.io/diseasenowcasting/articles/Benchmark.md)**
+  epinowcast)](https://rodrigozepeda.github.io/diseasenowcasting/articles/Benchmark.html)**
   — *How does it compare?* A reproducible backtest comparing
   `diseasenowcasting` against the `NobBS` and `epinowcast` packages.
 
 - **[Mathematical Foundations of
-  diseasenowcasting](https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.md)**
+  diseasenowcasting](https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.html)**
   — *Under the hood.* The censored likelihood, the epidemic processes
   (HSGP, AR(1), SIR), the delay families, and the Laplace-approximation
   inference that powers `RTMB`.

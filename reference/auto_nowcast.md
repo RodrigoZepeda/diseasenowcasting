@@ -249,7 +249,7 @@ nc <- auto_nowcast(tn,
 #> ℹ Backtesting "HSGP/nb/LogNormal" at 1990-12-24.
 #> ℹ Backtesting "HSGP/nb/Dirichlet" at 1990-12-24.
 #> ✔ auto_nowcast: selected HSGP/nb/LogNormal (best relative wis; ties by
-#>   epidemic_priority) in 7.41 seconds.
+#>   epidemic_priority) in 4.64 seconds.
 # future::plan(future::sequential)
 best_model_name(nc)    # the winning model's label
 #> [1] "HSGP/nb/LogNormal"

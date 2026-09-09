@@ -359,8 +359,8 @@ The component reports the finite-horizon retraction mass, h_R, S_R, q_C,
 and terminal retention. It never labels one minus the retraction mass as
 an identified truth probability. `hurdle_ztpoisson` is also available
 when the non-zero update magnitude should be zero-truncated Poisson with
-no dispersion parameter. See §9 of
-[`vignette("Mathematics")`](https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.md).
+no dispersion parameter. See §9 of the [Mathematics
+article](https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.md).
 
 ## Backtesting
 
@@ -380,8 +380,8 @@ backtest(dat, n_dates = 10) |> score()
 
 ## Where the mathematics lives
 
-Section 8 of
-[`vignette("Mathematics")`](https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.md)
+Section 8 of the [Mathematics
+article](https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.md)
 derives all of this: the trajectory-type decomposition, why the
 resolution block is a mixture-cure likelihood, why the negative-binomial
 case needs no numerical integration, and how the predictive thins each
