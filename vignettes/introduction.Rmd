@@ -257,7 +257,7 @@ models_to_compare <- list(
 backtest_mpox <- backtest(
   mpox_tbl,
   models  = models_to_compare,
-  dates = seq(as.Date("2022-07-18"), as.Date("2022-08-15"), by = "week")
+  dates = seq(as.Date("2022-08-01"), as.Date("2022-08-15"), by = "week")
 )
 
 #This closes the plan multisession opened above
@@ -282,10 +282,11 @@ The scoringutils output includes WIS and its decomposition, median absolute
 error, interval coverage, and relative WIS. A well-calibrated nowcast should
 have low WIS and coverage close to the nominal levels.
 
-> In this specific test we would choose the SIR for
-having the lowest WIS at essentially the same coverage as HSGP. Note however that
-for the tutorial  we only used 5 historical dates which is too low to reach
-a definite conslusion.
+> Read the table by picking the model with the lowest WIS whose coverage is
+still close to nominal -- a model that wins on WIS by being overconfident is not
+the one you want in production. Note that for the tutorial we only used 3
+historical dates, which is far too few to reach a definite conclusion; a real
+comparison would use dozens.
 
 ## When a report is not yet a case: the revision process
 
@@ -328,7 +329,7 @@ parameters(nc) |> filter(type == "resolution")
 #>  prob_not_retracted    0.8512   0.8399    0.8619 resolution
 ```
 
-See `vignette("Revision_processes")` for the full treatment, including
+See the [Revision processes article](https://rodrigozepeda.github.io/diseasenowcasting/articles/Revision_processes.html) for the full treatment, including
 per-stratum probabilities, censored revision dates, count-incidence data, and
 the shared revision-delay assumption used when both outcomes are recorded.
 
@@ -341,39 +342,46 @@ feasible, crossed with the delay families), backtests them, scores them, and
 **refits the single best one** on the full data. The result is an ordinary
 nowcast, with the ranked comparison stored alongside it.
 
-Here we use all the dengue data up to 1994:
+Here we use the dengue data up to January 1992:
 
 ```{r auto-data}
-#All dengue observed as of January 1994
-dengue_94 <- denguedat |>
-  filter(onset_week  <= as.Date("1994-01-01") &
-         report_week <= as.Date("1994-01-01"))
+#All dengue observed as of January 1992
+dengue_92 <- denguedat |>
+  filter(onset_week  <= as.Date("1992-01-01") &
+         report_week <= as.Date("1992-01-01"))
 
-dengue_tbl_94 <- tbl_now(
-  dengue_94,
+dengue_tbl_92 <- tbl_now(
+  dengue_92,
   event_date  = onset_week,
   report_date = report_week,
   data_type   = "linelist",
-  now         = as.Date("1994-01-01")
+  now         = as.Date("1992-01-01")
 )
 ```
 
-Backtesting the whole grid is the expensive step. To run the candidates in
-parallel, set a `future::plan()` before the call and restore it afterwards (left
-commented here so the vignette stays single-process):
+Backtesting the whole grid is the expensive step: cost grows with the number of
+candidates (`delays` x epidemic processes), the number of backtest dates
+(`n_dates`), and -- most steeply -- the length of the series. The settings below
+are deliberately small so this vignette builds quickly; for a real selection keep
+the defaults (all three delay families, `n_dates = 6`, `n_draws = 2000`,
+`K = 25`). To run the candidates in parallel, set a `future::plan()` before the
+call and restore it afterwards (left commented here so the vignette stays
+single-process):
 
 ```{r auto-fit}
 # Uncomment to run candidates in parallel:
 # library(future)
 # plan(multisession, workers = max(parallel::detectCores() - 1, 1))
 auto_ncast <- auto_nowcast(
-  dengue_tbl_94,
+  dengue_tbl_92,
   metric         = "wis",   # rank candidates by relative WIS (the default)
   relative_score = TRUE,
-  n_dates        = 10,      # backtest at 10 historical dates (raise for a firmer choice)
-  n_draws_select = 150,     # draws while comparing (small => fast)
-  n_draws        = 500,     # draws for the final fit of the winner
-  K              = 8        # delay imputations (small => fast)
+  delays         = list(lognormal_delay(), generalized_gamma_delay()),
+  n_dates        = 3,       # backtest at 3 historical dates (raise for a firmer choice)
+  n_draws_select = 100,     # draws while comparing (small => fast)
+  n_draws        = 300,     # draws for the final fit of the winner
+  K              = 5,       # delay imputations for the final fit
+  K_select       = 5        # delay imputations while comparing
 )
 # plan(sequential)
 ```
@@ -408,17 +416,17 @@ model and scores the incoming reports against the fitted delay, warning if any
 arrive far later than expected:
 
 ```{r auto-update, warning=TRUE}
-# A few more weeks of dengue, observed as of 1994-04-01:
+# A few more weeks of dengue, observed as of 1992-04-01:
 dengue_apr <- denguedat |>
-  filter(onset_week  <= as.Date("1994-04-01") &
-         report_week <= as.Date("1994-04-01"))
+  filter(onset_week  <= as.Date("1992-04-01") &
+         report_week <= as.Date("1992-04-01"))
 
 dengue_tbl_apr <- tbl_now(
   dengue_apr,
   event_date  = onset_week,
   report_date = report_week,
   data_type   = "linelist",
-  now         = as.Date("1994-04-01")
+  now         = as.Date("1992-04-01")
 )
 
 auto_ncast_updated <- update(auto_ncast, dengue_tbl_apr)
@@ -431,7 +439,7 @@ returns `NULL` when nothing looks off):
 extreme_values(auto_ncast_updated)
 ```
 
-See the vignette on [Handling Outlier Delays with Censoring](Handling_Outlier_Delays_with_Censoring.html) for what to do when a
+See the article on [Handling Outlier Delays with Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.html) for what to do when a
 delay *is* flagged.
 
 ## Example 5 -- Count-cumulative revisions and a historical origin
@@ -568,14 +576,76 @@ model later (on the original data, or on a newer extract):
 nowcast(restored@data, restored@model)   # re-runs the optimisation
 ```
 
+## Combining diseasenowcasting models in an ensemble
+
+Different epidemic processes can fail in different ways. For example, an HSGP
+can follow a smooth epidemic curve while an AR(1) process reacts more locally.
+Because `nowcast()` returns the common `tbl.now::tbl_nowcast` result, its output
+can be passed **directly** to `tbl.now::nowcast_ensemble()`; there is no need to
+refit the models through `tbl.now::run_nowcast()` or convert their results.
+
+Here both members use the same likelihood and reporting-delay model, and differ
+only in their epidemic process:
+
+```{r ensemble-models, eval = FALSE}
+hsgp_fit <- nowcast(
+  dengue_tbl,
+  model = model(
+    likelihood = nb_likelihood(),
+    epidemic   = hsgp_epidemic(),
+    delay      = lognormal_delay()
+  ),
+  n_draws = 1000,
+  seed = 101
+)
+
+ar1_fit <- nowcast(
+  dengue_tbl,
+  model = model(
+    likelihood = nb_likelihood(),
+    epidemic   = ar1_epidemic(),
+    delay      = lognormal_delay()
+  ),
+  n_draws = 1000,
+  seed = 102
+)
+```
+
+The default ensemble averages matching predictive quantiles from the two
+models. Naming the arguments also records useful member names in the result:
+
+```{r ensemble-quantiles, eval = FALSE}
+ensemble <- tbl.now::nowcast_ensemble(
+  HSGP = hsgp_fit,
+  AR1  = ar1_fit
+)
+
+autoplot(ensemble)
+```
+
+Both `diseasenowcasting` fits retain posterior draws, so they can also be
+combined as a mixture distribution. This preserves disagreement between the
+members as part of the ensemble uncertainty and will generally give wider
+intervals than averaging their quantiles:
+
+```{r ensemble-linear-pool, eval = FALSE}
+pooled_ensemble <- tbl.now::nowcast_ensemble(
+  HSGP = hsgp_fit,
+  AR1  = ar1_fit,
+  type = "linear_pool",
+  n_draws = 4000
+)
+```
+
 ## Next steps
 
 This vignette covered the basics: building a `tbl_now`, fitting a nowcast with
 `nowcast()`, inspecting results with `predict()` / `summary()` / `autoplot()`,
-and comparing models with `backtest()` / `score()`.
+comparing models with `backtest()` / `score()`, and combining structurally
+different fits with `tbl.now::nowcast_ensemble()`.
 
 Depending on what you want to do next, check out the following
-vignettes:
+vignettes and website articles:
 
 - **[Nowcasting at the Start of an Epidemic](Nowcasting_at_the_start_of_an_Epidemic.html)**
   —  A worked, end-to-end case study of monitoring an outbreak in real time: 
@@ -589,25 +659,25 @@ vignettes:
   the prior-predictive tools (`nowcast(..., prior_only = TRUE)`) to *see* what a
   prior implies before fitting.
   
-- **[Custom delays and epidemic processes](https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.html)**
+- **[Custom delays and epidemic processes](Custom_delays_and_processes.html)**
   — Two examples on how to set **your own delays and epidemic processes**. Includes
   how to use ordinary differential equation models. 
 
 
-- **[Handling Outlier Delays with Censoring](Handling_Outlier_Delays_with_Censoring.html)**
+- **[Handling Outlier Delays with Censoring](https://rodrigozepeda.github.io/diseasenowcasting/articles/Handling_Outlier_Delays_with_Censoring.html)**
   — *Robustness to reporting glitches.* How the censored likelihood copes with
   unusually long reporting delays, and how to flag extreme 
   delays in your surveillance stream.
   
-- **[Using alongside an LLM](LLM_Usage.html)**
+- **[Using alongside an LLM](https://rodrigozepeda.github.io/diseasenowcasting/articles/LLM_Usage.html)**
   — *Use AI.* How to use the [`SKILL.md`](https://github.com/RodrigoZepeda/diseasenowcasting/blob/master/SKILL.md)
   to teach a Large Language Model how to you develop your nowcasts with `diseasenowcasting`. 
 
-- **[Benchmark (diseasenowcasting vs NobBS and epinowcast)](Benchmark.html)**
+- **[Benchmark (diseasenowcasting vs NobBS and epinowcast)](https://rodrigozepeda.github.io/diseasenowcasting/articles/Benchmark.html)**
   — *How does it compare?* A reproducible backtest comparing `diseasenowcasting`
   against the `NobBS` and `epinowcast` packages.
 
-- **[Mathematical Foundations of diseasenowcasting](Mathematics.html)**
+- **[Mathematical Foundations of diseasenowcasting](https://rodrigozepeda.github.io/diseasenowcasting/articles/Mathematics.html)**
   — *Under the hood.* The censored likelihood, the epidemic processes
   (HSGP, AR(1), SIR), the delay families, and the Laplace-approximation inference
   that powers `RTMB`.

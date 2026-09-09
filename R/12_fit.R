@@ -132,6 +132,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
 
   hessian_positive_definite <- FALSE
   hessian_status <- "unavailable"
+  hessian_source <- "unavailable"
   quadratic_gap <- NA_real_
   curvature_dimension <- 0L
   free_coordinates <- rep(TRUE, length(par))
@@ -139,9 +140,22 @@ fit <- function(model, data, priors = NULL, init = NULL,
   if (finite_gradient && length(par) == 0L) {
     hessian_positive_definite <- TRUE
     hessian_status <- "no_free_parameters"
+    hessian_source <- "not_applicable"
     quadratic_gap <- 0
   } else if (finite_gradient) {
     hessian <- tryCatch(obj$he(opt$par), error = function(e) NULL)
+    if (!is.null(hessian)) hessian_source <- "analytic"
+    if (is.null(hessian)) {
+      # A Laplace-marginal RTMB objective has an analytic gradient but `he()`
+      # is unavailable with some RTMB/TMB builds.  optimHess differentiates
+      # that gradient by centred differences, providing the same local
+      # observed-curvature object needed by the second-order adequacy check.
+      hessian <- tryCatch(
+        stats::optimHess(opt$par, obj$fn, obj$gr),
+        error = function(e) NULL
+      )
+      if (!is.null(hessian)) hessian_source <- "finite_difference"
+    }
     if (!is.null(hessian)) {
       if (any(!is.finite(hessian))) {
         hessian_status <- "nonfinite"
@@ -240,6 +254,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
     free_coordinates = free_coordinates,
     hessian_positive_definite = hessian_positive_definite,
     hessian_status = hessian_status,
+    hessian_source = hessian_source,
     quadratic_gap = quadratic_gap,
     quadratic_gap_tolerance = quadratic_gap_tolerance,
     finite_reconstruction = isTRUE(finite_reconstruction)

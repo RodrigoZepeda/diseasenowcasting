@@ -1,5 +1,29 @@
 # 2.4.0
 
+## Documentation: vignettes split into CRAN vignettes and website articles
+
+Building the vignettes took 13.4 minutes, almost all of it re-fitting models.
+Five of them are now pkgdown-only **articles** under `vignettes/articles/`
+(`Benchmark`, `Handling_Outlier_Delays_with_Censoring`, `LLM_Usage`,
+`Mathematics`, `Revision_processes`); they remain on the package website but no
+longer ship in the tarball or run during `R CMD check`. Links to them from the
+remaining vignettes now point at the website.
+
+The four vignettes that still ship (`introduction`, `Understanding_Priors`,
+`Nowcasting_at_the_start_of_an_Epidemic`, `Custom_delays_and_processes`) run the
+same code on smaller inputs: `auto_nowcast()` in `introduction` selects over the
+dengue data up to 1992 with three backtest dates instead of ten dates on data up
+to 1994, its mpox backtest uses three dates instead of five, and
+`Nowcasting_at_the_start_of_an_Epidemic` fits four observation windows instead of
+seven.
+
+The `Benchmark` article now shows the four tables per disease that its text
+promises. Dengue previously collapsed the NobBS, epinowcast and baselinenowcast
+views into a single de-duplicated table, the `diseasenowcasting`-only view was
+never rendered for any disease, and the dengue heading said Colombia instead of
+Puerto Rico.
+
+
 ## Breaking: fitted nowcasts now use the common `tbl.now` result grammar
 
 `nowcast()` and `auto_nowcast()` now return a diseasenowcasting subclass of
@@ -83,6 +107,14 @@ floor was required. Strictly complementary active box coordinates are held
 fixed and sampling uses the certified free-coordinate precision. Any altered
 precision is visible in result metadata and causes `fit_check()` to report a
 warning rather than an unqualified pass.
+
+Cross-platform numerical handling is now deterministic. Non-finite sparse
+precision matrices are rejected before CHOLMOD factorization and sent directly
+to the documented repair path, avoiding non-finite predictive draws on some
+Linux builds. When an RTMB Laplace-marginal objective does not expose an
+analytic Hessian, the adequacy check computes observed curvature by centered
+finite differences of its analytic gradient; the source is recorded in the
+fit diagnostic.
 
 Two-stage results now expose an auditable `fit_diagnostics` record containing
 the requested and resolved fitting type; requested, attempted, retained, and

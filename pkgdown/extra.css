@@ -21,14 +21,14 @@
 /* ==========================================================================
    COLOUR TOKENS — light and dark.
 
-   The whole site is themed from these. Every rule below uses `var(--dn-*)`
+   The whole site is themed from these. Every rule below uses `var(--tn-*)`
    rather than a literal hex, so the dark palette is a matter of redefining the
    tokens once instead of shadowing every selector — which matters here because
    almost every rule carries `!important` to beat Bootswatch, and a shadowing
    rule would have to repeat all of it.
 
-   The palette keeps the package's visual grammar: GREEN is the primary
-   epidemic/brand colour and RED is the secondary reporting/emphasis colour.
+   The palette is the package's own, unchanged in meaning: RED is the reporting
+   process, GREEN is the epidemic process, and that grammar holds in both modes.
    What changes is which end of each ramp is the surface and which is the ink:
    in light mode the surfaces are pale tints and the text is near-black; in dark
    mode the surfaces are deep, desaturated versions of the same hues and the
@@ -38,98 +38,79 @@
    ========================================================================== */
 
 :root {
-  /* Secondary reporting/emphasis colour — red */
-  --dn-red-strong:      #B85348;
-  --dn-red-mid:         #C55F53;
-  --dn-red-soft:        #e78b7f;
-  --dn-red-surface:     #f9e6e2;
-  --dn-red-surface-2:   #f4ddd9;
-  --dn-red-surface-3:   #fdf3f1;
-  --dn-red-surface-4:   #fbeeeb;
-  --dn-red-surface-5:   #f7e4e0;
-  --dn-red-text:        #8a4038;
-  --dn-red-text-muted:  #a9675d;
-  --dn-red-text-dim:    #6d4a44;
-  --dn-red-hover:       #f1d6d1;
+  /* Reporting process — red */
+  --tn-red-strong:      #B85348;
+  --tn-red-mid:         #C55F53;
+  --tn-red-soft:        #e78b7f;
+  --tn-red-surface:     #f9e6e2;
+  --tn-red-surface-2:   #f4ddd9;
+  --tn-red-surface-3:   #fdf3f1;
+  --tn-red-surface-4:   #fbeeeb;
+  --tn-red-surface-5:   #f7e4e0;
+  --tn-red-text:        #8a4038;
+  --tn-red-text-muted:  #a9675d;
+  --tn-red-text-dim:    #6d4a44;
 
-  /* Primary epidemic/brand colour — green */
-  --dn-green-strong:    #5F7E62;
-  --dn-green-mid:       #718f74;
-  --dn-green-soft:      #A8BFA9;
-  --dn-green-text:      #334335;
-  --dn-green-text-muted:#607862;
-  --dn-green-text-dim:  #4f6251;
-  --dn-green-surface:   #eaf1ea;
-  --dn-green-surface-2: #e3ece3;
-  --dn-green-surface-3: #f4f8f4;
-  --dn-green-surface-4: #eff5ef;
-  --dn-green-surface-5: #e6efe6;
-  --dn-green-hover:     #dbe4db;
+  /* Epidemic process — green */
+  --tn-green-strong:    #5F7E62;
+  --tn-green-soft:      #A8BFA9;
+  --tn-green-text:      #334335;
+  --tn-green-surface:   #eaf1ea;
+  --tn-green-surface-2: #e3ece3;
+  --tn-green-hover:     #dbe4db;
 
   /* Neutrals */
-  --dn-ink:             #262626;
-  --dn-ink-muted:       #6b7280;
-  --dn-on-strong:       #ffffff;
-  --dn-code-surface:    #f4e8e6;
+  --tn-ink:             #262626;
+  --tn-ink-muted:       #6b7280;
+  --tn-on-strong:       #ffffff;
+  --tn-code-surface:    #ebefeb;
 
   /* Kept: older rules and any user CSS may still reference these. */
-  --sage-dark:  var(--dn-green-strong);
-  --sage-light: var(--dn-green-soft);
-  --brand-red:  var(--dn-red-strong);
-  --charcoal:   var(--dn-ink);
+  --sage-dark:  var(--tn-green-strong);
+  --sage-light: var(--tn-green-soft);
+  --brand-red:  var(--tn-red-strong);
+  --charcoal:   var(--tn-ink);
 }
 
-html[data-bs-theme="dark"] {
+[data-bs-theme="dark"] {
   /* Reporting process — red. Surfaces become deep warm browns rather than
      desaturated greys, so a red-family callout still reads as red-family. */
-  --dn-red-strong:      #d4776b;
-  --dn-red-mid:         #e08a7f;
-  --dn-red-soft:        #8a4038;
-  --dn-red-surface:     #3a2521;
-  --dn-red-surface-2:   #452a25;
-  --dn-red-surface-3:   #2f1f1c;
-  --dn-red-surface-4:   #34211e;
-  --dn-red-surface-5:   #452a25;
-  --dn-red-text:        #f0a99e;
-  --dn-red-text-muted:  #d99e93;
-  --dn-red-text-dim:    #c49a92;
-  --dn-red-hover:       #4f302a;
+  --tn-red-strong:      #C55F53;
+  --tn-red-mid:         #d4776b;
+  --tn-red-soft:        #8a4038;
+  --tn-red-surface:     #3a2521;
+  --tn-red-surface-2:   #452a25;
+  --tn-red-surface-3:   #2f1f1c;
+  --tn-red-surface-4:   #34211e;
+  --tn-red-surface-5:   #452a25;
+  --tn-red-text:        #f0a99e;
+  --tn-red-text-muted:  #d99e93;
+  --tn-red-text-dim:    #c49a92;
 
   /* Epidemic process — green. Same idea: deep sage, not grey. */
-  --dn-green-strong:    #8fae92;
-  --dn-green-mid:       #789a7b;
-  --dn-green-soft:      #4a6b4d;
-  --dn-green-text:      #b8d0ba;
-  --dn-green-text-muted:#9fbea2;
-  --dn-green-text-dim:  #91a894;
-  --dn-green-surface:   #232e24;
-  --dn-green-surface-2: #273328;
-  --dn-green-surface-3: #1f291f;
-  --dn-green-surface-4: #212c22;
-  --dn-green-surface-5: #2b392c;
-  --dn-green-hover:     #2f3d30;
+  --tn-green-strong:    #8fae92;
+  --tn-green-soft:      #4a6b4d;
+  --tn-green-text:      #b8d0ba;
+  --tn-green-surface:   #232e24;
+  --tn-green-surface-2: #273328;
+  --tn-green-hover:     #2f3d30;
 
-  /* Neutrals. `--dn-ink` is the *text* colour, so it inverts. */
-  --dn-ink:             #e8eae8;
-  --dn-ink-muted:       #9aa3a0;
-  --dn-on-strong:       #ffffff;
-  --dn-code-surface:    #2b2424;
+  /* Neutrals. `--tn-ink` is the *text* colour, so it inverts. */
+  --tn-ink:             #e8eae8;
+  --tn-ink-muted:       #9aa3a0;
+  --tn-on-strong:       #ffffff;
+  --tn-code-surface:    #22292a;
 
   /* Terminal colours, lifted for the dark code surface — see the ANSI block
      at the bottom of this file. Only defined here: in light mode the originals
      are already legible and nothing overrides them. */
-  --dn-ansi-blue:       #6ea8fe;
-  --dn-ansi-red:        #e78b7f;
-  --dn-ansi-cyan:       #5fd7d7;
+  --tn-ansi-blue:       #6ea8fe;
+  --tn-ansi-red:        #e78b7f;
+  --tn-ansi-cyan:       #5fd7d7;
 }
 
 .navbar {
-  background-color: var(--dn-green-strong) !important;
-}
-
-/* Keep white navbar controls readable when the page switches to dark mode. */
-html[data-bs-theme="dark"] .navbar {
-  background-color: #49684c !important;
+  background-color: var(--tn-red-strong) !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -140,61 +121,56 @@ html[data-bs-theme="dark"] .navbar {
    "flatly" default, which is near-black. Both selectors are kept below so the
    styling survives a pkgdown/Bootstrap version bump.
 
-   Target: a pale tint of the primary green (var(--dn-green-soft)) with the
-   `near_black` (var(--dn-ink)) text used elsewhere in the package.
+   Target: a pale tint of the plot palette's `light_red` (var(--tn-red-soft)) with the
+   `near_black` (var(--tn-ink)) text used elsewhere in the package.
    -------------------------------------------------------------------------- */
 .navbar .dropdown-menu,
 .navbar .submenu {
-  background-color: var(--dn-green-surface) !important;
-  border: 1px solid var(--dn-green-soft) !important;
+  background-color: var(--tn-red-surface) !important;
+  border: 1px solid var(--tn-red-soft) !important;
   box-shadow: 0 0.5rem 1rem rgba(38, 38, 38, 0.15);
 }
 
 .navbar .dropdown-menu .dropdown-item,
 .navbar .submenu .dropdown-item {
-  color: var(--dn-ink) !important;
+  color: var(--tn-ink) !important;
 }
 
 .navbar .dropdown-menu .dropdown-item:hover,
 .navbar .dropdown-menu .dropdown-item:focus,
 .navbar .submenu .dropdown-item:hover,
 .navbar .submenu .dropdown-item:focus {
-  background-color: var(--dn-green-soft) !important;
-  color: var(--dn-ink) !important;
+  background-color: var(--tn-red-soft) !important;
+  color: var(--tn-ink) !important;
 }
 
 .navbar .dropdown-menu .dropdown-item.active,
 .navbar .dropdown-menu .dropdown-item:active {
-  background-color: var(--dn-green-strong) !important;
-  color: var(--dn-on-strong) !important;
+  background-color: var(--tn-red-strong) !important;
+  color: var(--tn-on-strong) !important;
 }
 
 /* Section headers and separators inside the dropdown. */
 .navbar .dropdown-menu .dropdown-header {
-  color: var(--dn-green-text) !important;
+  color: var(--tn-red-text) !important;
   font-weight: 600;
 }
 
 .navbar .dropdown-menu .dropdown-divider {
-  border-top-color: var(--dn-green-soft) !important;
+  border-top-color: var(--tn-red-soft) !important;
 }
 
 /* The pale treatment is legible in both themes, so dark mode keeps it rather
    than reverting to the dark Bootswatch default. */
 [data-bs-theme="dark"] .navbar .dropdown-menu,
 [data-bs-theme="dark"] .navbar .submenu {
-  background-color: var(--dn-green-surface-2) !important;
-  border-color: var(--dn-green-mid) !important;
+  background-color: var(--tn-red-surface-2) !important;
+  border-color: var(--tn-red-mid) !important;
 }
 
 [data-bs-theme="dark"] .navbar .dropdown-menu .dropdown-item,
 [data-bs-theme="dark"] .navbar .submenu .dropdown-item {
-  color: var(--dn-ink) !important;
-}
-
-html[data-bs-theme="dark"] .navbar .dropdown-menu .dropdown-item.active,
-html[data-bs-theme="dark"] .navbar .dropdown-menu .dropdown-item:active {
-  color: #171a18 !important;
+  color: var(--tn-ink) !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -207,56 +183,52 @@ html[data-bs-theme="dark"] .navbar .dropdown-menu .dropdown-item:active {
    -------------------------------------------------------------------------- */
 .navbar #search-input,
 .navbar #search-input.form-control {
-  background-color: var(--dn-green-surface) !important;
-  color: var(--dn-ink) !important;
-  border: 1px solid var(--dn-green-soft) !important;
+  background-color: var(--tn-red-surface) !important;
+  color: var(--tn-ink) !important;
+  border: 1px solid var(--tn-red-soft) !important;
 }
 
 .navbar #search-input::placeholder {
-  color: var(--dn-green-text-muted) !important;
+  color: var(--tn-red-text-muted) !important;
   opacity: 1; /* Firefox dims placeholders by default. */
 }
 
 .navbar #search-input:focus {
-  background-color: var(--dn-green-surface-3) !important;
-  border-color: var(--dn-green-strong) !important;
-  box-shadow: 0 0 0 0.2rem rgba(95, 126, 98, 0.3) !important;
+  background-color: var(--tn-red-surface-3) !important;
+  border-color: var(--tn-red-strong) !important;
+  box-shadow: 0 0 0 0.2rem rgba(184, 83, 72, 0.3) !important;
 }
 
 /* Results list. */
 .aa-dropdown-menu {
-  background-color: var(--dn-green-surface) !important;
-  border: 1px solid var(--dn-green-soft) !important;
+  background-color: var(--tn-red-surface) !important;
+  border: 1px solid var(--tn-red-soft) !important;
   box-shadow: 0 0.5rem 1rem rgba(38, 38, 38, 0.15);
 }
 
 .aa-dropdown-menu .aa-suggestion {
-  color: var(--dn-ink) !important;
+  color: var(--tn-ink) !important;
 }
 
 .aa-dropdown-menu .aa-suggestion:hover,
 .aa-dropdown-menu .aa-suggestion.aa-cursor {
-  background-color: var(--dn-green-soft) !important;
-  color: var(--dn-ink) !important;
+  background-color: var(--tn-red-soft) !important;
+  color: var(--tn-ink) !important;
 }
 
 /* mark.js wraps matched terms in <mark>; the default yellow clashes with the
-   pale green ground. */
+   pale red ground. */
 .aa-dropdown-menu .aa-suggestion mark {
-  background-color: var(--dn-green-strong) !important;
-  color: var(--dn-on-strong) !important;
+  background-color: var(--tn-red-strong) !important;
+  color: var(--tn-on-strong) !important;
   padding: 0 0.15em;
   border-radius: 2px;
-}
-
-html[data-bs-theme="dark"] .aa-dropdown-menu .aa-suggestion mark {
-  color: #171a18 !important;
 }
 
 /* "No results found" and the dimmed context line under each hit. */
 .aa-dropdown-menu .aa-suggestion .search-details,
 .aa-dropdown-menu .aa-suggestion .autocomplete-item {
-  color: var(--dn-green-text-dim) !important;
+  color: var(--tn-red-text-dim) !important;
 }
 
 /* NO `[data-bs-theme="dark"]` override for the search box or its results.
@@ -280,13 +252,14 @@ html[data-bs-theme="dark"] .aa-dropdown-menu .aa-suggestion mark {
        :::
 
    Bootstrap's default `.alert-info` is a blue that belongs to no part of this
-   package's palette, so it is restyled into the secondary red accent.
+   package's palette, so it is restyled into the sage green used for the
+   epidemic/event-date process in the plots.
    -------------------------------------------------------------------------- */
 .alert-info {
-  background-color: var(--dn-red-surface) !important;
-  border: 1px solid var(--dn-red-soft) !important;
-  border-left: 4px solid var(--dn-red-strong) !important;
-  color: var(--dn-ink) !important;
+  background-color: var(--tn-green-surface) !important;
+  border: 1px solid var(--tn-green-soft) !important;
+  border-left: 4px solid var(--tn-green-strong) !important;
+  color: var(--tn-ink) !important;
   border-radius: 4px;
 }
 
@@ -295,48 +268,48 @@ html[data-bs-theme="dark"] .aa-dropdown-menu .aa-suggestion mark {
 .alert-info b,
 .alert-info h1, .alert-info h2, .alert-info h3,
 .alert-info h4, .alert-info h5, .alert-info h6 {
-  color: var(--dn-red-text) !important;
+  color: var(--tn-green-text) !important;
 }
 
 .alert-info a {
-  color: var(--dn-red-strong) !important;
+  color: var(--tn-green-strong) !important;
   text-decoration: underline;
 }
 
 .alert-info a:hover {
-  color: var(--dn-red-text) !important;
+  color: var(--tn-green-text) !important;
 }
 
-/* Inline code inside the callout: the page-wide `code` rule paints a pale red
+/* Inline code inside the callout: the page-wide `code` rule paints a pale sage
    background that disappears against the callout, so lift it slightly. */
 .alert-info code {
-  background-color: var(--dn-red-hover) !important;
-  color: var(--dn-ink) !important;
+  background-color: var(--tn-green-hover) !important;
+  color: var(--tn-ink) !important;
 }
 
 /* The callout is legible in both themes, so dark mode keeps the same palette
    rather than reverting to the Bootswatch default. */
 [data-bs-theme="dark"] .alert-info {
-  background-color: var(--dn-red-surface-2) !important;
-  border-color: var(--dn-red-soft) !important;
-  border-left-color: var(--dn-red-strong) !important;
-  color: var(--dn-ink) !important;
+  background-color: var(--tn-green-surface-2) !important;
+  border-color: var(--tn-green-soft) !important;
+  border-left-color: var(--tn-green-strong) !important;
+  color: var(--tn-ink) !important;
 }
 
 [data-bs-theme="dark"] .alert-info strong,
 [data-bs-theme="dark"] .alert-info b {
-  color: var(--dn-red-text) !important;
+  color: var(--tn-green-text) !important;
 }
 
 
-/* `.alert-warning` callouts use the attenuated primary green
-   (var(--dn-green-soft)), so the two callout kinds are distinguishable at a
+/* `.alert-warning` callouts use the attenuated red the plots use for intervals
+   (`light_red`, var(--tn-red-soft)), so the two callout kinds are distinguishable at a
    glance and both stay inside the package palette. */
 .alert-warning {
-  background-color: var(--dn-green-surface-4) !important;
-  border: 1px solid var(--dn-green-soft) !important;
-  border-left: 4px solid var(--dn-green-soft) !important;
-  color: var(--dn-ink) !important;
+  background-color: var(--tn-red-surface-4) !important;
+  border: 1px solid var(--tn-red-soft) !important;
+  border-left: 4px solid var(--tn-red-soft) !important;
+  color: var(--tn-ink) !important;
   border-radius: 4px;
 }
 
@@ -344,28 +317,28 @@ html[data-bs-theme="dark"] .aa-dropdown-menu .aa-suggestion mark {
 .alert-warning b,
 .alert-warning h1, .alert-warning h2, .alert-warning h3,
 .alert-warning h4, .alert-warning h5, .alert-warning h6 {
-  color: var(--dn-green-text-muted) !important;
+  color: var(--tn-red-text-muted) !important;
 }
 
 .alert-warning a {
-  color: var(--dn-green-text-muted) !important;
+  color: var(--tn-red-text-muted) !important;
   text-decoration: underline;
 }
 
-/* Inline code keeps the page-wide red here. The callout's own tint is
-   green, and a green-on-green chip reads as a coloured square rather than as code, so
+/* Inline code keeps the page-wide sage green here. The callout's own tint is
+   red, and a red-on-red chip read as a coloured square rather than as code, so
    this deliberately does NOT follow the callout the way `.alert-info code`
    does (there the lift stays within the same green family). */
 .alert-warning code {
-  background-color: var(--dn-code-surface) !important;
-  color: var(--dn-ink) !important;
+  background-color: var(--tn-code-surface) !important;
+  color: var(--tn-ink) !important;
 }
 
 [data-bs-theme="dark"] .alert-warning {
-  background-color: var(--dn-green-surface-5) !important;
-  border-color: var(--dn-green-soft) !important;
-  border-left-color: var(--dn-green-soft) !important;
-  color: var(--dn-ink) !important;
+  background-color: var(--tn-red-surface-5) !important;
+  border-color: var(--tn-red-soft) !important;
+  border-left-color: var(--tn-red-soft) !important;
+  color: var(--tn-ink) !important;
 }
 
 
@@ -380,26 +353,26 @@ html[data-bs-theme="dark"] .aa-dropdown-menu .aa-suggestion mark {
 }
 
 a {
-  color: var(--dn-red-strong);
+  color: var(--tn-green-strong);
 }
 
 a:hover {
-  color: var(--dn-green-strong);
+  color: var(--tn-red-strong);
 }
 
 /* Color for all headings (H1, H2, H3, etc.) */
 h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
-  color: var(--dn-red-text) !important;
+  color: var(--tn-green-text) !important;
 }
 
 /* Color for bold text */
 strong, b {
-  color: var(--dn-red-text);
+  color: var(--tn-green-text);
 }
 
 /* Background color for inline code snippets */
 code {
-  background-color: var(--dn-code-surface);
+  background-color: var(--tn-code-surface);
   padding: 0.2em 0.4em;
   border-radius: 4px;
 }
@@ -457,7 +430,7 @@ pre, pre code {
 
 /* Background color for code chunks/blocks */
 pre.src, pre.r, div.sourceCode {
-  background-color: var(--dn-code-surface) !important;
+  background-color: var(--tn-code-surface) !important;
 }
 
 /* Ensures the internal pre block inherits the background */
@@ -467,12 +440,12 @@ pre.src code, div.sourceCode pre {
 
 /* Target evaluated output blocks and standard preformatted text */
 pre, .markdown-body pre, pre code, .output pre {
-  background-color: var(--dn-code-surface) !important;
+  background-color: var(--tn-code-surface) !important;
 }
 
 /* Ensure the container background matches seamlessly */
 div.pre {
-  background-color: var(--dn-code-surface) !important;
+  background-color: var(--tn-code-surface) !important;
 }
 
 
@@ -486,7 +459,7 @@ p.caption,
 figcaption {
   text-align: center !important;
   font-size: 0.875rem !important;
-  color: var(--dn-ink-muted) !important;
+  color: var(--tn-ink-muted) !important;
   margin-top: 0.5rem;
   line-height: 1.4;
 }
@@ -504,7 +477,7 @@ figure {
    `cli` styles `{.val ...}` in ANSI blue, `{.cls ...}` and error bullets in
    red, and a few fields in cyan. pkgdown converts the escape codes to HTML at
    build time and bakes each one in as an INLINE `style="color: #0000BB"`. On
-   the charcoal `--dn-code-surface` those three are near-invisible: the dates
+   the charcoal `--tn-code-surface` those three are near-invisible: the dates
    and row counts in `print(covid_snapshots)` disappear entirely.
 
    Two consequences shape the rules below.
@@ -523,15 +496,15 @@ figure {
    are perfectly legible on the pale code surface.
    -------------------------------------------------------------------------- */
 [data-bs-theme="dark"] pre [style*="#0000BB" i] {
-  color: var(--dn-ansi-blue) !important;
+  color: var(--tn-ansi-blue) !important;
 }
 
 [data-bs-theme="dark"] pre [style*="#BB0000" i] {
-  color: var(--dn-ansi-red) !important;
+  color: var(--tn-ansi-red) !important;
 }
 
 [data-bs-theme="dark"] pre [style*="#00BBBB" i] {
-  color: var(--dn-ansi-cyan) !important;
+  color: var(--tn-ansi-cyan) !important;
 }
 
 /* ==========================================================================
@@ -573,8 +546,7 @@ figure {
 [data-bs-theme="dark"] img.r-plt,
 [data-bs-theme="dark"] pre .r-plt.img img,
 [data-bs-theme="dark"] .no-invert-dark-mode img.r-plt,
-[data-bs-theme="dark"] .no-invert-dark-mode pre .r-plt.img img,
-html[data-bs-theme="dark"] main img[src*="reference/figures/README-"] {
+[data-bs-theme="dark"] .no-invert-dark-mode pre .r-plt.img img {
   filter: brightness(0.871) invert(100%) hue-rotate(180deg) !important;
   mix-blend-mode: lighten;
 }

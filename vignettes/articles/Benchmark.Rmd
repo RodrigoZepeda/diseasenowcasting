@@ -100,25 +100,19 @@ The pre-computed scores ship with the package, so these tables reproduce exactly
 library(diseasenowcasting)
 library(dplyr)
 
-# Locate a pre-computed result file: installed package -> source tree -> repo.
-# This lets the vignette knit before the package is installed (pkgdown, R CMD
-# build) and on the website.
+# Locate a pre-computed result file. The scores ship in inst/extdata, so an
+# installed package resolves them via system.file(); the relative paths cover
+# knitting straight from the source tree (this file lives in
+# vignettes/articles/, hence the two-level hop).
 find_rds <- function(name) {
-  local <- c(system.file("extdata", name, package = "diseasenowcasting"),
-             file.path("../inst/extdata", name), file.path("inst", "extdata", name))
-  local <- local[nzchar(local) & file.exists(local)]
-  if (length(local)) return(local[1])
-  base <- "https://raw.githubusercontent.com/RodrigoZepeda/diseasenowcasting"
-  for (ref in c("master", "main")) {
-    tmp <- tempfile(fileext = ".rds")
-    ok  <- tryCatch({
-      utils::download.file(paste0(base, "/", ref, "/inst/extdata/", name),
-                           tmp, mode = "wb", quiet = TRUE)
-      file.exists(tmp) && file.size(tmp) > 0
-    }, error = function(e) FALSE)
-    if (isTRUE(ok)) return(tmp)
-  }
-  NA_character_
+  candidates <- c(
+    system.file("extdata", name, package = "diseasenowcasting"),
+    file.path("../../inst/extdata", name),
+    file.path("../inst/extdata", name),
+    file.path("inst", "extdata", name)
+  )
+  hit <- candidates[nzchar(candidates) & file.exists(candidates)]
+  if (length(hit)) hit[1] else NA_character_
 }
 
 scores_file <- find_rds("benchmark_scores.rds")
@@ -209,14 +203,25 @@ coverage close to its stated level (0.90 for `Cov90`). The footnote under each
 table notes any competitor that failed to fit on some dates.
 
 
-## Nobbs
+## Results by disease
 
-### Dengue fever (weekly, Colombia)
+### Dengue fever (weekly, Puerto Rico)
 
-```{r dengue-nobbs, echo = FALSE, eval = have_scores}
-view_table("dengue", c("nobbs","epinowcast","baselinenowcast"), "Dengue: diseasenowcasting vs NobBS")
+```{r dengue-own, echo = FALSE, eval = have_scores}
+view_table("dengue", "own", "Dengue: every diseasenowcasting model")
 ```
 
+```{r dengue-nobbs, echo = FALSE, eval = have_scores}
+view_table("dengue", "nobbs", "Dengue: diseasenowcasting vs NobBS")
+```
+
+```{r dengue-enw, echo = FALSE, eval = have_scores}
+view_table("dengue", "epinowcast", "Dengue: diseasenowcasting vs epinowcast")
+```
+
+```{r dengue-base, echo = FALSE, eval = have_scores}
+view_table("dengue", "baselinenowcast", "Dengue: diseasenowcasting vs baselinenowcast")
+```
 
 ```{r dengue-note, echo = FALSE, eval = have_scores, results = "asis"}
 cat(conv_note("dengue"))
@@ -228,19 +233,20 @@ spots, beating both NobBS and the best Epinowcast variant on WIS. Best model:
 
 ### Mpox (daily, USA)
 
+```{r mpox-own, echo = FALSE, eval = have_scores}
+view_table("mpox", "own", "Mpox: every diseasenowcasting model")
+```
 
 ```{r mpox-nobbs, echo = FALSE, eval = have_scores}
 view_table("mpox", "nobbs", "Mpox: diseasenowcasting vs NobBS")
 ```
 
 ```{r mpox-enw, echo = FALSE, eval = have_scores}
-view_table("mpox", "epinowcast",
-           "Mpox: diseasenowcasting vs epinowcast")
+view_table("mpox", "epinowcast", "Mpox: diseasenowcasting vs epinowcast")
 ```
 
 ```{r mpox-base, echo = FALSE, eval = have_scores}
-view_table("mpox", "baselinenowcast",
-           "Mpox: diseasenowcasting vs baselinenowcast")
+view_table("mpox", "baselinenowcast", "Mpox: diseasenowcasting vs baselinenowcast")
 ```
 
 ```{r mpox-note, echo = FALSE, eval = have_scores, results = "asis"}
@@ -253,18 +259,20 @@ Epinowcast.
 
 ### COVID-19 (daily, Colombia)
 
+```{r covid-own, echo = FALSE, eval = have_scores}
+view_table("covid", "own", "COVID-19: every diseasenowcasting model")
+```
+
 ```{r covid-nobbs, echo = FALSE, eval = have_scores}
 view_table("covid", "nobbs", "COVID-19: diseasenowcasting vs NobBS")
 ```
 
 ```{r covid-enw, echo = FALSE, eval = have_scores}
-view_table("covid", "epinowcast",
-           "COVID-19: diseasenowcasting vs epinowcast")
+view_table("covid", "epinowcast", "COVID-19: diseasenowcasting vs epinowcast")
 ```
 
 ```{r covid-base, echo = FALSE, eval = have_scores}
-view_table("covid", "baselinenowcast",
-           "COVID-19: diseasenowcasting vs baselinenowcast")
+view_table("covid", "baselinenowcast", "COVID-19: diseasenowcasting vs baselinenowcast")
 ```
 
 ```{r covid-note, echo = FALSE, eval = have_scores, results = "asis"}

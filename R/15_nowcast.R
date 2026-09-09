@@ -38,10 +38,19 @@
     applied = FALSE, method = "none", ridge = 0,
     eigenvalue_floor = 0, original_cholesky = TRUE
   )
-  cholesky <- tryCatch(
-    suppressWarnings(Matrix::Cholesky(precision_matrix, super = TRUE)),
-    error = function(e) NULL
-  )
+  # CHOLMOD's handling of non-finite sparse entries differs by version and
+  # platform: some builds error, while others return a factor whose solve is
+  # non-finite.  A non-finite matrix is never a valid precision matrix, so make
+  # that mathematical precondition explicit before asking CHOLMOD to factor it.
+  precision_is_finite <- all(is.finite(precision_matrix))
+  cholesky <- if (precision_is_finite) {
+    tryCatch(
+      suppressWarnings(Matrix::Cholesky(precision_matrix, super = TRUE)),
+      error = function(e) NULL
+    )
+  } else {
+    NULL
+  }
   if (is.null(cholesky)) {
     regularization$original_cholesky <- FALSE
     diagonal_scale <- mean(abs(Matrix::diag(precision_matrix)), na.rm = TRUE)
@@ -50,19 +59,21 @@
     # in a weakly identified direction.  Because public results now
     # materialise their draws eagerly, keep increasing the ridge until the
     # Laplace precision is usable rather than failing result construction.
-    for (ridge_exponent in -6:6) {
-      ridge <- diagonal_scale * 10^ridge_exponent
-      ridged_precision <- precision_matrix +
-        Matrix::Diagonal(nrow(precision_matrix), x = ridge)
-      cholesky <- tryCatch(
-        suppressWarnings(Matrix::Cholesky(ridged_precision, super = TRUE)),
-        error = function(e) NULL
-      )
-      if (!is.null(cholesky)) {
-        regularization$applied <- TRUE
-        regularization$method <- "diagonal_ridge"
-        regularization$ridge <- ridge
-        break
+    if (precision_is_finite) {
+      for (ridge_exponent in -6:6) {
+        ridge <- diagonal_scale * 10^ridge_exponent
+        ridged_precision <- precision_matrix +
+          Matrix::Diagonal(nrow(precision_matrix), x = ridge)
+        cholesky <- tryCatch(
+          suppressWarnings(Matrix::Cholesky(ridged_precision, super = TRUE)),
+          error = function(e) NULL
+        )
+        if (!is.null(cholesky)) {
+          regularization$applied <- TRUE
+          regularization$method <- "diagonal_ridge"
+          regularization$ridge <- ridge
+          break
+        }
       }
     }
     if (is.null(cholesky)) {
