@@ -81,11 +81,15 @@ test_that("canonical results work directly with tbl.now scoring and ensembling",
     data_type = "count-incidence", verbose = FALSE
   )
   first <- nowcast(
-    x, prior_only = TRUE, n_draws = 20L,
+    x,
+    model = model(epidemic = hsgp_epidemic()),
+    prior_only = TRUE, n_draws = 20L,
     temporal_effects = "none", seed = 5L
   )
   second <- nowcast(
-    x, prior_only = TRUE, n_draws = 20L,
+    x,
+    model = model(epidemic = ar1_epidemic()),
+    prior_only = TRUE, n_draws = 20L,
     temporal_effects = "none", seed = 6L
   )
 
@@ -101,6 +105,18 @@ test_that("canonical results work directly with tbl.now scoring and ensembling",
   expect_s3_class(tbl.now::as_tibble(first), "tbl_df")
   expect_true(tbl.now::is_tbl_nowcast(ensemble))
   expect_identical(ensemble@method, "ensemble")
+  expect_identical(ensemble@metadata$members, c("first", "second"))
+
+  pooled <- tbl.now::nowcast_ensemble(
+    HSGP = first,
+    AR1 = second,
+    type = "linear_pool",
+    n_draws = 30L,
+    verbose = FALSE
+  )
+  expect_true(tbl.now::is_tbl_nowcast(pooled))
+  expect_identical(pooled@metadata$members, c("HSGP", "AR1"))
+  expect_equal(length(unique(pooled@draws$.draw)), 30L)
 
   if (requireNamespace("scoringutils", quietly = TRUE)) {
     quantile_forecast <- scoringutils::as_forecast_quantile(first, truth = x)

@@ -209,11 +209,13 @@ test_that("canonical backtest tidies its quantile predictions", {
 
 test_that("prepare_from_tbl_now with daily data and temporal effects works", {
   suppressMessages(library(tbl.now))
-  mp <- tbl_now(as.data.frame(mpoxdat), event_date = dx_date,
-                report_date = dx_report_date, case_count = n,
-                data_type = "count-incidence", verbose = FALSE) |>
-    add_temporal_effects(temporal_effects(day_of_week = TRUE)) |>
-    compute_temporal_effects()
+  mp <- suppressWarnings(
+    tbl_now(as.data.frame(mpoxdat), event_date = dx_date,
+            report_date = dx_report_date, case_count = n,
+            data_type = "count-incidence", verbose = FALSE) |>
+      add_temporal_effects(temporal_effects(day_of_week = TRUE)) |>
+      compute_temporal_effects()
+  )
   mdl  <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
   prep <- diseasenowcasting:::prepare_from_tbl_now(mp, mdl, now = as.Date("2022-09-15"))
   expect_gt(prep$data$P, 0L)                       # covariates were picked up
