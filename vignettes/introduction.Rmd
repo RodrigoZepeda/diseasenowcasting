@@ -641,7 +641,8 @@ pooled_ensemble <- tbl.now::nowcast_ensemble(
 
 This vignette covered the basics: building a `tbl_now`, fitting a nowcast with
 `nowcast()`, inspecting results with `predict()` / `summary()` / `autoplot()`,
-and comparing models with `backtest()` / `score()`.
+comparing models with `backtest()` / `score()`, and combining structurally
+different fits with `tbl.now::nowcast_ensemble()`.
 
 Depending on what you want to do next, check out the following
 vignettes and website articles:
