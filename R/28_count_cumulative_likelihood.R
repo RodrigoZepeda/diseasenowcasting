@@ -79,6 +79,43 @@
   )
 }
 
+#' Count-cumulative kernel with report-origin-specific revision timing
+#'
+#' `revision_pmf_by_report[[u + 1]][ell]` is the conditional probability of a
+#' revision at lag `ell` for a report arriving at delay `u`.
+#' @keywords internal
+#' @noRd
+.count_cumulative_components_varying <- function(
+    report_pmf, revision_pmf_by_report, revision_mass, settlement) {
+  "[<-" <- RTMB::ADoverload("[<-")
+  zero <- report_pmf[1L] * 0
+  q_C <- alpha_unit <- omega_unit <- rep(zero, settlement + 1L)
+  alpha_unit <- report_pmf
+  for (delay in 0:settlement) {
+    retained <- zero
+    withdrawn <- zero
+    for (report_delay in 0:delay) {
+      age <- delay - report_delay
+      revision_cdf <- zero
+      if (age > 0L) {
+        revision_cdf <- sum(
+          revision_pmf_by_report[[report_delay + 1L]][seq_len(age)]
+        )
+      }
+      retained <- retained + report_pmf[report_delay + 1L] *
+        (1 - revision_mass * revision_cdf)
+      if (age > 0L) {
+        withdrawn <- withdrawn + report_pmf[report_delay + 1L] *
+          revision_mass * revision_pmf_by_report[[report_delay + 1L]][age]
+      }
+    }
+    q_C[delay + 1L] <- retained
+    omega_unit[delay + 1L] <- withdrawn
+  }
+  list(q_C = q_C, alpha_unit = alpha_unit, omega_unit = omega_unit,
+       terminal_retention = q_C[settlement + 1L])
+}
+
 #' Stable numeric finite-horizon discretisation of a delay law
 #'
 #' Posterior Laplace draws are not confined to the optimiser box.  A drawn

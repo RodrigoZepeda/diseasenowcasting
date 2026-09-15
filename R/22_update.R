@@ -60,6 +60,10 @@
     init$basis_coefs <- resize_strata(old_parlist$basis_coefs, new_engine$num_basis)
   if (!is.null(old_parlist$delay_logits))
     init$delay_logits <- resize(old_parlist$delay_logits, as.integer(new_engine$np_model_length))
+  if (!is.null(old_parlist$delay_beta))
+    init$delay_beta <- resize(old_parlist$delay_beta, as.integer(new_engine$P_delay %||% 0L))
+  if (!is.null(old_parlist$revision_beta))
+    init$revision_beta <- resize(old_parlist$revision_beta, as.integer(new_engine$P_revision %||% 0L))
   init
 }
 
@@ -94,6 +98,7 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
   # than substituting the package defaults).  tbl.now's internal data-shaping
   # warnings (e.g. non-unique rows) are not actionable here, so they are muffled.
   orig_spec   <- tryCatch(tbl.now::get_temporal_effects(object@data), error = function(e) NULL)
+  orig_roles  <- .covariate_roles(object@data)
   had_effects <- !is.null(orig_spec) && length(orig_spec) > 0L
   strip_te <- function(d) {
     # Avoid calling remove_temporal_effects() when there is nothing to remove.
@@ -108,9 +113,14 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
     m <- stats::update(strip_te(object@data), new_data = strip_te(new_data))
     if (had_effects) {
       m <- tryCatch({
-        for (s in orig_spec) m <- tbl.now::add_temporal_effects(m, s$t_effects)
+        for (s in orig_spec) m <- tbl.now::add_temporal_effects(
+          m, s$t_effects, date_type = s$date_type %||% "event_date"
+        )
         tbl.now::compute_temporal_effects(m)
       }, error = function(e) m)
+    }
+    for (role in names(orig_roles)) for (column in intersect(orig_roles[[role]], names(m))) {
+      m[[column]] <- .tag_covariate_role(m[[column]], role)
     }
     m
   })

@@ -270,6 +270,21 @@
   retained
 }
 
+#' Draw genuine cases from row-design-specific pending revision risks
+#' @keywords internal
+#' @noRd
+.thin_revision_rows <- function(rows, probabilities, n_time, n_strata) {
+  retained <- matrix(0.0, n_time, n_strata)
+  if (is.null(rows) || !nrow(rows)) return(retained)
+  genuine <- stats::rbinom(
+    nrow(rows), size = as.integer(rows[, "count"]),
+    prob = pmin(pmax(probabilities, 0), 1)
+  )
+  by_cell <- rowsum(genuine, as.integer(rows[, "cell"]), reorder = FALSE)
+  retained[as.integer(rownames(by_cell))] <- as.numeric(by_cell)
+  retained
+}
+
 #' Draw from zero-truncated count laws indexed by their own mean
 #' @keywords internal
 #' @noRd
@@ -326,8 +341,10 @@
       if (horizon < H) {
         for (delay in seq.int(horizon + 1L, H)) {
           index <- delay + 1L
-          alpha <- reconstructed$lambda[t, s] * cc$alpha_unit[index]
-          omega <- reconstructed$lambda[t, s] * cc$omega_unit[index]
+          components <- if (!is.null(cc$components_by_cohort))
+            cc$components_by_cohort[[s]][[t]] else cc
+          alpha <- reconstructed$lambda[t, s] * components$alpha_unit[index]
+          omega <- reconstructed$lambda[t, s] * components$omega_unit[index]
           update <- 0
           if (cc$observation == 1L) {
             # Anchored update approximation for the level composite.  This is
@@ -615,9 +632,16 @@ summarise_nowcast_matrix <- function(draws_matrix) {
         # confirmation the first term is the confirmed cases, which are certain;
         # under retraction it is zero, since a retracted case is gone.
         reconstructed$retraction$resolved_weight * data$resolved_counts +
-        .thin_standing_rows(data$standing_rows, reconstructed$retraction$rho,
-                            data$standing_censored_rows, reconstructed$retraction$rho_censored,
-                            n_time, n_strata) + future_cases
+        (if (!is.null(reconstructed$retraction$revision_pending_rows))
+           .thin_revision_rows(
+             reconstructed$retraction$revision_pending_rows,
+             reconstructed$retraction$rho_revision, n_time, n_strata
+           )
+         else .thin_standing_rows(
+           data$standing_rows, reconstructed$retraction$rho,
+           data$standing_censored_rows, reconstructed$retraction$rho_censored,
+           n_time, n_strata
+         )) + future_cases
       } else {
         future_cases + case_counts_mat
       }

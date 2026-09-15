@@ -360,12 +360,20 @@ fit <- function(model, data, priors = NULL, init = NULL,
 .warn_joint_fit <- function(fit, context = "The fit") {
   if (.fit_is_adequate(fit)) return(invisible(FALSE))
   summary <- .fit_diagnostic_summary(fit)
-  cli::cli_warn(c(
+  warning <- c(
     "{context} did not pass the optimizer adequacy check.",
     "x" = "{paste(summary$reasons, collapse = '; ')}.",
     "i" = "Maximum absolute gradient: {format(summary$max_gradient, digits = 4)}; projected gradient: {format(summary$projected_gradient, digits = 4)}; quadratic objective gap: {format(summary$quadratic_gap, digits = 4)}.",
     "i" = "Inspect the returned `fit$diagnostic` before using predictions."
-  ))
+  )
+  if (as.integer(fit$data$P_delay %||% 0L) > 0L ||
+      as.integer(fit$data$P_revision %||% 0L) > 0L) {
+    warning <- c(
+      warning,
+      "i" = "The report/revision regression may be weakly identified. Remove the affected `delay_covariates` or `revision_covariates` tags (or use fewer covariates) before trusting these predictions."
+    )
+  }
+  cli::cli_warn(warning)
   invisible(TRUE)
 }
 
@@ -722,6 +730,8 @@ fit <- function(model, data, priors = NULL, init = NULL,
     }
     list(par = c(delay_mu = fitted_delay_mu, delay_sigma = fitted_delay_sd),
          delay_mu = fitted_delay_mu, delay_sigma = fitted_delay_sd, delay_Q = fitted_shape_Q,
+         delay_beta = as.numeric(parlist$delay_beta %||% numeric(0)),
+         parList = parlist,
          delay_mu_sd = unname(delay_mu_se), delay_sigma_sd = unname(delay_sigma_se),
          nll = if (is.null(opt)) obj$fn(obj$par) else opt$objective,
          convergence = if (is.null(opt)) 0L else opt$convergence,
@@ -729,7 +739,9 @@ fit <- function(model, data, priors = NULL, init = NULL,
   }
 
   # Everything fixed -> nothing to optimise (degenerate, but handle gracefully).
-  if (delay_mu_is_fixed && delay_sigma_is_fixed && (!is_gengamma || shape_Q_is_fixed)) {
+  if (delay_mu_is_fixed && delay_sigma_is_fixed &&
+      (!is_gengamma || shape_Q_is_fixed) &&
+      as.integer(data$P_delay %||% 0L) == 0L) {
     obj <- build_delay_only_obj(data, priors, init = init_ladder[[1]])
     obj$fn(obj$par)
     return(finish(obj, NULL))
@@ -762,7 +774,11 @@ fit <- function(model, data, priors = NULL, init = NULL,
   if (is.null(opt))
     cli::cli_abort("Non-parametric delay-only fit failed.")
   fitted_simplex <- as.numeric(obj$report()$simplex_probs)
-  list(delay_probs = fitted_simplex, delay_logits = obj$env$last.par.best,
+  parlist <- obj$env$parList()
+  list(delay_probs = fitted_simplex,
+       delay_logits = as.numeric(parlist$delay_logits),
+       delay_beta = as.numeric(parlist$delay_beta %||% numeric(0)),
+       parList = parlist,
        convergence = opt$convergence, nll = opt$objective,
        obj = obj, data = data, priors = priors, model = model)
 }
@@ -785,7 +801,10 @@ fit <- function(model, data, priors = NULL, init = NULL,
   param_names <- tryCatch(model@delay@param_names, error = function(e) NULL)
   if (length(param_names) != length(fitted_params))
     param_names <- paste0("param_", seq_along(fitted_params))
+  parlist <- obj$env$parList()
   list(custom_delay_params = fitted_params,
+       delay_beta = as.numeric(parlist$delay_beta %||% numeric(0)),
+       parList = parlist,
        par = stats::setNames(fitted_params, param_names),
        delay_mu = NA_real_, delay_sigma = NA_real_, delay_Q = NA_real_,
        delay_mu_sd = NA_real_, delay_sigma_sd = NA_real_,

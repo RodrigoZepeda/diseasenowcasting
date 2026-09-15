@@ -53,6 +53,32 @@ S7::method(parameters, nowcast_class) <- function(x, conf.level = 0.95, ...) {
   # A saved/loaded fit has no live tape: use the stored Laplace mode + precision.
   posterior_mode  <- if (is.null(obj)) fit$mode else obj$env$last.par.best
   parameter_names <- names(posterior_mode)
+  relabel_block <- function(parameter_names, base, labels) {
+    index <- which(parameter_names == base)
+    if (length(index)) {
+      labels <- labels %||% character(0)
+      if (length(labels) != length(index)) labels <- seq_along(index)
+      parameter_names[index] <- paste0(base, "[", labels, "]")
+    }
+    parameter_names
+  }
+  parameter_names <- relabel_block(
+    parameter_names, "delay_beta", x@engine$delay_coef_names
+  )
+  parameter_names <- relabel_block(
+    parameter_names, "revision_beta", x@engine$revision_coef_names
+  )
+  gamma_index <- which(parameter_names == "gamma")
+  if (length(gamma_index)) {
+    event_names <- x@engine$event_coef_names %||% seq_len(x@engine$P)
+    strata <- x@engine$strata_levels %||% "all"
+    labels <- unlist(lapply(strata, function(stratum) {
+      if (length(strata) == 1L) event_names
+      else paste0(event_names, ",", stratum)
+    }), use.names = FALSE)
+    if (length(labels) != length(gamma_index)) labels <- seq_along(gamma_index)
+    parameter_names[gamma_index] <- paste0("event_beta[", labels, "]")
+  }
   estimates       <- as.numeric(posterior_mode)
 
   # Posterior SDs are the square roots of the diagonal of the inverse Hessian
@@ -103,13 +129,15 @@ S7::method(parameters, nowcast_class) <- function(x, conf.level = 0.95, ...) {
     # Resolution first: `logit_confirm_p` would otherwise match the delay rule.
     else if (grepl("^logit_confirm_p|^retract_|^log_retract_|^negative_|^log_negative_",
               parameter_name)) "resolution"
+    else if (grepl("^delay_beta", parameter_name))                  "delay_covariate"
+    else if (grepl("^revision_beta", parameter_name))               "revision_covariate"
     else if (grepl("^delay|^simplex|^logit", parameter_name))       "delay"
     else if (grepl("^log_phi|^nb", parameter_name))                 "likelihood"
     else if (grepl("^log_gp|^basis_coefs|^gp", parameter_name))     "epidemic_hsgp"
     else if (grepl("^ar_|^log_ar", parameter_name))                 "epidemic_ar1"
     else if (grepl("^log_R0|^u_gamma|^u_neff", parameter_name))     "epidemic_sir"
     else if (grepl("^mu_intercept|^mu_global|^delta|^log_tau_intercept", parameter_name)) "epidemic_intercept"
-    else if (grepl("^gamma", parameter_name))                       "covariate"
+    else if (grepl("^event_beta|^gamma", parameter_name))           "event_covariate"
     else                                                            "other"
   }
 

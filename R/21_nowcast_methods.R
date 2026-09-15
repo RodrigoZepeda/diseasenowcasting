@@ -53,6 +53,25 @@ S7::method(coef, nowcast_class) <- function(object, ...) {
                             "log_ar_sigma_unc", "log_R0", "u_gamma", "u_neff")
   for (param_name in intersect(epidemic_param_names, names(representative_parlist)))
     out[param_name] <- representative_parlist[[param_name]][1]
+  append_block <- function(values, prefix, labels) {
+    if (is.null(values) || !length(values)) return(invisible(NULL))
+    labels <- labels %||% seq_along(values)
+    if (length(labels) != length(values)) labels <- seq_along(values)
+    out[paste0(prefix, "[", labels, "]")] <<- as.numeric(values)
+  }
+  if (!is.null(representative_parlist$gamma)) {
+    event_names <- object@engine$event_coef_names %||% seq_len(object@engine$P)
+    strata <- object@engine$strata_levels %||% "all"
+    labels <- unlist(lapply(strata, function(stratum) {
+      if (length(strata) == 1L) event_names
+      else paste0(event_names, ",", stratum)
+    }), use.names = FALSE)
+    append_block(representative_parlist$gamma, "event_beta", labels)
+  }
+  append_block(representative_parlist$delay_beta, "delay_beta",
+               object@engine$delay_coef_names)
+  append_block(representative_parlist$revision_beta, "revision_beta",
+               object@engine$revision_coef_names)
   out
 }
 

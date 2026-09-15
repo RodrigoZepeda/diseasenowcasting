@@ -13,6 +13,10 @@ prepare_data(
   delay_only = FALSE,
   max_time = NULL,
   num_strata = NULL,
+  report_calendar = NULL,
+  report_cohort = NULL,
+  revision_calendar = NULL,
+  covariate_roles = NULL,
   gp_L = 1.5,
   gp_boundary_frac = 0.62,
   ar_sigma_max = 1,
@@ -45,6 +49,18 @@ delays 1-indexed (single stratum supported in this version).}
 \item{num_strata}{Number of stratum cells (the K-way product of the strata
 levels). If \code{NULL}, inferred from column 4 of \code{m}. The likelihood is summed
 over all \verb{max_time x num_strata} (time, stratum) cells; \code{1} is unstratified.}
+
+\item{report_calendar}{Optional report-date design matrix over the full
+calendar grid. These columns affect reporting timing, not incidence.}
+
+\item{report_cohort}{Optional event-time by stratum by covariate array for
+cohort-level reporting covariates.}
+
+\item{revision_calendar}{Optional revision-date design matrix over the full
+calendar grid. These columns affect revision timing, not incidence.}
+
+\item{covariate_roles}{Named list recording the event, delay, and revision
+covariate column names discovered on the source data.}
 
 \item{gp_L}{HSGP boundary factor (> 1). Default 1.5.}
 

@@ -37,6 +37,13 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   if (is_custom_delay || is_custom_epidemic) .assert_rtmb_attached()
   is_negbin <- data$is_negative_binomial == 1L
   n_covariates <- data$P
+  n_delay_covariates <- as.integer(data$P_delay %||% 0L)
+  n_delay_calendar <- as.integer(data$P_delay_calendar %||% 0L)
+  n_delay_cohort <- as.integer(data$P_delay_cohort %||% 0L)
+  has_report_regression <- n_delay_covariates > 0L
+  n_revision_covariates <- as.integer(data$P_revision %||% 0L)
+  n_revision_calendar <- as.integer(data$P_revision_calendar %||% 0L)
+  n_revision_row <- as.integer(data$P_revision_row %||% 0L)
   n_time       <- data$max_time
   n_strata     <- as.integer(data$num_strata)
 
@@ -72,10 +79,12 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
 
   # Precompute the shared-delay Gstar [n_time x n_strata] when the delay is fully
   # fixed (multisample Stage-2): the CDF is then data, not re-taped per step.
-  delay_fully_fixed <- (!is_nonparametric && !is_custom_delay && delay_mu_is_fixed && delay_sigma_is_fixed &&
-                        (!is_gengamma || shape_Q_is_fixed)) || delay_probs_fixed || custom_fully_fixed
+  baseline_delay_fixed <- (!is_nonparametric && !is_custom_delay && delay_mu_is_fixed && delay_sigma_is_fixed &&
+                           (!is_gengamma || shape_Q_is_fixed)) || delay_probs_fixed || custom_fully_fixed
+  delay_fully_fixed <- baseline_delay_fixed && !has_report_regression
   gstar_precomputed <- matrix(0.0, 0L, 0L)
-  if (delay_fully_fixed) {
+  fixed_delay_fns <- NULL
+  if (baseline_delay_fixed) {
     fixed_delay_fns <- if (is_nonparametric)
         .nonparametric_delay_functions(priors$delay_probs$fixed, n_bins)
       else if (is_gengamma)
@@ -160,6 +169,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   # lambda_t becomes the gross report rate mu_t = lambda_t / p -- and the
   # appearance-delay block is untouched.
   is_retraction  <- isTRUE(data$is_linelist_retraction == 1L)
+  has_revision_regression <- (is_retraction || is_count_cumulative) &&
+    n_revision_covariates > 0L
   # 0 = retraction (the resolution observed is negative, lag on {1, 2, ...});
   # 1 = confirmation (the resolution observed is positive, lag on {0, 1, ...}).
   resolution_mode <- if (is_retraction) as.integer(data$resolution_mode %||% 0L) else 0L
@@ -232,6 +243,15 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     custom_is_free = custom_is_free,
     dirichlet_alpha = dirichlet_alpha,
     delay_fully_fixed = as.integer(delay_fully_fixed), gstar_precomputed = gstar_precomputed,
+    baseline_delay_fixed = as.integer(baseline_delay_fixed),
+    has_report_regression = as.integer(has_report_regression),
+    n_delay_covariates = n_delay_covariates,
+    n_delay_calendar = n_delay_calendar,
+    n_delay_cohort = n_delay_cohort,
+    report_calendar = data$report_calendar,
+    report_cohort = data$report_cohort,
+    report_rows = data$m,
+    report_censored_rows = data$m_censored,
     case_counts = data$case_counts, d_star = data$d_star,           # [n_time x n_strata] matrices
     n_time = n_time, n_strata = n_strata, is_hierarchical = as.integer(is_hierarchical),
     obs_delays = data$obs_delays, row_sums = data$row_sums_exact,
@@ -252,6 +272,13 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     prior_shape_params = if (is_gengamma) .pad3(priors$delay_Q$params) else c(0, 0, 0),
     prior_intercept_dist = priors$mu_intercept$dist, prior_intercept_params = .pad3(priors$mu_intercept$params),
     prior_gamma_dist  = priors$gamma_cov$dist,   prior_gamma_params  = .pad3(priors$gamma_cov$params),
+    has_revision_regression = as.integer(has_revision_regression),
+    n_revision_covariates = n_revision_covariates,
+    n_revision_calendar = n_revision_calendar,
+    n_revision_row = n_revision_row,
+    revision_calendar = data$revision_calendar,
+    revision_rows = data$revision_rows,
+    revision_row_design = data$revision_row_design,
     prior_phi_dist    = if (is_negbin) priors$phi_nb$dist else 0L,
     prior_phi_params  = if (is_negbin) .pad3(priors$phi_nb$params) else c(0, 0, 0),
     prior_gp_alpha_dist = if (epidemic_model == 1L) priors$gp_alpha$dist else 0L,
@@ -456,6 +483,13 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     if (is_gengamma) parameters$delay_Q <- if (shape_Q_is_fixed) 0 else (init$delay_Q %||% -2)
   }
   if (is_negbin) parameters$log_phi_nb <- init$log_phi_nb %||% log(20)
+  if (has_report_regression) {
+    parameters$delay_beta <- init$delay_beta %||% rep(0, n_delay_covariates)
+  }
+  if (has_revision_regression) {
+    parameters$revision_beta <- init$revision_beta %||%
+      rep(0, n_revision_covariates)
+  }
   # Dedicated count-cumulative parameters.  These are deliberately separate
   # from the linelist revision parameters below: the cumulative stream
   # identifies the defective kernel h_R, not a biological confirmation
@@ -613,6 +647,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     # -- shared delay distribution ------------------------------------------
     if (delay_fully_fixed == 1L) {
       delay_fns <- NULL
+    } else if (baseline_delay_fixed == 1L) {
+      delay_fns <- fixed_delay_fns
     } else if (is_nonparametric == 1L) {
       exp_logits    <- exp(delay_logits)
       simplex_probs <- c(exp_logits, exp(0 * delay_logits[1])) / (sum(exp_logits) + 1)
@@ -634,6 +670,30 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
                    else                   .delay_distribution_functions(family, delay_log_mean, delay_sd)
     }
     cdf_fn <- if (delay_fully_fixed == 1L) NULL else delay_fns$cdf
+    report_paths <- NULL
+    if (has_report_regression == 1L) {
+      baseline_report_cdf <- cdf_fn(seq_len(n_time))
+      report_paths <- lapply(seq_len(n_strata), function(stratum) {
+        lapply(seq_len(n_time), function(time) {
+          destination <- time:n_time
+          eta <- baseline_report_cdf[seq_along(destination)] * 0
+          if (n_delay_calendar > 0L) {
+            eta <- eta + as.vector(
+              report_calendar[destination, , drop = FALSE] %*%
+                delay_beta[seq_len(n_delay_calendar)]
+            )
+          }
+          if (n_delay_cohort > 0L) {
+            cohort_index <- n_delay_calendar + seq_len(n_delay_cohort)
+            eta <- eta + sum(report_cohort[time, stratum, ] *
+                               delay_beta[cohort_index])
+          }
+          .process_hazard_path(
+            baseline_report_cdf[seq_along(destination)], eta
+          )
+        })
+      })
+    }
     upper_bound <- mu_log_upper_bound
     nb_size <- if (is_negbin == 1L) 1.0 / exp(log_phi_nb) else 0
 
@@ -712,6 +772,69 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         cumulative_report_pmf, cumulative_retraction_pmf,
         cumulative_retraction_mass, settlement_horizon
       )
+      cumulative_components_by_cohort <- NULL
+      if (has_report_regression == 1L || has_revision_regression == 1L) {
+        report_cdf_for_cumulative <- if (delay_fully_fixed == 1L)
+          fixed_delay_fns$cdf else cdf_fn
+        cumulative_components_by_cohort <- lapply(
+          seq_len(n_strata), function(stratum) lapply(
+            seq_len(n_time), function(time) {
+              report_pmf <- cumulative_report_pmf
+              if (has_report_regression == 1L) {
+                report_destination <- time + 0:settlement_horizon
+                report_eta <- report_cdf_for_cumulative(
+                  seq_len(settlement_horizon + 1L)
+                ) * 0
+                if (n_delay_calendar > 0L) {
+                  report_eta <- report_eta + as.vector(
+                    report_calendar[report_destination, , drop = FALSE] %*%
+                      delay_beta[seq_len(n_delay_calendar)]
+                  )
+                }
+                if (n_delay_cohort > 0L) {
+                  beta_index <- n_delay_calendar + seq_len(n_delay_cohort)
+                  report_eta <- report_eta + sum(
+                    report_cohort[time, stratum, ] * delay_beta[beta_index]
+                  )
+                }
+                report_path <- .process_hazard_path(
+                  report_cdf_for_cumulative(seq_len(settlement_horizon + 1L)),
+                  report_eta
+                )
+                report_pmf <- exp(report_path$log_pmf)
+                report_pmf <- report_pmf / sum(report_pmf)
+              }
+
+              revision_by_report <- lapply(
+                seq_len(settlement_horizon + 1L),
+                function(index) cumulative_retraction_pmf
+              )
+              if (has_revision_regression == 1L) {
+                for (report_delay in 0:settlement_horizon) {
+                  revision_destination <- time + report_delay +
+                    seq_len(settlement_horizon)
+                  revision_eta <- as.vector(
+                    revision_calendar[
+                      revision_destination, , drop = FALSE
+                    ] %*% revision_beta[seq_len(n_revision_calendar)]
+                  )
+                  revision_path <- .process_hazard_path(
+                    cumulative_retraction_fns$cdf(seq_len(settlement_horizon)),
+                    revision_eta
+                  )
+                  revision_pmf <- exp(revision_path$log_pmf)
+                  revision_by_report[[report_delay + 1L]] <-
+                    revision_pmf / sum(revision_pmf)
+                }
+              }
+              .count_cumulative_components_varying(
+                report_pmf, revision_by_report,
+                cumulative_retraction_mass, settlement_horizon
+              )
+            }
+          )
+        )
+      }
 
       if (cumulative_observation %in% c(2L, 3L)) {
         movement_intercept_v <- if (movement_intercept_fixed == 1L)
@@ -792,27 +915,71 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         retraction_grid <- .resolution_lag_grid(retract_fns$cdf, retract_grid_max, lag_offset)
       }
 
-      for (stratum in seq_len(n_strata)) {
-        confirm_p_s   <- confirm_p_vec[confirm_p_of_stratum[stratum]]
-        retract_slice <- retract_rows_of_stratum[[stratum]]
-        standing_slice <- standing_rows_of_stratum[[stratum]]
-        loglik_retraction <- loglik_retraction +
-          .loglik_retraction(retract_fns, retract_is_np,
-                             if (length(retract_slice)) retract_table[retract_slice, "lag"] else numeric(0),
-                             if (length(retract_slice)) retract_table[retract_slice, "count"] else numeric(0),
-                             if (length(standing_slice)) standing_table[standing_slice, "age"] else numeric(0),
-                             if (length(standing_slice)) standing_table[standing_slice, "count"] else numeric(0),
-                             n_retracted_by_stratum[stratum], confirm_p_s, retract_split,
-                             lag_offset, resolution_mode,
-                             n_positive_by_stratum[stratum], n_negative_by_stratum[stratum])
-        censored_slice <- censored_rows_of_stratum[[stratum]]
-        if (retract_grid_max > 0L && length(censored_slice) > 0)
+      if (has_revision_regression == 1L) {
+        for (row in seq_len(nrow(revision_rows))) {
+          stratum <- as.integer(revision_rows[row, "stratum"])
+          p_s <- confirm_p_vec[confirm_p_of_stratum[stratum]]
+          resolved_probability <- .resolved_probability(p_s, resolution_mode)
+          resolved <- revision_rows[row, "resolved"] == 1
+          positive <- revision_rows[row, "positive"] == 1
+          weight <- revision_rows[row, "count"]
+          if (resolved) {
+            if (positive) loglik_retraction <- loglik_retraction + weight * log(p_s)
+            else loglik_retraction <- loglik_retraction + weight * log1p(-p_s)
+          }
+          age <- as.integer(revision_rows[row, "age"])
+          path_length <- age + lag_offset
+          if (path_length > 0L) {
+            eta <- retract_fns$cdf(seq_len(path_length)) * 0
+            destination <- as.integer(revision_rows[row, "report_time"]) +
+              seq_len(path_length) - lag_offset
+            if (n_revision_calendar > 0L) {
+              eta <- eta + as.vector(
+                revision_calendar[destination, , drop = FALSE] %*%
+                  revision_beta[seq_len(n_revision_calendar)]
+              )
+            }
+            if (n_revision_row > 0L) {
+              row_index <- n_revision_calendar + seq_len(n_revision_row)
+              eta <- eta + sum(revision_row_design[row, ] *
+                                 revision_beta[row_index])
+            }
+            revision_path <- .process_hazard_path(
+              retract_fns$cdf(seq_len(path_length)), eta
+            )
+            if (resolved) {
+              lag_index <- as.integer(revision_rows[row, "lag"]) + lag_offset
+              loglik_retraction <- loglik_retraction + weight *
+                revision_path$log_pmf[lag_index]
+            } else {
+              survival <- exp(revision_path$log_survival[path_length])
+              loglik_retraction <- loglik_retraction + weight *
+                log((1 - resolved_probability) +
+                      resolved_probability * survival)
+            }
+          }
+        }
+      } else for (stratum in seq_len(n_strata)) {
+          confirm_p_s   <- confirm_p_vec[confirm_p_of_stratum[stratum]]
+          retract_slice <- retract_rows_of_stratum[[stratum]]
+          standing_slice <- standing_rows_of_stratum[[stratum]]
           loglik_retraction <- loglik_retraction +
-            .loglik_retraction_censored(censored_patterns[censored_slice, , drop = FALSE],
-                                        appearance_grid$pmf, retraction_grid$pmf,
-                                        retraction_grid$cdf, confirm_p_s, lag_offset,
-                                        resolution_mode)
-      }
+            .loglik_retraction(retract_fns, retract_is_np,
+                               if (length(retract_slice)) retract_table[retract_slice, "lag"] else numeric(0),
+                               if (length(retract_slice)) retract_table[retract_slice, "count"] else numeric(0),
+                               if (length(standing_slice)) standing_table[standing_slice, "age"] else numeric(0),
+                               if (length(standing_slice)) standing_table[standing_slice, "count"] else numeric(0),
+                               n_retracted_by_stratum[stratum], confirm_p_s, retract_split,
+                               lag_offset, resolution_mode,
+                               n_positive_by_stratum[stratum], n_negative_by_stratum[stratum])
+          censored_slice <- censored_rows_of_stratum[[stratum]]
+          if (retract_grid_max > 0L && length(censored_slice) > 0)
+            loglik_retraction <- loglik_retraction +
+              .loglik_retraction_censored(censored_patterns[censored_slice, , drop = FALSE],
+                                          appearance_grid$pmf, retraction_grid$pmf,
+                                          retraction_grid$cdf, confirm_p_s, lag_offset,
+                                          resolution_mode)
+        }
     }
 
     # -- per-stratum epidemic mean + S_k accumulation -----------------------
@@ -903,12 +1070,15 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         # uses E[C_t(d)] = mu_t q_C(d); both hurdle variants instead use the
         # signed delay update and preserve E[Delta] = alpha - omega.
         for (t in seq_len(n_time)) {
+          cohort_components <- if (
+            has_report_regression == 1L || has_revision_regression == 1L
+          ) cumulative_components_by_cohort[[s]][[t]] else cumulative_components
           for (delay in 0:settlement_horizon) {
             delay_index <- delay + 1L
             if (!observation_mask[t, delay_index, s]) next
             if (cumulative_observation == 1L) {
               cumulative_mean <- lambda[t] *
-                cumulative_components$q_C[delay_index] + 1e-10
+                cohort_components$q_C[delay_index] + 1e-10
               loglik_counts <- loglik_counts +
                 .count_cumulative_level_logpmf(
                   cumulative_level_array[t, delay_index, s],
@@ -916,9 +1086,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
                 )
             } else {
               alpha <- lambda[t] *
-                cumulative_components$alpha_unit[delay_index] + 1e-12
+                cohort_components$alpha_unit[delay_index] + 1e-12
               omega <- lambda[t] *
-                cumulative_components$omega_unit[delay_index] + 1e-12
+                cohort_components$omega_unit[delay_index] + 1e-12
               total <- alpha + omega
               movement_eta <- movement_intercept_v +
                 movement_age_v * log1p(delay) +
@@ -986,7 +1156,17 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         confirm_p_s    <- if (is_retraction == 1L) confirm_p_vec[confirm_p_of_stratum[s]] else 1
         log_mean_gross <- if (is_retraction == 1L) log_mean_capped - log(confirm_p_s) else log_mean_capped
         lambda_gross   <- if (is_retraction == 1L) lambda / confirm_p_s else lambda
-        gstar  <- if (delay_fully_fixed == 1L) gstar_precomputed[, s] else cdf_fn(d_star[, s] + 1)
+        gstar <- if (has_report_regression == 1L) {
+          value <- report_paths[[s]][[1L]]$cdf * 0
+          for (time in seq_len(n_time)) {
+            value[time] <- report_paths[[s]][[time]]$cdf[
+              as.integer(d_star[time, s]) + 1L
+            ]
+          }
+          value
+        } else if (delay_fully_fixed == 1L) {
+          gstar_precomputed[, s]
+        } else cdf_fn(d_star[, s] + 1)
         counts_col <- case_counts[, s]
         if (is_negbin == 1L) {
           success_prob <- nb_size / (nb_size + lambda_gross)
@@ -1007,11 +1187,21 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     loglik_delay <- 0
     if (is_count_cumulative == 0L && is_confirmation == 0L &&
         delay_fully_fixed == 0L && length(obs_delays) > 0) {
-      loglik_delay <- if (is_nonparametric == 1L)
-        sum(row_sums * np_fns$log_pmf_raw(obs_delays))
-      else
-        .discretised_delay_loglik(obs_delays, row_sums, split_delay,
-                                  delay_fns$log_cdf, delay_fns$log_survival)
+      if (has_report_regression == 1L) {
+        for (row in seq_len(nrow(report_rows))) {
+          time <- as.integer(report_rows[row, 1L])
+          delay <- as.integer(report_rows[row, 3L])
+          stratum <- as.integer(report_rows[row, 4L])
+          loglik_delay <- loglik_delay + report_rows[row, 2L] *
+            report_paths[[stratum]][[time]]$log_pmf[delay]
+        }
+      } else {
+        loglik_delay <- if (is_nonparametric == 1L)
+          sum(row_sums * np_fns$log_pmf_raw(obs_delays))
+        else
+          .discretised_delay_loglik(obs_delays, row_sums, split_delay,
+                                    delay_fns$log_cdf, delay_fns$log_survival)
+      }
     }
     # Right-censored delays: we only know the delay is <= j, contributing
     # log G_D(j) (the article's m_j^* term). G_D = CDF of the delay process.
@@ -1022,14 +1212,24 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     if (is_count_cumulative == 0L && is_confirmation == 0L &&
         is_retraction == 0L && delay_fully_fixed == 0L &&
         length(obs_delays_cens) > 0) {
-      log_cdf_cens <- if (is_nonparametric == 1L) np_fns$log_cdf(obs_delays_cens)
-                      else delay_fns$log_cdf(obs_delays_cens)
-      loglik_delay <- loglik_delay + sum(row_sums_cens * log_cdf_cens)
+      if (has_report_regression == 1L) {
+        for (row in seq_len(nrow(report_censored_rows))) {
+          time <- as.integer(report_censored_rows[row, 1L])
+          delay <- as.integer(report_censored_rows[row, 3L])
+          stratum <- as.integer(report_censored_rows[row, 4L])
+          loglik_delay <- loglik_delay + report_censored_rows[row, 2L] *
+            log(report_paths[[stratum]][[time]]$cdf[delay])
+        }
+      } else {
+        log_cdf_cens <- if (is_nonparametric == 1L) np_fns$log_cdf(obs_delays_cens)
+                        else delay_fns$log_cdf(obs_delays_cens)
+        loglik_delay <- loglik_delay + sum(row_sums_cens * log_cdf_cens)
+      }
     }
 
     # -- priors --------------------------------------------------------------
     log_prior <- 0
-    if (delay_fully_fixed == 0L) {
+    if (baseline_delay_fixed == 0L) {
       if (is_nonparametric == 1L) {
         log_prior <- log_prior + dirichlet_lpdf(simplex_probs, dirichlet_alpha) + sum(log(simplex_probs))
       } else if (is_custom_delay == 1L) {
@@ -1057,6 +1257,10 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     }
     if (is_sir == 0L && is_custom_epidemic == 0L && n_covariates > 0)
       log_prior <- log_prior + prior_lpdf(as.vector(gamma), prior_gamma_dist, prior_gamma_params)
+    if (has_report_regression == 1L)
+      log_prior <- log_prior + prior_lpdf(delay_beta, prior_gamma_dist, prior_gamma_params)
+    if (has_revision_regression == 1L)
+      log_prior <- log_prior + prior_lpdf(revision_beta, prior_gamma_dist, prior_gamma_params)
     if (is_negbin == 1L) log_prior <- log_prior + prior_lpdf(1.0 / nb_size, prior_phi_dist, prior_phi_params)
     # Count-cumulative priors are intentionally disjoint from confirm_p and the
     # linelist revision-delay priors.  The mass prior is evaluated on h_R's
@@ -1272,7 +1476,23 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   mu_safe <- ub - log1p(exp(ub - log_mean))
   lambda  <- exp(mu_safe)
   Gstar   <- matrix(0.0, n_time, n_strata)
-  for (s in seq_len(n_strata)) Gstar[, s] <- as.numeric(delay_fns$cdf(d_star[, s] + 1))
+  if (as.integer(data$P_delay %||% 0L) > 0L) {
+    delay_beta <- as.numeric(parlist$delay_beta)
+    report_paths <- .report_hazard_paths(
+      delay_fns$cdf, n_time, n_strata, data$report_calendar,
+      data$report_cohort, delay_beta,
+      as.integer(data$P_delay_calendar %||% 0L),
+      as.integer(data$P_delay_cohort %||% 0L)
+    )
+    for (s in seq_len(n_strata)) for (t in seq_len(n_time)) {
+      Gstar[t, s] <- as.numeric(report_paths[[s]][[t]]$cdf[
+        as.integer(d_star[t, s]) + 1L
+      ])
+    }
+  } else {
+    for (s in seq_len(n_strata))
+      Gstar[, s] <- as.numeric(delay_fns$cdf(d_star[, s] + 1))
+  }
   uses_nb_dispersion <- data$is_negative_binomial == 1L &&
     (!isTRUE(data$is_count_cumulative == 1L) ||
        identical(as.integer(data$count_cumulative_observation), 1L))
@@ -1309,6 +1529,55 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     components <- .count_cumulative_components(
       report_pmf, retract_pmf, retract_mass, H
     )
+    components_by_cohort <- NULL
+    has_report_regression <- as.integer(data$P_delay %||% 0L) > 0L
+    has_revision_regression <- as.integer(data$P_revision %||% 0L) > 0L
+    if (has_report_regression || has_revision_regression) {
+      delay_beta <- as.numeric(parlist$delay_beta %||% numeric(0))
+      revision_beta <- as.numeric(parlist$revision_beta %||% numeric(0))
+      n_delay_calendar <- as.integer(data$P_delay_calendar %||% 0L)
+      n_delay_cohort <- as.integer(data$P_delay_cohort %||% 0L)
+      n_revision_calendar <- as.integer(data$P_revision_calendar %||% 0L)
+      components_by_cohort <- lapply(
+        seq_len(n_strata), function(stratum) lapply(
+          seq_len(n_time), function(time) {
+            report_pmf_ts <- report_pmf
+            if (has_report_regression) {
+              destination <- time + 0:H
+              eta <- numeric(H + 1L)
+              if (n_delay_calendar > 0L) {
+                eta <- eta + as.vector(data$report_calendar[
+                  destination, , drop = FALSE
+                ] %*% delay_beta[seq_len(n_delay_calendar)])
+              }
+              if (n_delay_cohort > 0L) {
+                index <- n_delay_calendar + seq_len(n_delay_cohort)
+                eta <- eta + sum(data$report_cohort[time, stratum, ] *
+                                   delay_beta[index])
+              }
+              path <- .process_hazard_path(delay_fns$cdf(seq_len(H + 1L)), eta)
+              report_pmf_ts <- exp(as.numeric(path$log_pmf))
+              report_pmf_ts <- report_pmf_ts / sum(report_pmf_ts)
+            }
+            revision_by_report <- lapply(seq_len(H + 1L), function(index) retract_pmf)
+            if (has_revision_regression) {
+              for (report_delay in 0:H) {
+                destination <- time + report_delay + seq_len(H)
+                eta <- as.vector(data$revision_calendar[
+                  destination, , drop = FALSE
+                ] %*% revision_beta[seq_len(n_revision_calendar)])
+                path <- .process_hazard_path(retract_fns$cdf(seq_len(H)), eta)
+                pmf <- exp(as.numeric(path$log_pmf))
+                revision_by_report[[report_delay + 1L]] <- pmf / sum(pmf)
+              }
+            }
+            .count_cumulative_components_varying(
+              report_pmf_ts, revision_by_report, retract_mass, H
+            )
+          }
+        )
+      )
+    }
 
     observation <- as.integer(data$count_cumulative_observation)
     movement <- magnitude_size <- NULL
@@ -1337,7 +1606,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         movement = movement,
         magnitude_size = magnitude_size
       ),
-      components
+      components,
+      list(components_by_cohort = components_by_cohort)
     )
   }
 
@@ -1434,6 +1704,51 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
                   numeric(length(report_ages)))
     rho <- matrix(rho, length(report_ages), n_strata)
 
+    revision_pending_rows <- NULL
+    rho_revision <- NULL
+    if (as.integer(data$P_revision %||% 0L) > 0L) {
+      rows <- data$revision_rows
+      row_design <- data$revision_row_design
+      beta <- as.numeric(parlist$revision_beta)
+      pending <- which(rows[, "resolved"] == 0)
+      rho_revision <- numeric(length(pending))
+      for (pending_index in seq_along(pending)) {
+        row <- pending[pending_index]
+        stratum <- as.integer(rows[row, "stratum"])
+        p_s <- confirm_p_by_stratum[stratum]
+        age <- as.integer(rows[row, "age"])
+        path_length <- age + lag_offset
+        survival <- 1
+        if (path_length > 0L) {
+          destination <- as.integer(rows[row, "report_time"]) +
+            seq_len(path_length) - lag_offset
+          eta <- numeric(path_length)
+          n_calendar <- as.integer(data$P_revision_calendar %||% 0L)
+          n_row <- as.integer(data$P_revision_row %||% 0L)
+          if (n_calendar > 0L) {
+            eta <- eta + as.vector(data$revision_calendar[
+              destination, , drop = FALSE
+            ] %*% beta[seq_len(n_calendar)])
+          }
+          if (n_row > 0L) {
+            beta_row <- n_calendar + seq_len(n_row)
+            eta <- eta + sum(row_design[row, ] * beta[beta_row])
+          }
+          path <- .process_hazard_path(
+            retract_fns$cdf(seq_len(path_length)), eta
+          )
+          survival <- exp(as.numeric(path$log_survival[path_length]))
+        }
+        rho_revision[pending_index] <- switch(
+          as.character(resolution_mode),
+          "0" = p_s / (p_s + (1 - p_s) * survival),
+          "1" = p_s * survival / ((1 - p_s) + p_s * survival),
+          "2" = p_s
+        )
+      }
+      revision_pending_rows <- rows[pending, c("cell", "count"), drop = FALSE]
+    }
+
     # Censored standing rows: rho has to be averaged over the appearance delays the
     # row is compatible with, so it is computed per pattern rather than looked up.
     censored_standing <- data$standing_censored_rows
@@ -1457,6 +1772,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
 
     retraction <- list(p = confirm_p, p_by_stratum = confirm_p_by_stratum,
                        ages = report_ages, rho = rho, rho_censored = rho_censored,
+                       revision_pending_rows = revision_pending_rows,
+                       rho_revision = rho_revision,
                        # A CONFIRMED row is already in the target and enters the
                        # nowcast with weight 1; a RETRACTED one is gone (weight 0).
                        # A CONFIRMED row is already in the target (weight 1); a

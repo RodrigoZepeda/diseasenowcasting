@@ -15,6 +15,14 @@
 #'   delays 1-indexed (single stratum supported in this version).
 #' @param m_censored Optional censored-observation matrix (same layout).
 #' @param X Optional covariate matrix (`max_time` rows, P columns).
+#' @param report_calendar Optional report-date design matrix over the full
+#'   calendar grid. These columns affect reporting timing, not incidence.
+#' @param report_cohort Optional event-time by stratum by covariate array for
+#'   cohort-level reporting covariates.
+#' @param revision_calendar Optional revision-date design matrix over the full
+#'   calendar grid. These columns affect revision timing, not incidence.
+#' @param covariate_roles Named list recording the event, delay, and revision
+#'   covariate column names discovered on the source data.
 #' @param d_star Optional max-observable-delay vector; if NULL, computed as
 #'   `rev(seq_len(max_time)) - 1`.
 #' @param delay_only If TRUE, only the delay process is prepared/fit.
@@ -45,6 +53,9 @@
 #' @export
 prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
                          delay_only = FALSE, max_time = NULL, num_strata = NULL,
+                         report_calendar = NULL, report_cohort = NULL,
+                         revision_calendar = NULL,
+                         covariate_roles = NULL,
                          gp_L = 1.5, gp_boundary_frac = 0.62,
                          ar_sigma_max = 1, is_confirmation = FALSE,
                          cumulative_levels = NULL,
@@ -79,6 +90,21 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
   # -- covariates -------------------------------------------------------------
   if (is.null(X)) { X_mat <- matrix(0.0, max_time, 0L); P_val <- 0L }
   else { X_mat <- as.matrix(X); P_val <- ncol(X_mat) }
+  report_calendar_mat <- if (is.null(report_calendar))
+    matrix(0.0, max_time, 0L) else as.matrix(report_calendar)
+  revision_calendar_mat <- if (is.null(revision_calendar))
+    matrix(0.0, max_time, 0L) else as.matrix(revision_calendar)
+  report_cohort_array <- if (is.null(report_cohort))
+    array(0.0, c(max_time, num_strata, 0L)) else as.array(report_cohort)
+  if (nrow(report_calendar_mat) < max_time ||
+      nrow(revision_calendar_mat) < max_time) {
+    cli::cli_abort("Process calendar matrices must have at least `max_time` rows.")
+  }
+  if (length(dim(report_cohort_array)) != 3L ||
+      !identical(as.integer(dim(report_cohort_array)[1:2]),
+                 c(max_time, num_strata))) {
+    cli::cli_abort("`report_cohort` must be a max_time by num_strata by covariate array.")
+  }
 
   # -- d_star [max_time x num_strata] (same reporting horizon across strata) ----
   d_star_mat <- if (is.null(d_star)) matrix(rev(seq_len(max_time)) - 1L, max_time, num_strata)
@@ -212,13 +238,40 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
   list(
     # dimensions / config
     max_time = max_time, num_strata = num_strata, P = P_val, X = X_mat,
+    event_coef_names = colnames(X_mat) %||% character(0),
+    P_delay_calendar = ncol(report_calendar_mat),
+    P_delay_cohort = dim(report_cohort_array)[3L],
+    P_delay = ncol(report_calendar_mat) + dim(report_cohort_array)[3L],
+    delay_coef_names = c(
+      colnames(report_calendar_mat) %||% character(0),
+      dimnames(report_cohort_array)[[3L]] %||% character(0)
+    ),
+    P_revision_calendar = ncol(revision_calendar_mat),
+    P_revision_row = ncol(retraction$revision_row_design %||%
+      matrix(0.0, 0L, 0L)),
+    P_revision = ncol(revision_calendar_mat) +
+      ncol(retraction$revision_row_design %||% matrix(0.0, 0L, 0L)),
+    revision_coef_names = c(
+      colnames(revision_calendar_mat) %||% character(0),
+      colnames(retraction$revision_row_design %||% matrix(0.0, 0L, 0L)) %||%
+        character(0)
+    ),
+    report_calendar = report_calendar_mat,
+    report_cohort = report_cohort_array,
+    revision_calendar = revision_calendar_mat,
+    revision_rows = retraction$revision_rows,
+    revision_row_design = retraction$revision_row_design,
+    covariate_roles = covariate_roles %||% list(
+      event = colnames(X_mat) %||% character(0),
+      delay = character(0), revision = character(0)
+    ),
     delay_only = isTRUE(delay_only),
     delay_family = as.integer(dly@num_id),
     epidemic_model = as.integer(epi@num_id),
     is_negative_binomial = as.integer(lik@num_id),
     num_delay_seasons = as.integer(dly@num_delay_seasons),
     np_model_length = np_len,
-    m = m,
+    m = m, m_censored = m_censored,
     # confirmation (count-cumulative) signed-increment likelihood
     is_confirmation = as.integer(isTRUE(is_confirmation)),
     increment_array = increment_array, max_conf_delay = max_conf_delay,

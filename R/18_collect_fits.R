@@ -178,6 +178,10 @@
   # defective retraction kernel, and epidemic intensity are estimated jointly.
   if (isTRUE(engine$is_count_cumulative == 1L) ||
       isTRUE(engine$is_confirmation == 1L)) type <- "one_stage"
+  # A reporting regression is one process: fixing only its baseline delay in
+  # Stage 2 would discard uncertainty in the hazard coefficients. Until the
+  # imputation block samples the combined vector, keep it joint.
+  if (as.integer(engine$P_delay %||% 0L) > 0L) type <- "one_stage"
   diagnostics$resolved_type <- type
 
   if (type == "one_stage") {

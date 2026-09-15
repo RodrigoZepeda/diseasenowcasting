@@ -32,7 +32,7 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Depends:
     R (>= 4.2.0),
-    tbl.now (>= 0.35.3)
+    tbl.now (>= 1.0.0)
 Imports:
     cli,
     dplyr,
@@ -46,7 +46,8 @@ Imports:
     S7,
     scoringutils,
     stats,
-    utils
+    utils,
+    vctrs
 Suggests:
     future,
     generics,

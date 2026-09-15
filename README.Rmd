@@ -98,6 +98,20 @@ companion [`tbl.now`](https://rodrigozepeda.github.io/tbl.now/) package: a data
 frame annotated with the **roles** of its columns (event date, report date, and
 optionally the `strata` and the `now` date up to which everything is observed).
 
+Covariates registered by `tbl.now` affect the event process by default. Tag a
+column when it belongs to a later observation process:
+
+```{r, eval = FALSE}
+now_data <- now_data |>
+  as_delay_covariates(reporting_capacity) |>
+  as_revision_covariates(laboratory_load)
+```
+
+`as_delay_covariates()` changes the conditional reporting hazard;
+`as_revision_covariates()` changes the conditional revision hazard. Their
+coefficients are log hazard-odds ratios and do not change the eventual
+confirmation probability `p`. The same vector can carry more than one role.
+
 ```{r setup, message=FALSE}
 set.seed(6728)
 library(diseasenowcasting)

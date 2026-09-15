@@ -32,6 +32,8 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
   if (family == 4L) return(.build_delay_only_nonparametric(data, priors, init))
   if (family == 5L) return(.build_delay_only_custom(data, priors, init))
   is_gengamma <- family == 3L
+  n_delay_covariates <- as.integer(data$P_delay %||% 0L)
+  has_report_regression <- n_delay_covariates > 0L
 
   delay_mu_is_fixed    <- isTRUE(priors$delay_mu$is_constant == 1L)
   delay_sigma_is_fixed <- isTRUE(priors$delay_sigma$is_constant == 1L)
@@ -53,7 +55,17 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
     prior_shape_params = if (is_gengamma) .pad3(priors$delay_Q$params) else c(0, 0, 0),
     delay_mu_fixed    = if (delay_mu_is_fixed)    priors$delay_mu$fixed    else NA_real_,
     delay_sigma_fixed = if (delay_sigma_is_fixed) priors$delay_sigma$fixed else NA_real_,
-    shape_Q_fixed     = if (shape_Q_is_fixed)     priors$delay_Q$fixed     else NA_real_
+    shape_Q_fixed     = if (shape_Q_is_fixed)     priors$delay_Q$fixed     else NA_real_,
+    has_report_regression = as.integer(has_report_regression),
+    n_time = data$max_time, n_strata = data$num_strata,
+    n_delay_calendar = as.integer(data$P_delay_calendar %||% 0L),
+    n_delay_cohort = as.integer(data$P_delay_cohort %||% 0L),
+    report_calendar = data$report_calendar,
+    report_cohort = data$report_cohort,
+    report_rows = data$m, report_censored_rows = data$m_censored,
+    d_star = data$d_star,
+    prior_beta_dist = priors$gamma_cov$dist,
+    prior_beta_params = .pad3(priors$gamma_cov$params)
   )
 
   if (is.null(init)) {
@@ -73,6 +85,8 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
   )
   # delay_Q is the UNCONSTRAINED raw value (Q = .gengamma_shape_transform()); init raw -2 ~ Q 0.4.
   if (is_gengamma) parameters$delay_Q <- if (is.na(objective_data$shape_Q_fixed)) (init$delay_Q %||% -2) else 0
+  if (has_report_regression)
+    parameters$delay_beta <- init$delay_beta %||% rep(0, n_delay_covariates)
   map <- list()
   if (!is.na(objective_data$delay_mu_fixed))    map$delay_mu <- factor(NA)
   if (!is.na(objective_data$delay_sigma_fixed)) map$log_delay_sigma_excess <- factor(NA)
@@ -97,22 +111,34 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
       else
         .delay_distribution_functions(family, delay_log_mean, delay_sd)
 
-    log_cdf_censoring <- delay_fns$log_cdf(censoring_col)
     loglik <- 0
-    if (length(obs_delays) > 0)
-      loglik <- loglik +
-        .discretised_delay_loglik(obs_delays, row_sums_exact, split_delay,
-                                  delay_fns$log_cdf, delay_fns$log_survival) -
-        sum(col_sums_exact * log_cdf_censoring)
-    if (length(obs_delays_cens) > 0)
-      loglik <- loglik + sum(row_sums_cens * delay_fns$log_cdf(obs_delays_cens)) -
-        sum(col_sums_cens * log_cdf_censoring)
+    if (has_report_regression == 1L) {
+      paths <- .report_hazard_paths(
+        delay_fns$cdf, n_time, n_strata, report_calendar,
+        report_cohort, delay_beta, n_delay_calendar, n_delay_cohort
+      )
+      loglik <- .report_hazard_loglik(
+        paths, report_rows, report_censored_rows, d_star
+      )
+    } else {
+      log_cdf_censoring <- delay_fns$log_cdf(censoring_col)
+      if (length(obs_delays) > 0)
+        loglik <- loglik +
+          .discretised_delay_loglik(obs_delays, row_sums_exact, split_delay,
+                                    delay_fns$log_cdf, delay_fns$log_survival) -
+          sum(col_sums_exact * log_cdf_censoring)
+      if (length(obs_delays_cens) > 0)
+        loglik <- loglik + sum(row_sums_cens * delay_fns$log_cdf(obs_delays_cens)) -
+          sum(col_sums_cens * log_cdf_censoring)
+    }
 
     log_prior <- 0
     if (is.na(delay_mu_fixed))    log_prior <- log_prior + prior_lpdf(delay_log_mean, prior_mu_dist, prior_mu_params)
     if (is.na(delay_sigma_fixed)) log_prior <- log_prior + prior_lpdf(delay_sd, prior_sigma_dist, prior_sigma_params)
     if (is_gengamma == 1L && is.na(shape_Q_fixed))
       log_prior <- log_prior + prior_lpdf(shape_Q, prior_shape_dist, prior_shape_params)
+    if (has_report_regression == 1L)
+      log_prior <- log_prior + prior_lpdf(delay_beta, prior_beta_dist, prior_beta_params)
 
     RTMB::REPORT(delay_sd)
     if (is.na(delay_sigma_fixed)) RTMB::ADREPORT(delay_sd)
@@ -137,6 +163,8 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
 .build_delay_only_nonparametric <- function(data, priors, init = NULL) {
   n_bins          <- as.integer(data$np_model_length)
   dirichlet_alpha <- priors$delay_probs$params
+  n_delay_covariates <- as.integer(data$P_delay %||% 0L)
+  has_report_regression <- n_delay_covariates > 0L
 
   objective_data <- list(
     obs_delays      = data$obs_delays,
@@ -147,7 +175,16 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
     col_sums_cens   = data$col_sums_cens,
     censoring_col   = data$censoring_col,
     n_bins          = n_bins,
-    dirichlet_alpha = dirichlet_alpha
+    dirichlet_alpha = dirichlet_alpha,
+    has_report_regression = as.integer(has_report_regression),
+    n_time = data$max_time, n_strata = data$num_strata,
+    n_delay_calendar = as.integer(data$P_delay_calendar %||% 0L),
+    n_delay_cohort = as.integer(data$P_delay_cohort %||% 0L),
+    report_calendar = data$report_calendar, report_cohort = data$report_cohort,
+    report_rows = data$m, report_censored_rows = data$m_censored,
+    d_star = data$d_star,
+    prior_beta_dist = priors$gamma_cov$dist,
+    prior_beta_params = .pad3(priors$gamma_cov$params)
   )
 
   logits_init <- if (!is.null(init$delay_logits)) init$delay_logits else {
@@ -158,6 +195,8 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
     log(empirical_pmf[1:n_bins]) - log(empirical_pmf[n_bins + 1])
   }
   parameters <- list(delay_logits = logits_init)
+  if (has_report_regression)
+    parameters$delay_beta <- init$delay_beta %||% rep(0, n_delay_covariates)
 
   negative_log_posterior <- function(params) {
     RTMB::getAll(params, objective_data)
@@ -165,16 +204,28 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
     simplex_probs <- c(exp_logits, exp(0 * delay_logits[1])) / (sum(exp_logits) + 1)
     np_fns        <- .nonparametric_delay_functions(simplex_probs, n_bins)
 
-    log_cdf_censoring <- np_fns$log_cdf(censoring_col)
     loglik <- 0
-    if (length(obs_delays) > 0)
-      loglik <- loglik + sum(row_sums_exact * np_fns$log_pmf_raw(obs_delays)) -
-        sum(col_sums_exact * log_cdf_censoring)
-    if (length(obs_delays_cens) > 0)
-      loglik <- loglik + sum(row_sums_cens * np_fns$log_cdf(obs_delays_cens)) -
-        sum(col_sums_cens * log_cdf_censoring)
+    if (has_report_regression == 1L) {
+      paths <- .report_hazard_paths(
+        np_fns$cdf, n_time, n_strata, report_calendar, report_cohort,
+        delay_beta, n_delay_calendar, n_delay_cohort
+      )
+      loglik <- .report_hazard_loglik(
+        paths, report_rows, report_censored_rows, d_star
+      )
+    } else {
+      log_cdf_censoring <- np_fns$log_cdf(censoring_col)
+      if (length(obs_delays) > 0)
+        loglik <- loglik + sum(row_sums_exact * np_fns$log_pmf_raw(obs_delays)) -
+          sum(col_sums_exact * log_cdf_censoring)
+      if (length(obs_delays_cens) > 0)
+        loglik <- loglik + sum(row_sums_cens * np_fns$log_cdf(obs_delays_cens)) -
+          sum(col_sums_cens * log_cdf_censoring)
+    }
 
     log_prior <- dirichlet_lpdf(simplex_probs, dirichlet_alpha) + sum(log(simplex_probs))  # + softmax Jacobian
+    if (has_report_regression == 1L)
+      log_prior <- log_prior + prior_lpdf(delay_beta, prior_beta_dist, prior_beta_params)
     RTMB::REPORT(simplex_probs)
     -(loglik + log_prior)
   }
@@ -198,6 +249,8 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
   custom_fixed_vals <- priors$custom_delay_fixed_vals
   custom_prior_dists  <- priors$custom_delay_prior_dists
   custom_prior_params <- priors$custom_delay_prior_params_mat
+  n_delay_covariates <- as.integer(data$P_delay %||% 0L)
+  has_report_regression <- n_delay_covariates > 0L
 
   objective_data <- list(
     obs_delays      = data$obs_delays,
@@ -211,7 +264,16 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
     n_params_custom  = n_params_custom,
     custom_is_free   = custom_is_free,
     custom_prior_dists  = custom_prior_dists,
-    custom_prior_params = custom_prior_params
+    custom_prior_params = custom_prior_params,
+    has_report_regression = as.integer(has_report_regression),
+    n_time = data$max_time, n_strata = data$num_strata,
+    n_delay_calendar = as.integer(data$P_delay_calendar %||% 0L),
+    n_delay_cohort = as.integer(data$P_delay_cohort %||% 0L),
+    report_calendar = data$report_calendar, report_cohort = data$report_cohort,
+    report_rows = data$m, report_censored_rows = data$m_censored,
+    d_star = data$d_star,
+    prior_beta_dist = priors$gamma_cov$dist,
+    prior_beta_params = .pad3(priors$gamma_cov$params)
   )
 
   user_inits <- priors$custom_delay_inits %||% rep(0.0, n_params_custom)
@@ -221,6 +283,8 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
                     else (init$custom_delay_params[i] %||% user_inits[i])
   }
   parameters <- list(custom_delay_params = init_vals)
+  if (has_report_regression)
+    parameters$delay_beta <- init$delay_beta %||% rep(0, n_delay_covariates)
 
   map <- list()
   if (any(custom_is_free == 0L)) {
@@ -238,17 +302,26 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
   negative_log_posterior <- function(params) {
     RTMB::getAll(params, objective_data)
     delay_fns          <- cdf_factory(custom_delay_params)
-    log_cdf_censoring  <- delay_fns$log_cdf(censoring_col)
-
     loglik <- 0
-    if (length(obs_delays) > 0)
-      loglik <- loglik +
-        .discretised_delay_loglik(obs_delays, row_sums_exact, split_delay,
-                                  delay_fns$log_cdf, delay_fns$log_survival) -
-        sum(col_sums_exact * log_cdf_censoring)
-    if (length(obs_delays_cens) > 0)
-      loglik <- loglik + sum(row_sums_cens * delay_fns$log_cdf(obs_delays_cens)) -
-        sum(col_sums_cens * log_cdf_censoring)
+    if (has_report_regression == 1L) {
+      paths <- .report_hazard_paths(
+        delay_fns$cdf, n_time, n_strata, report_calendar, report_cohort,
+        delay_beta, n_delay_calendar, n_delay_cohort
+      )
+      loglik <- .report_hazard_loglik(
+        paths, report_rows, report_censored_rows, d_star
+      )
+    } else {
+      log_cdf_censoring <- delay_fns$log_cdf(censoring_col)
+      if (length(obs_delays) > 0)
+        loglik <- loglik +
+          .discretised_delay_loglik(obs_delays, row_sums_exact, split_delay,
+                                    delay_fns$log_cdf, delay_fns$log_survival) -
+          sum(col_sums_exact * log_cdf_censoring)
+      if (length(obs_delays_cens) > 0)
+        loglik <- loglik + sum(row_sums_cens * delay_fns$log_cdf(obs_delays_cens)) -
+          sum(col_sums_cens * log_cdf_censoring)
+    }
 
     log_prior <- 0
     for (i in seq_len(n_params_custom)) {
@@ -256,6 +329,8 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
         log_prior <- log_prior +
           prior_lpdf(custom_delay_params[i], custom_prior_dists[i], custom_prior_params[i, ])
     }
+    if (has_report_regression == 1L)
+      log_prior <- log_prior + prior_lpdf(delay_beta, prior_beta_dist, prior_beta_params)
 
     -(loglik + log_prior)
   }

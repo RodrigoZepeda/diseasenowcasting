@@ -1,5 +1,17 @@
 # 2.4.1
 
+## Covariates can target event, reporting-delay, or revision processes
+
+`as_event_covariates()`, `as_delay_covariates()`, and
+`as_revision_covariates()` now attach process-role S3 classes to vectors (or
+selected columns of a data frame / `tbl_now`). Untagged `tbl.now` covariates
+remain event covariates. Report- and revision-date temporal effects and tagged
+covariates are fitted as discrete-hazard regressions; they no longer enter the
+epidemic mean. Coefficients are reported as `event_beta`, `delay_beta`, and
+`revision_beta`, with hazard odds-ratio interpretations for the latter two.
+Categorical temporal effects use reference-level contrasts, and tagged factor
+strata remain compatible with `tbl.now` grid-completion joins.
+
 This release removes three things `diseasenowcasting` was duplicating from
 `tbl.now`. All three were invisible in normal use and none change results.
 
