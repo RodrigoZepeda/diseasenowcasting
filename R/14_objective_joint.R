@@ -81,7 +81,15 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   # fixed (multisample Stage-2): the CDF is then data, not re-taped per step.
   baseline_delay_fixed <- (!is_nonparametric && !is_custom_delay && delay_mu_is_fixed && delay_sigma_is_fixed &&
                            (!is_gengamma || shape_Q_is_fixed)) || delay_probs_fixed || custom_fully_fixed
-  delay_fully_fixed <- baseline_delay_fixed && !has_report_regression
+  # Stage 2 of the cascade fixes the WHOLE reporting process, coefficients
+  # included.  That is what lets the delay likelihood drop out here: Stage 1
+  # already read those observations, and leaving `delay_beta` free would make
+  # Stage 2 read them a second time to identify it.
+  delay_beta_fixed <- priors$delay_beta_fixed %||% numeric(0)
+  report_beta_is_fixed <- has_report_regression &&
+    length(delay_beta_fixed) == n_delay_covariates
+  delay_fully_fixed <- baseline_delay_fixed &&
+    (!has_report_regression || report_beta_is_fixed)
   gstar_precomputed <- matrix(0.0, 0L, 0L)
   fixed_delay_fns <- NULL
   if (baseline_delay_fixed) {
@@ -225,8 +233,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   censored_rows_of_stratum <- .split_rows_by_stratum(censored_patterns, n_strata)
   n_retracted_by_stratum   <- if (is_retraction) as.numeric(data$n_retracted_by_stratum)
                               else rep(0, n_strata)
-  retract_split <- if (!is.null(retract_table) && nrow(retract_table) > 0)
-    max(2, .wtd_median(retract_table[, "lag"], retract_table[, "count"])) else 2
+  retract_split <- .retract_split(data)
   # Largest delay any censored kernel indexes; 0 disables the grid construction.
   retract_grid_max <- if (is_retraction && !is.null(censored_patterns) &&
                           nrow(censored_patterns) > 0)
@@ -243,6 +250,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     custom_is_free = custom_is_free,
     dirichlet_alpha = dirichlet_alpha,
     delay_fully_fixed = as.integer(delay_fully_fixed), gstar_precomputed = gstar_precomputed,
+    report_beta_is_fixed = as.integer(report_beta_is_fixed),
     baseline_delay_fixed = as.integer(baseline_delay_fixed),
     has_report_regression = as.integer(has_report_regression),
     n_delay_covariates = n_delay_covariates,
@@ -273,6 +281,12 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     prior_intercept_dist = priors$mu_intercept$dist, prior_intercept_params = .pad3(priors$mu_intercept$params),
     prior_gamma_dist  = priors$gamma_cov$dist,   prior_gamma_params  = .pad3(priors$gamma_cov$params),
     has_revision_regression = as.integer(has_revision_regression),
+    # Longest hazard path either regression has to build.  The reporting paths
+    # span the event grid, plus the settlement horizon for a cumulative stream;
+    # the revision paths span the oldest pending report's age.
+    report_horizon = if (is_count_cumulative) settlement_horizon + 1L else 0L,
+    revision_path_max = if (!is.null(data$revision_rows))
+      as.integer(max(data$revision_rows[, "age"])) + 1L else 1L,
     n_revision_covariates = n_revision_covariates,
     n_revision_calendar = n_revision_calendar,
     n_revision_row = n_revision_row,
@@ -484,7 +498,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   }
   if (is_negbin) parameters$log_phi_nb <- init$log_phi_nb %||% log(20)
   if (has_report_regression) {
-    parameters$delay_beta <- init$delay_beta %||% rep(0, n_delay_covariates)
+    parameters$delay_beta <- if (report_beta_is_fixed) as.numeric(delay_beta_fixed)
+                             else init$delay_beta %||% rep(0, n_delay_covariates)
   }
   if (has_revision_regression) {
     parameters$revision_beta <- init$revision_beta %||%
@@ -610,6 +625,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     }
     map$custom_delay_params <- factor(map_vals)
   }
+  if (report_beta_is_fixed) {
+    map$delay_beta <- factor(rep(NA_integer_, n_delay_covariates))
+  }
   if (is_count_cumulative) {
     if (cumulative_retraction_mass_fixed)
       map$cumulative_retraction_mass_raw <- factor(NA)
@@ -645,7 +663,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     log_jacobian <- 0
 
     # -- shared delay distribution ------------------------------------------
-    if (delay_fully_fixed == 1L) {
+    if (delay_fully_fixed == 1L && has_report_regression == 0L) {
+      # Nothing downstream needs a delay law: `gstar_precomputed` is data.
       delay_fns <- NULL
     } else if (baseline_delay_fixed == 1L) {
       delay_fns <- fixed_delay_fns
@@ -653,7 +672,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       exp_logits    <- exp(delay_logits)
       simplex_probs <- c(exp_logits, exp(0 * delay_logits[1])) / (sum(exp_logits) + 1)
       np_fns        <- .nonparametric_delay_functions(simplex_probs, n_bins)
-      delay_fns     <- list(cdf = np_fns$cdf)
+      delay_fns     <- np_fns
     } else if (is_custom_delay == 1L) {
       delay_fns <- cdf_factory(custom_delay_params)
     } else {
@@ -669,31 +688,23 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       delay_fns <- if (is_gengamma == 1L) .delay_distribution_functions(3L, delay_log_mean, shape_Q, delay_sd)
                    else                   .delay_distribution_functions(family, delay_log_mean, delay_sd)
     }
-    cdf_fn <- if (delay_fully_fixed == 1L) NULL else delay_fns$cdf
-    report_paths <- NULL
-    if (has_report_regression == 1L) {
-      baseline_report_cdf <- cdf_fn(seq_len(n_time))
-      report_paths <- lapply(seq_len(n_strata), function(stratum) {
-        lapply(seq_len(n_time), function(time) {
-          destination <- time:n_time
-          eta <- baseline_report_cdf[seq_along(destination)] * 0
-          if (n_delay_calendar > 0L) {
-            eta <- eta + as.vector(
-              report_calendar[destination, , drop = FALSE] %*%
-                delay_beta[seq_len(n_delay_calendar)]
-            )
-          }
-          if (n_delay_cohort > 0L) {
-            cohort_index <- n_delay_calendar + seq_len(n_delay_cohort)
-            eta <- eta + sum(report_cohort[time, stratum, ] *
-                               delay_beta[cohort_index])
-          }
-          .process_hazard_path(
-            baseline_report_cdf[seq_along(destination)], eta
-          )
-        })
-      })
-    }
+    cdf_fn <- if (is.null(delay_fns)) NULL else delay_fns$cdf
+    # Baseline log-survival on the whole grid, shared by the reporting hazard
+    # paths and (for cumulative streams) the cohort kernels below.  The
+    # non-parametric law needs no log-CDF branch; see .stable_log_survival().
+    report_log_survival <- if (has_report_regression == 1L) {
+      .stable_log_survival(delay_fns, seq_len(n_time + report_horizon),
+                           if (is_nonparametric == 1L) 0 else split_delay)
+    } else NULL
+    # Cumulative streams never read these: their reporting law reaches the
+    # likelihood through the finite-horizon cohort kernels instead, so building
+    # one path per event time here would be strata x time wasted tape.
+    report_paths <- if (has_report_regression == 1L && is_count_cumulative == 0L) {
+      .report_hazard_paths(
+        report_log_survival, n_time, n_strata, report_calendar, report_cohort,
+        delay_beta, n_delay_calendar, n_delay_cohort
+      )
+    } else NULL
     upper_bound <- mu_log_upper_bound
     nb_size <- if (is_negbin == 1L) 1.0 / exp(log_phi_nb) else 0
 
@@ -774,64 +785,38 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       )
       cumulative_components_by_cohort <- NULL
       if (has_report_regression == 1L || has_revision_regression == 1L) {
-        report_cdf_for_cumulative <- if (delay_fully_fixed == 1L)
-          fixed_delay_fns$cdf else cdf_fn
+        # Time-varying timing makes the stationary convolution origin-specific,
+        # so every (event time, stratum) cohort gets its own kernel.
+        report_spec <- .cumulative_hazard_spec(
+          pmf = cumulative_report_pmf,
+          log_survival = if (has_report_regression == 1L) report_log_survival
+                         else NULL,
+          active = has_report_regression == 1L,
+          calendar = report_calendar,
+          beta = if (has_report_regression == 1L) delay_beta else numeric(0),
+          n_calendar = n_delay_calendar, cohort = report_cohort,
+          n_row = n_delay_cohort
+        )
+        revision_spec <- .cumulative_hazard_spec(
+          pmf = cumulative_retraction_pmf,
+          # The cumulative kernel has no observed lag table to take a split
+          # from, so the horizon midpoint is used: it keeps the head on the
+          # exact log-CDF and the tail on the family's own log-survival.
+          log_survival = if (has_revision_regression == 1L)
+            .stable_log_survival(cumulative_retraction_fns,
+                                 seq_len(settlement_horizon),
+                                 max(1, settlement_horizon %/% 2L)) else NULL,
+          active = has_revision_regression == 1L,
+          calendar = revision_calendar,
+          beta = if (has_revision_regression == 1L) revision_beta else numeric(0),
+          n_calendar = n_revision_calendar,
+          mass = cumulative_retraction_mass
+        )
         cumulative_components_by_cohort <- lapply(
           seq_len(n_strata), function(stratum) lapply(
-            seq_len(n_time), function(time) {
-              report_pmf <- cumulative_report_pmf
-              if (has_report_regression == 1L) {
-                report_destination <- time + 0:settlement_horizon
-                report_eta <- report_cdf_for_cumulative(
-                  seq_len(settlement_horizon + 1L)
-                ) * 0
-                if (n_delay_calendar > 0L) {
-                  report_eta <- report_eta + as.vector(
-                    report_calendar[report_destination, , drop = FALSE] %*%
-                      delay_beta[seq_len(n_delay_calendar)]
-                  )
-                }
-                if (n_delay_cohort > 0L) {
-                  beta_index <- n_delay_calendar + seq_len(n_delay_cohort)
-                  report_eta <- report_eta + sum(
-                    report_cohort[time, stratum, ] * delay_beta[beta_index]
-                  )
-                }
-                report_path <- .process_hazard_path(
-                  report_cdf_for_cumulative(seq_len(settlement_horizon + 1L)),
-                  report_eta
-                )
-                report_pmf <- exp(report_path$log_pmf)
-                report_pmf <- report_pmf / sum(report_pmf)
-              }
-
-              revision_by_report <- lapply(
-                seq_len(settlement_horizon + 1L),
-                function(index) cumulative_retraction_pmf
-              )
-              if (has_revision_regression == 1L) {
-                for (report_delay in 0:settlement_horizon) {
-                  revision_destination <- time + report_delay +
-                    seq_len(settlement_horizon)
-                  revision_eta <- as.vector(
-                    revision_calendar[
-                      revision_destination, , drop = FALSE
-                    ] %*% revision_beta[seq_len(n_revision_calendar)]
-                  )
-                  revision_path <- .process_hazard_path(
-                    cumulative_retraction_fns$cdf(seq_len(settlement_horizon)),
-                    revision_eta
-                  )
-                  revision_pmf <- exp(revision_path$log_pmf)
-                  revision_by_report[[report_delay + 1L]] <-
-                    revision_pmf / sum(revision_pmf)
-                }
-              }
-              .count_cumulative_components_varying(
-                report_pmf, revision_by_report,
-                cumulative_retraction_mass, settlement_horizon
-              )
-            }
+            seq_len(n_time), function(time) .cumulative_cohort_components(
+              time, stratum, settlement_horizon, report_spec, revision_spec
+            )
           )
         )
       }
@@ -916,6 +901,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       }
 
       if (has_revision_regression == 1L) {
+        revision_log_survival <- .stable_log_survival(
+          retract_fns, seq_len(max(1L, revision_path_max)), retract_split
+        )
         for (row in seq_len(nrow(revision_rows))) {
           stratum <- as.integer(revision_rows[row, "stratum"])
           p_s <- confirm_p_vec[confirm_p_of_stratum[stratum]]
@@ -930,22 +918,12 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
           age <- as.integer(revision_rows[row, "age"])
           path_length <- age + lag_offset
           if (path_length > 0L) {
-            eta <- retract_fns$cdf(seq_len(path_length)) * 0
-            destination <- as.integer(revision_rows[row, "report_time"]) +
-              seq_len(path_length) - lag_offset
-            if (n_revision_calendar > 0L) {
-              eta <- eta + as.vector(
-                revision_calendar[destination, , drop = FALSE] %*%
-                  revision_beta[seq_len(n_revision_calendar)]
-              )
-            }
-            if (n_revision_row > 0L) {
-              row_index <- n_revision_calendar + seq_len(n_revision_row)
-              eta <- eta + sum(revision_row_design[row, ] *
-                                 revision_beta[row_index])
-            }
-            revision_path <- .process_hazard_path(
-              retract_fns$cdf(seq_len(path_length)), eta
+            revision_path <- .revision_hazard_path(
+              revision_log_survival,
+              as.integer(revision_rows[row, "report_time"]),
+              path_length, lag_offset, revision_calendar,
+              if (n_revision_row > 0L) revision_row_design[row, ] else NULL,
+              revision_beta, n_revision_calendar, n_revision_row
             )
             if (resolved) {
               lag_index <- as.integer(revision_rows[row, "lag"]) + lag_offset
@@ -1188,13 +1166,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     if (is_count_cumulative == 0L && is_confirmation == 0L &&
         delay_fully_fixed == 0L && length(obs_delays) > 0) {
       if (has_report_regression == 1L) {
-        for (row in seq_len(nrow(report_rows))) {
-          time <- as.integer(report_rows[row, 1L])
-          delay <- as.integer(report_rows[row, 3L])
-          stratum <- as.integer(report_rows[row, 4L])
-          loglik_delay <- loglik_delay + report_rows[row, 2L] *
-            report_paths[[stratum]][[time]]$log_pmf[delay]
-        }
+        # No conditioning term here: unlike the delay-only objective, the joint
+        # `S_k` factor already carries the reporting truncation.
+        loglik_delay <- .report_hazard_row_loglik(report_paths, report_rows, FALSE)
       } else {
         loglik_delay <- if (is_nonparametric == 1L)
           sum(row_sums * np_fns$log_pmf_raw(obs_delays))
@@ -1213,13 +1187,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         is_retraction == 0L && delay_fully_fixed == 0L &&
         length(obs_delays_cens) > 0) {
       if (has_report_regression == 1L) {
-        for (row in seq_len(nrow(report_censored_rows))) {
-          time <- as.integer(report_censored_rows[row, 1L])
-          delay <- as.integer(report_censored_rows[row, 3L])
-          stratum <- as.integer(report_censored_rows[row, 4L])
-          loglik_delay <- loglik_delay + report_censored_rows[row, 2L] *
-            log(report_paths[[stratum]][[time]]$cdf[delay])
-        }
+        loglik_delay <- loglik_delay +
+          .report_hazard_row_loglik(report_paths, report_censored_rows, TRUE)
       } else {
         log_cdf_cens <- if (is_nonparametric == 1L) np_fns$log_cdf(obs_delays_cens)
                         else delay_fns$log_cdf(obs_delays_cens)
@@ -1257,7 +1226,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     }
     if (is_sir == 0L && is_custom_epidemic == 0L && n_covariates > 0)
       log_prior <- log_prior + prior_lpdf(as.vector(gamma), prior_gamma_dist, prior_gamma_params)
-    if (has_report_regression == 1L)
+    # A fixed coefficient block contributes a constant, and Stage 1 already
+    # scored it against this prior.
+    if (has_report_regression == 1L && report_beta_is_fixed == 0L)
       log_prior <- log_prior + prior_lpdf(delay_beta, prior_gamma_dist, prior_gamma_params)
     if (has_revision_regression == 1L)
       log_prior <- log_prior + prior_lpdf(revision_beta, prior_gamma_dist, prior_gamma_params)
@@ -1477,9 +1448,10 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   lambda  <- exp(mu_safe)
   Gstar   <- matrix(0.0, n_time, n_strata)
   if (as.integer(data$P_delay %||% 0L) > 0L) {
-    delay_beta <- as.numeric(parlist$delay_beta)
+    delay_beta <- as.numeric(parlist$delay_beta %||% priors$delay_beta_fixed %||% numeric(0))
     report_paths <- .report_hazard_paths(
-      delay_fns$cdf, n_time, n_strata, data$report_calendar,
+      .stable_log_survival(delay_fns, seq_len(n_time), .delay_split(data)),
+      n_time, n_strata, data$report_calendar,
       data$report_cohort, delay_beta,
       as.integer(data$P_delay_calendar %||% 0L),
       as.integer(data$P_delay_cohort %||% 0L)
@@ -1529,52 +1501,39 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     components <- .count_cumulative_components(
       report_pmf, retract_pmf, retract_mass, H
     )
+    # Same cohort kernels the tape builds, through the same helper: the two
+    # must not be allowed to drift, because a mismatch would give a correct
+    # likelihood and wrong predictions.
     components_by_cohort <- NULL
     has_report_regression <- as.integer(data$P_delay %||% 0L) > 0L
     has_revision_regression <- as.integer(data$P_revision %||% 0L) > 0L
     if (has_report_regression || has_revision_regression) {
-      delay_beta <- as.numeric(parlist$delay_beta %||% numeric(0))
-      revision_beta <- as.numeric(parlist$revision_beta %||% numeric(0))
-      n_delay_calendar <- as.integer(data$P_delay_calendar %||% 0L)
-      n_delay_cohort <- as.integer(data$P_delay_cohort %||% 0L)
-      n_revision_calendar <- as.integer(data$P_revision_calendar %||% 0L)
+      report_spec <- .cumulative_hazard_spec(
+        pmf = report_pmf,
+        log_survival = if (has_report_regression) .stable_log_survival(
+          delay_fns, seq_len(H + 1L), .delay_split(data)) else NULL,
+        active = has_report_regression,
+        calendar = data$report_calendar,
+        beta = as.numeric(parlist$delay_beta %||% numeric(0)),
+        n_calendar = as.integer(data$P_delay_calendar %||% 0L),
+        cohort = data$report_cohort,
+        n_row = as.integer(data$P_delay_cohort %||% 0L)
+      )
+      revision_spec <- .cumulative_hazard_spec(
+        pmf = retract_pmf,
+        log_survival = if (has_revision_regression) .stable_log_survival(
+          retract_fns, seq_len(H), max(1L, H %/% 2L)) else NULL,
+        active = has_revision_regression,
+        calendar = data$revision_calendar,
+        beta = as.numeric(parlist$revision_beta %||% numeric(0)),
+        n_calendar = as.integer(data$P_revision_calendar %||% 0L),
+        mass = retract_mass
+      )
       components_by_cohort <- lapply(
         seq_len(n_strata), function(stratum) lapply(
-          seq_len(n_time), function(time) {
-            report_pmf_ts <- report_pmf
-            if (has_report_regression) {
-              destination <- time + 0:H
-              eta <- numeric(H + 1L)
-              if (n_delay_calendar > 0L) {
-                eta <- eta + as.vector(data$report_calendar[
-                  destination, , drop = FALSE
-                ] %*% delay_beta[seq_len(n_delay_calendar)])
-              }
-              if (n_delay_cohort > 0L) {
-                index <- n_delay_calendar + seq_len(n_delay_cohort)
-                eta <- eta + sum(data$report_cohort[time, stratum, ] *
-                                   delay_beta[index])
-              }
-              path <- .process_hazard_path(delay_fns$cdf(seq_len(H + 1L)), eta)
-              report_pmf_ts <- exp(as.numeric(path$log_pmf))
-              report_pmf_ts <- report_pmf_ts / sum(report_pmf_ts)
-            }
-            revision_by_report <- lapply(seq_len(H + 1L), function(index) retract_pmf)
-            if (has_revision_regression) {
-              for (report_delay in 0:H) {
-                destination <- time + report_delay + seq_len(H)
-                eta <- as.vector(data$revision_calendar[
-                  destination, , drop = FALSE
-                ] %*% revision_beta[seq_len(n_revision_calendar)])
-                path <- .process_hazard_path(retract_fns$cdf(seq_len(H)), eta)
-                pmf <- exp(as.numeric(path$log_pmf))
-                revision_by_report[[report_delay + 1L]] <- pmf / sum(pmf)
-              }
-            }
-            .count_cumulative_components_varying(
-              report_pmf_ts, revision_by_report, retract_mass, H
-            )
-          }
+          seq_len(n_time), function(time) .cumulative_cohort_components(
+            time, stratum, H, report_spec, revision_spec
+          )
         )
       )
     }
@@ -1674,25 +1633,29 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
                             else rep(confirm_p_vec[1], n_strata)
     confirm_p <- confirm_p_vec[1]
     retract_family <- as.integer(priors$retract_family)
-    survival_fn <- if (retract_family == 4L) {
+    # Keep the whole family bundle: the pooled lookup below needs only the
+    # survival, but the row-level revision regression reads the baseline hazard
+    # off the log-survival (and the log-CDF in the head).
+    retract_fns <- if (retract_family == 4L) {
       retract_simplex <- if (isTRUE(priors$retract_probs$is_constant == 1L)) priors$retract_probs$fixed
         else { exp_logits <- exp(as.numeric(parlist$retract_logits))
                c(exp_logits, 1) / (sum(exp_logits) + 1) }
-      .nonparametric_delay_functions(retract_simplex, as.integer(priors$retract_probs$bins))$survival
+      .nonparametric_delay_functions(retract_simplex, as.integer(priors$retract_probs$bins))
     } else {
       retract_mu_v <- if (isTRUE(priors$retract_mu$is_constant == 1L)) priors$retract_mu$fixed
                       else as.numeric(parlist$retract_mu)
       retract_sd_v <- if (isTRUE(priors$retract_sigma$is_constant == 1L)) priors$retract_sigma$fixed
                       else 0.01 + exp(as.numeric(parlist$log_retract_sd_exc))
-      retract_fns <- if (retract_family == 3L) {
+      if (retract_family == 3L) {
         retract_shape_Q <- if (isTRUE(priors$retract_Q$is_constant == 1L)) priors$retract_Q$fixed
                            else .gengamma_shape_transform(as.numeric(parlist$retract_Q))$shape_Q
         .delay_distribution_functions(3L, retract_mu_v, retract_shape_Q, retract_sd_v)
       } else {
         .delay_distribution_functions(retract_family, retract_mu_v, retract_sd_v)
       }
-      function(age) exp(as.numeric(retract_fns$log_survival(age)))
     }
+    survival_fn <- if (retract_family == 4L) retract_fns$survival
+                   else function(age) exp(as.numeric(retract_fns$log_survival(age)))
     resolution_mode <- as.integer(data$resolution_mode %||% 0L)
     lag_offset <- if (resolution_mode == 0L) 0L else 1L
     # rho[age + 1, stratum]: the exact-row lookup used by the predictive thinning.
@@ -1710,8 +1673,14 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       rows <- data$revision_rows
       row_design <- data$revision_row_design
       beta <- as.numeric(parlist$revision_beta)
+      n_calendar <- as.integer(data$P_revision_calendar %||% 0L)
+      n_row <- as.integer(data$P_revision_row %||% 0L)
       pending <- which(rows[, "resolved"] == 0)
       rho_revision <- numeric(length(pending))
+      revision_log_survival <- .stable_log_survival(
+        retract_fns, seq_len(max(1L, as.integer(max(rows[, "age"])) + 1L)),
+        max(1L, .retract_split(data))
+      )
       for (pending_index in seq_along(pending)) {
         row <- pending[pending_index]
         stratum <- as.integer(rows[row, "stratum"])
@@ -1720,22 +1689,11 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         path_length <- age + lag_offset
         survival <- 1
         if (path_length > 0L) {
-          destination <- as.integer(rows[row, "report_time"]) +
-            seq_len(path_length) - lag_offset
-          eta <- numeric(path_length)
-          n_calendar <- as.integer(data$P_revision_calendar %||% 0L)
-          n_row <- as.integer(data$P_revision_row %||% 0L)
-          if (n_calendar > 0L) {
-            eta <- eta + as.vector(data$revision_calendar[
-              destination, , drop = FALSE
-            ] %*% beta[seq_len(n_calendar)])
-          }
-          if (n_row > 0L) {
-            beta_row <- n_calendar + seq_len(n_row)
-            eta <- eta + sum(row_design[row, ] * beta[beta_row])
-          }
-          path <- .process_hazard_path(
-            retract_fns$cdf(seq_len(path_length)), eta
+          path <- .revision_hazard_path(
+            revision_log_survival, as.integer(rows[row, "report_time"]),
+            path_length, lag_offset, data$revision_calendar,
+            if (n_row > 0L) row_design[row, ] else NULL,
+            beta, n_calendar, n_row
           )
           survival <- exp(as.numeric(path$log_survival[path_length]))
         }

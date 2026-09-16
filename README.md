@@ -110,15 +110,44 @@ Tag a column when it belongs to a later observation process:
 
 ``` r
 now_data <- now_data |>
-  as_delay_covariates(reporting_capacity) |>
-  as_revision_covariates(laboratory_load)
+  as_delay_covariates(sex) |>          # may report at different speeds
+  as_revision_covariates(test_type)    # may be confirmed at different speeds
 ```
 
 `as_delay_covariates()` changes the conditional reporting hazard;
 `as_revision_covariates()` changes the conditional revision hazard. Their
 coefficients are log hazard-odds ratios and do not change the eventual
 confirmation probability `p`. The same vector can carry more than one
-role.
+role, so `sex` can be a stratum *and* shift reporting speed.
+
+The two roles have different eligibility rules, because they are known at
+different times:
+
+-   A **delay** covariate has to be known for every case that *might* be
+    reported, including the ones that have not been reported yet, so it
+    must be constant within each event-date by stratum cell. In practice
+    that means a cohort-level attribute — typically the stratum itself. A
+    value that varies from case to case, or a calendar series with gaps on
+    days that saw no reports, is refused rather than filled with zero.
+-   A **revision** covariate only has to be known once the report exists,
+    so it may vary from report to report.
+
+Calendar effects are not covariates and are not subject to either rule:
+they are generated for every possible destination date, including dates
+with no observations, so day-of-week or holiday effects on the report date
+are the right tool for “the laboratory is slower at weekends”.
+
+``` r
+now_data <- now_data |>
+  add_temporal_effects(temporal_effects(day_of_week = TRUE),
+                       date_type = "report_date") |>
+  compute_temporal_effects()
+```
+
+Use a `factor` with explicit `levels` for any tagged column you intend to
+backtest or `update()`: the fitted design is pinned to the declared
+levels, so `delay_beta[2]` keeps meaning the same contrast at every as-of
+date.
 
 ``` r
 set.seed(6728)

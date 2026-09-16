@@ -23,6 +23,9 @@
 #'   calendar grid. These columns affect revision timing, not incidence.
 #' @param covariate_roles Named list recording the event, delay, and revision
 #'   covariate column names discovered on the source data.
+#' @param design_schema Named list of per-role design schemas (levels,
+#'   contrasts, centring constants, surviving and dropped terms) so later fits
+#'   on the same series reproduce the same columns.
 #' @param d_star Optional max-observable-delay vector; if NULL, computed as
 #'   `rev(seq_len(max_time)) - 1`.
 #' @param delay_only If TRUE, only the delay process is prepared/fit.
@@ -55,7 +58,7 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
                          delay_only = FALSE, max_time = NULL, num_strata = NULL,
                          report_calendar = NULL, report_cohort = NULL,
                          revision_calendar = NULL,
-                         covariate_roles = NULL,
+                         covariate_roles = NULL, design_schema = NULL,
                          gp_L = 1.5, gp_boundary_frac = 0.62,
                          ar_sigma_max = 1, is_confirmation = FALSE,
                          cumulative_levels = NULL,
@@ -261,6 +264,10 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     revision_calendar = revision_calendar_mat,
     revision_rows = retraction$revision_rows,
     revision_row_design = retraction$revision_row_design,
+    design_schema = c(
+      design_schema %||% list(),
+      list(revision_row = retraction$revision_row_schema)
+    ),
     covariate_roles = covariate_roles %||% list(
       event = colnames(X_mat) %||% character(0),
       delay = character(0), revision = character(0)

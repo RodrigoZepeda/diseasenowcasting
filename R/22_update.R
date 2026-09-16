@@ -124,7 +124,12 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
     }
     m
   })
+  # Reuse the fitted design schema: an update continues the SAME fit, so its
+  # coefficients must keep meaning the same columns.  (A backtest deliberately
+  # does not do this -- each as-of date may only use the design its own data
+  # support, and replaying a later schema would leak.)
   prepared <- prepare_from_tbl_now(merged, object@model, now = now, delay_only = FALSE,
+                                   schema = object@engine$design_schema,
                                    revision_mode = object@revision_mode)
   engine   <- prepared$data
   engine$min_event <- prepared$min_event
@@ -248,11 +253,19 @@ extreme_values <- function(nc) {
     eu  <- tbl.now::get_event_units(merged); mn <- min(merged[[ev]], na.rm = TRUE)
     new_rep <- which(merged[[rp]] > object@now)
     if (length(new_rep) == 0L) NULL else {
-      d_u <- .unit_steps(mn, merged[[rp]][new_rep], eu) - .unit_steps(mn, merged[[ev]][new_rep], eu)
-      d_u <- d_u[is.finite(d_u) & d_u >= 0]
+      e_u <- .unit_steps(mn, merged[[ev]][new_rep], eu)
+      d_u <- .unit_steps(mn, merged[[rp]][new_rep], eu) - e_u
+      usable <- is.finite(d_u) & d_u >= 0 & is.finite(e_u)
+      d_u <- d_u[usable]; e_u <- e_u[usable]
       if (length(d_u) == 0L) NULL else {
-        tab <- as.data.frame(table(delay = d_u), stringsAsFactors = FALSE)
-        data.frame(delay = as.numeric(tab$delay), weight = as.numeric(tab$Freq))
+        # Carry the event time: with a reporting regression the delay law is
+        # cohort-specific, so surprise() needs to know which cohort each delay
+        # came from (see .tilted_delay_fns()).
+        tab <- stats::aggregate(list(weight = rep(1, length(d_u))),
+                                list(delay = d_u, event_index = e_u), sum)
+        data.frame(delay = as.numeric(tab$delay),
+                   event_index = as.numeric(tab$event_index),
+                   weight = as.numeric(tab$weight))
       }
     }
   }, error = function(e) NULL)

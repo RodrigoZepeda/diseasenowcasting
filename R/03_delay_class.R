@@ -327,12 +327,18 @@ custom_delay <- function(cdf,
                          num_delay_seasons = 1L,
                          season_distribution = std_normal_prior()) {
   n_params <- .infer_n_params(priors, param_names, inits)
+  # A defaulted `log_survival` is log(1 - cdf), which loses its significant
+  # digits as F -> 1.  Record that, so the process-hazard regressions know to
+  # take the head of the baseline hazard from the log-CDF instead; an explicit
+  # `log_survival` is assumed exact and used throughout.
+  survival_is_approximate <- missing(log_survival)
   # Assemble the internal factory the objective consumes from the three pieces:
   # each of cdf / log_cdf / log_survival is `function(theta) -> function(d)`.
   cdf_factory <- function(theta) list(
     cdf          = cdf(theta),
     log_cdf      = log_cdf(theta),
-    log_survival = log_survival(theta)
+    log_survival = log_survival(theta),
+    survival_is_approximate = survival_is_approximate
   )
   # The class constructor fills any empty argument to length `n_params`.
   custom_delay_class(

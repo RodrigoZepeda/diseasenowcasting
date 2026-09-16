@@ -17,6 +17,7 @@ prepare_data(
   report_cohort = NULL,
   revision_calendar = NULL,
   covariate_roles = NULL,
+  design_schema = NULL,
   gp_L = 1.5,
   gp_boundary_frac = 0.62,
   ar_sigma_max = 1,
@@ -61,6 +62,10 @@ calendar grid. These columns affect revision timing, not incidence.}
 
 \item{covariate_roles}{Named list recording the event, delay, and revision
 covariate column names discovered on the source data.}
+
+\item{design_schema}{Named list of per-role design schemas (levels,
+contrasts, centring constants, surviving and dropped terms) so later fits
+on the same series reproduce the same columns.}
 
 \item{gp_L}{HSGP boundary factor (> 1). Default 1.5.}
 

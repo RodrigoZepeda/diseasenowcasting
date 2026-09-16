@@ -91,12 +91,5 @@ test_that("temporal effects are rebuilt into distinct process matrices", {
   expect_equal(prepared$P_delay, 1L)
 })
 
-test_that("zero hazard tilt reproduces the baseline distribution", {
-  baseline <- c(0.2, 0.5, 0.8, 0.95)
-  path <- .process_hazard_path(baseline, rep(0, length(baseline)))
-  expect_equal(path$cdf, baseline, tolerance = 2e-11)
-  expect_equal(sum(exp(path$log_pmf)), tail(baseline, 1), tolerance = 2e-11)
-
-  tilted <- .process_hazard_path(baseline, c(0, 2, 0, 0))
-  expect_gt(exp(tilted$log_pmf[2]), exp(path$log_pmf[2]))
-})
+# The hazard core itself (zero-tilt equivalence, tail accuracy, underflow,
+# hand-enumerated paths) is covered by test-process-hazard.R.

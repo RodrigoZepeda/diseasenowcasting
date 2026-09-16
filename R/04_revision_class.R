@@ -108,6 +108,20 @@
 #'         stratified_p     = TRUE))
 #'
 #' @seealso [model()], [revision_distributions], [delay_process], [nowcast()]
+#' @section One shared revision-delay law:
+#' The manuscript allows the revision delay to depend on the latent sign, with a
+#' separate `g_{D+}` for confirmations and `g_{D-}` for retractions. This
+#' implementation fits ONE law and shares it across both outcomes, including in
+#' `mode = "both"`, where the sign of each resolution is observed. `p` still
+#' splits the outcomes; only their *timing* is assumed common. Outcome-specific
+#' timing is a competing-risks extension and is not what `mode = "both"` does
+#' today, so a difference in how fast positives and negatives come back will be
+#' absorbed into the shared law rather than estimated.
+#'
+#' Revision-date temporal effects and `as_revision_covariates()` tags tilt that
+#' shared law through a discrete hazard regression; see [covariate_roles]. They
+#' change revision timing only and never `p`.
+#'
 #' @export
 revision_process <- function(revision_delay = lognormal_delay(),
                                p = numeric(0), stratified_p = FALSE,

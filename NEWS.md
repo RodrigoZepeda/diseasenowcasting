@@ -1,5 +1,48 @@
 # 2.4.1
 
+## Reporting-delay hazard: correct tails, pinned designs
+
+The discrete-hazard regressions now read their baseline hazard off the delay
+law's **log-survival** instead of differencing its CDF. Differencing lost every
+bin past the point where `F` saturates to 1 in double precision -- delay 16 for a
+LogNormal with mean 3 and SD 0.6 -- and replaced the true tail hazards with a
+floor, so a report at delay 40 cost 42 log-units less than it should. The effect
+was worst exactly where reporting is fast and an occasional report is very late.
+Zero coefficients now reproduce the stationary likelihood over the whole
+parameter space rather than only where the CDF had not saturated.
+
+Design matrices for the delay and revision roles are built once and pinned as a
+schema on the fitted object. Reference levels come from a factor's declared
+`levels()`, so a level that has not appeared yet keeps its slot instead of
+renumbering every other coefficient at the next as-of date; a character column
+warns that its reference level is not pinned. Constant, duplicate and exactly
+collinear columns are dropped before fitting, by name, instead of surfacing as a
+singular Hessian. `update()` replays the fitted schema; `backtest()` deliberately
+rebuilds it per date, since replaying a later one would leak.
+
+`surprise()` scores a delay against the law its own cohort faces when the fit
+carries a reporting regression -- pass an `event_index` column, which `update()`
+now does automatically. Without one it warns rather than silently comparing
+against the untilted baseline.
+
+The two-stage cascade now carries a reporting regression, instead of silently
+falling back to a single joint fit. Stage 1 fits the delay *and* its hazard
+coefficients as one censored regression on the recent window, with the calendar
+and cohort designs sliced to that window; the whole parameter vector is drawn
+from the Stage-1 joint Laplace; and Stage 2 hard-fixes all of it, so the delay
+observations are read exactly once across the two stages.
+
+The stationary imputation is deliberately untouched: it keeps its independent
+normals on `(delay_mu, delay_sigma)` and the tuned `floor_mu` / `floor_sig_frac`
+spreads, because the convergence behaviour on real data was tuned against them.
+Only a model with `P_delay > 0` takes the joint draw, where the floors survive as
+a minimum marginal spread applied without disturbing the correlation structure.
+Drawing on the unconstrained scale also retires the `pmax(0.05, .)` truncation
+that the natural-scale sigma draws needed.
+
+Tape construction for regression models is several times faster than in the first
+cut, but still grows roughly quadratically in the number of event times.
+
 ## Covariates can target event, reporting-delay, or revision processes
 
 `as_event_covariates()`, `as_delay_covariates()`, and
@@ -11,6 +54,23 @@ epidemic mean. Coefficients are reported as `event_beta`, `delay_beta`, and
 `revision_beta`, with hazard odds-ratio interpretations for the latter two.
 Categorical temporal effects use reference-level contrasts, and tagged factor
 strata remain compatible with `tbl.now` grid-completion joins.
+
+**This changes existing daily fits.** Day-of-week previously entered the epidemic
+mean as a single column of weekday numbers, which imposed an artificial linear
+trend across the week; it is now six reference-level dummies. Since
+`temporal_effects = "auto"` is the default, nowcasts, `P`, the shape of `gamma`
+and saved warm starts all change for daily data. Earlier fits are not comparable
+with this release.
+
+The same rule now applies to user covariates in every role, which it previously
+did not: an **unordered** factor becomes reference-level dummies, an **ordered**
+factor keeps a single ordinal score, and a numeric column is used as it stands.
+A factor event covariate used to be flattened to its integer codes, which
+asserted that its levels were equally spaced and in alphabetical order. Dummies
+are built by comparison rather than through `model.matrix()`, so the encoding no
+longer depends on the session's `options("contrasts")`. An event covariate with
+no value at some event time is still filled with zero, but now says so: for a
+factor that means the reference level, which the data did not state.
 
 This release removes three things `diseasenowcasting` was duplicating from
 `tbl.now`. All three were invisible in normal use and none change results.

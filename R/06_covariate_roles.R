@@ -15,6 +15,60 @@
 #' Untagged columns registered by `tbl.now::get_covariates()` remain event
 #' covariates for backward compatibility. A vector may carry more than one tag.
 #'
+#' @section What the coefficients mean:
+#' Delay and revision covariates enter a discrete-time hazard regression, not the
+#' delay's location parameter: `logit h(k) = logit h0(k) + eta`, where `h0` is the
+#' chosen delay family's own conditional hazard. A coefficient is therefore a log
+#' hazard-odds ratio -- how much more likely a still-unreported case is to be
+#' reported on a flagged date -- and it changes *timing*, not the eventual number
+#' of cases and not the confirmation probability `p`. At zero coefficients the
+#' model is exactly the stationary one.
+#'
+#' @section Eligibility:
+#' The two roles are knowable at different times, so they are held to different
+#' standards.
+#'
+#' A **delay** covariate is a property of the latent reporting risk set, which
+#' includes the cases that have not been reported yet. It must therefore be
+#' constant within each event-time by stratum cell; a value that varies between
+#' the reports that happen to have arrived says nothing about the ones that have
+#' not, and is refused. This is also what keeps the marks independent and
+#' identically distributed within a cell, so that a single
+#' `1 - G_R,t(d*)` is still the probability of being unobserved there.
+#'
+#' A **revision** covariate only has to be known once the report exists, so it may
+#' differ from report to report. The likelihood is then *conditional* on those
+#' values: they are treated as fixed, which is only meaningful if they are
+#' unrelated to whether the report was filed at all. A variable recorded only when
+#' the revision happens must not be used, because it is structurally missing for
+#' exactly the pending reports the correction is about.
+#'
+#' Calendar effects are not covariates and are exempt from the first rule:
+#' `tbl.now` can generate them for every possible destination date, including
+#' dates with no observations, so report-date and revision-date temporal effects
+#' are the right tool for operational rhythms such as weekends and holidays.
+#'
+#' @section Stability across fits:
+#' The fitted design -- reference levels, contrasts, centring constants and the
+#' surviving columns -- is pinned as a schema on the fitted object, so
+#' `delay_beta[2]` keeps meaning the same contrast when the model is re-fitted or
+#' updated. Declare tagged categorical columns as a `factor` with explicit
+#' `levels`: a character column can only take its reference level from whatever
+#' sorts first in the current as-of view, and `diseasenowcasting` warns when it
+#' has to do that. A backtest deliberately rebuilds the schema at each as-of date,
+#' because replaying a later one would use information that date did not have.
+#'
+#' @section Cost:
+#' A reporting regression makes the delay law cohort-specific, so the objective
+#' builds one hazard path per event time and stratum instead of one shared
+#' distribution. Taping is roughly quadratic in the number of event times and
+#' linear in the strata: on this machine a 365-step daily series takes a few
+#' seconds to tape against well under one for the stationary model. Both
+#' `type = "one_stage"` and `type = "two_stage"` are supported; under two-stage,
+#' Stage 1 fits the baseline and the coefficients together as a censored
+#' regression on the recent window and Stage 2 fixes the whole vector, so the
+#' reporting data is read once.
+#'
 #' The helpers can be used on a vector, typically inside `dplyr::mutate()`, or
 #' on a data frame / `tbl_now` with tidy-select expressions in `...`. When a
 #' `tbl_now` is supplied without selections, all columns registered as

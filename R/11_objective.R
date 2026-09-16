@@ -114,8 +114,9 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
     loglik <- 0
     if (has_report_regression == 1L) {
       paths <- .report_hazard_paths(
-        delay_fns$cdf, n_time, n_strata, report_calendar,
-        report_cohort, delay_beta, n_delay_calendar, n_delay_cohort
+        .stable_log_survival(delay_fns, seq_len(n_time), split_delay),
+        n_time, n_strata, report_calendar, report_cohort,
+        delay_beta, n_delay_calendar, n_delay_cohort
       )
       loglik <- .report_hazard_loglik(
         paths, report_rows, report_censored_rows, d_star
@@ -206,8 +207,12 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
 
     loglik <- 0
     if (has_report_regression == 1L) {
+      # split_delay = 0: the simplex law's own log-survival is exact on the grid
+      # (log1p of a partial sum) and in the geometric tail, so there is nothing
+      # for the log-CDF branch to rescue.
       paths <- .report_hazard_paths(
-        np_fns$cdf, n_time, n_strata, report_calendar, report_cohort,
+        .stable_log_survival(np_fns, seq_len(n_time), 0),
+        n_time, n_strata, report_calendar, report_cohort,
         delay_beta, n_delay_calendar, n_delay_cohort
       )
       loglik <- .report_hazard_loglik(
@@ -305,7 +310,8 @@ build_delay_only_obj <- function(data, priors, init = NULL) {
     loglik <- 0
     if (has_report_regression == 1L) {
       paths <- .report_hazard_paths(
-        delay_fns$cdf, n_time, n_strata, report_calendar, report_cohort,
+        .stable_log_survival(delay_fns, seq_len(n_time), split_delay),
+        n_time, n_strata, report_calendar, report_cohort,
         delay_beta, n_delay_calendar, n_delay_cohort
       )
       loglik <- .report_hazard_loglik(

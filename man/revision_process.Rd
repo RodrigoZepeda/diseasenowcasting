@@ -104,6 +104,22 @@ identified.
 revision layer is inert and the model is the ordinary count model.
 }
 
+\section{One shared revision-delay law}{
+
+The manuscript allows the revision delay to depend on the latent sign, with a
+separate \verb{g_\{D+\}} for confirmations and \verb{g_\{D-\}} for retractions. This
+implementation fits ONE law and shares it across both outcomes, including in
+\code{mode = "both"}, where the sign of each resolution is observed. \code{p} still
+splits the outcomes; only their \emph{timing} is assumed common. Outcome-specific
+timing is a competing-risks extension and is not what \code{mode = "both"} does
+today, so a difference in how fast positives and negatives come back will be
+absorbed into the shared law rather than estimated.
+
+Revision-date temporal effects and \code{as_revision_covariates()} tags tilt that
+shared law through a discrete hazard regression; see \link{covariate_roles}. They
+change revision timing only and never \code{p}.
+}
+
 \examples{
 # Results come back on one shared timescale, whatever the answer:
 revision_process(lognormal_revision())
