@@ -244,7 +244,8 @@ valid_positive_prior <- function(object) {
 #' Valid epidemic process names
 #' @noRd
 #' @keywords internal
-.valid_epidemic_processes <- c("HSGP", "AR1", "SIR")
+.valid_epidemic_processes <- c("HSGP", "AR1", "SIR", "ARIMA", "STS", "ETS",
+                               "Theta", "RW", "Naive")
 
 #' Which delay parameters to hard-fix for a given delay family
 #'
@@ -263,4 +264,217 @@ valid_positive_prior <- function(object) {
          `2` = c("delay_mu_gamma", "delay_sigma"),                # Gamma
          `3` = c("delay_mu", "delay_Q", "delay_sigma_gengamma"),  # Generalized-Gamma
          character(0))
+}
+
+# =============================================================================
+# Holding a parameter at a supplied value
+# =============================================================================
+# A number in a parameter slot -- `nb_likelihood(phi = 5)`, `ar1_epidemic(phi =
+# 0.9)` -- means "hold this here".  The delay side has always honoured that by
+# seeding the parameter and mapping it out of the optimisation; these helpers
+# let the epidemic and likelihood parameters do the same thing.
+#
+# The work is all in the transform.  Every one of these parameters is optimised
+# on an UNCONSTRAINED scale, so a user-facing value has to be pushed back
+# through the constraint map before it can be used as a seed, and a value
+# outside the map's domain has to be reported as such rather than turned into a
+# silent NaN at the first gradient evaluation.
+
+#' Push a fixed value back through a constraint map
+#'
+#' @param value The natural-scale value the user supplied.
+#' @param argument The argument name, for the error message.
+#' @param domain Human-readable description of the admissible set.
+#' @param inside Predicate: is the value in the domain?
+#' @param transform The map to the unconstrained scale.
+#' @keywords internal
+#' @noRd
+.unconstrain_fixed <- function(value, argument, domain, inside, transform) {
+  value <- as.numeric(value)
+  if (!length(value) || anyNA(value) || any(!is.finite(value)) || !all(inside(value)))
+    cli::cli_abort(c(
+      "{.arg {argument}} was fixed at {.val {value}}, which is outside {domain}.",
+      "i" = "A fixed value is held exactly as given, so it has to be a value the model can represent."
+    ), class = "diseasenowcasting_invalid_fixed_value")
+  transform(value)
+}
+
+#' @keywords internal
+#' @noRd
+.unconstrain_positive <- function(value, argument)
+  .unconstrain_fixed(value, argument, "the positive line", function(v) v > 0, log)
+
+#' @keywords internal
+#' @noRd
+.unconstrain_unit <- function(value, argument)
+  .unconstrain_fixed(value, argument, "the open interval (0, 1)",
+                     function(v) v > 0 & v < 1, stats::qlogis)
+
+#' Inverse of `-0.999 + 1.998 * plogis(x)`, the map AR(1)'s `phi` uses.
+#' @keywords internal
+#' @noRd
+.unconstrain_signed_unit <- function(value, argument)
+  .unconstrain_fixed(value, argument, "the open interval (-0.999, 0.999)",
+                     function(v) v > -0.999 & v < 0.999,
+                     function(v) stats::qlogis((v + 0.999) / 1.998))
+
+#' Inverse of `upper * plogis(x)`, the map the innovation SDs use.
+#' @keywords internal
+#' @noRd
+.unconstrain_bounded_positive <- function(upper) function(value, argument)
+  .unconstrain_fixed(value, argument, paste0("the open interval (0, ", format(upper), ")"),
+                     function(v) v > 0 & v < upper,
+                     function(v) stats::qlogis(v / upper))
+
+#' Inverse of `lower + (upper - lower) * plogis(x)`.
+#' @keywords internal
+#' @noRd
+.unconstrain_bounded_interval <- function(lower, upper) function(value, argument)
+  .unconstrain_fixed(value, argument,
+                     paste0("the open interval (", format(lower), ", ", format(upper), ")"),
+                     function(v) v > lower & v < upper,
+                     function(v) stats::qlogis((v - lower) / (upper - lower)))
+
+#' @keywords internal
+#' @noRd
+.unconstrain_identity <- function(value, argument)
+  .unconstrain_fixed(value, argument, "the real line", function(v) TRUE, identity)
+
+#' Resolve one parameter slot into "free" or "held at this seed"
+#'
+#' Returns the seed on the UNCONSTRAINED scale, recycled to the parameter's
+#' length, so the caller can both initialise the parameter there and map it out
+#' of the optimisation.  `active = FALSE` (the parameter does not exist in this
+#' model) always yields free, so a slot belonging to a component the user did not
+#' choose is simply not consulted.
+#' @keywords internal
+#' @noRd
+.resolve_fixed_parameter <- function(prior_entry, argument, transform,
+                                     length_out = 1L, active = TRUE) {
+  if (!isTRUE(active) || is.null(prior_entry) ||
+      !isTRUE(prior_entry$is_constant == 1L))
+    return(list(is_fixed = FALSE, seed = NULL))
+  supplied <- as.numeric(prior_entry$fixed)
+  if (length(supplied) != 1L && length(supplied) != length_out)
+    cli::cli_abort(c(
+      "{.arg {argument}} was fixed at {length(supplied)} values, but this model has {length_out} {cli::qty(length_out)}{?stratum/strata}.",
+      "i" = if (length_out == 1L) "Supply a single value."
+            else "Supply one value to share across strata, or {length_out} -- one per stratum."
+    ), class = "diseasenowcasting_invalid_fixed_value")
+  list(is_fixed = TRUE,
+       seed = rep_len(transform(supplied, argument), length_out))
+}
+
+#' Put pinned parameters back into a parameter list
+#'
+#' Reconstruction runs from two different sources.  `obj$env$parList()` carries
+#' every parameter, pinned ones included.  A posterior draw does not: a pinned
+#' parameter is not in the Laplace precision, so `.split_named_vector()` has no
+#' entry for it and everything downstream reads `NULL`.  Rather than teach each
+#' of the nine read sites to check, fill the values in once, on the unconstrained
+#' scale the reconstruction expects.  Idempotent: where the list already has the
+#' parameter the value is the same one.
+#'
+#' A pinned parameter has no posterior width, which is the point -- the draws
+#' vary everything else around it.
+#' @keywords internal
+#' @noRd
+.fill_fixed_parameters <- function(parlist, data, priors) {
+  n_strata <- as.integer(data$num_strata %||% 1L)
+  epidemic_model <- as.integer(data$epidemic_model)
+  uses_ar_trend <- epidemic_model == 2L ||
+    (epidemic_model == 3L && isTRUE(data$use_beta_rw_trend == 1L))
+  # A hierarchical fit has no `mu_intercept` to pin (it has mu_global + delta),
+  # and build_joint_obj() refuses that combination up front.
+  is_hierarchical <- !is.null(parlist$mu_global)
+
+  fill <- function(name, entry, argument, transform, length_out, active) {
+    if (!active) return(invisible(NULL))
+    resolved <- .resolve_fixed_parameter(entry, argument, transform, length_out, TRUE)
+    if (resolved$is_fixed) parlist[[name]] <<- resolved$seed
+  }
+  fill("mu_intercept", priors$mu_intercept, "mu", .unconstrain_identity, n_strata,
+       epidemic_model %in% c(1L, 2L, 5L, 6L, 7L) && !is_hierarchical)
+  fill("log_phi_nb", priors$phi_nb, "phi", .unconstrain_positive, 1L,
+       isTRUE(data$is_negative_binomial == 1L))
+  fill("log_gp_alpha", priors$gp_alpha, "alpha", .unconstrain_positive, 1L,
+       epidemic_model == 1L)
+  fill("log_gp_ell", priors$gp_ell, "ell", .unconstrain_positive, 1L,
+       epidemic_model == 1L)
+  fill("ar_phi_unc", priors$ar_phi, "phi", .unconstrain_signed_unit, n_strata,
+       uses_ar_trend)
+  fill("log_ar_sigma_unc", priors$ar_sigma, "sigma",
+       .unconstrain_bounded_positive(data$ar_sigma_max), n_strata, uses_ar_trend)
+  fill("log_R0", priors$R0, "R0", .unconstrain_positive, n_strata, epidemic_model == 3L)
+  fill("u_gamma", priors$gamma_sir, "gamma", .unconstrain_unit, n_strata,
+       epidemic_model == 3L)
+  fill("u_neff", priors$N_eff, "N_eff", .unconstrain_unit, n_strata,
+       epidemic_model == 3L)
+
+  bounded_sigma <- .unconstrain_bounded_positive(data$ar_sigma_max)
+  arima_p <- as.integer(data$arima_p %||% 0L)
+  arima_q <- as.integer(data$arima_q %||% 0L)
+  is_arima <- epidemic_model == 5L
+  is_ets <- epidemic_model == 6L
+  is_sts <- epidemic_model == 7L
+  ets_has_slope <- is_ets && isTRUE(data$ets_has_slope == 1L)
+  sts_has_slope <- is_sts && isTRUE(data$sts_has_slope == 1L)
+  sts_reverting <- sts_has_slope && isTRUE(data$sts_reverting_slope == 1L)
+  # The AR/MA blocks are [order x strata]; a pinned lag profile is shared, so it
+  # tiles across the columns the same way the tape seeds it.
+  fill_block <- function(name, entry, argument, transform, order, active) {
+    if (!active || order < 1L) return(invisible(NULL))
+    resolved <- .resolve_fixed_parameter(entry, argument, transform, order, TRUE)
+    if (resolved$is_fixed)
+      parlist[[name]] <<- matrix(resolved$seed, order, n_strata)
+  }
+  fill_block("arima_ar_pacf_unc", priors$arima_ar, "ar", .unconstrain_signed_unit,
+             arima_p, is_arima)
+  fill_block("arima_ma_pacf_unc", priors$arima_ma, "ma", .unconstrain_signed_unit,
+             arima_q, is_arima)
+  fill("log_arima_sigma_unc", priors$arima_sigma, "sigma", bounded_sigma, n_strata, is_arima)
+  fill("arima_drift", priors$arima_drift, "drift", .unconstrain_identity, n_strata,
+       is_arima && isTRUE(data$arima_include_drift == 1L))
+  fill("log_ets_sigma_unc", priors$ets_sigma, "sigma", bounded_sigma, n_strata, is_ets)
+  fill("ets_beta_unc", priors$ets_beta, "beta", .unconstrain_unit, n_strata, ets_has_slope)
+  fill("ets_damp_unc", priors$ets_damping, "damping", .unconstrain_unit, n_strata,
+       ets_has_slope && isTRUE(data$ets_damped == 1L))
+  fill("ets_drift", priors$ets_drift, "drift", .unconstrain_identity, n_strata,
+       is_ets && isTRUE(data$ets_include_drift == 1L))
+  fill("ets_slope_init", priors$ets_slope_init, "slope_init", .unconstrain_identity,
+       n_strata, ets_has_slope)
+  fill("log_sts_level_sigma_unc", priors$sts_level_sigma, "level_sigma", bounded_sigma,
+       n_strata, is_sts)
+  fill("log_sts_slope_sigma_unc", priors$sts_slope_sigma, "slope_sigma", bounded_sigma,
+       n_strata, sts_has_slope)
+  fill("sts_slope_phi_unc", priors$sts_slope_phi, "slope_phi", .unconstrain_signed_unit,
+       n_strata, sts_reverting)
+  fill("sts_slope_mean", priors$sts_slope_mean, "slope_mean", .unconstrain_identity,
+       n_strata, sts_reverting)
+  fill("sts_slope_init", priors$sts_slope_init, "slope_init", .unconstrain_identity,
+       n_strata, sts_has_slope)
+  parlist
+}
+
+#' Check a fixed value against the domain its constructor knows statically
+#'
+#' The fit-time check in `build_joint_obj()` is the backstop, but it fires deep
+#' inside the optimiser's init ladder. Where the admissible set is a property of
+#' the parameter rather than of the data -- an autocorrelation in (-1, 1), a
+#' probability in (0, 1) -- the constructor can say so immediately, which is
+#' where the user can actually see it.
+#' @keywords internal
+#' @noRd
+.check_fixed_domain <- function(value, argument, constructor, domain, inside) {
+  if (!is.numeric(value) || !length(value)) return(invisible(NULL))
+  value <- as.numeric(value)
+  if (anyNA(value) || any(!is.finite(value)) || !all(inside(value)))
+    cli::cli_abort(c(
+      "{.arg {argument}} in {.fn {constructor}} must be in {domain}, not {.val {value}}.",
+      "i" = "A number in a parameter slot holds it at that value, so it has to be one the model can represent.",
+      "*" = "Pass a prior instead to estimate it."
+    ), class = "diseasenowcasting_invalid_fixed_value")
+  # S7 validators must return NULL or a character; anything else is an error
+  # about the validator rather than about the object.
+  invisible(NULL)
 }

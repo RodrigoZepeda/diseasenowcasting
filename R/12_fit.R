@@ -67,6 +67,13 @@ fit <- function(model, data, priors = NULL, init = NULL,
   set_bounds("^delay_Q$|^cumulative_retraction_Q$", -10, 10)
   set_bounds("cumulative_retraction_mass_raw$", -12, 12)
   set_bounds("^ar_phi_unc$|^log_ar_sigma_unc$", -10, 10)
+  # The classical time-series trends are all bounded reparameterisations, so the
+  # box only has to keep nlminb out of the flat tails where plogis() saturates
+  # and the gradient stops carrying information.
+  set_bounds("^arima_ar_pacf_unc$|^arima_ma_pacf_unc$|^log_arima_sigma_unc$", -10, 10)
+  set_bounds("^log_ets_sigma_unc$|^ets_beta_unc$|^ets_damp_unc$", -10, 10)
+  set_bounds("^log_sts_level_sigma_unc$|^log_sts_slope_sigma_unc$|^sts_slope_phi_unc$", -10, 10)
+  set_bounds("^arima_drift$|^ets_drift$|^ets_slope_init$|^sts_slope_mean$|^sts_slope_init$", -5, 5)
   set_bounds("^log_gp_alpha$|^log_gp_ell$", -8, 8)
   set_bounds("^log_R0$", -6, 6)
   set_bounds("^u_gamma$|^u_neff$", -10, 10)
@@ -558,6 +565,15 @@ fit <- function(model, data, priors = NULL, init = NULL,
       ini$log_gp_alpha <- log(1) + (j - 1) * 0.15          # shared GP amplitude (scalar)
     if (data$epidemic_model == 2L && is.null(base_init$log_ar_sigma_unc))
       ini$log_ar_sigma_unc <- rep(-2 + (j - 1) * 0.3, n_strata)   # per-stratum AR innovation SD
+    # The time-series trends get the same innovation-SD ladder: their sigma is the
+    # one parameter whose starting value decides whether the first fit sees a flat
+    # trend or a noisy one, and a cold start at the wrong end can stall there.
+    if (data$epidemic_model == 5L && is.null(base_init$log_arima_sigma_unc))
+      ini$log_arima_sigma_unc <- rep(-2 + (j - 1) * 0.3, n_strata)
+    if (data$epidemic_model == 6L && is.null(base_init$log_ets_sigma_unc))
+      ini$log_ets_sigma_unc <- rep(-2 + (j - 1) * 0.3, n_strata)
+    if (data$epidemic_model == 7L && is.null(base_init$log_sts_level_sigma_unc))
+      ini$log_sts_level_sigma_unc <- rep(-2 + (j - 1) * 0.3, n_strata)
 
     res <- tryCatch({
       built <- build_joint_obj(data, priors, init = ini, use_random = use_random,
@@ -609,6 +625,10 @@ fit <- function(model, data, priors = NULL, init = NULL,
         data = data, priors = priors, model = model
       )
     }, error = function(e) {
+      # A bad configuration is not something another init rung can rescue, and
+      # burying it under "failed to converge for all init attempts" hides the one
+      # message that says what to change.
+      if (inherits(e, "diseasenowcasting_invalid_fixed_value")) stop(e)
       attempt_errors <<- unique(c(attempt_errors, conditionMessage(e)))
       NULL
     })

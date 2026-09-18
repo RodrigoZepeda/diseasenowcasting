@@ -38,7 +38,12 @@
   }
   init <- list()
   per_stratum <- c("mu_intercept", "ar_phi_unc", "log_ar_sigma_unc",
-                   "log_R0", "u_gamma", "u_neff")
+                   "log_R0", "u_gamma", "u_neff",
+                   "log_arima_sigma_unc", "arima_drift",
+                   "log_ets_sigma_unc", "ets_beta_unc", "ets_damp_unc",
+                   "ets_drift", "ets_slope_init",
+                   "log_sts_level_sigma_unc", "log_sts_slope_sigma_unc",
+                   "sts_slope_phi_unc", "sts_slope_mean", "sts_slope_init")
   for (nm in intersect(per_stratum, names(old_parlist)))
     init[[nm]] <- resize(old_parlist[[nm]], n_strata)
   # Shared scalar parameters carry over unchanged.
@@ -58,6 +63,17 @@
     init$ar_innov <- resize_strata(old_parlist$ar_innov, new_engine$max_time)
   if (!is.null(old_parlist$basis_coefs))
     init$basis_coefs <- resize_strata(old_parlist$basis_coefs, new_engine$num_basis)
+  # Time-series trends: innovations grow with the series, the AR/MA partial
+  # autocorrelation blocks do not.
+  for (nm in intersect(c("arima_innov", "ets_innov", "sts_level_innov", "sts_slope_innov"),
+                       names(old_parlist)))
+    init[[nm]] <- resize_strata(old_parlist[[nm]], new_engine$max_time)
+  if (!is.null(old_parlist$arima_ar_pacf_unc))
+    init$arima_ar_pacf_unc <- resize_strata(old_parlist$arima_ar_pacf_unc,
+                                            as.integer(new_engine$arima_p %||% 0L))
+  if (!is.null(old_parlist$arima_ma_pacf_unc))
+    init$arima_ma_pacf_unc <- resize_strata(old_parlist$arima_ma_pacf_unc,
+                                            as.integer(new_engine$arima_q %||% 0L))
   if (!is.null(old_parlist$delay_logits))
     init$delay_logits <- resize(old_parlist$delay_logits, as.integer(new_engine$np_model_length))
   if (!is.null(old_parlist$delay_beta))

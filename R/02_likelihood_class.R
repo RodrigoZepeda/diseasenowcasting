@@ -45,6 +45,10 @@ nb_likelihood_class <- S7::new_class(
   ),
   constructor = function(mu = numeric(0), phi = lognormal_prior(log(20), 0.5)) {
     S7::new_object(S7::S7_object(), name = "nb", num_id = 1L, mu = mu, phi = phi)
+  },
+  validator = function(self) {
+    .check_fixed_domain(self@phi, "phi", "nb_likelihood", "the positive line",
+                        function(v) v > 0)
   }
 )
 
@@ -52,8 +56,9 @@ nb_likelihood_class <- S7::new_class(
 #'
 #' Count observation model for the (truncation-corrected) case counts.
 #'
-#' @param mu  Log-scale mean intercept prior (or fixed numeric).
-#' @param phi Negative-binomial overdispersion prior (or fixed numeric);
+#' @param mu  Log-scale mean intercept prior, or a number to hold it there.
+#' @param phi Negative-binomial overdispersion prior, or a number to hold it
+#'   there (> 0);
 #'   NB only.  Defaults to `lognormal_prior(log(20), 0.5)`.  This is the *only*
 #'   place to set the overdispersion prior — [nowcast()] reads it from the model
 #'   and does not accept its own `phi` argument.
@@ -65,6 +70,8 @@ nb_likelihood_class <- S7::new_class(
 #' nb_likelihood()
 #' # Wider overdispersion (heavier-tailed counts) -- set via the likelihood:
 #' nb_likelihood(phi = lognormal_prior(log(5), 0.5))
+#' # A number holds the parameter at that value instead of estimating it:
+#' nb_likelihood(phi = 5)
 #'
 #' @name likelihood
 NULL

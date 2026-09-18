@@ -49,6 +49,11 @@ model(likelihood, epidemic, delay)   # combine three components
 | `hsgp_epidemic(num_basis, gp_kernel=2, gp_basis=1, tmax_model=0, gp_boundary_frac=0.62)` | `num_basis` (int, 0=auto) | Hilbert-space GP; flexible smooth trend. Shared kernel (alpha, ell) across strata. |
 | `ar1_epidemic()` | — | AR(1) trend; fast, per-stratum phi/sigma. |
 | `sir_epidemic(N_pop=1e6, use_beta_rw_trend=TRUE)` | `N_pop` | Discrete-time SIR; coupled force of infection across strata. |
+| `arima_epidemic(p=2, d=1, q=0, include_drift)` | `p`, `d`, `q` | ARIMA on log-incidence. AR/MA parameterised by partial autocorrelations -> stationary + invertible by construction. Drift only at `d >= 1`. Default has **no MA term** (see below). |
+| `sts_epidemic(trend="semilocal")` | `trend` | Structural time series. `"semilocal"` = local level + slope reverting to a long-run `D` (does not extrapolate off the plot); also `"local_linear"`, `"local_level"`. |
+| `ets_epidemic(trend="additive", damped=TRUE)` | `trend`, `damped` | Single-source-of-error damped local trend: level and slope share one innovation. |
+| `random_walk_epidemic()` / `naive_epidemic()` | `include_drift` | Random walk on log-incidence; the baseline. `naive_epidemic()` is the named baseline slot (currently a RW). |
+| `theta_epidemic()` | — | The Theta method's model form: random walk with an estimated drift. |
 | `custom_epidemic(intensity_fn, priors, ...)` | `intensity_fn`, `priors` | **User-defined** `f(t)`. Any RTMB-traceable generator of `log_mean[T×S]`. See §2b. |
 
 ### Delay families
@@ -248,6 +253,136 @@ See `vignette("Custom_delays_and_processes")` for worked Weibull-delay,
 random-walk, and SIR-ODE examples with built-in comparisons.
 
 ---
+
+## 2c. Classical time-series epidemic processes
+
+`arima_epidemic()`, `sts_epidemic()`, `ets_epidemic()`, `random_walk_epidemic()`,
+`naive_epidemic()` and `theta_epidemic()` are latent trends for **log**
+incidence.  They slot in exactly where HSGP/AR(1) do:
+
+```
+log_mean[t, s] = mu_intercept[s] + (X gamma[, s])[t] + trend[s](t)
+```
+
+so **covariates and temporal effects apply to them unchanged**, and every trend
+coefficient is estimated **per stratum** (the AR(1) convention, not HSGP's
+shared kernel).
+
+**No seasonal states.**  There is no SARIMA `(P,D,Q)_s` and no Holt-Winters
+seasonal vector.  Seasonality comes through the covariate path:
+`temporal_effects(day_of_week = TRUE)` adds **reference-coded** weekday dummies
+(6 columns, first level dropped -- see `.encode_design_column()` in
+`R/06_process_design.R`, so no collinearity with `mu_intercept`) and
+`temporal_effects(seasons = c(7, 52))` adds Fourier pairs.  A handful of
+coefficients instead of `s` latent states per stratum.
+
+**What is actually distinct.**  Under a count likelihood several classical
+methods coincide, and the package does not pretend otherwise:
+
+| Constructor | Latent process | Note |
+|---|---|---|
+| `random_walk_epidemic()` | RW | `naive_epidemic()` is the same fit with a different label |
+| `theta_epidemic()` | RW + drift | Theta = SES + drift (Hyndman & Billah 2003); the SES smoothing is what the Kalman filter for a local level model already does, so only the drift is left to estimate |
+| `ets_epidemic(trend="none")` | RW | documented as equal to `random_walk_epidemic()` |
+| `ets_epidemic(trend="additive")` | one-source damped local trend | genuinely distinct: rank-one restriction of `sts_epidemic("local_linear")` |
+| `sts_epidemic("semilocal")` | two-source level + mean-reverting slope | the one that keeps long-horizon trends bounded |
+| `arima_epidemic(p,d,q)` | ARMA on the d-th difference | conditional (zero pre-sample) likelihood |
+
+**Parameterisation gotchas**
+
+- `alpha` is NOT a separate ETS parameter.  `(alpha, beta, sigma)` is identified
+  only up to a common rescaling, so `sigma` **is** the level innovation SD
+  (classical `alpha*sigma`) and `beta` is Hyndman's `beta* = beta/alpha` in (0,1).
+- ARIMA `ar`/`ma` slots are priors on the **partial autocorrelations**, not on
+  the coefficients.  `.pacf_to_coefficients()` (Levinson-Durbin) maps them.
+  Default `normal_prior(0, 0.5)`, deliberately shrunk: a partial autocorrelation
+  near 1 on a *differenced* series is an I(2) level, whose predictive variance
+  grows like `h^2` over the unobserved tail.
+- **The default order is `(2, 1, 0)`, not `(1, 1, 1)`.**  An ARMA(1,1) on a
+  latent trend sits near a common factor, where `ar` and `ma` nearly cancel.  In
+  the backtest `(1,1,1)` was the worst of nine processes (relative WIS 2.06 vs
+  1.63 for `(2,1,0)`), with bands 2.4x the settled count and 15 of the 21
+  over-wide fits in the whole grid.
+- **These do not scale to long series.**  One latent innovation per event-time
+  (two for STS with a slope) means the Laplace Hessian grows with `max_time`.
+  On the 1,095-week dengue series `fit_check()` pass rates collapse -- ETS 15%,
+  STS 39%, SIR 44%, RW 71%, AR(1) 86% -- against 96-100% for every one of them
+  on the other seven datasets.  HSGP is 100% on both, because its basis is ~20
+  coefficients rather than `T`.  Past ~500 event-times, use HSGP.
+- `include_drift` defaults to `d >= 1` and **errors at `d = 0`** (the ARMA mean
+  and `mu_intercept` are the same quantity).
+- A **number in any parameter slot holds it at that value**, as on the delay
+  side (see §2d).
+- Latent-state cost: ARIMA/ETS/RW/Theta are `T` innovations per stratum (same as
+  AR(1)); `sts_epidemic()` with a slope is `2T`.  On a 1,000+ step weekly series
+  STS is the slowest of the set by a wide margin.
+
+**Internals**: `R/13_epidemic_timeseries.R` holds the trend builders
+(`arima_trend`, `sts_trend`, `ets_trend`) and the constrained-parameter helpers.
+They are **dual-mode** -- one implementation serves both the RTMB tape and the
+plain-R `.joint_reconstruct()` mirror, via `.trend_zeros()` -- so the objective
+and `predict()` cannot drift apart.  Dispatch codes: `epidemic_model` 5 = ARIMA,
+6 = ETS family (ETS/RW/Naive/Theta), 7 = STS.
+
+**auto_nowcast()**: the default candidate grid is still `{SIR, AR1, HSGP}` --
+widening it would triple the selection cost for every existing caller. Compare
+the new processes by passing them through `models =`:
+
+```r
+auto_nowcast(tn, models = list(
+  model(nb_likelihood(), sts_epidemic(),  lognormal_delay()),
+  model(nb_likelihood(), arima_epidemic(), lognormal_delay())))
+```
+
+**Validation harness**: `devel/validate_epidemic_timeseries.R` backtests the
+whole process menu across dengue, covid_us, mpox, mpox-as-cumulative and
+FluSight (stratified and pooled) with an hourly-updating ETA log at
+`devel/epidemic_timeseries/progress.log`.
+
+---
+
+## 2d. Fixed parameters
+
+A number in a parameter slot means **hold it here**; a `prior_class` means
+estimate it.  This works for every delay, epidemic, likelihood, revision and
+cumulative parameter:
+
+```r
+model(nb_likelihood(phi = 5),                 # NB overdispersion held at 5
+      ar1_epidemic(phi = 0.9, sigma = 0.1),   # AR(1) coefficients held
+      lognormal_delay(mu = log(3)))           # delay location held
+```
+
+**How it works.** The parameter is seeded at the unconstrained value that maps
+to the number, mapped out of the optimisation with `factor(NA)`, and its prior
+and Jacobian terms are skipped -- they are constants once it stops moving.
+`.resolve_fixed_parameter()` plus the `.unconstrain_*()` maps in `R/01_utils.R`
+do the seeding; `.fill_fixed_parameters()` puts held values back into a
+parameter list before reconstruction (a posterior **draw** has no entry for a
+pinned parameter, since it is not in the Laplace precision).
+
+**Gotchas**
+
+- Stratified fits: supply **one** value to share across strata, or **one per
+  stratum**.  Anything else errors naming the stratum count.
+- `coef()` reports a held parameter.  `parameters()` does **not** -- it reports
+  estimates with credible intervals, and a held parameter has no width.  It is
+  also absent from `fit$obj$par`.
+- A held value must be inside its domain.  Statically-knowable domains (`phi`
+  in (-1, 1), probabilities in (0, 1), scales > 0) error **at construction**;
+  `sigma` is bounded by the engine's `ar_sigma_max`, so that one errors at fit
+  time -- and is deliberately rethrown past the six-rung init ladder rather than
+  becoming "failed to converge for all init attempts".  Those aborts carry class
+  `diseasenowcasting_invalid_fixed_value`.
+- `mu` cannot be held under `strata_pooling = "hierarchical"`: the pooling is a
+  model *for* the intercept, so pinning it leaves nothing to pool.  This errors.
+- `ar1_epidemic(error = )` is **read by nothing** -- a dead slot.  The AR(1)
+  innovations are always standard normal (non-centred).
+
+**History.** Before 2.5.0 the epidemic and likelihood slots read only the prior
+entry's `$dist`, never its `$is_constant` / `$fixed`, so a supplied number was
+replaced by a standard-normal prior and the parameter was estimated anyway --
+silently, in nine slots that the roxygen examples advertised as working.
 
 ## 3. Data preparation
 
@@ -689,10 +824,17 @@ built <- build_joint_obj(data, priors, init = NULL, use_random = FALSE)
 | `delay_logits` (Dirichlet) | `[n_bins]` | Yes |
 | `custom_delay_params` (custom delay, family 5) | `[n_params]` | Yes |
 | `custom_epidemic_params` (custom epidemic, epidemic_model 4) | `[n_params]` | n/a (user owns full `log_mean[T×S]`) |
+| `arima_ar_pacf_unc`, `arima_ma_pacf_unc` (ARIMA) | `[p × S]`, `[q × S]` | No |
+| `log_arima_sigma_unc`, `arima_drift` (ARIMA) | `[S]` | No |
+| `arima_innov` (ARIMA) | `[T × S]` | No |
+| `log_ets_sigma_unc`, `ets_beta_unc`, `ets_damp_unc`, `ets_drift`, `ets_slope_init` (ETS family) | `[S]` | No |
+| `ets_innov` (ETS family) | `[T × S]` | No |
+| `log_sts_level_sigma_unc`, `log_sts_slope_sigma_unc`, `sts_slope_phi_unc`, `sts_slope_mean`, `sts_slope_init` (STS) | `[S]` | No |
+| `sts_level_innov`, `sts_slope_innov` (STS) | `[T × S]` | No |
 
 **Component dispatch codes.** `delay_family`: 1=LogNormal, 2=Gamma,
 3=GenGamma, 4=Dirichlet, **5=Custom**.  `epidemic_model`: 1=HSGP, 2=AR1,
-3=SIR, **4=Custom**.  Custom params are fixed via the per-element `priors` API
+3=SIR, **4=Custom**, **5=ARIMA**, **6=ETS family**, **7=STS**.  Custom params are fixed via the per-element `priors` API
 (a number fixes, a prior frees) → an RTMB `map` with `factor(NA)` entries.
 
 **Smooth cap on log_mean** (prevents exp() overflow):

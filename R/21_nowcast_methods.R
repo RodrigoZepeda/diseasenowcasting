@@ -47,10 +47,15 @@ S7::method(coef, nowcast_class) <- function(object, ...) {
   }
 
   # Append whichever epidemic-process hyperparameters this model actually has
-  # (HSGP, AR(1) or SIR populate different entries of the parameter list).
+  # (each process populates different entries of the parameter list).
   representative_parlist <- representative_fit$parList
   epidemic_param_names <- c("mu_intercept", "log_gp_alpha", "log_gp_ell", "ar_phi_unc",
-                            "log_ar_sigma_unc", "log_R0", "u_gamma", "u_neff")
+                            "log_ar_sigma_unc", "log_R0", "u_gamma", "u_neff",
+                            "log_arima_sigma_unc", "arima_drift",
+                            "log_ets_sigma_unc", "ets_beta_unc", "ets_damp_unc",
+                            "ets_drift", "ets_slope_init",
+                            "log_sts_level_sigma_unc", "log_sts_slope_sigma_unc",
+                            "sts_slope_phi_unc", "sts_slope_mean", "sts_slope_init")
   for (param_name in intersect(epidemic_param_names, names(representative_parlist)))
     out[param_name] <- representative_parlist[[param_name]][1]
   append_block <- function(values, prefix, labels) {

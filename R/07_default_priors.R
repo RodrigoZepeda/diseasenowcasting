@@ -12,6 +12,11 @@
 #   gp_alpha, gp_ell                           (HSGP)
 #   ar_phi, ar_sigma                           (AR1 / SIR-RW)
 #   R0, gamma_sir, N_eff                       (SIR)
+#   arima_ar, arima_ma, arima_sigma, arima_drift              (ARIMA)
+#   ets_sigma, ets_beta, ets_damping, ets_drift, ets_slope_init
+#                                      (ETS / RW / Naive / Theta)
+#   sts_level_sigma, sts_slope_sigma, sts_slope_phi,
+#   sts_slope_mean, sts_slope_init                              (STS)
 # =============================================================================
 
 #' Resolve a per-parameter prior list for a custom component (delay or process)
@@ -173,6 +178,39 @@ default_priors <- function(mod, data = NULL, ...) {
     pr$ar_phi    <- .res(numeric(0), std_normal_prior(),     key = "ar_phi")
     pr$ar_sigma  <- .res(numeric(0), exponential_prior(100), key = "ar_sigma")
     pr$N_eff     <- .res(epi@N_eff, beta_prior(2, 5),        key = "N_eff")
+  } else if (S7::S7_inherits(epi, arima_epidemic_class)) {
+    # The AR and MA slots are priors on the PARTIAL autocorrelations, not on the
+    # coefficients: that is the parameterisation the objective optimises in, so
+    # putting the prior anywhere else would need a Jacobian nobody could read.
+    #
+    # N(0, 0.5) rather than a standard normal, which over (-1, 1) is close to
+    # flat.  A partial autocorrelation near 1 on a DIFFERENCED log-incidence
+    # series is an I(2) level: its predictive variance grows like h^2 over the
+    # unobserved tail instead of like h, which is the one thing a nowcast cannot
+    # afford.  Shrinking towards zero says the differenced series is mildly
+    # autocorrelated, which is a statement about epidemic curves rather than
+    # about any particular dataset -- the data move it easily when they disagree.
+    pr$arima_ar    <- .res(epi@ar,    normal_prior(0, 0.5),  key = "arima_ar")
+    pr$arima_ma    <- .res(epi@ma,    normal_prior(0, 0.5),  key = "arima_ma")
+    pr$arima_sigma <- .res(epi@sigma, exponential_prior(10), key = "arima_sigma")
+    pr$arima_drift <- .res(epi@drift, normal_prior(0, 0.1),  key = "arima_drift")
+  } else if (S7::S7_inherits(epi, ets_epidemic_class)) {
+    # One block for ETS / random walk / naive / Theta: they are the same engine,
+    # and the objective only declares the parameters its variant switches on.
+    pr$ets_sigma      <- .res(epi@sigma,      exponential_prior(10), key = "ets_sigma")
+    pr$ets_beta       <- .res(epi@beta,       beta_prior(2, 8),      key = "ets_beta")
+    pr$ets_damping    <- .res(epi@damping,    beta_prior(5, 2),      key = "ets_damping")
+    pr$ets_drift      <- .res(epi@drift,      normal_prior(0, 0.1),  key = "ets_drift")
+    pr$ets_slope_init <- .res(epi@slope_init, normal_prior(0, 0.1),  key = "ets_slope_init")
+  } else if (S7::S7_inherits(epi, sts_epidemic_class)) {
+    # The slope's innovation SD is shrunk an order of magnitude harder than the
+    # level's: a slope that moves as freely as the level is just a level with
+    # extra steps, and the two stop being separable.
+    pr$sts_level_sigma <- .res(epi@level_sigma, exponential_prior(10),  key = "sts_level_sigma")
+    pr$sts_slope_sigma <- .res(epi@slope_sigma, exponential_prior(100), key = "sts_slope_sigma")
+    pr$sts_slope_phi   <- .res(epi@slope_phi,   std_normal_prior(),     key = "sts_slope_phi")
+    pr$sts_slope_mean  <- .res(epi@slope_mean,  normal_prior(0, 0.1),   key = "sts_slope_mean")
+    pr$sts_slope_init  <- .res(epi@slope_init,  normal_prior(0, 0.1),   key = "sts_slope_init")
   } else if (S7::S7_inherits(epi, custom_epidemic_class)) {
     n_custom_epi <- as.integer(epi@n_params)
     resolved      <- .resolve_custom_param_priors(epi@priors, n_custom_epi)

@@ -1,3 +1,102 @@
+# 2.5.0
+
+## Classical time-series epidemic processes
+
+The epidemic-process menu gains five constructors beyond HSGP, AR(1) and SIR:
+`arima_epidemic(p, d, q)`, `sts_epidemic(trend = "semilocal")`,
+`ets_epidemic(trend, damped)`, `random_walk_epidemic()` / `naive_epidemic()`
+and `theta_epidemic()`. Each supplies the latent trend in
+`log_mean[t, s] = mu_intercept[s] + (X gamma)[t, s] + trend[s](t)`, the same slot
+HSGP and AR(1) fill, so `tbl_now` covariates and temporal effects apply to them
+unchanged and every trend coefficient is estimated per stratum.
+
+Seasonality stays on the covariate path rather than in the state vector: there
+is no SARIMA `(P, D, Q)_s` and no Holt-Winters seasonal block.
+`temporal_effects(day_of_week = TRUE)` contributes reference-coded weekday
+dummies and `temporal_effects(seasons = )` contributes Fourier pairs, which cost
+a handful of coefficients where a seasonal state would cost `s` latent states
+per stratum -- the difference between a fit that converges on these series and
+one that does not.
+
+ARIMA is parameterised by the partial autocorrelations of its AR and MA
+polynomials and mapped to coefficients through Levinson-Durbin, so stationarity
+and invertibility hold by construction and the optimiser cannot step into a
+region where the recursion explodes. A drift is included by default once
+`d >= 1` and is refused at `d = 0`, where the ARMA mean and `mu_intercept` are
+the same quantity.
+
+Exponential smoothing is written with `sigma` as the level innovation SD and
+`beta` as Hyndman's `beta* = beta / alpha`, because the classical
+`(alpha, beta, sigma)` triple is identified only up to a common rescaling once
+the innovation is latent rather than observed. For the same reason
+`ets_epidemic(trend = "none")` is documented as being the random walk, and
+`theta_epidemic()` as the random walk with drift: under a count likelihood the
+exponential smoothing of the classical methods is what the Kalman filter for a
+local level model already performs.
+
+## Fixed parameters are honoured instead of discarded
+
+A number in a parameter slot has always meant "hold this here" on the delay
+side. For the epidemic-process and likelihood parameters it meant nothing at
+all: `build_joint_obj()` read the prior entry's `$dist` and never its
+`$is_constant` or `$fixed`, so a supplied number was replaced by a
+standard-normal prior and the parameter was estimated anyway. Nine slots were
+affected -- `nb_likelihood(mu =, phi =)`, `hsgp_epidemic(alpha =, ell =)`,
+`ar1_epidemic(phi =, sigma =)` and `sir_epidemic(R0 =, gamma =, N_eff =)` --
+including two that the roxygen examples advertised as working.
+
+They are now held the way the delay parameters are: the parameter is seeded at
+the unconstrained value that maps to the supplied one, mapped out of the
+optimisation, and its prior and Jacobian terms are skipped. The same applies to
+every parameter of the new time-series processes, which until now refused a
+fixed value outright because there was no machinery to honour one. Stratified
+fits take either a single shared value or one per stratum.
+
+`coef()` reports a held parameter; `parameters()` does not, because it reports
+estimates with credible intervals and a held parameter has none.
+
+A held value outside its domain is now refused where it can be seen. Domains
+that are a property of the parameter -- an autocorrelation in (-1, 1), a
+probability in (0, 1), a scale above zero -- are checked by the constructor.
+`sigma` is bounded by the engine's `ar_sigma_max`, which the constructor cannot
+know, so it is checked during the fit and rethrown past the initialisation
+ladder: no retry rescues a value outside its domain, and burying it under
+"failed to converge for all init attempts" hid the one message that said what
+to change.
+
+Fixing `mu` under `strata_pooling = "hierarchical"` is an error. The pooling is
+a model for the intercept, so pinning the intercept leaves it nothing to do.
+
+Fits that pin nothing are unaffected: the joint objective and every
+reconstruction are unchanged to the last digit.
+
+## Classical time-series epidemic processes (continued)
+
+`arima_epidemic()` defaults to order `(2, 1, 0)`. An MA term remains available
+but is not the default: on a latent trend an ARMA(1, 1) sits close to a common
+factor, where the AR and MA polynomials nearly cancel and neither is identified.
+Across a 2,376-fit backtest on nine dataset variants, `(1, 1, 1)` was the worst
+of the nine processes compared, with intervals 2.4 times the settled count and
+15 of the 21 over-wide fits recorded in the whole grid; `(2, 1, 0)` converged
+more often, scored better and produced two.
+
+These trends carry one latent innovation per event-time, so the Laplace
+Hessian grows with the series and they do not scale the way HSGP does. On the
+1,095-week dengue series `fit_check()` pass rates fall to 15% (ETS), 39% (STS)
+and 71% (random walk), against 96-100% for all of them on the other seven
+datasets; `ar1_epidemic()` shows the same pattern more mildly at 86%, and
+`hsgp_epidemic()` is unaffected at 100%. Past roughly 500 event-times, HSGP
+remains the right choice. This is documented under "Long series" in
+`?timeseries_epidemic`.
+
+Unlike the older constructors, these refuse a fixed numeric in a parameter slot.
+`arima_epidemic(sigma = 0.1)` is an error rather than a value that is silently
+estimated anyway.
+
+The trend recursions and their constraint maps have a single implementation that
+serves both the RTMB tape and the plain-R reconstruction `predict()` runs on, so
+the two cannot disagree about the model that was fitted.
+
 # 2.4.1
 
 ## Reporting-delay hazard: correct tails, pinned designs

@@ -363,7 +363,13 @@ auto_nowcast <- function(data,
   if (S7::S7_inherits(epidemic, hsgp_epidemic_class)) return(1L)
   if (S7::S7_inherits(epidemic, ar1_epidemic_class)) return(2L)
   if (S7::S7_inherits(epidemic, sir_epidemic_class)) return(3L)
-  4L
+  if (S7::S7_inherits(epidemic, sts_epidemic_class)) return(4L)
+  if (S7::S7_inherits(epidemic, arima_epidemic_class)) return(5L)
+  # The ETS engine covers the random walk, naive and Theta baselines too; they
+  # rank last on a TIE only, which is the right way round -- a baseline should
+  # not win a coin toss against a model that fits the same score with structure.
+  if (S7::S7_inherits(epidemic, ets_epidemic_class)) return(6L)
+  7L
 }
 
 #' Rank auto-nowcast candidates, using policy only inside score ties

@@ -275,6 +275,7 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     delay_only = isTRUE(delay_only),
     delay_family = as.integer(dly@num_id),
     epidemic_model = as.integer(epi@num_id),
+    epidemic_name = as.character(epi@name),
     is_negative_binomial = as.integer(lik@num_id),
     num_delay_seasons = as.integer(dly@num_delay_seasons),
     np_model_length = np_len,
@@ -334,6 +335,18 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     # SIR
     N_pop = if (S7::S7_inherits(epi, sir_epidemic_class)) epi@N_pop else 1e6,
     use_beta_rw_trend = if (S7::S7_inherits(epi, sir_epidemic_class)) as.integer(epi@use_beta_rw_trend) else 1L,
+    # ARIMA (num_id 5)
+    arima_p = if (S7::S7_inherits(epi, arima_epidemic_class)) as.integer(epi@p) else 0L,
+    arima_d = if (S7::S7_inherits(epi, arima_epidemic_class)) as.integer(epi@d) else 0L,
+    arima_q = if (S7::S7_inherits(epi, arima_epidemic_class)) as.integer(epi@q) else 0L,
+    arima_include_drift = if (S7::S7_inherits(epi, arima_epidemic_class)) as.integer(epi@include_drift) else 0L,
+    # ETS family: exponential smoothing, random walk, naive, Theta (num_id 6)
+    ets_has_slope = if (S7::S7_inherits(epi, ets_epidemic_class)) as.integer(epi@trend == "additive") else 0L,
+    ets_damped = if (S7::S7_inherits(epi, ets_epidemic_class)) as.integer(epi@damped) else 0L,
+    ets_include_drift = if (S7::S7_inherits(epi, ets_epidemic_class)) as.integer(epi@include_drift) else 0L,
+    # Structural time series (num_id 7)
+    sts_has_slope = if (S7::S7_inherits(epi, sts_epidemic_class)) as.integer(epi@trend != "local_level") else 0L,
+    sts_reverting_slope = if (S7::S7_inherits(epi, sts_epidemic_class)) as.integer(epi@trend == "semilocal") else 0L,
     # Custom epidemic
     custom_epidemic_n_params = if (S7::S7_inherits(epi, custom_epidemic_class)) as.integer(epi@n_params) else 0L,
     # bounds
