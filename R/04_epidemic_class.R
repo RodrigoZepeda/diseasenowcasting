@@ -669,14 +669,13 @@ sts_epidemic_class <- S7::new_class(
 #'
 #' @section Long series:
 #' These trends carry one latent innovation per event-time (two for
-#' `sts_epidemic()` with a slope), so the Laplace approximation's Hessian grows
-#' with the series.  On the package's 1,095-week dengue series they converge far
-#' less reliably than on shorter ones -- `ets_epidemic()` passed
-#' [fit_check()] on 15% of those fits against 100% on every other dataset
-#' tested, and `ar1_epidemic()` shows the same pattern more mildly.  Only
-#' [hsgp_epidemic()], whose basis is a fixed 20-or-so coefficients rather than
-#' one per time point, was unaffected.  Prefer it past roughly 500 event-times,
-#' or shorten the window.
+#' `sts_epidemic()` with a slope), so the number of free parameters is set by the
+#' length of the series: 28 for an HSGP on any series, but 1,623 for
+#' `sts_epidemic()` on a 1,095-week one.  They converge there, but they are not
+#' cheap -- on that series a structural trend takes around five minutes against
+#' ten seconds for [hsgp_epidemic()], whose basis stays a fixed 20-or-so
+#' coefficients however long the data get.  If fitting time matters more than the
+#' shape of the trend, HSGP remains the economical choice on long series.
 #'
 #' @seealso [epidemic_process] for HSGP, AR(1) and SIR; [custom_epidemic()] for
 #'   an arbitrary user-written trend.

@@ -34,6 +34,40 @@ the innovation is latent rather than observed. For the same reason
 exponential smoothing of the classical methods is what the Kalman filter for a
 local level model already performs.
 
+## The optimiser's iteration budget scales with the problem
+
+`fit()` hard-coded `iter.max = 500` regardless of how many parameters the tape
+had. The joint fit optimises one latent innovation per event-time, so that count
+is a property of the data: 28 for an HSGP on any series, 1,623 for a structural
+time series on a 1,095-week one. Five hundred iterations is generous for the
+first and nowhere near enough for the second.
+
+The failure was silent. `nlminb` returns code 1, the fit is kept, and the only
+trace is a `fit_check()` warning about a non-positive-definite Hessian -- never
+an error, so a caller who did not inspect the diagnostics got a fit that had
+stopped short of a mode. On the package's 1,095-week dengue series this affected
+six of the nine epidemic processes: `ets_epidemic()` passed `fit_check()` on 15%
+of fits and `sts_epidemic()` on 39%. At 500 iterations ETS stopped with a maximum
+gradient of 6.6 and `theta_epidemic()` with 107.
+
+`fit(control = NULL)`, the new default, sizes the budget from the tape:
+`iter.max = max(500, min(50000, 25 * n_parameters))`. All nine processes now pass
+`fit_check()` on dengue with a positive-definite Hessian, ETS and Theta reaching
+maximum gradients of 0.32 and 0.036, and ETS finding a better mode than it
+previously stopped at (objective 53061.5 against 53049.0). The L-BFGS-B polish
+step scales the same way. A supplied `control` list is still used verbatim.
+
+Raising a cap costs nothing when it does not bind, which is what makes this
+safe: short series converge in the same number of steps and return a
+bit-identical objective. Long series pay for the iterations they were previously
+skipping -- a structural trend on 1,095 weeks now takes around five minutes
+rather than ninety seconds, and converges.
+
+This also revises the note added with the time-series processes above: they do
+not have an inherent scaling limit, they had an optimiser budget that did not
+scale. They remain the expensive choice on a long series, where `hsgp_epidemic()`
+keeps a fixed-size basis.
+
 ## Fixed parameters are honoured instead of discarded
 
 A number in a parameter slot has always meant "hold this here" on the delay

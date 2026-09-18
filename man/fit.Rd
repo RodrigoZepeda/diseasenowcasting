@@ -4,14 +4,7 @@
 \alias{fit}
 \title{Fit a nowcast model with the RTMB engine}
 \usage{
-fit(
-  model,
-  data,
-  priors = NULL,
-  init = NULL,
-  control = list(iter.max = 500, eval.max = 1000, rel.tol = 1e-09),
-  warn = TRUE
-)
+fit(model, data, priors = NULL, init = NULL, control = NULL, warn = TRUE)
 }
 \arguments{
 \item{model}{A \code{\link[=model]{model()}} object.}
@@ -22,7 +15,9 @@ fit(
 
 \item{init}{Optional named init list.}
 
-\item{control}{\code{nlminb} control list.}
+\item{control}{\code{nlminb} control list.  \code{NULL} (the default) sizes the
+iteration budget to the number of free parameters -- see
+\code{\link[=.scaled_nlminb_control]{.scaled_nlminb_control()}}.  A supplied list is used verbatim.}
 
 \item{warn}{If \code{TRUE}, warn when the returned joint fit does not pass the
 optimizer adequacy checks. Internal warm-start and imputation fits set this

@@ -12,7 +12,9 @@
 #' @param data Prepared-data list from [prepare_data()].
 #' @param priors Optional prior bundle; defaults to [default_priors()].
 #' @param init Optional named init list.
-#' @param control `nlminb` control list.
+#' @param control `nlminb` control list.  `NULL` (the default) sizes the
+#'   iteration budget to the number of free parameters -- see
+#'   [.scaled_nlminb_control()].  A supplied list is used verbatim.
 #' @param warn If `TRUE`, warn when the returned joint fit does not pass the
 #'   optimizer adequacy checks. Internal warm-start and imputation fits set this
 #'   to `FALSE` and report only diagnostics for the fits that affect the result.
@@ -20,7 +22,7 @@
 #'   `model`, `convergence`, and (delay-only) `delay_mu` / `delay_sigma`.
 #' @export
 fit <- function(model, data, priors = NULL, init = NULL,
-                control = list(iter.max = 500, eval.max = 1000, rel.tol = 1e-9),
+                control = NULL,
                 warn = TRUE) {
   priors <- priors %||% default_priors(model, data)
   hier   <- S7::S7_inherits(model, model_class) && model@strata_pooling == "hierarchical"
@@ -37,7 +39,9 @@ fit <- function(model, data, priors = NULL, init = NULL,
                      "i" = "Leave `p` free (the default) or give it a prior, so the observed retractions have positive probability."))
 
   if (isTRUE(data$delay_only)) {
-    return(.fit_delay_only(model, data, priors, init = init, control = control))
+    return(.fit_delay_only(model, data, priors, init = init,
+                           control = control %||%
+                             list(iter.max = 500, eval.max = 1000, rel.tol = 1e-9)))
   }
   .fit_joint(model, data, priors, init = init, control = control,
              hierarchical_strata = hier, warn = warn)
@@ -81,6 +85,36 @@ fit <- function(model, data, priors = NULL, init = NULL,
   set_bounds("^log_magnitude_size$", -8, 12)
   set_bounds("^movement_", -12, 12)
   list(lower = lower, upper = upper)
+}
+
+#' An `nlminb` budget sized to the problem, not to a constant
+#'
+#' The joint fit optimises one latent innovation per event-time, so its parameter
+#' count is set by the DATA: 28 for an HSGP on any series, but 1,623 for a
+#' structural time series on a 1,095-week one.  A fixed `iter.max = 500` is
+#' generous for the first and nowhere near enough for the second, and the symptom
+#' is not an error -- `nlminb` returns code 1, the fit is kept, and the only
+#' trace is a `fit_check()` warning about a non-positive-definite Hessian.  On
+#' the package's dengue series that silently affected six of the nine epidemic
+#' processes: at 500 iterations ETS stopped with a maximum gradient of 6.6 and
+#' Theta with 107; given room they reach 0.32 and 0.036.
+#'
+#' Raising a cap is free when it does not bind, which is what makes this safe:
+#' a short series converges in the same number of steps and returns a
+#' bit-identical objective.  Only fits that were previously stopping early cost
+#' more, and those were the ones being reported wrong.
+#'
+#' @param n_parameters Number of free parameters in the tape.
+#' @returns An `nlminb` control list.
+#' @keywords internal
+#' @noRd
+.scaled_nlminb_control <- function(n_parameters) {
+  # 25 iterations per parameter, which covers the worst case observed (a
+  # structural trend on 1,095 weeks needed roughly 12 per parameter) with room
+  # to spare, floored so small problems keep the budget they always had and
+  # capped so a pathological fit cannot run forever.
+  iterations <- max(500L, min(50000L, 25L * as.integer(n_parameters)))
+  list(iter.max = iterations, eval.max = 2L * iterations, rel.tol = 1e-9)
 }
 
 #' Mathematically coherent diagnostics for a box-constrained joint fit
@@ -410,7 +444,11 @@ fit <- function(model, data, priors = NULL, init = NULL,
 #' @noRd
 .polish_joint_candidate <- function(
     obj, opt, bounds, gradient_trigger = 0.05,
-    control = list(maxit = 2000L, factr = 1e4, pgtol = 1e-8)) {
+    control = NULL) {
+  # Same reasoning as .scaled_nlminb_control(): a constant iteration budget is
+  # not a property of the problem being polished.
+  control <- control %||% list(maxit = max(2000L, min(50000L, 25L * length(opt$par))),
+                               factr = 1e4, pgtol = 1e-8)
   start_gradient <- tryCatch(
     max(abs(obj$gr(opt$par))), error = function(e) NA_real_
   )
@@ -527,7 +565,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
 #' @noRd
 .fit_joint <- function(model, data, priors, init = NULL, n_tries = 6L,
                        use_random = NULL,
-                       control = list(iter.max = 1000, eval.max = 2000, rel.tol = 1e-9),
+                       control = NULL,
                        hierarchical_strata = FALSE, warn = TRUE) {
   if (is.null(use_random)) {
     use_random <- if (isTRUE(data$is_count_cumulative == 1L)) {
@@ -582,9 +620,10 @@ fit <- function(model, data, priors = NULL, init = NULL,
       bounds <- .joint_parameter_bounds(
         obj$par, data$settlement_horizon %||% 26L
       )
+      attempt_control <- control %||% .scaled_nlminb_control(length(obj$par))
       opt <- nlminb(
         obj$par, obj$fn, obj$gr,
-        lower = bounds$lower, upper = bounds$upper, control = control
+        lower = bounds$lower, upper = bounds$upper, control = attempt_control
       )
       if (!is.finite(opt$objective)) stop("non-finite objective")
       # A nominal nlminb convergence code is not enough for either inference

@@ -303,12 +303,15 @@ methods coincide, and the package does not pretend otherwise:
   the backtest `(1,1,1)` was the worst of nine processes (relative WIS 2.06 vs
   1.63 for `(2,1,0)`), with bands 2.4x the settled count and 15 of the 21
   over-wide fits in the whole grid.
-- **These do not scale to long series.**  One latent innovation per event-time
-  (two for STS with a slope) means the Laplace Hessian grows with `max_time`.
-  On the 1,095-week dengue series `fit_check()` pass rates collapse -- ETS 15%,
-  STS 39%, SIR 44%, RW 71%, AR(1) 86% -- against 96-100% for every one of them
-  on the other seven datasets.  HSGP is 100% on both, because its basis is ~20
-  coefficients rather than `T`.  Past ~500 event-times, use HSGP.
+- **Long series are expensive, but they do converge.**  One latent innovation
+  per event-time (two for STS with a slope) means the parameter count is set by
+  the data: 28 for HSGP on any series, 1,623 for STS on 1,095 weeks.  On that
+  series all nine processes pass `fit_check()` with a positive-definite Hessian,
+  but STS takes ~5 min and SIR ~2 min against ~10 s for HSGP.  Use HSGP on long
+  series when fitting time matters more than the shape of the trend.
+  **This used to be a convergence cliff** (ETS passed 15% of dengue fits, STS
+  39%) and the cause was NOT the parameterisation -- it was `fit()` hard-coding
+  `iter.max = 500` regardless of problem size.  See §2e.
 - `include_drift` defaults to `d >= 1` and **errors at `d = 0`** (the ARMA mean
   and `mu_intercept` are the same quantity).
 - A **number in any parameter slot holds it at that value**, as on the delay
@@ -338,6 +341,33 @@ auto_nowcast(tn, models = list(
 whole process menu across dengue, covid_us, mpox, mpox-as-cumulative and
 FluSight (stratified and pooled) with an hourly-updating ETA log at
 `devel/epidemic_timeseries/progress.log`.
+
+---
+
+## 2e. The optimiser's iteration budget scales with the problem
+
+`fit(control = NULL)` (the default) sizes the `nlminb` budget from the tape:
+`iter.max = max(500, min(50000, 25 * n_parameters))`, `eval.max` twice that.
+`.scaled_nlminb_control()` in `R/12_fit.R`; the L-BFGS-B polish scales the same way.
+
+**Why it matters.** The joint fit optimises one latent innovation per event-time,
+so `n_parameters` is a property of the DATA, not the model spec.  A constant
+`iter.max = 500` is generous for an HSGP (28 parameters) and nowhere near enough
+for a structural trend on a 1,095-week series (1,623).
+
+**The failure was silent.** `nlminb` returns code 1, the fit is *kept*, and the
+only trace is a `fit_check()` warning about a non-positive-definite Hessian —
+never an error.  On dengue this affected six of nine processes: at 500
+iterations ETS stopped with a max gradient of 6.6 and Theta with 107; given room
+they reach 0.32 and 0.036, and ETS finds a better mode (nll 53061.5 -> 53049.0).
+
+**Raising a cap is free when it does not bind.** A short series converges in the
+same number of steps and returns a bit-identical objective — verified to
+`0.00e+00` on mpox for HSGP/ETS/STS, and across seven processes pooled and
+stratified. Only fits that were previously stopping early cost more.
+
+If you see `optimizer code 1` in `fit_check()$reasons`, the budget bound; that
+is now expected only on genuinely pathological fits.
 
 ---
 

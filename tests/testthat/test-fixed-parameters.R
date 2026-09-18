@@ -183,3 +183,36 @@ test_that("leaving everything free changes nothing", {
     expect_true(all(is.finite(nc@fits[[1]]$lambda)), label = process@name)
   }
 })
+
+test_that("the nlminb budget scales with the parameter count", {
+  # A constant iter.max is not a property of the problem: the joint fit carries
+  # one latent innovation per event-time, so a long series has thousands of
+  # parameters where an HSGP has thirty.  The old constant 500 silently left six
+  # of nine epidemic processes short of a mode on the package's 1,095-week
+  # dengue series -- silently because nlminb returns code 1 and the fit is kept.
+  expect_equal(.scaled_nlminb_control(10)$iter.max, 500L)      # floor holds below 20
+  expect_equal(.scaled_nlminb_control(28)$iter.max, 700L)      # an HSGP, 25 per parameter
+  expect_equal(.scaled_nlminb_control(816)$iter.max, 20400L)
+  expect_equal(.scaled_nlminb_control(1623)$iter.max, 40575L)
+  expect_equal(.scaled_nlminb_control(1e6)$iter.max, 50000L)   # cap holds
+  expect_equal(.scaled_nlminb_control(816)$eval.max,
+               2L * .scaled_nlminb_control(816)$iter.max)
+})
+
+test_that("a bigger budget does not change a fit that was already converging", {
+  skip_on_cran()
+  # This is what makes the scaling safe to apply everywhere: raising a cap is a
+  # no-op when it does not bind.  If this ever fails, the budget is changing
+  # answers rather than just letting them finish.
+  tn <- .make_synth_tblnow(Tn = 55L, seed = 11)
+  for (process in list(hsgp_epidemic(), ar1_epidemic(), ets_epidemic(), sts_epidemic())) {
+    specification <- model(nb_likelihood(), process, lognormal_delay())
+    prepared <- prepare_from_tbl_now(tn, specification)
+    priors <- default_priors(specification, prepared$data)
+    small <- fit(specification, prepared$data, priors = priors, warn = FALSE,
+                 control = list(iter.max = 500, eval.max = 1000, rel.tol = 1e-9))
+    large <- fit(specification, prepared$data, priors = priors, warn = FALSE,
+                 control = list(iter.max = 20000, eval.max = 40000, rel.tol = 1e-9))
+    expect_equal(small$nll, large$nll, tolerance = 1e-8, label = process@name)
+  }
+})
