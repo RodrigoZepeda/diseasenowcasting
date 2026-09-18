@@ -19,8 +19,9 @@ free subspace, and a quadratic objective-gap estimate no larger than
 \value{
 A data frame with one row per retained RTMB fit and columns \code{fit},
 \code{rung}, \code{convergence}, \code{objective}, raw and projected gradients, quadratic
-objective gap, Hessian status, any Laplace-precision regularization used
-for prediction, overall status, and diagnostic reasons.
+objective gap, Hessian status, the headroom between the fitted latent
+\code{log_mean} and its softplus ceiling, any Laplace-precision regularization
+used for prediction, overall status, and diagnostic reasons.
 }
 \description{
 Predictive accuracy belongs to \code{\link[tbl.now:score_nowcast]{tbl.now::score_nowcast()}} and

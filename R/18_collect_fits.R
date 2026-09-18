@@ -29,6 +29,8 @@
       convergence = integer(), objective = numeric(), max_gradient = numeric(),
       projected_gradient = numeric(), quadratic_gap = numeric(),
       hessian_positive_definite = logical(), hessian_status = character(),
+      log_mean_upper_bound = numeric(), log_mean_headroom = numeric(),
+      log_mean_cap_bound = logical(), log_mean_upper_bound_legacy = numeric(),
       reasons = character(),
       stringsAsFactors = FALSE
     ))
@@ -46,6 +48,10 @@
       quadratic_gap = summary$quadratic_gap,
       hessian_positive_definite = summary$hessian_positive_definite,
       hessian_status = summary$hessian_status,
+      log_mean_upper_bound = summary$log_mean_upper_bound,
+      log_mean_headroom = summary$log_mean_headroom,
+      log_mean_cap_bound = summary$log_mean_cap_bound,
+      log_mean_upper_bound_legacy = summary$log_mean_upper_bound_legacy,
       reasons = paste(summary$reasons, collapse = "; "),
       stringsAsFactors = FALSE
     )
@@ -64,7 +70,10 @@
   diagnostics$collection_warning_emitted <- FALSE
 
   if (isTRUE(warn)) {
-    retained_bad <- diagnostics$retained_fit_diagnostics$status != "pass"
+    # `adequate`, not `status`: a fit whose only complaint is the `log_mean`
+    # ceiling has converged, and gets its own warning below rather than being
+    # filed under "optimizer adequacy".
+    retained_bad <- !diagnostics$retained_fit_diagnostics$adequate
     problems <- character()
     if (diagnostics$excluded_K > 0L) {
       problems <- c(
@@ -94,6 +103,17 @@
         "i" = "Run {.code fit_check(result, warn = FALSE)} for retained-fit details."
       ))
     }
+    capped <- which(diagnostics$retained_fit_diagnostics$log_mean_cap_bound)
+    if (length(capped)) {
+      .warn_log_mean_cap(
+        diagnostics$retained_fit_diagnostics$log_mean_headroom[capped],
+        diagnostics$retained_fit_diagnostics$log_mean_upper_bound[capped],
+        n_fits = nrow(diagnostics$retained_fit_diagnostics),
+        context = paste("retained", rung, "fit"),
+        legacy_bound =
+          diagnostics$retained_fit_diagnostics$log_mean_upper_bound_legacy[capped]
+      )
+    }
   }
 
   list(
@@ -116,8 +136,10 @@
   retained <- diagnostics$retained_fit_diagnostics
   # A degraded retained fit has already generated the collection warning. Its
   # sampling regularization remains visible in `fit_check()` without producing
-  # a second warning for the same final fit.
-  if (!is.null(retained) && any(retained$status != "pass")) {
+  # a second warning for the same final fit.  The test is optimizer adequacy,
+  # not `status`: a fit whose only complaint is the `log_mean` ceiling has not
+  # produced that warning, and its regularized precision is separate news.
+  if (!is.null(retained) && any(!retained$adequate)) {
     return(invisible(FALSE))
   }
   regularized_count <- sum(vapply(

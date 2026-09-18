@@ -1,5 +1,89 @@
 # 2.5.0
 
+## The cap on the latent incidence no longer truncates the nowcast
+
+The objective caps the latent `log_mean` with a softplus so a bad optimiser step
+cannot overflow `exp()`. The ceiling was
+`min(max(6, log1p(casemax)), 16)`, where `casemax` is the largest count
+**reported so far**. But the latent incidence exceeds the reported count by
+`1/Gstar`, the reciprocal of the reporting fraction -- which is precisely the
+quantity a nowcast exists to estimate. On a stream that is growing while only a
+percent or two has arrived, the ceiling sat *below* the answer and the fit
+pinned to it.
+
+On the `covid_us` case series the ceiling was below the settled truth at six of
+seven as-of dates in March-April 2020 (ceiling over truth 0.14 to 0.54) and the
+median nowcast came out at 8.7% of the settled count. Because the cap is applied
+downstream of every epidemic process, all nine were biased identically -- which
+is why the effect looked like a property of the data rather than of the engine.
+
+The bound is now `min(max(6, log1p(casemax)) + log(100), 16)`. The `log(100)`
+admits a hundredfold reporting inflation, which covers what early-2020
+`covid_us` needs; `exp(16)` (about 8.9 million) remains the hard overflow stop,
+which was always the guard's actual job. `prepare_data()` and, through `...`,
+`nowcast()` accept `mu_log_upper_bound = ` to set it explicitly.
+
+The failure was silent, in the same way the `iter.max = 500` one below was, so
+it is now audible. `fit_check()` reports `log_mean_upper_bound`,
+`max_log_mean`, `log_mean_headroom` and `log_mean_cap_bound`, and `nowcast()`
+warns whenever the fitted `log_mean` comes within three log units of the
+ceiling. Three is where the distortion stops being negligible: the softplus
+keeps exactly `plogis(bound - log_mean)` of `lambda`, which is 95.3% three units
+down, 88.1% two units down and 50% at the bound, and once it saturates the
+gradient vanishes, so the trend is unidentified above the ceiling and `lambda`
+goes flat.
+
+The check reads the **uncapped** `log_mean`. A cap-bound fit is reported as
+`fit_status == "warning"` while `optimizer_adequate` stays `TRUE`: the optimiser
+has converged, to a ceiling, and the two failures want different remedies.
+
+## `reporting_fraction()`: the multiplier a nowcast is applying
+
+Every nowcast is at bottom one number per event-time -- the fraction of that
+cohort that has arrived by the as-of date. The engine has always computed it as
+`Gstar`, but nothing exposed it. `reporting_fraction()` now returns it per
+(event-time, stratum) together with `inflation = 1 / reporting_fraction`, which
+is exactly the multiplier applied to the observed count, and with the range over
+retained fits -- under `type = "two_stage"` that spread is the delay uncertainty
+the cascade propagates.
+
+It is worth reading because it is where most nowcast level errors live and it
+does not appear in the predictive summary. On `covid_colombia` at
+`now = 2020-08-01`, every configuration tried -- three epidemic processes, one-
+and two-stage, and a susceptible-pool sweep spanning four orders of magnitude --
+put the horizon-0 inflation at 132-208, while the settled truth for that cohort
+was 9,171 against 309 reported, an inflation of 29.7. No epidemic process can be
+right when it is handed a reporting fraction five times too small.
+
+**It deliberately does not warn.** A very large inflation on a young cohort is
+correct, not suspicious: early-2020 `covid_us` genuinely needs 37-83x. There is
+no threshold that is universally wrong, so the number is reported and the
+judgement is left to the caller.
+
+## `hsgp_epidemic()` warns when the basis outnumbers the series
+
+The basis count sets the shortest wavelength the trend can resolve, and the
+place an over-flexible basis bends is the right-hand edge of the series, where
+reporting is least complete and the likelihood constrains it least. On mpox at
+`now = 2022-08-09` — 33 event-times, settled truth 64 — `num_basis = 20` gives a
+median of 1,540 with a 90% band of [180, 13,373], where the automatic count of
+12 gives 186 with [19, 1,913] and covers.
+
+`prepare_data()` now warns when an explicitly supplied `num_basis` exceeds half
+the event-times. An automatic count never warns: the ladder's floor of 12 is
+itself more than half of a 20-step series, so checking it would fire on the
+package's own default path -- eleven times across this package's own test suite,
+none of them a choice anyone made. Short series are already handled better by
+`auto_nowcast()`, which keeps HSGP out of its candidate grid below
+`min_hsgp = 30`. What is actionable is a number the caller supplied, typically
+one carried over from a longer series: the `num_basis = 20L` recommended for
+COVID-length daily data is exactly the value that breaks a 33-day one. The
+warning is skipped for `delay_only` Stage-1 fits, which build no epidemic
+process.
+
+This was previously invisible because the `log_mean` ceiling clipped the runaway
+into something plausible-looking.
+
 ## Classical time-series epidemic processes
 
 The epidemic-process menu gains five constructors beyond HSGP, AR(1) and SIR:

@@ -19,8 +19,9 @@
 #'
 #' @returns A data frame with one row per retained RTMB fit and columns `fit`,
 #'   `rung`, `convergence`, `objective`, raw and projected gradients, quadratic
-#'   objective gap, Hessian status, any Laplace-precision regularization used
-#'   for prediction, overall status, and diagnostic reasons.
+#'   objective gap, Hessian status, the headroom between the fitted latent
+#'   `log_mean` and its softplus ceiling, any Laplace-precision regularization
+#'   used for prediction, overall status, and diagnostic reasons.
 #' @seealso [diseasenowcasting_workflows] for the distinction between native fit
 #'   diagnostics and predictive scoring; [nowcast_diagnostic()],
 #'   [tbl.now::score_nowcast()], [tbl.now::nowcast_backtest()]
@@ -64,6 +65,12 @@ fit_check <- function(object, warn = TRUE) {
       quadratic_gap = summary$quadratic_gap,
       hessian_positive_definite = summary$hessian_positive_definite,
       hessian_status = summary$hessian_status,
+      optimizer_adequate = summary$adequate,
+      log_mean_upper_bound = summary$log_mean_upper_bound,
+      log_mean_upper_bound_legacy = summary$log_mean_upper_bound_legacy,
+      max_log_mean = summary$max_log_mean,
+      log_mean_headroom = summary$log_mean_headroom,
+      log_mean_cap_bound = summary$log_mean_cap_bound,
       laplace_regularized = as.logical(laplace$applied %||% NA),
       laplace_regularization = as.character(laplace$method %||% "unknown"),
       laplace_ridge = as.numeric(laplace$ridge %||% NA_real_),
@@ -79,12 +86,24 @@ fit_check <- function(object, warn = TRUE) {
 
   if (isTRUE(warn)) {
     applicable <- out$rung != "prior"
-    problematic <- applicable & out$fit_status != "pass"
+    # The two failures are reported separately because they mean different
+    # things: one says the optimiser has not arrived, the other says it arrived
+    # at a ceiling.  A cap-bound fit routinely passes every optimizer test.
+    capped <- applicable & out$log_mean_cap_bound
+    regularized <- !is.na(out$laplace_regularized) & out$laplace_regularized
+    problematic <- applicable & (!out$optimizer_adequate | regularized)
     if (any(problematic)) {
       cli::cli_warn(c(
         "{sum(problematic)} of {nrow(out)} retained RTMB fit{?s} failed the optimizer diagnostic check.",
         "i" = "Inspect {.code fit_check(object, warn = FALSE)} and {.fn nowcast_diagnostic}."
       ))
+    }
+    if (any(capped)) {
+      .warn_log_mean_cap(
+        out$log_mean_headroom[capped], out$log_mean_upper_bound[capped],
+        n_fits = nrow(out), context = "retained RTMB fit",
+        legacy_bound = out$log_mean_upper_bound_legacy[capped]
+      )
     }
   }
 

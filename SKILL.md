@@ -371,6 +371,38 @@ is now expected only on genuinely pathological fits.
 
 ---
 
+## 2f. The cap on the latent log-incidence
+
+The objective caps `log_mean` with a softplus,
+`ub - log1p(exp(ub - log_mean))`, applied **downstream of every epidemic
+process**, so a binding cap truncates all of them identically.  The bound is
+`min(max(6, log1p(casemax)) + log(100), 16)`, where `casemax` is the largest
+count **reported so far** per (event time, stratum).
+
+**Why the headroom.**  The latent incidence exceeds the reported count by
+`1/Gstar` -- the reciprocal of the reporting fraction, i.e. the quantity a
+nowcast exists to estimate.  Without the `log(100)` term the ceiling sits below
+the answer on any stream that is growing while mostly unreported.  On `covid_us`
+in March-April 2020 it was below the settled truth at six of seven as-of dates
+and the median nowcast came out at 8.7% of it, for all nine processes.  `exp(16)`
+(~8.9M) remains the hard overflow stop.
+
+**It distorts before it saturates.**  `lambda` keeps exactly
+`plogis(ub - log_mean)` of its value: 95.3% three log units below the ceiling,
+88.1% two, 50% at it.  Once saturated the gradient vanishes, so the trend is
+unidentified above the ceiling and `lambda` goes flat.
+
+**The diagnostic.**  `fit_check()` carries `log_mean_upper_bound`,
+`max_log_mean`, `log_mean_headroom` and `log_mean_cap_bound`, and warns when the
+headroom drops below 3.  The check reads the **uncapped** `log_mean` (`fit$mu`,
+not `fit$mu_safe` -- `mu_safe` approaches the bound asymptotically and never
+reaches it, so a check written against it can never fire).  A cap-bound fit is
+`fit_status == "warning"` but `optimizer_adequate == TRUE`: the optimiser has
+converged, to a ceiling.
+
+**The escape hatch.**  `nowcast(..., mu_log_upper_bound = )` (a `...`
+pass-through to `prepare_data()`) sets the bound explicitly.
+
 ## 2d. Fixed parameters
 
 A number in a parameter slot means **hold it here**; a `prior_class` means
@@ -699,6 +731,36 @@ summary(pred)
 autoplot(pred)   # ggplot2: median + 50%/90% ribbons
 ```
 
+### Reporting fraction and inflation
+
+```r
+rf <- reporting_fraction(nc)              # one row per (event-time, stratum)
+# event_date, .event_num, stratum, horizon, observed,
+# reporting_fraction, reporting_fraction_low/high, inflation
+subset(rf, horizon == 0)$inflation        # what the nowcast multiplies by
+reporting_fraction(nc, summary = FALSE)   # one row per retained fit too
+```
+
+`reporting_fraction` is the engine's `Gstar` = `F_D(d_star + 1)`: the fraction of
+each cohort the fit believes has arrived. `inflation = 1 / reporting_fraction` is
+**exactly the multiplier the nowcast applies to the observed count** — the whole
+of its claim, as one dimensionless number per cohort. It is the quantity most
+level errors travel through and it is invisible in `summary(predict(nc))`.
+
+`reporting_fraction` is in (0, 1], `inflation` in [1, Inf). Both are *fitted*,
+not observed — the delay law is extrapolated past the data.
+
+**A very large inflation at horizon 0 is normal, not a fault.** Early-2020
+`covid_us` genuinely needs 37–83x; a fit reporting ~1 there would be badly
+wrong. There is no universally suspicious threshold, which is why nothing warns.
+What is informative is comparing it against the retrospective settled inflation,
+or watching its stability: `covid_colombia` runs 15.8 (Mar 2020), 103.2 (Jun),
+5.1 (Oct), and a single stationary delay is then wrong in both directions at
+different dates. With `summary = TRUE` the `_low`/`_high` columns are the range
+over retained fits — under `type = "two_stage"` that spread is the delay
+uncertainty the cascade propagates, and at horizon 0 it can span two orders of
+magnitude.
+
 ### Latent incidence (lambda)
 
 ```r
@@ -871,7 +933,8 @@ built <- build_joint_obj(data, priors, init = NULL, use_random = FALSE)
 ```r
 log_mean_capped <- upper_bound - log1p(exp(upper_bound - log_mean_col))
 ```
-where `upper_bound = min(max(6, log1p(casemax)), 16)`.
+where `upper_bound = min(max(6, log1p(casemax)) + log(100), 16)` and
+`casemax` is the largest count REPORTED so far. See §2f.
 
 ### .joint_reconstruct()
 
@@ -954,14 +1017,38 @@ the joint Hessian — same as `cmdstanr $laplace()`.  Set
 `options(diseasenowcasting.use_random = TRUE)` to switch to the marginal nested Laplace
 (slower, sometimes more accurate for hierarchical models).
 
-### HSGP num_basis for long daily series
+### HSGP num_basis: too many is worse than too few
 
-Auto `num_basis = ceiling(1.5 * sqrt(max_time))` → ~60 for a 1,500-day series,
+Auto `num_basis` is `3` below 10 event-times, `8` below 20, then
+`min(150, max(12, ceiling(1.5 * sqrt(max_time))))` — ~60 for a 1,500-day series,
 which can cause an ill-conditioned Laplace.  For COVID-length series, cap at 20:
 
 ```r
 model(nb_likelihood(), hsgp_epidemic(num_basis = 20L), lognormal_delay())
 ```
+
+**But do not carry that 20 onto a short series.**  The basis count sets the
+shortest resolvable wavelength (basis `j` ≈ `2 * gp_L * max_time / j`), and the
+place an over-flexible basis bends is the right-hand edge, where reporting is
+least complete.  On mpox at `now = 2022-08-09` (33 event-times, settled truth
+64), one-stage NB + log-normal:
+
+| num_basis | median | 90% band | covers? |
+|---|---|---|---|
+| 8 | 84 | [9, 484] | yes |
+| 12 (auto) | 186 | [19, 1913] | yes |
+| 20 | 1540 | [180, 13373] | **no** |
+
+`prepare_data()` warns when an **explicitly supplied** `num_basis` exceeds
+`max_time / 2` (`.warn_hsgp_basis_fraction()`).  An automatic count never warns:
+the ladder's floor of 12 is itself more than half of a 20-step series, so
+checking it would fire on the package's own default path for every short series.
+Short series are handled better elsewhere — `auto_nowcast()` keeps HSGP out of
+its grid below `min_hsgp = 30`.  The warning is also skipped in `delay_only`
+mode, where no epidemic process is built.
+
+This used to be invisible: the `log_mean` cap (§2f) clipped the runaway into
+something plausible-looking.
 
 ### delay_only = TRUE skips fit() validity check
 

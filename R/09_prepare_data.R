@@ -8,6 +8,129 @@
 # keeps the delay log-mean constant across t.
 # =============================================================================
 
+#' The softplus ceiling on the latent log-incidence
+#'
+#' The objective caps `log_mean` with `ub - log1p(exp(ub - log_mean))` so a bad
+#' optimiser step cannot overflow `exp()`.  That is the whole of its job: it is
+#' a numerical guard, NOT a belief about how large incidence can be.
+#'
+#' The ceiling is nevertheless sized from `casemax`, the largest count REPORTED
+#' so far.  The latent incidence exceeds the reported count by `1/Gstar`, the
+#' reciprocal of the reporting fraction -- which is exactly the quantity a
+#' nowcast exists to estimate.  On a stream that is growing while only a percent
+#' or two has arrived, a ceiling at `log1p(casemax)` sits BELOW the answer, the
+#' fit pins to it, and (because the softplus gradient vanishes once saturated)
+#' the trend goes flat above it.  On `covid_us` in March 2020 that put the
+#' median nowcast at 8.7% of the settled count at every as-of date and for every
+#' epidemic process, because the cap is applied downstream of all of them.
+#'
+#' `log(100)` of headroom decouples the guard from the observed scale: it admits
+#' a hundredfold reporting inflation, which covers the 37-83x that early-2020
+#' `covid_us` needs, while `exp(16)` (~8.9M) remains the hard overflow stop.
+#' Widening a bound is free wherever it does not bind -- and the softplus is
+#' within 5% of the identity three log units below the ceiling, so on the
+#' datasets that were already clear of it nothing moves.
+#'
+#' @param casemax Largest observed count over (event time, stratum).
+#' @param override Optional user-supplied bound; returned as given.
+#' @returns A single finite bound on the natural-log scale.
+#' @keywords internal
+#' @noRd
+.mu_log_upper_bound <- function(casemax, override = NULL) {
+  if (!is.null(override)) {
+    value <- suppressWarnings(as.numeric(override))
+    if (length(value) != 1L || !is.finite(value) || value <= 0) {
+      cli::cli_abort(c(
+        "`mu_log_upper_bound` must be a single finite positive number.",
+        "x" = "Got {.val {override}}.",
+        "i" = "It is a bound on the NATURAL LOG of incidence: {.code log(1e6)} is a ceiling of a million."
+      ))
+    }
+    return(value)
+  }
+  min(max(6, log1p(casemax)) + log(100), 16)
+}
+
+#' Warn when the HSGP has more basis functions than the series can support
+#'
+#' The basis count sets the shortest wavelength the trend can resolve: with the
+#' boundary factor `gp_L`, basis `j` carries a wavelength of about
+#' `2 * gp_L * max_time / j`.  Once `j` approaches `max_time / 2` the trend can
+#' wiggle on a two-step scale, and the place it does so is the right-hand edge,
+#' where reporting is least complete and the likelihood constrains it least.
+#' The result is a nowcast that extrapolates the last few censored points
+#' instead of the epidemic.
+#'
+#' Measured on mpox at `now = 2022-08-09` (33 event-times, settled truth 64),
+#' one-stage, NB + log-normal:
+#'
+#' | num_basis | median nowcast | 90% band | covers? |
+#' |---|---|---|---|
+#' | 8  | 84   | [9, 484]        | yes |
+#' | 12 (auto) | 186  | [19, 1913]  | yes |
+#' | 20 | 1540 | [180, 13373]    | no  |
+#'
+#' This used to be invisible: the softplus ceiling on `log_mean` clipped the
+#' runaway to something plausible-looking.  With the ceiling decoupled from the
+#' observed scale (see `.mu_log_upper_bound()`) the over-flexible basis shows
+#' through, so it is named here rather than silently absorbed.
+#'
+#' @section Only a count the caller chose:
+#'
+#' The warning fires for an EXPLICIT `num_basis` only.  The automatic ladder has
+#' a floor of 12, which is itself more than half of a 20-step series, so warning
+#' on it would fire on the package's own default path for every short series --
+#' 11 times across this package's own test suite, none of them a choice anyone
+#' made.  Short series are already handled elsewhere and better:
+#' `auto_nowcast()` keeps HSGP out of its candidate grid below
+#' `min_hsgp = 30`.  What is actionable is a number the caller supplied, which
+#' is usually one carried over from a longer series (the `num_basis = 20L` that
+#' `?diseasenowcasting` recommends for COVID-length daily data is exactly the
+#' value that breaks a 33-day one).
+#'
+#' @param num_basis The resolved basis count.
+#' @param max_time Number of event-times the model spans.
+#' @param explicit `TRUE` when the caller set `num_basis`.  An automatic count
+#'   never warns; see above.
+#' @returns `TRUE` (invisibly) when a warning was emitted.
+#' @keywords internal
+#' @noRd
+.warn_hsgp_basis_fraction <- function(num_basis, max_time, explicit = FALSE) {
+  if (!isTRUE(explicit)) return(invisible(FALSE))
+  num_basis <- as.integer(num_basis)
+  max_time <- as.integer(max_time)
+  if (!length(num_basis) || !length(max_time) ||
+      is.na(num_basis) || is.na(max_time) || max_time <= 0L) {
+    return(invisible(FALSE))
+  }
+  # Half the event-times is where the shortest resolvable wavelength reaches
+  # the two-step scale.  Below that the basis is smoothing; above it, it can
+  # interpolate the noise.
+  if (num_basis <= max_time %/% 2L) return(invisible(FALSE))
+
+  fraction <- round(100 * num_basis / max_time)
+  automatic <- .auto_hsgp_num_basis(max_time)
+  cli::cli_warn(c(
+    "{.val {num_basis}} HSGP basis function{?s} for {.val {max_time}} event-time{?s} ({fraction}%) is more flexibility than the series supports.",
+    "x" = "The basis can then fit the most recent, least-reported points instead of smoothing them, and the nowcast extrapolates from them.",
+    "i" = "Drop {.code num_basis} (leave it at {.code 0L} for the automatic count, {.val {automatic}} here), or use a process whose flexibility does not scale with the basis count: {.fn ar1_epidemic}, {.fn random_walk_epidemic}, {.fn sts_epidemic}.",
+    "i" = "Check {.code reporting_fraction(nc)} and {.code fit_check()} before trusting the result."
+  ))
+  invisible(TRUE)
+}
+
+#' The automatic HSGP basis count for a series length
+#'
+#' `prepare_data()`'s ladder, factored out so the warning can quote the number
+#' the user would get by leaving `num_basis` alone without the two drifting.
+#' @keywords internal
+#' @noRd
+.auto_hsgp_num_basis <- function(max_time) {
+  if (max_time < 10) return(3L)
+  if (max_time < 20) return(8L)
+  min(150L, max(12L, as.integer(ceiling(1.5 * sqrt(max_time)))))
+}
+
 #' Prepare data for the RTMB nowcast engine
 #'
 #' @param model A [model()] object.
@@ -37,6 +160,9 @@
 #' @param gp_boundary_frac Fraction of the HSGP domain placed left of the data.
 #'   Default 0.62.
 #' @param ar_sigma_max Upper bound on the AR/beta RW innovation SD. Default 1.
+#' @param mu_log_upper_bound Optional override for the softplus ceiling on the
+#'   latent log-incidence.  `NULL` (default) derives it from the observed counts
+#'   with headroom for the reporting fraction; see `.mu_log_upper_bound()`.
 #' @param is_confirmation Deprecated legacy switch.  `TRUE` now errors; use the
 #'   dedicated `count_cumulative` model component and cumulative arguments.
 #' @param cumulative_levels Optional cumulative levels aligned row-for-row with
@@ -60,7 +186,8 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
                          revision_calendar = NULL,
                          covariate_roles = NULL, design_schema = NULL,
                          gp_L = 1.5, gp_boundary_frac = 0.62,
-                         ar_sigma_max = 1, is_confirmation = FALSE,
+                         ar_sigma_max = 1, mu_log_upper_bound = NULL,
+                         is_confirmation = FALSE,
                          cumulative_levels = NULL,
                          cumulative_previous_nonzero = NULL,
                          cumulative_settlement = NULL,
@@ -224,9 +351,10 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
   # -- num_basis (auto) ---------------------------------------------------------
   nb_model <- if (S7::S7_inherits(epi, hsgp_epidemic_class)) epi@num_basis else 0L
   num_basis_val <- if (nb_model > 0L) as.integer(nb_model)
-                   else if (max_time < 10) 3L
-                   else if (max_time < 20) 8L
-                   else min(150L, max(12L, as.integer(ceiling(1.5 * sqrt(max_time)))))
+                   else .auto_hsgp_num_basis(max_time)
+  if (S7::S7_inherits(epi, hsgp_epidemic_class) && !isTRUE(delay_only)) {
+    .warn_hsgp_basis_fraction(num_basis_val, max_time, explicit = nb_model > 0L)
+  }
 
   # -- tmax_model (HSGP time normalisation) -------------------------------------
   tmax_model_val <- if (S7::S7_inherits(epi, hsgp_epidemic_class)) {
@@ -350,7 +478,10 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     # Custom epidemic
     custom_epidemic_n_params = if (S7::S7_inherits(epi, custom_epidemic_class)) as.integer(epi@n_params) else 0L,
     # bounds
-    mu_log_upper_bound = min(max(6, log1p(casemax)), 16),
+    mu_log_upper_bound = .mu_log_upper_bound(casemax, mu_log_upper_bound),
+    # The pre-2.5.0 bound, kept so a cap warning can name the tighter ceiling
+    # concretely.  It is NOT used by the objective; see `.mu_log_upper_bound()`.
+    mu_log_upper_bound_legacy = min(max(6, log1p(casemax)), 16),
     ar_sigma_max = ar_sigma_max
   )
 }

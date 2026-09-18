@@ -117,6 +117,64 @@ fit <- function(model, data, priors = NULL, init = NULL,
   list(iter.max = iterations, eval.max = 2L * iterations, rel.tol = 1e-9)
 }
 
+#' How close the latent log-incidence may come to its softplus ceiling
+#'
+#' `prepare_data()` caps `log_mean` with
+#' `ub - log1p(exp(ub - log_mean))`, a softplus, so the ceiling bites long
+#' before it saturates: the fraction of `lambda` that survives it is exactly
+#' `plogis(ub - log_mean)` -- 95.3% three log units below the ceiling, 88.1% two
+#' below, 50% at it.  Three units is therefore where a fit stops being within a
+#' rounding error of the model that was written down.
+#' @keywords internal
+#' @noRd
+.log_mean_headroom_tolerance <- function() 3
+
+#' Is the fitted latent incidence pressed against its ceiling?
+#'
+#' The comparison has to use the UNCAPPED `log_mean` (`rc$mu`).  `rc$mu_safe`
+#' approaches the bound asymptotically and never reaches it, so a check written
+#' against it can never fire.
+#'
+#' @param log_mean Uncapped latent log-incidence, any shape.
+#' @param upper_bound `data$mu_log_upper_bound`.
+#' @param tolerance Headroom, in log units, below which the cap is reported.
+#' @returns A list with the bound, the peak `log_mean`, their gap, a flag, and a
+#'   human-readable `reason` (`character(0)` when the cap is not binding).
+#' @keywords internal
+#' @noRd
+.log_mean_cap_diagnostic <- function(log_mean, upper_bound,
+                                     tolerance = .log_mean_headroom_tolerance()) {
+  empty <- list(
+    log_mean_upper_bound = NA_real_, max_log_mean = NA_real_,
+    log_mean_headroom = NA_real_, log_mean_cap_bound = FALSE,
+    reason = character()
+  )
+  bound <- suppressWarnings(as.numeric(upper_bound %||% NA_real_))
+  if (length(bound) != 1L || !is.finite(bound)) return(empty)
+  values <- suppressWarnings(as.numeric(log_mean))
+  values <- values[is.finite(values)]
+  if (!length(values)) return(empty)
+
+  peak <- max(values)
+  headroom <- bound - peak
+  bound_binding <- headroom < tolerance
+  reason <- if (bound_binding) {
+    paste0(
+      "latent log_mean within ", signif(headroom, 3),
+      " of its upper bound ", signif(bound, 4),
+      " (softplus cap keeps ", signif(100 * stats::plogis(headroom), 3),
+      "% of peak lambda)"
+    )
+  } else {
+    character()
+  }
+  list(
+    log_mean_upper_bound = bound, max_log_mean = peak,
+    log_mean_headroom = headroom, log_mean_cap_bound = bound_binding,
+    reason = reason
+  )
+}
+
 #' Mathematically coherent diagnostics for a box-constrained joint fit
 #'
 #' The raw maximum gradient is retained for debugging, but adequacy is based on
@@ -124,11 +182,28 @@ fit <- function(model, data, priors = NULL, init = NULL,
 #' `0.5 * r' H^-1 r` of the objective decrease still available locally. The
 #' latter is invariant under invertible linear reparameterisations and gives the
 #' tolerance (`0.01` by default) a log-posterior interpretation.
+#'
+#' The softplus ceiling on the latent `log_mean` is reported alongside them.
+#' It is not an optimizer property -- a cap-bound fit can converge perfectly --
+#' so it does not enter `adequate`, but it does set `status` to `"warning"`,
+#' because the quantity being reported is no longer the one the model wrote
+#' down.  See `.log_mean_cap_diagnostic()`.
+#'
+#' @param log_mean The UNCAPPED latent log-incidence from `.joint_reconstruct()`
+#'   (`rc$mu`, not `rc$mu_safe`).  `NULL` when no reconstruction is available.
+#' @param log_mean_upper_bound `data$mu_log_upper_bound`, the softplus ceiling.
+#' @param log_mean_headroom_tolerance Headroom below which the cap is reported
+#'   as binding, in log units.
 #' @keywords internal
 #' @noRd
 .joint_fit_diagnostic <- function(obj, opt, bounds,
                                   finite_reconstruction = TRUE,
-                                  quadratic_gap_tolerance = 0.01) {
+                                  quadratic_gap_tolerance = 0.01,
+                                  log_mean = NULL,
+                                  log_mean_upper_bound = NA_real_,
+                                  log_mean_upper_bound_legacy = NA_real_,
+                                  log_mean_headroom_tolerance =
+                                    .log_mean_headroom_tolerance()) {
   objective <- as.numeric(opt$objective %||% opt$value %||% NA_real_)
   par <- as.numeric(opt$par)
   names(par) <- names(opt$par)
@@ -281,10 +356,28 @@ fit <- function(model, data, priors = NULL, init = NULL,
     reasons <- c(reasons, "non-finite reconstructed incidence")
   }
 
+  # The cap is deliberately kept out of `adequate`: the optimizer can be at a
+  # textbook mode and still be reporting a truncated epidemic, and the two
+  # failures want different remedies.  It is carried in `reasons` and in
+  # `status` so no caller has to know to look for it.
+  cap <- .log_mean_cap_diagnostic(
+    log_mean, log_mean_upper_bound, log_mean_headroom_tolerance
+  )
+
   list(
     adequate = length(reasons) == 0L,
-    status = if (length(reasons) == 0L) "pass" else "warning",
-    reasons = unique(reasons),
+    status = if (length(reasons) == 0L && !cap$log_mean_cap_bound) {
+      "pass"
+    } else {
+      "warning"
+    },
+    reasons = unique(c(reasons, cap$reason)),
+    log_mean_upper_bound = cap$log_mean_upper_bound,
+    log_mean_upper_bound_legacy = as.numeric(log_mean_upper_bound_legacy %||% NA_real_),
+    max_log_mean = cap$max_log_mean,
+    log_mean_headroom = cap$log_mean_headroom,
+    log_mean_cap_bound = cap$log_mean_cap_bound,
+    log_mean_headroom_tolerance = log_mean_headroom_tolerance,
     finite_objective = finite_objective,
     optimizer_convergence = convergence,
     finite_gradient = finite_gradient,
@@ -353,6 +446,22 @@ fit <- function(model, data, priors = NULL, init = NULL,
     hessian_status = as.character(
       diagnostic$hessian_status %||% fit$hessian_status %||% "unknown"
     ),
+    log_mean_upper_bound = as.numeric(
+      diagnostic$log_mean_upper_bound %||% fit$log_mean_upper_bound %||% NA_real_
+    ),
+    max_log_mean = as.numeric(
+      diagnostic$max_log_mean %||% fit$max_log_mean %||% NA_real_
+    ),
+    log_mean_headroom = as.numeric(
+      diagnostic$log_mean_headroom %||% fit$log_mean_headroom %||% NA_real_
+    ),
+    log_mean_cap_bound = isTRUE(
+      diagnostic$log_mean_cap_bound %||% fit$log_mean_cap_bound
+    ),
+    log_mean_upper_bound_legacy = as.numeric(
+      diagnostic$log_mean_upper_bound_legacy %||%
+        fit$log_mean_upper_bound_legacy %||% NA_real_
+    ),
     reasons = diagnostic$reasons %||% fit$diagnostic_reasons %||% character()
   )
 }
@@ -388,12 +497,63 @@ fit <- function(model, data, priors = NULL, init = NULL,
   fit$quadratic_gap <- diagnostic$quadratic_gap
   fit$hessian_positive_definite <- diagnostic$hessian_positive_definite
   fit$hessian_status <- diagnostic$hessian_status
+  fit$log_mean_headroom <- diagnostic$log_mean_headroom
+  fit$log_mean_cap_bound <- diagnostic$log_mean_cap_bound
+  fit$log_mean_upper_bound_legacy <- diagnostic$log_mean_upper_bound_legacy
   fit$fit_status <- diagnostic$status
   fit$diagnostic_reasons <- diagnostic$reasons
   fit$gradient_status <- if (!diagnostic$finite_gradient) "nonfinite" else
     diagnostic$status
   fit$diagnostic <- diagnostic
   fit
+}
+
+#' Warn that the latent incidence is pressed against its ceiling
+#'
+#' Shared by `fit()`, `.finish_nowcast_collection()` and `fit_check()` so the
+#' three entry points say the same thing.  `headroom` is one value per fit;
+#' non-binding fits are dropped by the caller or ignored here.
+#'
+#' The warning points BOTH ways, because a cap-bound fit is ambiguous on its
+#' own.  Either the stream genuinely needs that much inflation -- early-2020
+#' `covid_us` needs 37-83x and the pre-2.5.0 ceiling made it nowcast 8.7% of the
+#' settled count -- or the process is running away and the ceiling was the only
+#' thing holding it down, which is what `sir_epidemic()` does on
+#' `covid_colombia`'s 2020 growth phase.  Nothing in the fit distinguishes them,
+#' so the warning names the tighter legacy bound as something to TRY rather than
+#' as a diagnosis, and sends the reader to `reporting_fraction()`, which shows
+#' the multiplier being applied and is the number that actually settles it.
+#'
+#' @param headroom One value per cap-bound fit.
+#' @param bound The ceiling(s) those fits were taped with.
+#' @param legacy_bound The pre-2.5.0 ceiling, `min(max(6, log1p(casemax)), 16)`,
+#'   quoted so the suggestion is a number the caller can paste. Suppressed when
+#'   it is not actually tighter than the bound in force.
+#' @keywords internal
+#' @noRd
+.warn_log_mean_cap <- function(headroom, bound, n_fits = length(headroom),
+                               context = "fit", legacy_bound = NA_real_) {
+  headroom <- headroom[is.finite(headroom)]
+  if (!length(headroom)) return(invisible(FALSE))
+  tightest <- min(headroom)
+  ceiling_value <- suppressWarnings(max(as.numeric(bound), na.rm = TRUE))
+
+  legacy <- suppressWarnings(min(as.numeric(legacy_bound), na.rm = TRUE))
+  suggestion <- if (is.finite(legacy) && is.finite(ceiling_value) &&
+                    legacy < ceiling_value) {
+    c("i" = "If instead the trend is running away -- a band spanning the whole plot, a nowcast many times the reported count -- the pre-2.5.0 ceiling {.code min(max(6, log1p(casemax)), 16)} held it down. Try {.code nowcast(..., mu_log_upper_bound = {signif(legacy, 4)})} and compare. It is a blunt instrument: it truncates a genuine inflation just as readily.")
+  } else {
+    character()
+  }
+
+  cli::cli_warn(c(
+    "{length(headroom)} of {n_fits} {context}{?s} reached the `log_mean` upper bound.",
+    "x" = "The fitted `log_mean` comes within {format(tightest, digits = 3)} log units of a bound of {format(ceiling_value, digits = 4)}, where the softplus cap keeps {format(100 * stats::plogis(tightest), digits = 3)}% of the peak latent incidence.",
+    "i" = "The cap is a numerical guard sized from the counts REPORTED so far, so a growing, mostly-unreported stream can want a latent incidence above it. The nowcast is then truncated, and flat, wherever it saturates.",
+    "i" = "Read {.code reporting_fraction(nc)} first: its {.code inflation} column is the multiplier being applied, and is what separates a stream that genuinely needs one from a process that has run away.",
+    suggestion
+  ))
+  invisible(TRUE)
 }
 
 #' @keywords internal
@@ -638,7 +798,10 @@ fit <- function(model, data, priors = NULL, init = NULL,
       rc  <- .joint_reconstruct(data, priors, pl, built$Bmat, built$freq)
       if (any(!is.finite(rc$lambda))) stop("non-finite lambda")
       diagnostic <- .joint_fit_diagnostic(
-        obj, opt, bounds, finite_reconstruction = TRUE
+        obj, opt, bounds, finite_reconstruction = TRUE,
+        # `rc$mu` is the UNCAPPED log_mean; `rc$mu_safe` never reaches the bound.
+        log_mean = rc$mu, log_mean_upper_bound = data$mu_log_upper_bound,
+        log_mean_upper_bound_legacy = data$mu_log_upper_bound_legacy
       )
       list(
         par = opt$par, parList = pl, nll = opt$objective, convergence = opt$convergence,
@@ -647,6 +810,9 @@ fit <- function(model, data, priors = NULL, init = NULL,
         projected_gradient = diagnostic$projected_gradient,
         quadratic_gap = diagnostic$quadratic_gap,
         hessian_positive_definite = diagnostic$hessian_positive_definite,
+        log_mean_headroom = diagnostic$log_mean_headroom,
+        log_mean_cap_bound = diagnostic$log_mean_cap_bound,
+        log_mean_upper_bound_legacy = diagnostic$log_mean_upper_bound_legacy,
         fit_status = diagnostic$status,
         diagnostic_reasons = diagnostic$reasons,
         gradient_status = if (!diagnostic$finite_gradient) "nonfinite"
@@ -716,6 +882,13 @@ fit <- function(model, data, priors = NULL, init = NULL,
         ))
       } else {
         .warn_joint_fit(selected)
+      }
+      if (isTRUE(selected$diagnostic$log_mean_cap_bound)) {
+        .warn_log_mean_cap(
+          selected$diagnostic$log_mean_headroom,
+          selected$diagnostic$log_mean_upper_bound, n_fits = 1L,
+          legacy_bound = selected$diagnostic$log_mean_upper_bound_legacy
+        )
       }
     }
     return(selected)

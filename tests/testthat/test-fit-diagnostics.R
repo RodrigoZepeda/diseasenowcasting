@@ -8,11 +8,14 @@ static_objective <- function(gradient, hessian) {
 diagnose_static <- function(par, gradient, hessian,
                             lower = rep(-Inf, length(par)),
                             upper = rep(Inf, length(par)),
-                            objective = 0, convergence = 0L) {
+                            objective = 0, convergence = 0L,
+                            log_mean = NULL,
+                            log_mean_upper_bound = NA_real_) {
   diseasenowcasting:::.joint_fit_diagnostic(
     static_objective(gradient, hessian),
     list(par = par, objective = objective, convergence = convergence),
-    list(lower = lower, upper = upper)
+    list(lower = lower, upper = upper),
+    log_mean = log_mean, log_mean_upper_bound = log_mean_upper_bound
   )
 }
 
@@ -238,7 +241,7 @@ test_that("collection warnings are final and aggregate", {
     )
   )
 
-  metadata$retained_fit_diagnostics <- data.frame(status = "pass")
+  metadata$retained_fit_diagnostics <- data.frame(status = "pass", adequate = TRUE)
   metadata$laplace_sampling <- list(
     any_regularized = TRUE,
     fits = list(list(
@@ -331,4 +334,148 @@ test_that("legacy matrix two-stage interface exposes the shared diagnostics", {
   expect_true(is.data.frame(
     result$fit_diagnostics$retained_fit_diagnostics
   ))
+})
+
+# =============================================================================
+# The softplus ceiling on the latent log_mean
+# =============================================================================
+# `prepare_data()` caps log_mean at `mu_log_upper_bound` and the objective
+# applies it downstream of every epidemic process, so a bound below the latent
+# scale truncates the nowcast identically for all of them -- silently, because
+# the optimiser converges perfectly to the ceiling.  These pin the diagnostic
+# that makes it audible.
+
+test_that(".log_mean_cap_diagnostic() reports the gap, not just a boolean", {
+  cap <- diseasenowcasting:::.log_mean_cap_diagnostic(
+    log_mean = matrix(c(1, 2, 4.5), ncol = 1L), upper_bound = 6
+  )
+  expect_equal(cap$log_mean_upper_bound, 6)
+  expect_equal(cap$max_log_mean, 4.5)
+  expect_equal(cap$log_mean_headroom, 1.5)
+  expect_true(cap$log_mean_cap_bound)
+  expect_match(cap$reason, "within 1.5 of its upper bound 6")
+
+  clear <- diseasenowcasting:::.log_mean_cap_diagnostic(
+    log_mean = matrix(c(1, 2, 2.5), ncol = 1L), upper_bound = 6
+  )
+  expect_equal(clear$log_mean_headroom, 3.5)
+  expect_false(clear$log_mean_cap_bound)
+  expect_length(clear$reason, 0L)
+})
+
+test_that(".log_mean_cap_diagnostic() fires at the 5%-distortion boundary", {
+  # capped = ub - log1p(exp(ub - log_mean)), so lambda keeps exactly
+  # plogis(headroom) of its value.  Three log units is 95.3%.
+  just_inside <- diseasenowcasting:::.log_mean_cap_diagnostic(0, 3 - 1e-8)
+  just_outside <- diseasenowcasting:::.log_mean_cap_diagnostic(0, 3 + 1e-8)
+  expect_true(just_inside$log_mean_cap_bound)
+  expect_false(just_outside$log_mean_cap_bound)
+  expect_equal(round(100 * stats::plogis(3), 1), 95.3)
+})
+
+test_that(".log_mean_cap_diagnostic() is quiet without a bound or a fit", {
+  expect_false(
+    diseasenowcasting:::.log_mean_cap_diagnostic(c(1, 2), NULL)$log_mean_cap_bound
+  )
+  expect_false(
+    diseasenowcasting:::.log_mean_cap_diagnostic(c(1, 2), Inf)$log_mean_cap_bound
+  )
+  expect_false(
+    diseasenowcasting:::.log_mean_cap_diagnostic(NULL, 6)$log_mean_cap_bound
+  )
+  expect_false(
+    diseasenowcasting:::.log_mean_cap_diagnostic(c(NA, NaN), 6)$log_mean_cap_bound
+  )
+})
+
+test_that("a cap-bound fit is a warning without being optimizer-inadequate", {
+  bound <- diagnose_static(
+    par = c(x = 0), gradient = 0, hessian = matrix(1),
+    log_mean = 5.5, log_mean_upper_bound = 6
+  )
+  clear <- diagnose_static(
+    par = c(x = 0), gradient = 0, hessian = matrix(1),
+    log_mean = 1, log_mean_upper_bound = 6
+  )
+
+  # The optimiser is at a textbook mode in both: adequacy must not move.
+  expect_true(bound$adequate)
+  expect_true(clear$adequate)
+  # But the reported quantity is truncated in one of them, and `status` says so.
+  expect_identical(bound$status, "warning")
+  expect_identical(clear$status, "pass")
+  expect_true(bound$log_mean_cap_bound)
+  expect_equal(bound$log_mean_headroom, 0.5)
+  expect_match(paste(bound$reasons, collapse = "; "), "upper bound")
+  expect_length(clear$reasons, 0L)
+})
+
+test_that("fit_check() carries the cap headroom and warns when the bound binds", {
+  skip_on_cran()
+  tn <- .make_synth_tblnow(Tn = 60L)
+  mdl <- model(nb_likelihood(), ar1_epidemic(), lognormal_delay())
+
+  clear <- suppressMessages(nowcast(
+    tn, mdl, type = "one_stage", n_draws = 50L, seed = 4L
+  ))
+  checked <- fit_check(clear, warn = FALSE)
+  expect_true(all(c("log_mean_upper_bound", "max_log_mean",
+                    "log_mean_headroom", "log_mean_cap_bound") %in%
+                    names(checked)))
+  expect_false(any(checked$log_mean_cap_bound))
+  expect_gt(min(checked$log_mean_headroom), 3)
+  # Sanity: the default bound really is above the observed scale it is built
+  # from, so the cap does nothing on ordinary data.
+  expect_gt(clear@engine$mu_log_upper_bound, log1p(max(clear@engine$case_counts)))
+
+  # Force a ceiling the fit cannot help but hit.
+  bound <- suppressMessages(suppressWarnings(nowcast(
+    tn, mdl, type = "one_stage", n_draws = 50L, seed = 4L,
+    mu_log_upper_bound = 1
+  )))
+  bound_check <- fit_check(bound, warn = FALSE)
+  expect_true(all(bound_check$log_mean_cap_bound))
+  expect_true(all(bound_check$log_mean_headroom < 3))
+  expect_true(all(bound_check$fit_status == "warning"))
+  expect_match(paste(bound_check$reasons, collapse = "; "), "upper bound")
+  # It is a reporting failure, not an optimizer one, and stays labelled as such.
+  expect_true(all(bound_check$optimizer_adequate))
+  expect_warning(fit_check(bound), "reached the `log_mean` upper bound")
+})
+
+test_that("the cap warning offers the legacy ceiling with a concrete value", {
+  # A cap-bound fit is ambiguous: the stream may genuinely need the inflation
+  # (early-2020 covid_us needs 37-83x) or the process may be running away.  The
+  # warning therefore points at reporting_fraction() first and offers the
+  # pre-2.5.0 ceiling as something to try, quoting the number so it can be
+  # pasted.
+  expect_warning(
+    diseasenowcasting:::.warn_log_mean_cap(0.5, bound = 12, legacy_bound = 7.47),
+    "mu_log_upper_bound = 7.47"
+  )
+  expect_warning(
+    diseasenowcasting:::.warn_log_mean_cap(0.5, bound = 12, legacy_bound = 7.47),
+    "reporting_fraction"
+  )
+  # Not offered when it would not actually be tighter, or is unknown.
+  no_legacy <- capture_warnings(
+    diseasenowcasting:::.warn_log_mean_cap(0.5, bound = 12, legacy_bound = NA_real_))
+  expect_false(any(grepl("pre-2.5.0", no_legacy)))
+  same_bound <- capture_warnings(
+    diseasenowcasting:::.warn_log_mean_cap(0.5, bound = 12, legacy_bound = 12))
+  expect_false(any(grepl("pre-2.5.0", same_bound)))
+})
+
+test_that("prepare_data() records the legacy ceiling alongside the one in force", {
+  m   <- .make_synth()$m
+  mdl <- model(nb_likelihood(), hsgp_epidemic(), lognormal_delay())
+  eng <- prepare_data(mdl, m)
+  casemax <- max(abs(eng$case_counts))
+  expect_equal(eng$mu_log_upper_bound_legacy, min(max(6, log1p(casemax)), 16))
+  # The legacy bound is strictly tighter wherever the new one has not hit 16.
+  expect_lt(eng$mu_log_upper_bound_legacy, eng$mu_log_upper_bound)
+  # An override changes the bound in force but never the recorded legacy value.
+  eng2 <- prepare_data(mdl, m, mu_log_upper_bound = 9)
+  expect_equal(eng2$mu_log_upper_bound, 9)
+  expect_equal(eng2$mu_log_upper_bound_legacy, eng$mu_log_upper_bound_legacy)
 })

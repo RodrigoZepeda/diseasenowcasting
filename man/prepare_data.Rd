@@ -21,6 +21,7 @@ prepare_data(
   gp_L = 1.5,
   gp_boundary_frac = 0.62,
   ar_sigma_max = 1,
+  mu_log_upper_bound = NULL,
   is_confirmation = FALSE,
   cumulative_levels = NULL,
   cumulative_previous_nonzero = NULL,
@@ -73,6 +74,10 @@ on the same series reproduce the same columns.}
 Default 0.62.}
 
 \item{ar_sigma_max}{Upper bound on the AR/beta RW innovation SD. Default 1.}
+
+\item{mu_log_upper_bound}{Optional override for the softplus ceiling on the
+latent log-incidence.  \code{NULL} (default) derives it from the observed counts
+with headroom for the reporting fraction; see \code{.mu_log_upper_bound()}.}
 
 \item{is_confirmation}{Deprecated legacy switch.  \code{TRUE} now errors; use the
 dedicated \code{count_cumulative} model component and cumulative arguments.}
