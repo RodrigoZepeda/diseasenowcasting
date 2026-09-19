@@ -298,20 +298,43 @@ methods coincide, and the package does not pretend otherwise:
   Default `normal_prior(0, 0.5)`, deliberately shrunk: a partial autocorrelation
   near 1 on a *differenced* series is an I(2) level, whose predictive variance
   grows like `h^2` over the unobserved tail.
-- **The default order is `(2, 1, 0)`, not `(1, 1, 1)`.**  An ARMA(1,1) on a
-  latent trend sits near a common factor, where `ar` and `ma` nearly cancel.  In
-  the backtest `(1,1,1)` was the worst of nine processes (relative WIS 2.06 vs
-  1.63 for `(2,1,0)`), with bands 2.4x the settled count and 15 of the 21
-  over-wide fits in the whole grid.
-- **Long series are expensive, but they do converge.**  One latent innovation
-  per event-time (two for STS with a slope) means the parameter count is set by
-  the data: 28 for HSGP on any series, 1,623 for STS on 1,095 weeks.  On that
-  series all nine processes pass `fit_check()` with a positive-definite Hessian,
-  but STS takes ~5 min and SIR ~2 min against ~10 s for HSGP.  Use HSGP on long
-  series when fitting time matters more than the shape of the trend.
-  **This used to be a convergence cliff** (ETS passed 15% of dengue fits, STS
-  39%) and the cause was NOT the parameterisation -- it was `fit()` hard-coding
-  `iter.max = 500` regardless of problem size.  See §2e.
+- **The default order is `(2, 1, 0)`, not `(1, 1, 1)`.**  On a latent trend the
+  AR and MA coefficients are only weakly separated, and it gets worse with
+  series length.  The fitted `ar + ma` is nowhere near zero, so the point
+  estimates do NOT sit at the common factor -- but the curvature does: on a
+  1,000-week series the two correlate -0.79 to -0.84 in the Laplace covariance,
+  and `(1,1,1)` scores within 1 nll unit of the matching `(2,1,0)`.  The
+  likelihood cannot choose; the interval pays.  At 985 event-times `(1,1,1)`
+  returned 90% bands of **175x to 691x the settled count** against about 7x for
+  `(2,1,0)`, with `converged = 1.000` and a positive-definite Hessian throughout.
+  On a short series the pair is fine (correlation 0.08 at 70 daily event-times).
+  `fit_check()` reports `arma_ridge_correlation` and warns above 0.6 -- see §2g.
+- **Long series are expensive, and STS stops converging on them.**  One latent
+  innovation per event-time (two for STS with a slope) means the parameter count
+  is set by the data: 28 for HSGP on any series, 1,623 for STS on 1,095 weeks.
+  Measured on dengue at **985 event-times**, untruncated, 54 fits
+  (`devel/longrun_2008.R`):
+
+  | process | converged | median min | max min | median band / truth |
+  |---|---|---|---|---|
+  | **STS** | **0.667** | 67.7 | **175.3** | 9.1 |
+  | SIR | 1.000 | 28.5 | 105.8 | 11.8 |
+  | ETS | 1.000 | 29.6 | 79.7 | 18.9 |
+  | RW / AR(1) / ARIMA / Theta | 1.000 | 9.9-25.0 | 48.4-60.8 | 4.7-5.6 |
+  | **HSGP** | 1.000 | **3.4** | **7.3** | **1.3** |
+
+  **STS is the only process that fails** -- and its two failures bail out in
+  under eight minutes with a *small* gradient, while the four that pass grind for
+  39-175 min and finish with max gradients of 23-51.  They pass on the projected
+  gradient and the quadratic gap, not because the surface is well behaved.
+  Everything else converges.
+
+  HSGP is 20x cheaper at the median and 24x at the tail, AND has the tightest
+  band and the second-best centre -- on a series this long it is not a
+  compromise.  **This used to be a convergence cliff for everything** (ETS passed
+  15% of dengue fits, STS 39%); that cause was `fit()` hard-coding
+  `iter.max = 500` regardless of problem size (§2e), and what remains after
+  fixing it is STS alone.
 - `include_drift` defaults to `d >= 1` and **errors at `d = 0`** (the ARMA mean
   and `mu_intercept` are the same quantity).
 - A **number in any parameter slot holds it at that value**, as on the delay
@@ -400,8 +423,53 @@ reaches it, so a check written against it can never fire).  A cap-bound fit is
 `fit_status == "warning"` but `optimizer_adequate == TRUE`: the optimiser has
 converged, to a ceiling.
 
+**Count-cumulative streams are exempt from the WARNING, not the check.**  Act on
+`log_mean_cap_reportable`, which is `FALSE` there: the horizon-0 nowcast is built
+by the cohort kernels from the observed cumulative rather than from `lambda`, so
+a saturated cap has no predictive consequence.  Measured on flusight, lifting the
+bound from ~12 to 20 moved the median 0.5% and -0.2% and the objective by noise,
+while `lambda` peaked at t=62/102 and t=165/408 -- the interior of the series,
+nowhere near the event-time being scored.  Left reportable it fired on 52-65% of
+flusight fits and would have trained callers to ignore a warning that matters a
+great deal on the count-incidence path.  `log_mean_cap_bound` still records it.
+
 **The escape hatch.**  `nowcast(..., mu_log_upper_bound = )` (a `...`
 pass-through to `prepare_data()`) sets the bound explicitly.
+
+## 2g. `arma_ridge`: AR and MA trading against each other
+
+Like the cap in §2f this leaves `optimizer_adequate` alone -- the optimizer
+really has converged -- and only sets `fit_status` to `"warning"`, with the
+detail in `reasons`.  Reported by `fit_check()` and warned about by `nowcast()`.
+
+For `arima_epidemic(p, d, q)` with `p >= 1` and `q >= 1`, the largest absolute
+correlation between an AR and an MA coordinate in the Laplace covariance.  A high
+value means a flat ridge: the likelihood barely moves along the direction that
+increases one coefficient and decreases the other, so the pair is only weakly
+identified -- but the fit converges and the Hessian stays positive definite,
+because the flatness is a 2x2 block, not a global near-singularity.  What it
+costs is the INTERVAL, not the median.
+
+Calibrated over 65 fits (`devel/calibrate_arima_ridge.R`) against the ratio of
+the ARIMA(p,d,q) band to the ARIMA(p+q,d,0) band on the same cell:
+
+| band ratio | n | min | median | max |
+|---|---|---|---|---|
+| <= 5x | 35 | 0.044 | 0.198 | 0.423 |
+| > 5x | 30 | 0.157 | 0.834 | 0.921 |
+
+Every cut in `[0.5, 0.7]` flags the same 24 fits with **zero false alarms**, so
+the threshold is 0.6, the middle of the empty band.  It caught **20 of 20** at
+`q = 1` (10/10 on `(1,1,1)`, 10/10 on `(2,1,1)`); those fits sit within 1 nll
+unit of their pure-AR reference, which is the flat-ridge signature.
+
+**It detects near-collinearity only.**  The 6 blow-ups it missed are all
+`q = 2`, with correlations of 0.16-0.26 and objectives 8.6 to 37.0 nll units
+BETTER than their reference -- that is overfitting, a different failure, and no
+correlation statistic should be expected to flag it.  A quiet check is not a
+promise that the interval is sound.
+
+---
 
 ## 2d. Fixed parameters
 

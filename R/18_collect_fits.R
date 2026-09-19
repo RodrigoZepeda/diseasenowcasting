@@ -30,7 +30,9 @@
       projected_gradient = numeric(), quadratic_gap = numeric(),
       hessian_positive_definite = logical(), hessian_status = character(),
       log_mean_upper_bound = numeric(), log_mean_headroom = numeric(),
-      log_mean_cap_bound = logical(), log_mean_upper_bound_legacy = numeric(),
+      log_mean_cap_bound = logical(), log_mean_cap_reportable = logical(),
+      arma_ridge = logical(), arma_ridge_correlation = numeric(),
+      log_mean_upper_bound_legacy = numeric(),
       reasons = character(),
       stringsAsFactors = FALSE
     ))
@@ -51,6 +53,10 @@
       log_mean_upper_bound = summary$log_mean_upper_bound,
       log_mean_headroom = summary$log_mean_headroom,
       log_mean_cap_bound = summary$log_mean_cap_bound,
+      log_mean_cap_reportable = summary$log_mean_cap_reportable %||%
+        summary$log_mean_cap_bound,
+      arma_ridge = isTRUE(summary$arma_ridge),
+      arma_ridge_correlation = summary$arma_ridge_correlation %||% NA_real_,
       log_mean_upper_bound_legacy = summary$log_mean_upper_bound_legacy,
       reasons = paste(summary$reasons, collapse = "; "),
       stringsAsFactors = FALSE
@@ -103,7 +109,18 @@
         "i" = "Run {.code fit_check(result, warn = FALSE)} for retained-fit details."
       ))
     }
-    capped <- which(diagnostics$retained_fit_diagnostics$log_mean_cap_bound)
+    # The ARMA ridge warns here as well as in `fit_check()`, for the same reason
+    # the cap does: a caller who only runs `nowcast()` must still hear about it.
+    ridged <- which(diagnostics$retained_fit_diagnostics$arma_ridge)
+    if (length(ridged)) {
+      .warn_arma_ridge(
+        diagnostics$retained_fit_diagnostics$arma_ridge_correlation[ridged],
+        n_fits = nrow(diagnostics$retained_fit_diagnostics),
+        context = paste("retained", rung, "fit")
+      )
+    }
+    # count-cumulative fits are excluded; see `.joint_fit_diagnostic()`
+    capped <- which(diagnostics$retained_fit_diagnostics$log_mean_cap_reportable)
     if (length(capped)) {
       .warn_log_mean_cap(
         diagnostics$retained_fit_diagnostics$log_mean_headroom[capped],

@@ -22,6 +22,26 @@ A data frame with one row per retained RTMB fit and columns \code{fit},
 objective gap, Hessian status, the headroom between the fitted latent
 \code{log_mean} and its softplus ceiling, any Laplace-precision regularization
 used for prediction, overall status, and diagnostic reasons.
+
+Two of those columns report failures the optimizer diagnostics cannot see,
+so both leave \code{optimizer_adequate} alone and only set \code{fit_status} to
+\code{"warning"}:
+\itemize{
+\item \code{log_mean_cap_bound} / \code{log_mean_cap_reportable} -- the fitted latent
+incidence is pressed against its softplus ceiling.  \code{reportable} is
+\code{FALSE} on a count-cumulative stream, where the horizon-0 nowcast is built
+by the cohort kernels rather than from \code{lambda} and a saturated cap moves
+the median by well under a percent.  Only the alarm is suppressed there;
+the fact is still in \code{log_mean_cap_bound}.
+\item \code{arma_ridge} / \code{arma_ridge_correlation} -- for an ARMA with \code{p >= 1} and
+\code{q >= 1}, the largest absolute correlation between an AR and an MA
+coordinate in the Laplace covariance.  Near-collinear coefficients mean a
+flat ridge: the fit converges with a positive-definite Hessian and the
+predictive interval is still poorly determined.  It detects
+near-collinearity only -- an ARMA with \code{q >= 2} can widen its interval by
+overfitting instead, which leaves the correlation low, so a quiet check is
+not a guarantee that the interval is sound.
+}
 }
 \description{
 Predictive accuracy belongs to \code{\link[tbl.now:score_nowcast]{tbl.now::score_nowcast()}} and

@@ -631,11 +631,20 @@ sts_epidemic_class <- S7::new_class(
 #'
 #' @param p,d,q ARIMA orders, defaulting to `(2, 1, 0)`.  `d` is capped at 2 and
 #'   `p`, `q` at 5.  An MA term is available but not the default: on a latent
-#'   trend an ARMA(1, 1) sits close to a common factor, where `ar` and `ma`
-#'   nearly cancel and neither is well identified.  In the package's backtest
-#'   `(1, 1, 1)` was the worst of the nine processes tried (relative WIS 2.06 vs
-#'   1.63 for `(2, 1, 0)`) with bands 2.4x the settled count and 15 of the 21
-#'   over-wide fits recorded across the whole grid.
+#'   trend the AR and MA coefficients are only weakly separated, and the longer
+#'   the series the worse it gets.  The point estimates need not sit at the
+#'   common factor -- fitted `ar + ma` is nowhere near zero -- but the CURVATURE
+#'   does: the AR and MA coordinates correlate -0.79 to -0.84 in the Laplace
+#'   covariance on a 1,000-week series, so the likelihood is nearly flat along
+#'   the direction that trades one against the other.  It cannot choose, and it
+#'   does not have to: `(1, 1, 1)` scores within 1 nll unit of the matching
+#'   `(2, 1, 0)`.  The predictive interval is what pays.  At 985 event-times
+#'   `(1, 1, 1)` returned 90% bands of 175x to 691x the settled count against
+#'   about 7x for `(2, 1, 0)`, while reporting a converged fit with a
+#'   positive-definite Hessian.  On a short series the pair is fine (correlation
+#'   0.08 on 70 daily event-times), so this is a long-series caution, not a
+#'   blanket one.  [fit_check()] reports the correlation as
+#'   `arma_ridge_correlation` and warns above 0.6.
 #' @param include_drift Include a drift term.  For ARIMA it defaults to `TRUE`
 #'   when `d >= 1` and is refused at `d = 0`, where the ARMA mean and
 #'   `mu_intercept` are the same quantity.

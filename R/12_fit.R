@@ -175,6 +175,118 @@ fit <- function(model, data, priors = NULL, init = NULL,
   )
 }
 
+#' Default threshold for the ARMA near-collinearity report
+#'
+#' Calibrated in `devel/calibrate_arima_ridge.R` over 65 fits spanning every
+#' series length in the validation set, against the observable consequence --
+#' the ratio of the ARIMA(p,d,q) 90% band to the ARIMA(p+q,d,0) band on the same
+#' cell, with a blow-up defined as 5x.  The two populations separate cleanly:
+#'
+#' | band ratio | n  | min   | median | max   |
+#' |------------|----|-------|--------|-------|
+#' | <= 5x      | 35 | 0.044 | 0.198  | 0.423 |
+#' | > 5x       | 30 | 0.157 | 0.834  | 0.921 |
+#'
+#' Every cut in `[0.5, 0.7]` flags the identical 24 fits with ZERO false alarms,
+#' so the value is taken from the middle of the empty band between 0.423 and
+#' 0.777 rather than from either edge.
+#'
+#' **What it catches, and what it does not.**  With `q = 1` it caught 20 of 20
+#' blow-ups -- 10 of 10 on ARIMA(1,1,1) and 10 of 10 on ARIMA(2,1,1) -- and those
+#' fits score within 1 nll unit of their pure-AR reference, which is the
+#' signature of a flat ridge.  The 6 it missed are all `q = 2`, and they are a
+#' DIFFERENT failure: their AR x MA correlation is 0.16-0.26, their within-MA
+#' correlation is lower still (0.10-0.13), and they beat their reference by 8.6
+#' to 37.0 nll units.  That is overfitting, not non-identifiability, and no
+#' correlation statistic should be expected to flag it.  A quiet check is
+#' therefore not a promise that the interval is sound.
+#' @keywords internal
+#' @noRd
+.arma_ridge_tolerance <- function() 0.6
+
+#' Are the AR and MA coefficients trading against each other along a flat ridge?
+#'
+#' An ARMA(p, q) with `p >= 1` and `q >= 1` can sit near a common factor, where
+#' the AR and MA polynomials nearly cancel.  The likelihood is then almost flat
+#' along the direction that increases one coefficient and decreases the other,
+#' so the pair is only weakly identified -- but the fit still CONVERGES, and the
+#' Hessian is still positive definite, because the flatness is a 2x2 sub-block
+#' and not a global near-singularity (`min|eig|` around 0.9 on the worst cells
+#' measured).  `hessian_positive_definite` therefore cannot see it.
+#'
+#' What it costs is the predictive interval: the two ends of the ridge imply very
+#' different variance over the unobserved tail.  On a 1,000-week series an
+#' ARIMA(1,1,1) whose band was 784x the equivalent ARIMA(2,1,0)'s scored an
+#' objective within 0.2 of it.
+#'
+#' The statistic is the largest absolute correlation between any AR and any MA
+#' coordinate in the Laplace covariance.  It is free of the parameter count,
+#' unlike `cond(H)`, which on these fits is dominated by `max_time`.
+#'
+#' Computed from the Cholesky factor of the free Hessian block by solving for the
+#' handful of columns needed, rather than inverting it.
+#'
+#' @param par_names Names of the full parameter vector.
+#' @param free Logical over that vector: coordinates not fixed at a bound.
+#' @param free_factor `Matrix::Cholesky` of the free Hessian block.
+#' @param tolerance Absolute correlation at or above which the ridge is reported.
+#' @returns A list with the correlation, a flag and a `reason`.
+#' @keywords internal
+#' @noRd
+.arma_ridge_diagnostic <- function(par_names, free, free_factor,
+                                   tolerance = .arma_ridge_tolerance()) {
+  empty <- list(
+    arma_ridge_correlation = NA_real_, arma_ridge = FALSE, reason = character()
+  )
+  if (is.null(free_factor) || is.null(par_names) || is.null(free)) return(empty)
+  ar_full <- grep("^arima_ar_pacf_unc", par_names)
+  ma_full <- grep("^arima_ma_pacf_unc", par_names)
+  if (!length(ar_full) || !length(ma_full)) return(empty)
+
+  position <- rep(NA_integer_, length(free))
+  position[free] <- seq_len(sum(free))
+  ar <- position[ar_full]; ar <- ar[!is.na(ar)]
+  ma <- position[ma_full]; ma <- ma[!is.na(ma)]
+  if (!length(ar) || !length(ma)) return(empty)
+
+  wanted <- unique(c(ar, ma))
+  rhs <- matrix(0, sum(free), length(wanted))
+  rhs[cbind(wanted, seq_along(wanted))] <- 1
+  columns <- tryCatch(
+    as.matrix(Matrix::solve(free_factor, rhs, system = "A")),
+    error = function(e) NULL
+  )
+  if (is.null(columns) || any(!is.finite(columns))) return(empty)
+  at <- setNames(seq_along(wanted), as.character(wanted))
+  covariance <- function(i, j) columns[i, at[[as.character(j)]]]
+
+  strongest <- 0
+  for (a in ar) for (m in ma) {
+    var_a <- covariance(a, a); var_m <- covariance(m, m)
+    if (!is.finite(var_a) || !is.finite(var_m) || var_a <= 0 || var_m <= 0) next
+    correlation <- covariance(a, m) / sqrt(var_a * var_m)
+    if (is.finite(correlation) && abs(correlation) > abs(strongest)) {
+      strongest <- correlation
+    }
+  }
+  if (!is.finite(strongest) || strongest == 0) return(empty)
+
+  binding <- abs(strongest) >= tolerance
+  list(
+    arma_ridge_correlation = strongest,
+    arma_ridge = binding,
+    reason = if (binding) {
+      paste0(
+        "AR and MA coefficients near-collinear in the fitted curvature ",
+        "(correlation ", signif(strongest, 3),
+        "): weakly identified, so the predictive interval is poorly determined"
+      )
+    } else {
+      character()
+    }
+  )
+}
+
 #' Mathematically coherent diagnostics for a box-constrained joint fit
 #'
 #' The raw maximum gradient is retained for debugging, but adequacy is based on
@@ -203,7 +315,8 @@ fit <- function(model, data, priors = NULL, init = NULL,
                                   log_mean_upper_bound = NA_real_,
                                   log_mean_upper_bound_legacy = NA_real_,
                                   log_mean_headroom_tolerance =
-                                    .log_mean_headroom_tolerance()) {
+                                    .log_mean_headroom_tolerance(),
+                                  count_cumulative = FALSE) {
   objective <- as.numeric(opt$objective %||% opt$value %||% NA_real_)
   par <- as.numeric(opt$par)
   names(par) <- names(opt$par)
@@ -247,6 +360,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
   }
 
   hessian_positive_definite <- FALSE
+  retained_factor <- NULL
   hessian_status <- "unavailable"
   hessian_source <- "unavailable"
   quadratic_gap <- NA_real_
@@ -306,6 +420,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
           if (is.null(free_factor)) {
             hessian_status <- "not_positive_definite_on_free_subspace"
           } else {
+            retained_factor <- free_factor
             hessian_positive_definite <- TRUE
             hessian_status <- if (all(free)) {
               "positive_definite"
@@ -363,15 +478,37 @@ fit <- function(model, data, priors = NULL, init = NULL,
   cap <- .log_mean_cap_diagnostic(
     log_mean, log_mean_upper_bound, log_mean_headroom_tolerance
   )
+  # On a COUNT-CUMULATIVE stream the horizon-0 nowcast is built by the cohort
+  # kernels from the observed cumulative, not from `lambda`, so a saturated cap
+  # has no predictive consequence there.  Measured on flusight: lifting the
+  # bound from ~12 to 20 moved the median 0.5% and -0.2% and the objective by
+  # 0.2-0.5 (noise), while `lambda` peaked at t=62/102 and t=165/408 -- the
+  # interior of the series, nowhere near the event-time being scored.  Left
+  # reportable it fires on 52-65% of flusight fits and teaches callers to ignore
+  # a warning that matters a great deal on the count-incidence path.  The fact
+  # is still recorded in `log_mean_cap_bound`; only the alarm is suppressed.
+  cap_reportable <- isTRUE(cap$log_mean_cap_bound) && !isTRUE(count_cumulative)
+
+  # Kept out of `adequate` for the same reason the cap is: the optimizer has
+  # arrived, at a mode that happens to sit on a flat ridge.  Convergence and
+  # identifiability are different failures and want different remedies.
+  ridge <- .arma_ridge_diagnostic(names(par), free_coordinates, retained_factor)
 
   list(
     adequate = length(reasons) == 0L,
-    status = if (length(reasons) == 0L && !cap$log_mean_cap_bound) {
+    status = if (length(reasons) == 0L && !cap_reportable && !ridge$arma_ridge) {
       "pass"
     } else {
       "warning"
     },
-    reasons = unique(c(reasons, cap$reason)),
+    reasons = unique(c(
+      reasons,
+      if (cap_reportable) cap$reason else character(),
+      ridge$reason
+    )),
+    log_mean_cap_reportable = cap_reportable,
+    arma_ridge_correlation = ridge$arma_ridge_correlation,
+    arma_ridge = ridge$arma_ridge,
     log_mean_upper_bound = cap$log_mean_upper_bound,
     log_mean_upper_bound_legacy = as.numeric(log_mean_upper_bound_legacy %||% NA_real_),
     max_log_mean = cap$max_log_mean,
@@ -458,6 +595,28 @@ fit <- function(model, data, priors = NULL, init = NULL,
     log_mean_cap_bound = isTRUE(
       diagnostic$log_mean_cap_bound %||% fit$log_mean_cap_bound
     ),
+    # Whether that binding is worth telling the caller about: FALSE on a
+    # count-cumulative fit, where the horizon-0 nowcast comes from the cohort
+    # kernels rather than `lambda` and a saturated cap moves it by well under a
+    # percent.  Falls back to the engine flag for a fit serialized before this
+    # field existed, so an old saved nowcast still reports sensibly.
+    arma_ridge_correlation = as.numeric(
+      diagnostic$arma_ridge_correlation %||% fit$arma_ridge_correlation %||% NA_real_
+    ),
+    arma_ridge = isTRUE(diagnostic$arma_ridge %||% fit$arma_ridge),
+    log_mean_cap_reportable = {
+      # `%||%` can still yield NULL when neither source carries the field, and
+      # `NULL && x` is an error, not FALSE.  Resolve the field first, then fall
+      # back to deriving it, coercing each operand with isTRUE().
+      recorded <- diagnostic$log_mean_cap_reportable %||%
+        fit$log_mean_cap_reportable
+      if (!is.null(recorded)) {
+        isTRUE(recorded)
+      } else {
+        isTRUE(diagnostic$log_mean_cap_bound %||% fit$log_mean_cap_bound) &&
+          !isTRUE(fit$data$is_count_cumulative == 1L)
+      }
+    },
     log_mean_upper_bound_legacy = as.numeric(
       diagnostic$log_mean_upper_bound_legacy %||%
         fit$log_mean_upper_bound_legacy %||% NA_real_
@@ -531,6 +690,35 @@ fit <- function(model, data, priors = NULL, init = NULL,
 #'   it is not actually tighter than the bound in force.
 #' @keywords internal
 #' @noRd
+#' Warn that an ARMA pair is only weakly identified
+#'
+#' Deliberately phrased as something to CHECK rather than something that is
+#' definitely wrong.  A high correlation is a reason to look at the interval, not
+#' proof that the interval is bad: the statistic is measured on the curvature,
+#' and whether it matters depends on how far the predictive has to extrapolate.
+#' @keywords internal
+#' @noRd
+.warn_arma_ridge <- function(correlation, n_fits = length(correlation),
+                             context = "fit") {
+  correlation <- correlation[is.finite(correlation)]
+  if (!length(correlation)) return(invisible(FALSE))
+  strongest <- correlation[which.max(abs(correlation))]
+  # The subject is built here rather than with cli's `{?s}`: the quantity that
+  # governs it is `length(correlation)`, but `{context}` sits between the two and
+  # is itself length 1, which resets cli's pluralization to the singular.
+  subject <- paste0(context, if (length(correlation) == 1L) "" else "s")
+  verb <- if (length(correlation) == 1L) "has" else "have"
+  cli::cli_warn(c(
+    "{length(correlation)} of {n_fits} {subject} {verb} near-collinear AR and MA coefficients.",
+    "x" = "Their correlation in the fitted curvature is {format(strongest, digits = 3)}: the likelihood is nearly flat along the direction that trades one against the other, so the pair is only weakly identified.",
+    "i" = "The fit still converged and the Hessian is still positive definite -- the flat direction is a 2x2 block, not a global one, so {.code hessian_positive_definite} cannot see it. What it costs is the INTERVAL, not the point estimate.",
+    "i" = "Compare against the pure-AR model of the same total order, {.code arima_epidemic(p = p + q, d = d, q = 0)}: on a 1,000-week series an ARIMA(1,1,1) produced a 90% band 784 times wider than the matching ARIMA(2,1,0) while scoring an objective within 0.2 of it.",
+    "i" = "Check the nowcast interval either way -- {.fn autoplot}, or the {.code q5}/{.code q95} columns of {.fn predict} -- and prefer the narrower model when the two agree on the median.",
+    "i" = "This check finds near-collinearity only. An ARMA with {.code q >= 2} can widen its interval by overfitting instead, which leaves the correlation low, so a silent check is not a guarantee that the interval is sound."
+  ))
+  invisible(TRUE)
+}
+
 .warn_log_mean_cap <- function(headroom, bound, n_fits = length(headroom),
                                context = "fit", legacy_bound = NA_real_) {
   headroom <- headroom[is.finite(headroom)]
@@ -546,8 +734,9 @@ fit <- function(model, data, priors = NULL, init = NULL,
     character()
   }
 
+  subject <- paste0(context, if (length(headroom) == 1L) "" else "s")
   cli::cli_warn(c(
-    "{length(headroom)} of {n_fits} {context}{?s} reached the `log_mean` upper bound.",
+    "{length(headroom)} of {n_fits} {subject} reached the `log_mean` upper bound.",
     "x" = "The fitted `log_mean` comes within {format(tightest, digits = 3)} log units of a bound of {format(ceiling_value, digits = 4)}, where the softplus cap keeps {format(100 * stats::plogis(tightest), digits = 3)}% of the peak latent incidence.",
     "i" = "The cap is a numerical guard sized from the counts REPORTED so far, so a growing, mostly-unreported stream can want a latent incidence above it. The nowcast is then truncated, and flat, wherever it saturates.",
     "i" = "Read {.code reporting_fraction(nc)} first: its {.code inflation} column is the multiplier being applied, and is what separates a stream that genuinely needs one from a process that has run away.",
@@ -801,7 +990,8 @@ fit <- function(model, data, priors = NULL, init = NULL,
         obj, opt, bounds, finite_reconstruction = TRUE,
         # `rc$mu` is the UNCAPPED log_mean; `rc$mu_safe` never reaches the bound.
         log_mean = rc$mu, log_mean_upper_bound = data$mu_log_upper_bound,
-        log_mean_upper_bound_legacy = data$mu_log_upper_bound_legacy
+        log_mean_upper_bound_legacy = data$mu_log_upper_bound_legacy,
+        count_cumulative = isTRUE(data$is_count_cumulative == 1L)
       )
       list(
         par = opt$par, parList = pl, nll = opt$objective, convergence = opt$convergence,
@@ -812,6 +1002,9 @@ fit <- function(model, data, priors = NULL, init = NULL,
         hessian_positive_definite = diagnostic$hessian_positive_definite,
         log_mean_headroom = diagnostic$log_mean_headroom,
         log_mean_cap_bound = diagnostic$log_mean_cap_bound,
+        log_mean_cap_reportable = diagnostic$log_mean_cap_reportable,
+        arma_ridge_correlation = diagnostic$arma_ridge_correlation,
+        arma_ridge = diagnostic$arma_ridge,
         log_mean_upper_bound_legacy = diagnostic$log_mean_upper_bound_legacy,
         fit_status = diagnostic$status,
         diagnostic_reasons = diagnostic$reasons,

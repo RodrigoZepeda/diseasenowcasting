@@ -1,5 +1,54 @@
 # 2.5.0
 
+## `fit_check()` reports when an ARMA is only weakly identified
+
+An `arima_epidemic(p, d, q)` with `p >= 1` and `q >= 1` can sit on a flat ridge
+that trades an AR coefficient against an MA one. The likelihood barely moves
+along it, so the fit converges and the Hessian stays positive definite -- the
+flatness is a 2x2 block, not a global near-singularity, which is why
+`hessian_positive_definite` never caught it. What it costs is the predictive
+interval. At 985 event-times an ARIMA(1,1,1) returned 90% bands of 175x to 691x
+the settled count against about 7x for the matching ARIMA(2,1,0), while
+reporting a converged fit.
+
+`fit_check()` now carries `arma_ridge_correlation` -- the largest absolute
+correlation between an AR and an MA coordinate in the Laplace covariance -- and
+`arma_ridge`, and both `nowcast()` and `fit_check()` warn above 0.6. Like the
+`log_mean` cap this stays out of `optimizer_adequate` and only sets
+`fit_status == "warning"`: the optimizer has arrived, at a mode that happens to
+sit on a ridge, and the two failures want different remedies.
+
+The threshold is calibrated over 65 fits against the ratio of the ARIMA(p,d,q)
+band to the ARIMA(p+q,d,0) band on the same cell. The two populations separate
+cleanly -- median correlation 0.198 where the band ratio is at most 5x, 0.834
+where it exceeds it -- and every cut in `[0.5, 0.7]` flags the same 24 fits with
+no false alarms.
+
+**It detects near-collinearity only.** The six blow-ups it does not flag are all
+`q = 2`, with correlations of 0.16-0.26 and objectives 8.6 to 37.0 nll units
+better than their reference: that is overfitting, a different failure. A silent
+check is not a guarantee that the interval is sound, and the warning says so.
+
+The documentation for `arima_epidemic()` has been corrected accordingly. It
+previously said an ARMA(1,1) "sits close to a common factor, where `ar` and `ma`
+nearly cancel". The fitted `ar + ma` is in fact nowhere near zero; it is the
+curvature, not the point estimate, that shows the cancellation.
+
+## The `log_mean` cap warning is suppressed for count-cumulative fits
+
+On a count-cumulative stream the horizon-0 nowcast is built by the cohort kernels
+from the observed cumulative rather than from `lambda`, so a saturated cap has no
+predictive consequence there. Lifting the bound from about 12 to 20 on flusight
+moved the median by 0.5% and -0.2% and the objective by noise, while `lambda`
+peaked in the interior of the series, nowhere near the event-time being scored.
+Left reportable the warning fired on 52-65% of those fits and would have taught
+callers to ignore something that matters a great deal on the count-incidence
+path.
+
+`fit_check()` gains `log_mean_cap_reportable`, which is `FALSE` for such fits and
+is the column to act on. `log_mean_cap_bound` still records the fact, and the
+warning is unchanged on count-incidence streams.
+
 ## The cap on the latent incidence no longer truncates the nowcast
 
 The objective caps the latent `log_mean` with a softplus so a bad optimiser step
