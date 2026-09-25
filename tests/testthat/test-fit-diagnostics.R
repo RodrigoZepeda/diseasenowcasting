@@ -479,3 +479,203 @@ test_that("prepare_data() records the legacy ceiling alongside the one in force"
   expect_equal(eng2$mu_log_upper_bound, 9)
   expect_equal(eng2$mu_log_upper_bound_legacy, eng$mu_log_upper_bound_legacy)
 })
+
+# -----------------------------------------------------------------------------
+# .refine_on_quadratic_gap(): take the step the gap has already priced
+# -----------------------------------------------------------------------------
+quadratic_objective <- function(hessian, mode) {
+  list(
+    fn = function(par) as.numeric(0.5 * t(par - mode) %*% hessian %*% (par - mode)),
+    gr = function(par) as.numeric(hessian %*% (par - mode)),
+    he = function(par) hessian
+  )
+}
+
+refine_quadratic <- function(hessian, mode, start,
+                             lower = rep(-Inf, length(start)),
+                             upper = rep(Inf, length(start)),
+                             overrides = list()) {
+  objective <- quadratic_objective(hessian, mode)
+  bounds <- list(lower = lower, upper = upper)
+  optimum <- list(par = start, objective = objective$fn(start), convergence = 0L)
+  diagnostic <- utils::modifyList(
+    diseasenowcasting:::.joint_fit_diagnostic(objective, optimum, bounds),
+    overrides
+  )
+  list(
+    refinement = diseasenowcasting:::.refine_on_quadratic_gap(
+      objective, optimum, bounds, diagnostic
+    ),
+    diagnostic = diagnostic,
+    objective = objective
+  )
+}
+
+test_that("a binding quadratic gap is closed by the Newton step it prices", {
+  set.seed(20260919)
+  hessian <- crossprod(matrix(stats::rnorm(25), 5, 5)) + diag(5)
+  mode <- stats::rnorm(5)
+  start <- stats::setNames(rep(0, 5), paste0("x", seq_len(5)))
+
+  out <- refine_quadratic(hessian, mode, start)
+
+  # The gap is what makes the starting point inadequate ...
+  expect_false(out$diagnostic$adequate)
+  expect_gt(out$diagnostic$quadratic_gap, 0.01)
+  expect_match(out$diagnostic$reasons, "quadratic objective gap")
+
+  # ... and one Newton step on an exact quadratic lands on the mode.
+  expect_true(out$refinement$applied)
+  expect_identical(out$refinement$steps, 1L)
+  expect_equal(as.numeric(out$refinement$opt$par), mode, tolerance = 1e-8)
+  expect_equal(out$refinement$objective_change, -out$diagnostic$quadratic_gap,
+               tolerance = 1e-8)
+  expect_match(out$refinement$opt$message, "Newton refinement")
+
+  # The refined point passes the check that the starting point failed.
+  refined <- diseasenowcasting:::.joint_fit_diagnostic(
+    out$objective, out$refinement$opt,
+    list(lower = rep(-Inf, 5), upper = rep(Inf, 5))
+  )
+  expect_true(refined$adequate)
+  expect_lt(refined$quadratic_gap, 1e-12)
+})
+
+test_that("refinement declines whenever the gap is not the failure", {
+  set.seed(20260919)
+  hessian <- crossprod(matrix(stats::rnorm(25), 5, 5)) + diag(5)
+  mode <- stats::rnorm(5)
+  start <- stats::setNames(rep(0, 5), paste0("x", seq_len(5)))
+  decline <- function(overrides) {
+    refine_quadratic(hessian, mode, start, overrides = overrides)$refinement
+  }
+
+  # An adequate fit is never touched, so a passing fit pays nothing.
+  expect_identical(decline(list(adequate = TRUE))$reason, "already_adequate")
+  # Indefinite curvature is a different failure with a different remedy.
+  expect_identical(decline(list(hessian_positive_definite = FALSE))$reason,
+                   "hessian_not_positive_definite")
+  # And a gap under tolerance leaves nothing to buy.
+  expect_identical(decline(list(quadratic_gap = 1e-6))$reason, "gap_not_binding")
+  for (reason in c("already_adequate", "hessian_not_positive_definite",
+                   "gap_not_binding")) {
+    expect_false(decline(list(
+      adequate = reason == "already_adequate",
+      hessian_positive_definite = reason != "hessian_not_positive_definite",
+      quadratic_gap = if (reason == "gap_not_binding") 1e-6 else 5
+    ))$applied)
+  }
+})
+
+test_that("refinement leaves a strictly active bound alone", {
+  hessian <- diag(c(2, 2))
+  mode <- c(-3, 1)                       # x1's mode is outside the box
+  start <- stats::setNames(c(0, 0), c("x1", "x2"))
+
+  out <- refine_quadratic(hessian, mode, start, lower = c(0, -Inf))
+
+  expect_true(out$refinement$applied)
+  refined <- as.numeric(out$refinement$opt$par)
+  expect_equal(refined[1], 0)            # held at the bound, not pulled to -3
+  expect_equal(refined[2], 1, tolerance = 1e-8)
+})
+
+test_that(".box_active_set() agrees with the KKT signs the diagnostic reports", {
+  par <- c(0, 1, 0.5)
+  gradient <- c(5, -4, 0.2)
+  bounds <- list(lower = c(0, -Inf, -Inf), upper = c(Inf, 1, Inf))
+
+  active <- diseasenowcasting:::.box_active_set(par, gradient, bounds)
+
+  expect_identical(active$at_lower, c(TRUE, FALSE, FALSE))
+  expect_identical(active$at_upper, c(FALSE, TRUE, FALSE))
+  # Correctly signed active coordinates satisfy KKT and are locally fixed.
+  expect_equal(active$kkt_residual, c(0, 0, 0.2))
+  expect_identical(active$free, c(FALSE, FALSE, TRUE))
+
+  # Without the sign test every coordinate stays free and the raw gradient
+  # is returned untouched, which is what a non-finite gradient needs.
+  unsigned <- diseasenowcasting:::.box_active_set(
+    par, gradient, bounds, apply_signs = FALSE
+  )
+  expect_equal(unsigned$kkt_residual, gradient)
+  expect_true(all(unsigned$free))
+})
+
+test_that("refinement will not step onto indefinite curvature", {
+  # 0.5 x^2 - 0.01 x^4 curves upward only for |x| < 2.887.  At x = 2.8 the
+  # curvature is positive but nearly flat (0.059), so the Newton step is huge
+  # and lands at about -29.7, where the objective is far LOWER and the
+  # curvature is negative.  A line search that accepts on objective alone takes
+  # that trade; the refinement must not, because the Laplace precision would
+  # then need a ridge and the posterior draws would pay for it.
+  objective <- list(
+    fn = function(par) 0.5 * par[[1]]^2 - 0.01 * par[[1]]^4,
+    gr = function(par) as.numeric(par[[1]] - 0.04 * par[[1]]^3),
+    he = function(par) matrix(1 - 0.12 * par[[1]]^2, 1, 1)
+  )
+  bounds <- list(lower = -Inf, upper = Inf)
+  start <- c(x = 2.8)
+  optimum <- list(par = start, objective = objective$fn(start), convergence = 0L)
+  diagnostic <- diseasenowcasting:::.joint_fit_diagnostic(
+    objective, optimum, bounds
+  )
+
+  # The trap is real: positive curvature here, a binding gap, and the full
+  # Newton step strictly lowers the objective.
+  expect_true(diagnostic$hessian_positive_definite)
+  expect_gt(diagnostic$quadratic_gap, 0.01)
+  full_step <- start - objective$gr(start) / objective$he(start)[[1]]
+  expect_lt(objective$fn(full_step), objective$fn(start))
+  expect_lt(objective$he(full_step)[[1]], 0)
+
+  refinement <- diseasenowcasting:::.refine_on_quadratic_gap(
+    objective, optimum, bounds, diagnostic
+  )
+
+  # It declines rather than returning a point it never certified.
+  expect_false(refinement$applied)
+  expect_identical(refinement$reason, "no_certified_step")
+  expect_identical(refinement$opt$par, start)
+  expect_gt(objective$he(refinement$opt$par)[[1]], 0)
+})
+
+test_that("a declined refinement leaves `last.par.best` on the kept point", {
+  # RTMB records `last.par.best` whenever `fn()` sees a lower objective, and
+  # `.nowcast_draws()` samples the Laplace posterior at exactly that vector.
+  # The line search evaluates better-but-rejected candidates, so a decline that
+  # only re-evaluates the kept point leaves the DRAWS pointed at a discarded
+  # one -- which is how a rejected step still costs the precision a ridge.
+  environment_of <- new.env(parent = emptyenv())
+  environment_of$last.par.best <- c(x = 2.8)
+  environment_of$value.best <- 0.5 * 2.8^2 - 0.01 * 2.8^4
+  objective <- list(
+    fn = function(par) {
+      value <- 0.5 * par[[1]]^2 - 0.01 * par[[1]]^4
+      if (value < environment_of$value.best) {
+        environment_of$last.par.best <- par
+        environment_of$value.best <- value
+      }
+      value
+    },
+    gr = function(par) as.numeric(par[[1]] - 0.04 * par[[1]]^3),
+    he = function(par) matrix(1 - 0.12 * par[[1]]^2, 1, 1),
+    env = environment_of
+  )
+  bounds <- list(lower = -Inf, upper = Inf)
+  start <- c(x = 2.8)
+  optimum <- list(par = start, objective = objective$fn(start), convergence = 0L)
+  diagnostic <- diseasenowcasting:::.joint_fit_diagnostic(
+    objective, optimum, bounds
+  )
+
+  refinement <- diseasenowcasting:::.refine_on_quadratic_gap(
+    objective, optimum, bounds, diagnostic
+  )
+
+  expect_false(refinement$applied)
+  # The rejected candidate had a LOWER objective, so a naive restore leaves it
+  # behind; the kept point must win anyway.
+  expect_equal(as.numeric(environment_of$last.par.best), 2.8)
+  expect_gt(objective$he(environment_of$last.par.best)[[1]], 0)
+})

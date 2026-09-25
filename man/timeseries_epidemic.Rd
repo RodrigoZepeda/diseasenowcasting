@@ -181,11 +181,27 @@ All innovations are standard normal (non-centred), as they are for AR(1).
 These trends carry one latent innovation per event-time (two for
 \code{sts_epidemic()} with a slope), so the number of free parameters is set by the
 length of the series: 28 for an HSGP on any series, but 1,623 for
-\code{sts_epidemic()} on a 1,095-week one.  They converge there, but they are not
-cheap -- on that series a structural trend takes around five minutes against
-ten seconds for \code{\link[=hsgp_epidemic]{hsgp_epidemic()}}, whose basis stays a fixed 20-or-so
-coefficients however long the data get.  If fitting time matters more than the
-shape of the trend, HSGP remains the economical choice on long series.
+\code{sts_epidemic()} on a 1,095-week one.  They are not cheap -- on that series a
+structural trend takes around five minutes against ten seconds for
+\code{\link[=hsgp_epidemic]{hsgp_epidemic()}}, whose basis stays a fixed 20-or-so coefficients however
+long the data get.  If fitting time matters more than the shape of the trend,
+HSGP remains the economical choice on long series, and at 985 event-times it
+is also the tightest interval of the nine processes, so it is not a
+compromise.
+
+The slope variants of \code{sts_epidemic()} are the one place where length costs
+more than time.  Measured on dengue at 985 event-times, \code{trend = "local_level"} (T innovations) converges comfortably, but \code{"semilocal"} and
+\code{"local_linear"} (2T) can stop just short of the second-order adequacy check
+when fitted \strong{one-stage}: \code{nlminb} returns code 0 with a positive-definite
+Hessian, and roughly a thousand innovation coordinates sit about 0.05 from
+the mode, whose aggregate exceeds the \code{quadratic_gap} tolerance even though
+no single coordinate is badly placed.  \code{fit()} closes that where it can, by
+taking the Newton step the gap prices, but on four of the five one-stage
+cells measured no step can be certified and the fit is returned unchanged.  Fitted \strong{two-stage}
+(the default for a parametric delay) the same cell converges cleanly.  So if
+a long-series \code{sts_epidemic()} fit reports a \verb{quadratic objective gap},
+prefer \code{type = "two_stage"}, drop to \code{trend = "local_level"}, or use
+\code{\link[=hsgp_epidemic]{hsgp_epidemic()}}.
 }
 
 \examples{

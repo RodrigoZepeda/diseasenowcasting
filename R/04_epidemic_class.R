@@ -680,11 +680,28 @@ sts_epidemic_class <- S7::new_class(
 #' These trends carry one latent innovation per event-time (two for
 #' `sts_epidemic()` with a slope), so the number of free parameters is set by the
 #' length of the series: 28 for an HSGP on any series, but 1,623 for
-#' `sts_epidemic()` on a 1,095-week one.  They converge there, but they are not
-#' cheap -- on that series a structural trend takes around five minutes against
-#' ten seconds for [hsgp_epidemic()], whose basis stays a fixed 20-or-so
-#' coefficients however long the data get.  If fitting time matters more than the
-#' shape of the trend, HSGP remains the economical choice on long series.
+#' `sts_epidemic()` on a 1,095-week one.  They are not cheap -- on that series a
+#' structural trend takes around five minutes against ten seconds for
+#' [hsgp_epidemic()], whose basis stays a fixed 20-or-so coefficients however
+#' long the data get.  If fitting time matters more than the shape of the trend,
+#' HSGP remains the economical choice on long series, and at 985 event-times it
+#' is also the tightest interval of the nine processes, so it is not a
+#' compromise.
+#'
+#' The slope variants of `sts_epidemic()` are the one place where length costs
+#' more than time.  Measured on dengue at 985 event-times, `trend =
+#' "local_level"` (T innovations) converges comfortably, but `"semilocal"` and
+#' `"local_linear"` (2T) can stop just short of the second-order adequacy check
+#' when fitted **one-stage**: `nlminb` returns code 0 with a positive-definite
+#' Hessian, and roughly a thousand innovation coordinates sit about 0.05 from
+#' the mode, whose aggregate exceeds the `quadratic_gap` tolerance even though
+#' no single coordinate is badly placed.  `fit()` closes that where it can, by
+#' taking the Newton step the gap prices, but on four of the five one-stage
+#' cells measured no step can be certified and the fit is returned unchanged.  Fitted **two-stage**
+#' (the default for a parametric delay) the same cell converges cleanly.  So if
+#' a long-series `sts_epidemic()` fit reports a `quadratic objective gap`,
+#' prefer `type = "two_stage"`, drop to `trend = "local_level"`, or use
+#' [hsgp_epidemic()].
 #'
 #' @seealso [epidemic_process] for HSGP, AR(1) and SIR; [custom_epidemic()] for
 #'   an arbitrary user-written trend.

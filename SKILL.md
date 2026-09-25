@@ -309,11 +309,11 @@ methods coincide, and the package does not pretend otherwise:
   `(2,1,0)`, with `converged = 1.000` and a positive-definite Hessian throughout.
   On a short series the pair is fine (correlation 0.08 at 70 daily event-times).
   `fit_check()` reports `arma_ridge_correlation` and warns above 0.6 -- see §2g.
-- **Long series are expensive, and STS stops converging on them.**  One latent
-  innovation per event-time (two for STS with a slope) means the parameter count
-  is set by the data: 28 for HSGP on any series, 1,623 for STS on 1,095 weeks.
-  Measured on dengue at **985 event-times**, untruncated, 54 fits
-  (`devel/longrun_2008.R`):
+- **Long series are expensive; the slope variants of STS are the fragile ones.**
+  One latent innovation per event-time (two for STS with a slope) means the
+  parameter count is set by the data: 28 for HSGP on any series, 1,623 for STS
+  on 1,095 weeks.  Measured on dengue at **985 event-times**, untruncated, 54
+  fits (`devel/longrun_2008.R`):
 
   | process | converged | median min | max min | median band / truth |
   |---|---|---|---|---|
@@ -323,18 +323,47 @@ methods coincide, and the package does not pretend otherwise:
   | RW / AR(1) / ARIMA / Theta | 1.000 | 9.9-25.0 | 48.4-60.8 | 4.7-5.6 |
   | **HSGP** | 1.000 | **3.4** | **7.3** | **1.3** |
 
-  **STS is the only process that fails** -- and its two failures bail out in
-  under eight minutes with a *small* gradient, while the four that pass grind for
-  39-175 min and finish with max gradients of 23-51.  They pass on the projected
-  gradient and the quadratic gap, not because the surface is well behaved.
-  Everything else converges.
+  **What STS's 0.667 actually is** (`devel/sts_longrun/`).  Not a failure to
+  converge: those fits return `nlminb` code 0 after 2,141 of 50,000 permitted
+  iterations, an accepted polish, a POSITIVE DEFINITE Hessian and no parameter
+  at a box bound.  The one reason is `quadratic objective gap 0.019 exceeds
+  0.01` -- 0.019 nll units unclaimed on an objective of 63,405.
+
+  Three things about it are counter-intuitive, and each was measured:
+
+  * **It is the 2T slope block, not mean reversion.**  `sts_epidemic(trend =
+    "local_level")` (T innovations) passes at a gap of 8.8e-07;
+    `"local_linear"`, which has neither `slope_phi` nor `slope_mean`, fails at
+    0.109.  `slope_phi` is fitted at **-0.002**, nowhere near a boundary, and
+    `slope_sigma` sits exactly at its `exponential_prior(100)` mean.
+  * **It is not the Dirichlet delay.**  `type = "auto"` fits the Dirichlet
+    delay ONE-stage and every parametric delay TWO-stage (§`.collect_nowcast_fits`),
+    so the longrun grid confounded delay family with stage.  Fitted one-stage,
+    `lognormal_delay()` fails identically (gap 0.0165).  Fitted two-stage --
+    what validation scores -- STS passes at 985 event-times with a gap of
+    6.5e-07.  "The failures are the fast fits" is the same artifact: 6 cold
+    init rungs of one joint fit against 26 warm-started two-stage fits.
+  * **The gap is an aggregate, and the big gradient is a decoy.**  The whole
+    max gradient of 1.68 sits on `sts_slope_mean`, which with `phi ~ 0` acts as
+    a DRIFT, so its curvature is `sum_t lambda_t (t-2)^2` -- order `T^3`, about
+    1e10 here.  A gradient of 1.68 against that is a displacement of 1.6e-10
+    and contributes 1.4e-10 to the gap.  The 0.019 is ~1,000 innovation
+    coordinates each about 0.05 off against curvature of order 30.
+
+  `fit()` now closes this where it can, by taking the Newton step the gap
+  prices (§2h) -- but only where a step can be CERTIFIED, and on these cells
+  that is **one of five**: `semilocal x dirichlet` on `dengue`.  On lognormal,
+  on gengamma, on `dengue_strata`, and on `local_linear`, every init rung steps
+  onto indefinite curvature, the refinement declines, and the fit comes back
+  bit-identical.  **Do not rely on it to make a one-stage long-series STS fit
+  adequate.**  Use `type = "two_stage"` (which passes at a gap of 6.5e-07),
+  `trend = "local_level"`, or HSGP.
 
   HSGP is 20x cheaper at the median and 24x at the tail, AND has the tightest
   band and the second-best centre -- on a series this long it is not a
-  compromise.  **This used to be a convergence cliff for everything** (ETS passed
-  15% of dengue fits, STS 39%); that cause was `fit()` hard-coding
-  `iter.max = 500` regardless of problem size (§2e), and what remains after
-  fixing it is STS alone.
+  compromise.  **This used to be a convergence cliff for everything** (ETS
+  passed 15% of dengue fits, STS 39%); that cause was `fit()` hard-coding
+  `iter.max = 500` regardless of problem size (§2e).
 - `include_drift` defaults to `d >= 1` and **errors at `d = 0`** (the ARMA mean
   and `mu_intercept` are the same quantity).
 - A **number in any parameter slot holds it at that value**, as on the delay
@@ -468,6 +497,69 @@ unit of their pure-AR reference, which is the flat-ridge signature.
 BETTER than their reference -- that is overfitting, a different failure, and no
 correlation statistic should be expected to flag it.  A quiet check is not a
 promise that the interval is sound.
+
+---
+
+## 2h. The joint fit takes the Newton step the gap prices
+
+`quadratic_gap` (§`.joint_fit_diagnostic`) is not just a score: it IS the
+objective decrease a Newton step on the free subspace would buy, and the
+diagnostic has already factorised the Hessian that computes it.  Where the gap
+is what fails a fit and that Hessian is positive definite, `fit()` now takes
+the step rather than reporting the shortfall.  `.refine_on_quadratic_gap()` in
+`R/12_fit.R`.
+
+**When it fires.**  Only on a fit that would otherwise be reported inadequate.
+It declines with a recorded reason otherwise -- `already_adequate`,
+`gap_not_binding`, `hessian_not_positive_definite`, `nonfinite_fit`,
+`no_analytic_hessian` -- and a fit that already passed is unchanged to the last
+digit.
+
+**Why it exists.**  A joint fit optimises one latent innovation per event-time,
+so on a long series the gap is an AGGREGATE over thousands of coordinates, none
+of them individually bad.  `sts_epidemic("semilocal")` at 985 event-times left
+~1,000 innovations about 0.05 from the mode against curvature of order 30:
+0.019 of unclaimed objective, against a tolerance of 0.01, with `nlminb`
+returning code 0.  A five-vector L-BFGS-B cannot find the direction that fixes
+a thousand coordinates simultaneously.  One Newton step can.
+
+**The three guards, and why each is load-bearing.**  A Newton step is a LOCAL
+model.  At a condition number of 1e6-1e7 a full step can lower the objective
+and land where the Hessian is indefinite; accepting on objective alone fixed
+one of three STS-with-slope cells and broke two, with Laplace ridges of 4.7 and
+478.5.  So:
+
+1. a step whose landing point is not certified by a successful Cholesky is
+   discarded (`no_certified_step`);
+2. the refined point is a candidate, kept only where the re-run diagnostic is
+   positive definite AND either adequate or strictly lower-gap
+   (`rejected_by_diagnostic`);
+3. `last.par.best` is restored on every decline.
+
+**Guard 3 is the one that will catch you again.**  RTMB records
+`last.par.best` whenever `fn()` sees a lower objective, and `.nowcast_draws()`
+samples the Laplace posterior at THAT vector, not at `opt$par`.  A line search
+evaluates better-but-rejected candidates, so "restore by re-evaluating the kept
+point" does not work -- the kept point is by construction the higher-objective
+one.  Symptom: every optimizer statistic bit-identical to the unrefined fit,
+and a Laplace ridge out of nowhere.  `.restore_tape_best()` exists for this;
+any code that trial-evaluates an RTMB tape needs it.
+
+**Measured** (`devel/sts_longrun/`, dengue at 2008-11-10, 985 event-times):
+
+| cell | before | after |
+|---|---|---|
+| STS semilocal x dirichlet, one_stage | warning, gap 0.0190 | **pass**, gap 9.9e-05 |
+| ETS additive x dirichlet, one_stage | pass, 5/6 rungs | pass, **6/6**, gap 3.2e-04 -> 1.7e-05 |
+| STS local_level x dirichlet | pass, gap 8.8e-07 | bit-identical |
+| STS semilocal x lognormal, one_stage | warning, gap 0.0165 | unchanged -- no rung certifies |
+| STS semilocal x gengamma, one_stage | warning, gap 0.0273 | unchanged -- no rung certifies |
+| STS semilocal x dirichlet, dengue_strata (3,984 par) | warning, gap 0.0553 | unchanged -- no rung certifies |
+| STS local_linear x dirichlet, one_stage | warning, gap 0.1094 | unchanged -- no rung certifies |
+| STS semilocal x lognormal, two_stage | pass, gap 6.5e-07 | unchanged, declines |
+
+Cost is a few seconds on a ten-minute fit (8 steps measured at 11 s on a
+2,006-parameter tape), and zero on anything that already passed.
 
 ---
 

@@ -287,6 +287,234 @@ fit <- function(model, data, priors = NULL, init = NULL,
   )
 }
 
+#' Which coordinates of a box-constrained mode are still moving
+#'
+#' Shared by the adequacy diagnostic and the Newton refinement, so the two
+#' cannot disagree about the active set.  Under strict complementarity a
+#' coordinate sitting on a bound with a non-zero, correctly signed multiplier
+#' is locally fixed and the curvature in that direction is irrelevant.  Weakly
+#' active coordinates (approximately zero multiplier) stay free, which is
+#' deliberately conservative.
+#'
+#' @param par The mode, as a plain numeric vector.
+#' @param gradient The gradient at `par`.
+#' @param bounds A list with `lower` and `upper`.
+#' @param apply_signs Whether to zero the KKT residual on correctly signed
+#'   active coordinates.  `FALSE` when the gradient is not finite, where the
+#'   sign test is meaningless.
+#' @returns A list with `at_lower`, `at_upper`, `kkt_residual` and `free`.
+#' @keywords internal
+#' @noRd
+.box_active_set <- function(par, gradient, bounds, apply_signs = TRUE) {
+  lower <- as.numeric(bounds$lower)
+  upper <- as.numeric(bounds$upper)
+  bound_scale <- pmax(
+    1, abs(par),
+    ifelse(is.finite(lower), abs(lower), 0),
+    ifelse(is.finite(upper), abs(upper), 0)
+  )
+  bound_tolerance <- sqrt(.Machine$double.eps) * bound_scale
+  at_lower <- is.finite(lower) & par <= lower + bound_tolerance
+  at_upper <- is.finite(upper) & par >= upper - bound_tolerance
+
+  kkt_residual <- gradient
+  free <- rep(TRUE, length(par))
+  if (isTRUE(apply_signs)) {
+    # At a lower bound, g >= 0 satisfies KKT; at an upper bound, g <= 0 does.
+    kkt_residual[at_lower & gradient >= 0] <- 0
+    kkt_residual[at_upper & gradient <= 0] <- 0
+    multiplier_scale <- max(1, if (length(gradient)) max(abs(gradient)) else 0)
+    multiplier_tolerance <- sqrt(.Machine$double.eps) * multiplier_scale
+    free <- !(
+      (at_lower & gradient > multiplier_tolerance) |
+      (at_upper & gradient < -multiplier_tolerance)
+    )
+  }
+  list(at_lower = at_lower, at_upper = at_upper,
+       kkt_residual = kkt_residual, free = free)
+}
+
+#' Put an RTMB tape back on a chosen point, including `last.par.best`
+#'
+#' `obj$fn()` records a new `last.par.best` whenever it sees a lower objective,
+#' and `.nowcast_draws()` samples the Laplace posterior at exactly that vector.
+#' A line search that evaluates a better-but-rejected candidate therefore
+#' leaves the draws pointed at a point the fit discarded -- which is how a
+#' rejected step can still cost the precision matrix a ridge, long after the
+#' optimizer state looks correct.  Re-evaluating the kept point is not enough,
+#' because its objective is by construction the higher one.
+#' @keywords internal
+#' @noRd
+.restore_tape_best <- function(obj, par, value = NULL) {
+  tryCatch(obj$fn(par), error = function(e) NULL)
+  env <- tryCatch(obj$env, error = function(e) NULL)
+  if (is.null(env)) return(invisible(NULL))
+  best <- tryCatch(env$last.par.best, error = function(e) NULL)
+  # Under `use_random = TRUE` the best vector spans fixed AND random
+  # coordinates and is longer than `par`; leave it to RTMB in that case.
+  if (is.null(best) || length(best) != length(par)) return(invisible(NULL))
+  try(assign("last.par.best", stats::setNames(as.numeric(par), names(best)),
+             envir = env), silent = TRUE)
+  if (!is.null(value) && is.finite(value))
+    try(assign("value.best", as.numeric(value), envir = env), silent = TRUE)
+  invisible(NULL)
+}
+
+#' Take the Newton step the adequacy check has already priced
+#'
+#' `.joint_fit_diagnostic()` reports `quadratic_gap = 0.5 r' H_FF^-1 r`, which
+#' IS the objective decrease a Newton step on the free subspace would buy.
+#' When that gap is the only thing standing between a fit and adequacy, and the
+#' Hessian it was computed from is positive definite, nothing has gone wrong:
+#' the optimizer has stopped just short of a step it can compute.  Reporting
+#' that as a failed fit while holding the cure is not useful to a caller.
+#'
+#' It happens where one hyperparameter is coupled to thousands of latent
+#' states.  On a 985-week dengue series `sts_epidemic("semilocal")` fits
+#' `slope_phi` at about 0, which leaves `slope_mean` as a pure linear drift on
+#' the level -- the same path a uniform shift of all 985 level innovations
+#' traces.  Neither `nlminb`'s quasi-Newton nor a five-vector L-BFGS-B finds
+#' that 986-coordinate direction, so the fit stopped with a gradient of 1.68 in
+#' ONE coordinate (`sts_slope_mean`; every other coordinate was below 0.052)
+#' and a gap of 0.019 against a tolerance of 0.01, on an objective of 63,405.
+#' Eight Newton steps took 11 seconds on an 8-minute fit and moved it to a
+#' gradient of 5.4e-08 and a gap of 2.8e-20.
+#'
+#' Only a fit that would otherwise be reported inadequate pays for this: the
+#' diagnostic that gates it has already been computed by the caller, and the
+#' loop stops as soon as the remaining gap is under tolerance.
+#'
+#' @param diagnostic The `.joint_fit_diagnostic()` result at `opt`.
+#' @param quadratic_gap_tolerance The tolerance the diagnostic used.
+#' @param max_steps Newton steps to attempt before giving up.
+#' @returns A list with `opt` (refined or unchanged), `applied`, `attempted`,
+#'   `steps`, `objective_change`, the gradient either side and `reason`.
+#' @keywords internal
+#' @noRd
+.refine_on_quadratic_gap <- function(obj, opt, bounds, diagnostic,
+                                     quadratic_gap_tolerance = 0.01,
+                                     max_steps = 8L) {
+  unchanged <- function(reason) list(
+    opt = opt, applied = FALSE, attempted = FALSE, steps = 0L,
+    objective_change = 0, max_gradient_before = NA_real_,
+    max_gradient_after = NA_real_, reason = reason
+  )
+  # Snapshot before any evaluation, so a decline can undo the line search.
+  best_at_entry <- tryCatch(obj$env$last.par.best, error = function(e) NULL)
+  value_at_entry <- tryCatch(obj$env$value.best, error = function(e) NULL)
+  if (isTRUE(diagnostic$adequate)) return(unchanged("already_adequate"))
+  # A Hessian that is not positive definite is a different failure with a
+  # different remedy, and offers no descent direction to solve for.
+  if (!isTRUE(diagnostic$hessian_positive_definite))
+    return(unchanged("hessian_not_positive_definite"))
+  if (!isTRUE(diagnostic$finite_objective) ||
+      !isTRUE(diagnostic$finite_gradient))
+    return(unchanged("nonfinite_fit"))
+  gap <- diagnostic$quadratic_gap
+  if (!is.finite(gap) || gap <= quadratic_gap_tolerance)
+    return(unchanged("gap_not_binding"))
+  if (is.null(obj$he)) return(unchanged("no_analytic_hessian"))
+
+  parameter_names <- names(opt$par)
+  par <- as.numeric(opt$par)
+  objective_at_start <- as.numeric(opt$objective)
+  gradient_at_start <- tryCatch(max(abs(obj$gr(opt$par))),
+                                error = function(e) NA_real_)
+  lower <- as.numeric(bounds$lower)
+  upper <- as.numeric(bounds$upper)
+  named <- function(values) stats::setNames(values, parameter_names)
+  steps_taken <- 0L
+  # The point whose curvature was last certified positive definite.  A Newton
+  # step is a LOCAL model: on a badly conditioned problem a full step can lower
+  # the objective and still land where the Hessian is indefinite, which costs
+  # the Laplace precision a ridge and so the posterior draws.  Never return a
+  # point worse in that sense than the one stepped from.
+  last_certified <- par
+  certified_steps <- 0L
+  for (step in seq_len(max_steps)) {
+    gradient <- tryCatch(as.numeric(obj$gr(named(par))), error = function(e) NULL)
+    if (is.null(gradient) || any(!is.finite(gradient))) break
+    active <- .box_active_set(par, gradient, bounds)
+    free <- active$free
+    if (!any(free)) break
+    hessian <- tryCatch(obj$he(named(par)), error = function(e) NULL)
+    if (is.null(hessian) || any(!is.finite(hessian))) break
+    hessian <- Matrix::forceSymmetric(Matrix::Matrix(hessian, sparse = TRUE))
+    factor <- tryCatch(
+      suppressWarnings(Matrix::Cholesky(
+        hessian[free, free, drop = FALSE], LDL = FALSE, perm = TRUE, super = TRUE
+      )),
+      error = function(e) NULL, warning = function(w) NULL
+    )
+    if (is.null(factor)) break
+    last_certified <- par
+    certified_steps <- steps_taken
+    direction <- tryCatch(
+      as.numeric(Matrix::solve(
+        factor, matrix(active$kkt_residual[free], ncol = 1L), system = "A"
+      )),
+      error = function(e) NULL
+    )
+    if (is.null(direction) || any(!is.finite(direction))) break
+    # The same quantity the adequacy check reports, recomputed here: once it is
+    # under tolerance there is nothing left to buy.
+    remaining <- 0.5 * sum(active$kkt_residual[free] * direction)
+    if (steps_taken > 0L && is.finite(remaining) &&
+        remaining <= quadratic_gap_tolerance) break
+    # The gap prices the FULL step.  A backtracking line search keeps the
+    # refinement monotone where the quadratic model overshoots.
+    current <- tryCatch(as.numeric(obj$fn(named(par))), error = function(e) NA_real_)
+    if (!is.finite(current)) break
+    accepted <- NULL
+    for (scale in c(1, 0.5, 0.25, 0.1, 0.01)) {
+      candidate <- par
+      candidate[free] <- candidate[free] - scale * direction
+      candidate <- pmin(pmax(candidate, lower), upper)
+      value <- tryCatch(as.numeric(obj$fn(named(candidate))),
+                        error = function(e) NA_real_)
+      if (is.finite(value) && value <= current) { accepted <- candidate; break }
+    }
+    if (is.null(accepted)) break
+    par <- accepted
+    steps_taken <- step
+  }
+  # A step whose landing point never had its curvature certified is discarded,
+  # even though it lowered the objective.
+  par <- last_certified
+  steps_taken <- certified_steps
+  if (steps_taken == 0L) {
+    # The line search may have evaluated a rejected candidate that RTMB
+    # recorded as `last.par.best`; undo that, or the draws sample from it.
+    .restore_tape_best(obj, best_at_entry %||% opt$par, value_at_entry)
+    return(unchanged("no_certified_step"))
+  }
+
+  refined <- named(par)
+  objective <- tryCatch(as.numeric(obj$fn(refined)), error = function(e) NA_real_)
+  if (!is.finite(objective) || objective > objective_at_start) {
+    .restore_tape_best(obj, best_at_entry %||% opt$par, value_at_entry)
+    return(unchanged("refinement_did_not_improve"))
+  }
+  gradient_after <- tryCatch(max(abs(obj$gr(refined))), error = function(e) NA_real_)
+  # A later rejected step may have been lower still; the KEPT point is the one
+  # the draws must use.
+  .restore_tape_best(obj, refined, objective)
+  opt$par <- refined
+  opt$objective <- objective
+  opt$message <- paste0(
+    "Newton refinement on the free subspace (", steps_taken, " step",
+    if (steps_taken == 1L) "" else "s", "); ",
+    opt$message %||% "no optimizer message"
+  )
+  list(
+    opt = opt, applied = TRUE, attempted = TRUE, steps = steps_taken,
+    objective_change = objective - objective_at_start,
+    max_gradient_before = gradient_at_start,
+    max_gradient_after = gradient_after,
+    reason = "accepted"
+  )
+}
+
 #' Mathematically coherent diagnostics for a box-constrained joint fit
 #'
 #' The raw maximum gradient is retained for debugging, but adequacy is based on
@@ -334,23 +562,10 @@ fit <- function(model, data, priors = NULL, init = NULL,
     NA_real_
   }
 
-  lower <- as.numeric(bounds$lower)
-  upper <- as.numeric(bounds$upper)
-  bound_scale <- pmax(
-    1, abs(par),
-    ifelse(is.finite(lower), abs(lower), 0),
-    ifelse(is.finite(upper), abs(upper), 0)
-  )
-  bound_tolerance <- sqrt(.Machine$double.eps) * bound_scale
-  at_lower <- is.finite(lower) & par <= lower + bound_tolerance
-  at_upper <- is.finite(upper) & par >= upper - bound_tolerance
-
-  kkt_residual <- gradient
-  if (finite_gradient) {
-    # At a lower bound, g >= 0 satisfies KKT; at an upper bound, g <= 0 does.
-    kkt_residual[at_lower & gradient >= 0] <- 0
-    kkt_residual[at_upper & gradient <= 0] <- 0
-  }
+  active <- .box_active_set(par, gradient, bounds, apply_signs = finite_gradient)
+  at_lower <- active$at_lower
+  at_upper <- active$at_upper
+  kkt_residual <- active$kkt_residual
   projected_gradient <- if (finite_gradient && length(kkt_residual)) {
     max(abs(kkt_residual))
   } else if (length(kkt_residual) == 0L) {
@@ -396,12 +611,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
         # sufficiency therefore concerns H_FF, not curvature in an infeasible
         # direction. Weakly active coordinates (approximately zero multiplier)
         # remain in F, which is deliberately conservative.
-        multiplier_scale <- max(1, max(abs(gradient)))
-        multiplier_tolerance <- sqrt(.Machine$double.eps) * multiplier_scale
-        fixed_active <-
-          (at_lower & gradient > multiplier_tolerance) |
-          (at_upper & gradient < -multiplier_tolerance)
-        free <- !fixed_active
+        free <- active$free
         free_coordinates <- free
         curvature_dimension <- sum(free)
         if (!any(free)) {
@@ -986,13 +1196,53 @@ fit <- function(model, data, priors = NULL, init = NULL,
       pl  <- obj$env$parList()
       rc  <- .joint_reconstruct(data, priors, pl, built$Bmat, built$freq)
       if (any(!is.finite(rc$lambda))) stop("non-finite lambda")
-      diagnostic <- .joint_fit_diagnostic(
-        obj, opt, bounds, finite_reconstruction = TRUE,
-        # `rc$mu` is the UNCAPPED log_mean; `rc$mu_safe` never reaches the bound.
-        log_mean = rc$mu, log_mean_upper_bound = data$mu_log_upper_bound,
+      diagnose <- function(optimum, reconstruction) .joint_fit_diagnostic(
+        obj, optimum, bounds, finite_reconstruction = TRUE,
+        # `$mu` is the UNCAPPED log_mean; `$mu_safe` never reaches the bound.
+        log_mean = reconstruction$mu,
+        log_mean_upper_bound = data$mu_log_upper_bound,
         log_mean_upper_bound_legacy = data$mu_log_upper_bound_legacy,
         count_cumulative = isTRUE(data$is_count_cumulative == 1L)
       )
+      diagnostic <- diagnose(opt, rc)
+      # The quadratic gap IS the objective decrease a Newton step would buy, and
+      # the diagnostic has just factorised the Hessian that prices it.  Where
+      # that gap is what fails the fit, take the step rather than report it.
+      refinement <- .refine_on_quadratic_gap(
+        obj, opt, bounds, diagnostic,
+        quadratic_gap_tolerance = diagnostic$quadratic_gap_tolerance
+      )
+      if (isTRUE(refinement$applied)) {
+        refined_opt <- refinement$opt
+        obj$fn(refined_opt$par)
+        refined_pl <- obj$env$parList()
+        refined_rc <- .joint_reconstruct(
+          data, priors, refined_pl, built$Bmat, built$freq
+        )
+        refined_diagnostic <- if (any(!is.finite(refined_rc$lambda))) NULL else
+          diagnose(refined_opt, refined_rc)
+        # The refinement is a CANDIDATE, not a result.  Keep it only where the
+        # diagnostic actually improves: a lower objective is not enough, since
+        # a step can buy objective and lose positive curvature, and the Laplace
+        # precision pays for that in a ridge.
+        keep <- !is.null(refined_diagnostic) &&
+          isTRUE(refined_diagnostic$hessian_positive_definite) &&
+          (isTRUE(refined_diagnostic$adequate) ||
+             (is.finite(refined_diagnostic$quadratic_gap) &&
+                refined_diagnostic$quadratic_gap < diagnostic$quadratic_gap))
+        if (keep) {
+          opt <- refined_opt
+          pl <- refined_pl
+          rc <- refined_rc
+          diagnostic <- refined_diagnostic
+        } else {
+          # Put the tape back on the point being returned, `last.par.best`
+          # included -- the draws are sampled at that vector.
+          .restore_tape_best(obj, opt$par, opt$objective)
+          refinement$applied <- FALSE
+          refinement$reason <- "rejected_by_diagnostic"
+        }
+      }
       list(
         par = opt$par, parList = pl, nll = opt$objective, convergence = opt$convergence,
         obj = obj, opt = opt, random = built$random, use_random = use_random,
@@ -1014,6 +1264,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
         attempt = j,
         polished = polished,
         polish = polish_result$diagnostic,
+        refinement = refinement,
         elapsed = proc.time()[["elapsed"]] - fit_started,
         epi_model = built$epi_model, is_nb = built$is_nb,
         lambda = rc$lambda, mu = rc$mu, mu_safe = rc$mu_safe, Gstar = rc$Gstar,
@@ -1058,6 +1309,13 @@ fit <- function(model, data, priors = NULL, init = NULL,
         ),
         polish_objective_change = as.numeric(
           candidate$polish$objective_change %||% NA_real_
+        ),
+        newton_steps = as.integer(candidate$refinement$steps %||% NA_integer_),
+        newton_objective_change = as.numeric(
+          candidate$refinement$objective_change %||% NA_real_
+        ),
+        newton_reason = as.character(
+          candidate$refinement$reason %||% NA_character_
         ),
         reasons = paste(summary$reasons, collapse = "; "),
         stringsAsFactors = FALSE

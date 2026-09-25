@@ -1,5 +1,59 @@
 # 2.5.0
 
+## A joint fit takes the Newton step its own adequacy check has priced
+
+`.joint_fit_diagnostic()` judges a fit on `quadratic_gap = 0.5 r' H_FF^-1 r`,
+which is exactly the objective decrease a Newton step on the free subspace
+would buy. Where that gap was the only thing failing a fit, and the Hessian it
+was computed from is positive definite, the optimizer has not failed and the
+curvature is not suspect -- it has stopped just short of a step it can compute.
+`fit()` now takes that step instead of reporting the shortfall.
+
+It matters on long series. At 985 event-times `sts_epidemic("semilocal")`
+carries 2T latent innovations, and the quasi-Newton leaves roughly a thousand
+of them about 0.05 from the mode against curvature of order 30. No single
+coordinate is badly off -- the sum is, at 0.019 against a tolerance of 0.01, on
+an objective of 63,405. A five-vector L-BFGS-B cannot find the direction that
+fixes a thousand coordinates at once; one Newton step does. On dengue at
+`2008-11-10` this turns a `warning` into a `pass`, with the gap going from
+0.019 to 9.9e-05 and no Laplace regularization, and `ets_epidemic()` gains its
+sixth adequate init rung (gap 3.2e-04 to 1.7e-05).
+
+**The tempting version of this is wrong and makes things worse.** A Newton step
+is a local model, and on a problem with a condition number of 1e6 to 1e7 a full
+step can lower the objective and still land where the Hessian is indefinite. A
+line search that accepts on objective alone takes that trade: across the three
+STS-with-slope cells at 985 event-times it fixed one and broke two, costing the
+Laplace precision diagonal ridges of 4.7 and 478.5 -- and the precision matrix
+is what the posterior draws are sampled from. Three things prevent it:
+
+* the refinement discards any step whose landing point it did not certify with
+  a successful Cholesky, so it never returns a point worse in that sense than
+  the one it stepped from;
+* the refined point is a CANDIDATE, kept only where a re-run diagnostic is
+  positive definite and either adequate or strictly lower-gap;
+* `last.par.best` is restored on every decline. RTMB records it whenever
+  `fn()` sees a lower objective, and `.nowcast_draws()` samples the Laplace
+  posterior at that vector -- so a line search that evaluates a
+  better-but-rejected candidate leaves the DRAWS on a point the fit discarded.
+  This is invisible in every optimizer statistic: the fit came back
+  bit-identical to its pre-refinement self and still took a ridge of 4.711.
+
+**It is not a blanket cure for long-series STS.** Where no step can be
+certified the refinement declines and the fit is returned exactly as before,
+and on the one-stage STS-with-slope cells at 985 event-times that is four
+cases out of five: lognormal (gap 0.0165), gengamma (0.0273), `dengue_strata`
+(0.0553) and `local_linear` (0.1094) all step onto indefinite curvature on
+every one of their six init rungs. Those fits still need
+`type = "two_stage"`, `trend = "local_level"`, or `hsgp_epidemic()`. A fit that already passed pays nothing
+and is unchanged to the last digit -- the gate declines with
+`already_adequate` before computing anything.
+
+`fit()` carries the outcome as `$refinement` alongside `$polish`, and
+`attempt_diagnostics` gains `newton_steps`, `newton_objective_change` and
+`newton_reason`.
+
+
 ## `fit_check()` reports when an ARMA is only weakly identified
 
 An `arima_epidemic(p, d, q)` with `p >= 1` and `q >= 1` can sit on a flat ridge
