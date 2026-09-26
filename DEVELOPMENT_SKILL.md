@@ -171,6 +171,14 @@ Prediction distinguishes:
 - latent incidence summaries from `mean()`, `median()`, and `quantile()`;
 - parameter estimates from `parameters()` and `coef()`.
 
+`forecast()` extends prediction past `now` without refitting. It must stay a
+continuation of the same draws: `.reconstruct_log_mean(horizon = h)` runs each
+epidemic recursion `h` more steps with fresh N(0, 1) innovations and must leave
+the fitted rows unchanged (tested). A new epidemic process must either support
+that horizon or refuse it with class `diseasenowcasting_forecast_unsupported`.
+Revision categories split one gross report cloud, so they add up draw by draw;
+keep `.forecast_category()` in step with the revision modes.
+
 Preserve stratum-specific draws plus their total. Avoid ambiguous string parsing
 of compound strata; prefer source-data keys. Quantile levels must be valid,
 sorted, and recorded in the common result.

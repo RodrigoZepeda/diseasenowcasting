@@ -1,5 +1,47 @@
 # 2.5.0
 
+## `forecast()`: carrying a nowcast past `now`
+
+`forecast(fit, h = 1)` extends a fitted nowcast `h` event times past `now`
+without refitting. After `now` nothing has been reported, so those event times
+contribute nothing to the likelihood and the posterior of the epidemic there is
+the fitted process's own transition from its posterior at `now`. The forecast
+therefore reuses the nowcast's Laplace draws, runs each latent recursion `h`
+more steps with fresh standard-normal innovations, and applies the same
+observation model. The nowcast and forecast are one joint draw.
+
+* Every recursive epidemic process forecasts: `ar1_epidemic()`,
+  `arima_epidemic()`, `ets_epidemic()`, `sts_epidemic()`, the random walks,
+  `theta_epidemic()` and `sir_epidemic()`. `hsgp_epidemic()` extrapolates up
+  to the edge of its domain and refuses a longer horizon; a `custom_epidemic()`
+  cannot be extended.
+* With a report-level `revision_process()`, `category` selects the
+  `"overall"`, `"confirmed"`, `"retracted"` or `"pending"` reports by their
+  eventual status. Gross reports are one negative-binomial cloud and the
+  genuine share is binomial in `p`, so the categories add up draw by draw.
+* Count-cumulative fits forecast the settled `C_t(H)` by running the fitted
+  signed updates from an empty level. The forecast is only as good as the scale
+  of the fitted latent incidence: the level composite
+  (`observation = "cumulative"`) ties it to the published levels, whereas the
+  hurdle observations can fit it well below them.
+* Temporal effects are recomputed for the new dates; other event covariates
+  are supplied through `new_data`.
+* The result is a `tbl_nowcast` with a `.horizon` column (`0` at `now`,
+  negative for the nowcast, `1..h` for the forecast), so `autoplot()`, `tidy()`
+  and scoring work unchanged. `generics` moves to `Imports` for the generic
+  (it was already installed as a `dplyr` dependency).
+* `.joint_reconstruct()` now builds the epidemic log-mean through
+  `.reconstruct_log_mean()`, which takes the horizon; the fitted event times are
+  unchanged.
+* New vignette: `vignette("Forecasting")`.
+
+## Model components construct their S7 parent explicitly
+
+The development version of S7 requires `new_object()` to receive an instance of
+the parent class. Likelihood, delay and epidemic constructors now build that
+instance instead of passing a bare `S7_object()`, which works with both the
+CRAN and the development S7.
+
 ## A joint fit takes the Newton step its own adequacy check has priced
 
 `.joint_fit_diagnostic()` judges a fit on `quadratic_gap = 0.5 r' H_FF^-1 r`,

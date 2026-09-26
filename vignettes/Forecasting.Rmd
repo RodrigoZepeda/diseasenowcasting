@@ -1,0 +1,142 @@
+---
+title: "Forecasting"
+author: "diseasenowcasting team"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Forecasting}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>",
+  fig.width = 7, fig.height = 4, fig.align = "center"
+)
+```
+
+A nowcast estimates the cases that have already happened but are not yet all
+reported. A forecast asks about cases that have not happened yet. For
+`diseasenowcasting` the two are the same computation: after `now` nothing has
+been reported, so those event times add nothing to the likelihood, and the
+epidemic there is just the fitted process carried forward. `forecast()` does
+exactly that with the draws of an existing fit, so there is no refit and the
+nowcast and forecast form one joint distribution.
+
+```{r libraries}
+library(tbl.now)
+library(diseasenowcasting)
+library(dplyr)
+library(ggplot2)
+```
+
+## Forecasting next week's dengue cases
+
+We nowcast weekly dengue in Puerto Rico as of 5 September 1994 with an
+exponential-smoothing epidemic.
+
+```{r dengue-fit}
+data(denguedat)
+dengue <- tbl_now(
+  filter(denguedat, onset_week >= as.Date("1992-01-06")),
+  event_date = onset_week, report_date = report_week,
+  data_type = "linelist", verbose = FALSE
+)
+
+fit <- nowcast(
+  dengue,
+  model(nb_likelihood(), ets_epidemic(), lognormal_delay()),
+  now = as.Date("1994-09-05"), temporal_effects = "none",
+  n_draws = 1000, seed = 1
+)
+```
+
+`forecast()` extends it `h` weeks. The result is an ordinary `tbl_nowcast`
+with an extra `.horizon` column: `0` at `now`, negative for the nowcast,
+`1, ..., h` for the forecast.
+
+```{r dengue-forecast}
+fc <- forecast(fit, h = 2, seed = 2)
+
+# Median and 95% interval, one row per date
+interval <- function(predictions) {
+  predictions |>
+    group_by(across(-c(.quantile_level, .value))) |>
+    summarise(lower  = .value[.quantile_level == 0.025],
+              median = .value[.quantile_level == 0.5],
+              upper  = .value[.quantile_level == 0.975], .groups = "drop")
+}
+interval(fc@predictions) |> filter(.horizon >= -1)
+```
+
+The uncertainty widens past `now` for two reasons: the epidemic can move in the
+new week, and nothing of it has been reported yet.
+
+```{r dengue-plot}
+interval(fc@predictions) |>
+  filter(.horizon >= -15) |>
+  ggplot(aes(onset_week)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = .horizon > 0), alpha = 0.3) +
+  geom_line(aes(y = median, colour = .horizon > 0)) +
+  geom_vline(xintercept = as.Date("1994-09-05"), linetype = "dashed") +
+  scale_fill_manual(values = unname(dn_palette()[c("reported", "accent")]),
+                    labels = c("nowcast", "forecast"), name = NULL) +
+  scale_colour_manual(values = unname(dn_palette()[c("reported", "accent")]),
+                      labels = c("nowcast", "forecast"), name = NULL) +
+  labs(x = "Onset week", y = "Cases") +
+  theme_diseasenowcasting()
+```
+
+Every recursive epidemic process forecasts any horizon: `ar1_epidemic()`,
+`arima_epidemic()`, `ets_epidemic()`, `sts_epidemic()`, the random walks and
+`sir_epidemic()`. `hsgp_epidemic()` extrapolates its basis only up to the edge
+of its domain, and a `custom_epidemic()` cannot be extended. Temporal effects
+are recomputed for the new dates; any other event covariate needs its future
+values in `new_data`.
+
+## Which cases? Revisions
+
+With a revision process, reports are later confirmed or retracted, and a
+forecast can count any part of them. In `covid_us`, a probable case is never
+laboratory-confirmed, so the revision process is confirmation-only.
+
+```{r covid-fit}
+data(covid_us)
+covid <- covid_us |>
+  filter(onset_dt >= as.Date("2020-03-01"), onset_dt <= as.Date("2020-07-31")) |>
+  mutate(
+    revision_type = if_else(current_status == "Laboratory-confirmed case",
+                            "confirmed", "pending"),
+    cdc_report_dt = if_else(revision_type == "pending", as.Date(NA), cdc_report_dt)
+  ) |>
+  count(onset_dt, pos_spec_dt, cdc_report_dt, revision_type, wt = n) |>
+  tbl_now(event_date = onset_dt, report_date = pos_spec_dt,
+          revision_date = cdc_report_dt, revision_type = revision_type,
+          case_count = n, data_type = "count-incidence", verbose = FALSE) |>
+  aggregate_time_units("weeks", verbose = FALSE)
+
+covid_fit <- nowcast(
+  covid, model(nb_likelihood(), ets_epidemic(), lognormal_delay()),
+  now = as.Date("2020-07-05"), temporal_effects = "none",
+  n_draws = 1000, seed = 1
+)
+```
+
+`category` chooses what is counted. The default is the fit's own estimand:
+here, the reports that will eventually be confirmed.
+
+```{r covid-categories}
+next_week <- function(category) {
+  forecast(covid_fit, h = 1, category = category,
+           include_nowcast = FALSE, seed = 3)@predictions |>
+    interval() |>
+    mutate(category = category)
+}
+bind_rows(lapply(c("confirmed", "pending", "overall"), next_week))
+```
+
+The categories are *eventual* statuses: `"overall"` counts every report,
+`"confirmed"` and `"retracted"` those that end up that way, and `"pending"`
+those that never do. Each mode only defines the categories it can observe;
+asking for `"retracted"` here is an error, because this data never records a
+retraction. See `?forecast.diseasenowcasting_nowcast` for the full table.
