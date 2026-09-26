@@ -44,10 +44,10 @@ lognormal_delay_class <- S7::new_class(
   constructor = function(mu = numeric(0), sigma = numeric(0),
                          num_delay_seasons = 1L,
                          season_distribution = std_normal_prior()) {
-    S7::new_object(S7::S7_object(),
-                   name = "LogNormal", num_id = 1L, mu = mu, sigma = sigma,
-                   num_delay_seasons = as.integer(num_delay_seasons),
-                   season_distribution = season_distribution)
+    S7::new_object(delay_process_class(name = "LogNormal", num_id = 1L,
+                                       num_delay_seasons = num_delay_seasons,
+                                       season_distribution = season_distribution),
+                   mu = mu, sigma = sigma)
   },
   validator = function(self) {
     if (!valid_positive_prior(self@sigma))
@@ -64,10 +64,10 @@ gamma_delay_class <- S7::new_class(
   constructor = function(shape = numeric(0), rate = numeric(0),
                          num_delay_seasons = 1L,
                          season_distribution = std_normal_prior()) {
-    S7::new_object(S7::S7_object(),
-                   name = "Gamma", num_id = 2L, shape = shape, rate = rate,
-                   num_delay_seasons = as.integer(num_delay_seasons),
-                   season_distribution = season_distribution)
+    S7::new_object(delay_process_class(name = "Gamma", num_id = 2L,
+                                       num_delay_seasons = num_delay_seasons,
+                                       season_distribution = season_distribution),
+                   shape = shape, rate = rate)
   },
   validator = function(self) {
     if (!valid_positive_prior(self@shape))
@@ -86,11 +86,10 @@ generalized_gamma_delay_class <- S7::new_class(
   constructor = function(mu = numeric(0), sigma = numeric(0), Q = numeric(0),
                          num_delay_seasons = 1L,
                          season_distribution = std_normal_prior()) {
-    S7::new_object(S7::S7_object(),
-                   name = "GeneralizedGamma", num_id = 3L,
-                   mu = mu, sigma = sigma, Q = Q,
-                   num_delay_seasons = as.integer(num_delay_seasons),
-                   season_distribution = season_distribution)
+    S7::new_object(delay_process_class(name = "GeneralizedGamma", num_id = 3L,
+                                       num_delay_seasons = num_delay_seasons,
+                                       season_distribution = season_distribution),
+                   mu = mu, sigma = sigma, Q = Q)
   },
   validator = function(self) {
     if (!valid_positive_prior(self@sigma))
@@ -105,11 +104,10 @@ dirichlet_delay_class <- S7::new_class(
   parent = delay_process_class,
   properties = list(alpha = .valid_param_slot, bins = S7::class_numeric),
   constructor = function(alpha = numeric(0), bins = NULL) {
-    S7::new_object(S7::S7_object(),
-                   name = "Dirichlet", num_id = 4L,
-                   alpha = alpha, bins = as.integer(bins),
-                   num_delay_seasons = 1,
-                   season_distribution = std_normal_prior())
+    S7::new_object(delay_process_class(name = "Dirichlet", num_id = 4L,
+                                       num_delay_seasons = 1,
+                                       season_distribution = std_normal_prior()),
+                   alpha = alpha, bins = as.integer(bins))
   }
 )
 
@@ -217,12 +215,11 @@ custom_delay_class <- S7::new_class(
     if (length(priors) == 0) priors <- replicate(n_params, std_normal_prior(), simplify = FALSE)
     if (length(param_names) == 0) param_names <- paste0("param_", seq_len(n_params))
     if (length(inits) == 0) inits <- rep(0.0, n_params)
-    S7::new_object(S7::S7_object(),
+    S7::new_object(delay_process_class(name = name, num_id = 5L,
+                                       num_delay_seasons = num_delay_seasons,
+                                       season_distribution = season_distribution),
                    cdf_factory = cdf_factory, n_params = n_params,
-                   priors = priors, param_names = param_names, inits = inits,
-                   name = name, num_id = 5L,
-                   num_delay_seasons = as.integer(num_delay_seasons),
-                   season_distribution = season_distribution)
+                   priors = priors, param_names = param_names, inits = inits)
   },
   validator = function(self) {
     if (self@n_params < 1L)

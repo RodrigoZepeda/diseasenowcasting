@@ -36,8 +36,7 @@ hsgp_epidemic_class <- S7::new_class(
   constructor = function(alpha = numeric(0), ell = numeric(0),
                          gp_kernel = "matern32", gp_basis = "dirichlet",
                          num_basis = 20, tmax_model = 1000L) {
-    S7::new_object(S7::S7_object(),
-                   name = "HSGP", num_id = 1L,
+    S7::new_object(epidemic_process_class(name = "HSGP", num_id = 1L),
                    alpha = alpha, ell = ell,
                    gp_kernel = .parse_gp_kernel(gp_kernel),
                    gp_basis  = .parse_gp_basis(gp_basis),
@@ -63,8 +62,8 @@ ar1_epidemic_class <- S7::new_class(
   parent = epidemic_process_class,
   properties = list(phi = .valid_param_slot, sigma = .valid_param_slot, error = .valid_param_slot),
   constructor = function(phi = numeric(0), sigma = numeric(0), error = numeric(0)) {
-    S7::new_object(S7::S7_object(),
-                   name = "AR1", num_id = 2L, phi = phi, sigma = sigma, error = error)
+    S7::new_object(epidemic_process_class(name = "AR1", num_id = 2L),
+                   phi = phi, sigma = sigma, error = error)
   },
   validator = function(self) {
     if (!valid_positive_prior(self@sigma)) cli::cli_abort("Invalid `sigma`.")
@@ -84,8 +83,8 @@ sir_epidemic_class <- S7::new_class(
   ),
   constructor = function(R0 = numeric(0), gamma = numeric(0), N_eff = numeric(0),
                          N_pop = 10000, use_beta_rw_trend = TRUE) {
-    S7::new_object(S7::S7_object(),
-                   name = "SIR", num_id = 3L, R0 = R0, gamma = gamma, N_eff = N_eff,
+    S7::new_object(epidemic_process_class(name = "SIR", num_id = 3L),
+                   R0 = R0, gamma = gamma, N_eff = N_eff,
                    N_pop = as.numeric(N_pop), use_beta_rw_trend = as.logical(use_beta_rw_trend))
   },
   validator = function(self) {
@@ -215,8 +214,7 @@ custom_epidemic_class <- S7::new_class(
     pnames  <- if (length(param_names) == 0) paste0("theta", seq_len(n_p)) else as.character(param_names)
     pinits  <- if (length(inits) == 0) rep(0.0, n_p) else as.numeric(inits)
     ppriors <- if (length(priors) == 0) vector("list", n_p) else priors
-    S7::new_object(S7::S7_object(),
-                   name = as.character(name), num_id = 4L,
+    S7::new_object(epidemic_process_class(name = as.character(name), num_id = 4L),
                    intensity_fn = intensity_fn,
                    n_params = n_p, priors = ppriors,
                    param_names = pnames, inits = pinits)
@@ -400,8 +398,7 @@ arima_epidemic_class <- S7::new_class(
     order_d <- as.integer(d)
     drift_on <- if (length(include_drift) == 1L && !is.na(include_drift))
       as.logical(include_drift) else order_d >= 1L
-    S7::new_object(S7::S7_object(),
-                   name = "ARIMA", num_id = 5L,
+    S7::new_object(epidemic_process_class(name = "ARIMA", num_id = 5L),
                    p = as.integer(p), d = order_d, q = as.integer(q),
                    include_drift = drift_on,
                    ar = ar, ma = ma, sigma = sigma, drift = drift)
@@ -446,8 +443,7 @@ ets_epidemic_class <- S7::new_class(
                          damping = numeric(0), drift = numeric(0),
                          slope_init = numeric(0),
                          name = "ETS", num_id = 6L) {
-    S7::new_object(S7::S7_object(),
-                   name = as.character(name), num_id = as.integer(num_id),
+    S7::new_object(epidemic_process_class(name = as.character(name), num_id = as.integer(num_id)),
                    trend = .parse_ets_trend(trend),
                    damped = as.logical(damped),
                    include_drift = as.logical(include_drift),
@@ -476,12 +472,10 @@ random_walk_epidemic_class <- S7::new_class(
   parent = ets_epidemic_class,
   constructor = function(sigma = numeric(0), drift = numeric(0),
                          include_drift = FALSE, name = "RW") {
-    S7::new_object(S7::S7_object(),
-                   name = as.character(name), num_id = 6L,
-                   trend = "none", damped = FALSE,
-                   include_drift = as.logical(include_drift),
-                   sigma = sigma, beta = numeric(0), damping = numeric(0),
-                   drift = drift, slope_init = numeric(0))
+    S7::new_object(ets_epidemic_class(trend = "none", damped = FALSE,
+                                      include_drift = include_drift,
+                                      sigma = sigma, drift = drift,
+                                      name = name, num_id = 6L))
   }
 )
 
@@ -491,11 +485,10 @@ theta_epidemic_class <- S7::new_class(
   "theta_epidemic_class",
   parent = ets_epidemic_class,
   constructor = function(sigma = numeric(0), drift = numeric(0)) {
-    S7::new_object(S7::S7_object(),
-                   name = "Theta", num_id = 6L,
-                   trend = "none", damped = FALSE, include_drift = TRUE,
-                   sigma = sigma, beta = numeric(0), damping = numeric(0),
-                   drift = drift, slope_init = numeric(0))
+    S7::new_object(ets_epidemic_class(trend = "none", damped = FALSE,
+                                      include_drift = TRUE,
+                                      sigma = sigma, drift = drift,
+                                      name = "Theta", num_id = 6L))
   }
 )
 
@@ -514,8 +507,7 @@ sts_epidemic_class <- S7::new_class(
                          level_sigma = numeric(0), slope_sigma = numeric(0),
                          slope_phi = numeric(0), slope_mean = numeric(0),
                          slope_init = numeric(0)) {
-    S7::new_object(S7::S7_object(),
-                   name = "STS", num_id = 7L,
+    S7::new_object(epidemic_process_class(name = "STS", num_id = 7L),
                    trend = .parse_sts_trend(trend),
                    level_sigma = level_sigma, slope_sigma = slope_sigma,
                    slope_phi = slope_phi, slope_mean = slope_mean,

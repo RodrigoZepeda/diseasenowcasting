@@ -29,7 +29,7 @@ poisson_likelihood_class <- S7::new_class(
     mu = .valid_param_slot   # log-scale mean intercept
   ),
   constructor = function(mu = numeric(0)) {
-    S7::new_object(S7::S7_object(), name = "poisson", num_id = 0L, mu = mu)
+    S7::new_object(likelihood_class(name = "poisson", num_id = 0L), mu = mu)
   }
 )
 
@@ -44,7 +44,7 @@ nb_likelihood_class <- S7::new_class(
     phi = .valid_param_slot   # NB overdispersion (> 0)
   ),
   constructor = function(mu = numeric(0), phi = lognormal_prior(log(20), 0.5)) {
-    S7::new_object(S7::S7_object(), name = "nb", num_id = 1L, mu = mu, phi = phi)
+    S7::new_object(likelihood_class(name = "nb", num_id = 1L), mu = mu, phi = phi)
   },
   validator = function(self) {
     .check_fixed_domain(self@phi, "phi", "nb_likelihood", "the positive line",
