@@ -320,6 +320,10 @@ test_that("temporal effects and event covariates are extended to the forecast da
                c(6, 6.1))
   expect_no_error(forecast(covariate_fit, h = 2, new_data = new_data,
                            n_draws = 10, include_nowcast = FALSE))
+  # Dates given as text are read on the same calendar.
+  text_dates <- transform(new_data, onset = as.character(onset))
+  expect_equal(.forecast_design(covariate_native, 2L, text_dates),
+               .forecast_design(covariate_native, 2L, new_data))
 })
 
 test_that("count-cumulative cohorts are forecast from an empty level", {

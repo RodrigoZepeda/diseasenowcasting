@@ -261,7 +261,8 @@ forecast.diseasenowcasting_nowcast <- function(
     if (length(missing_cols))
       cli::cli_abort("{.arg new_data} is missing the column{?s} {.field {missing_cols}}.",
                      class = "diseasenowcasting_forecast_covariates")
-    supplied <- as(new_data[[event_col]], class(future_dates)[1])
+    as_grid <- function(x) if (inherits(future_dates, "Date")) as.Date(x) else as.numeric(x)
+    supplied <- as_grid(new_data[[event_col]])
     uncovered <- future_dates[!future_dates %in% supplied]
     if (length(uncovered))
       cli::cli_abort(c(
@@ -270,7 +271,7 @@ forecast.diseasenowcasting_nowcast <- function(
       ), class = "diseasenowcasting_forecast_covariates")
     observed <- as.data.frame(data)[c(event_col, covariate_cols)]
     new_rows <- new_data[supplied %in% future_dates, c(event_col, covariate_cols), drop = FALSE]
-    new_rows[[event_col]] <- as(new_rows[[event_col]], class(observed[[event_col]])[1])
+    new_rows[[event_col]] <- as_grid(new_rows[[event_col]])
     combined <- dplyr::bind_rows(observed, new_rows)
     covariate_X <- .covariate_matrix(
       combined, event_col, min_event,
