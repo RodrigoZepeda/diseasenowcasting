@@ -1751,6 +1751,155 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
        Bmat = hsgp_basis_matrix, freq = hsgp_frequencies, n_strata = n_strata)
 }
 
+#' Latent log-mean `[n_time + horizon, n_strata]` from one parameter list
+#'
+#' The plain-R mirror of the epidemic half of the tape.  With `horizon = 0` it
+#' is exactly what `.joint_reconstruct()` has always computed.  With
+#' `horizon > 0` every recursive process simply keeps running: each latent
+#' innovation series gains `horizon` fresh standard-normal rows, the HSGP basis
+#' is evaluated on the extended grid, and the covariate matrix gains the rows in
+#' `X_future`.  That is the whole forecast.  Innovations after `now` never enter
+#' the likelihood (nothing has been reported for them), so their posterior IS
+#' their N(0, 1) prior, independent of every other coordinate; drawing them fresh
+#' next to a posterior draw of everything else is an exact draw from the joint
+#' posterior of the extended model.
+#'
+#' The first `n_time` rows never depend on the horizon: every recursion is
+#' causal and the HSGP grid is anchored on `tmax_model`, not on its length.
+#'
+#' @param data Prepared engine.
+#' @param parlist Parameter list with pinned parameters already restored.
+#' @param hsgp_basis_matrix,hsgp_frequencies The fit's HSGP basis (in-sample).
+#' @param horizon Number of steps past the last event time.
+#' @param X_future `[horizon x P]` covariate rows for the new event times.
+#' @param priors Prior bundle (only the custom epidemic reads it).
+#' @keywords internal
+#' @noRd
+.reconstruct_log_mean <- function(data, parlist, hsgp_basis_matrix,
+                                  hsgp_frequencies, horizon = 0L,
+                                  X_future = NULL, priors = NULL) {
+  n_time <- as.integer(data$max_time); n_strata <- as.integer(data$num_strata)
+  horizon <- as.integer(horizon)
+  n_out <- n_time + horizon
+  reshape <- function(x, nr, nc) matrix(as.numeric(x), nr, nc)
+  # Future innovations: the posterior of an innovation no observation touches is
+  # its standard-normal prior.
+  extend <- function(innovations) {
+    if (horizon == 0L) return(innovations)
+    rbind(innovations, matrix(stats::rnorm(horizon * ncol(innovations)),
+                              horizon, ncol(innovations)))
+  }
+  log_mean <- matrix(0.0, n_out, n_strata)
+  if (data$epidemic_model == 4L) {                              # custom epidemic
+    if (horizon > 0L)
+      cli::cli_abort(c(
+        "A {.fn custom_epidemic} cannot be extended past its fitted event grid.",
+        "i" = "Its {.arg intensity_fn} returns a matrix of fixed length, so there is no recursion to continue."
+      ), class = "diseasenowcasting_forecast_unsupported")
+    theta_epi <- as.numeric(parlist$custom_epidemic_params)
+    return(matrix(as.numeric(priors$intensity_fn(theta_epi)), n_time, n_strata))
+  }
+  if (data$epidemic_model == 3L) {                              # coupled SIR
+    R0 <- exp(parlist$log_R0); recovery_rate <- stats::plogis(parlist$u_gamma)
+    susceptible_frac <- stats::plogis(parlist$u_neff); effective_pop <- susceptible_frac * data$N_pop
+    initial_infected <- data$case_counts[1, ]
+    trend <- matrix(0.0, n_out, n_strata)
+    if (isTRUE(data$use_beta_rw_trend == 1L)) {
+      ar_phi   <- -0.999 + 1.998 * stats::plogis(parlist$ar_phi_unc)
+      ar_sigma <- data$ar_sigma_max * stats::plogis(parlist$log_ar_sigma_unc)
+      ar_innov <- extend(reshape(parlist$ar_innov, n_time, n_strata))
+      for (s in seq_len(n_strata)) {
+        trend[1, s] <- ar_innov[1, s] * ar_sigma[s] / sqrt(1 - ar_phi[s]^2)
+        if (n_out >= 2) for (t in 2:n_out)
+          trend[t, s] <- ar_phi[s] * trend[t - 1, s] + ar_innov[t, s] * ar_sigma[s]
+      }
+    }
+    beta0 <- log(R0 * recovery_rate); incidence <- matrix(0.0, n_out, n_strata)
+    susceptible <- 1 - initial_infected / effective_pop; infected <- initial_infected / effective_pop
+    for (t in seq_len(n_out)) {
+      total_infectious <- sum(infected)
+      for (s in seq_len(n_strata)) {
+        beta_ts <- exp(beta0[s] + trend[t, s])
+        new_inf <- susceptible[s] * (1 - exp(-beta_ts * total_infectious))
+        incidence[t, s] <- new_inf * effective_pop[s]
+        susceptible[s]  <- susceptible[s] * exp(-beta_ts * total_infectious)
+        infected[s]     <- new_inf + (1 - recovery_rate[s]) * infected[s]
+      }
+    }
+    # (incidence+|incidence|)/2 = pmax(incidence, 0) guards the SIR log-mean
+    # against NaN without changing any fit where incidence >= 0.
+    return(log((incidence + abs(incidence)) * 0.5 + 1e-8))
+  }
+  # Resolve intercept: hierarchical or independent
+  is_hierarchical_r <- !is.null(parlist$mu_global)
+  mu_intercept <- if (is_hierarchical_r)
+    as.numeric(parlist$mu_global) + exp(as.numeric(parlist$log_tau_intercept)) * as.numeric(parlist$delta_intercept)
+  else parlist$mu_intercept
+  gamma <- if (data$P > 0) reshape(parlist$gamma, data$P, n_strata) else NULL
+  X <- data$X
+  if (!is.null(gamma) && horizon > 0L) {
+    if (is.null(X_future) || nrow(X_future) != horizon || ncol(X_future) != data$P)
+      cli::cli_abort("Internal error: {.arg X_future} must be a {horizon} x {data$P} matrix.")
+    X <- rbind(X, X_future)
+  }
+  epidemic_model <- data$epidemic_model
+  if (epidemic_model == 1L) {
+    gp_alpha <- exp(parlist$log_gp_alpha); gp_ell <- exp(parlist$log_gp_ell)
+    spectral_weights <- hsgp_spectral_weights(hsgp_frequencies, gp_alpha, gp_ell, data$gp_kernel)
+    basis_coefs <- reshape(parlist$basis_coefs, ncol(hsgp_basis_matrix), n_strata)
+    if (horizon > 0L) hsgp_basis_matrix <- .hsgp_extended_basis(data, n_out)
+  } else if (epidemic_model == 2L) {
+    ar_phi   <- -0.999 + 1.998 * stats::plogis(parlist$ar_phi_unc)
+    ar_sigma <- data$ar_sigma_max * stats::plogis(parlist$log_ar_sigma_unc)
+    ar_innov <- extend(reshape(parlist$ar_innov, n_time, n_strata))
+  } else {
+    # Classical time-series trends.  This reads the SAME helpers the tape uses
+    # (see R/13_epidemic_timeseries.R), so a change to a constraint map lands
+    # in both places at once.
+    trend_parameters <- .timeseries_reconstruct_parameters(data, parlist, n_strata)
+    trend_parameters$innovations <- extend(trend_parameters$innovations)
+    if (!is.null(trend_parameters$slope_innovations))
+      trend_parameters$slope_innovations <- extend(trend_parameters$slope_innovations)
+  }
+  for (s in seq_len(n_strata)) {
+    col <- rep(mu_intercept[s], n_out)
+    if (!is.null(gamma)) col <- col + as.vector(X %*% gamma[, s])
+    if (epidemic_model == 1L) {
+      col <- col + as.vector(hsgp_basis_matrix %*% (basis_coefs[, s] * spectral_weights))
+    } else if (epidemic_model == 2L) {
+      tr <- numeric(n_out); tr[1] <- ar_innov[1, s] * ar_sigma[s] / sqrt(1 - ar_phi[s]^2)
+      if (n_out >= 2) for (t in 2:n_out) tr[t] <- ar_phi[s] * tr[t - 1] + ar_innov[t, s] * ar_sigma[s]
+      col <- col + tr
+    } else {
+      col <- col + .timeseries_trend_column(data, trend_parameters, s, n_out)
+    }
+    log_mean[, s] <- col
+  }
+  log_mean
+}
+
+#' HSGP basis on an event grid extended past the fitted one
+#'
+#' The standardised grid is anchored on `tmax_model`, so extending it only
+#' appends points to the right.  The basis is defined on
+#' `[-gp_L_left, gp_L_right]`; past the right edge the Dirichlet eigenfunctions
+#' reflect back rather than extrapolate, so a horizon that reaches it is refused.
+#' @keywords internal
+#' @noRd
+.hsgp_extended_basis <- function(data, n_out) {
+  time_scaled <- hsgp_time_scaled(n_out, data$tmax_model)
+  if (max(time_scaled) >= data$gp_L_right) {
+    reachable <- sum(time_scaled[-seq_len(data$max_time)] < data$gp_L_right)
+    cli::cli_abort(c(
+      "The forecast horizon runs past the edge of the HSGP domain.",
+      "i" = "This fit's basis can extrapolate at most {reachable} step{?s} past {.arg now}.",
+      "*" = "Use a shorter horizon, refit with a smaller {.arg gp_boundary_frac} (more room on the right), or use a recursive process such as {.fn ar1_epidemic}."
+    ), class = "diseasenowcasting_forecast_unsupported")
+  }
+  hsgp_basis(time_scaled, data$gp_L_left, data$gp_L_right, data$num_basis,
+             data$gp_basis)
+}
+
 #' Reconstruct per-(time, stratum) lambda / Gstar (plain numeric) from a fit
 #'
 #' Mirrors the objective's per-stratum / coupled-SIR mean construction in base
@@ -1791,77 +1940,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   d_star <- if (is.matrix(data$d_star)) data$d_star else matrix(data$d_star, n_time, n_strata)
 
   # -- per-(time, stratum) log-mean -------------------------------------------
-  log_mean <- matrix(0.0, n_time, n_strata)
-  if (data$epidemic_model == 4L) {                              # custom epidemic
-    theta_epi <- as.numeric(parlist$custom_epidemic_params)
-    log_mean   <- matrix(as.numeric(priors$intensity_fn(theta_epi)), n_time, n_strata)
-  } else if (data$epidemic_model == 3L) {                       # coupled SIR
-    R0 <- exp(parlist$log_R0); recovery_rate <- stats::plogis(parlist$u_gamma)
-    susceptible_frac <- stats::plogis(parlist$u_neff); effective_pop <- susceptible_frac * data$N_pop
-    initial_infected <- data$case_counts[1, ]
-    trend <- matrix(0.0, n_time, n_strata)
-    if (isTRUE(data$use_beta_rw_trend == 1L)) {
-      ar_phi   <- -0.999 + 1.998 * stats::plogis(parlist$ar_phi_unc)
-      ar_sigma <- data$ar_sigma_max * stats::plogis(parlist$log_ar_sigma_unc)
-      ar_innov <- reshape(parlist$ar_innov, n_time, n_strata)
-      for (s in seq_len(n_strata)) {
-        trend[1, s] <- ar_innov[1, s] * ar_sigma[s] / sqrt(1 - ar_phi[s]^2)
-        if (n_time >= 2) for (t in 2:n_time)
-          trend[t, s] <- ar_phi[s] * trend[t - 1, s] + ar_innov[t, s] * ar_sigma[s]
-      }
-    }
-    beta0 <- log(R0 * recovery_rate); incidence <- matrix(0.0, n_time, n_strata)
-    susceptible <- 1 - initial_infected / effective_pop; infected <- initial_infected / effective_pop
-    for (t in seq_len(n_time)) {
-      total_infectious <- sum(infected)
-      for (s in seq_len(n_strata)) {
-        beta_ts <- exp(beta0[s] + trend[t, s])
-        new_inf <- susceptible[s] * (1 - exp(-beta_ts * total_infectious))
-        incidence[t, s] <- new_inf * effective_pop[s]
-        susceptible[s]  <- susceptible[s] * exp(-beta_ts * total_infectious)
-        infected[s]     <- new_inf + (1 - recovery_rate[s]) * infected[s]
-      }
-    }
-    # See the note above: (incidence+|incidence|)/2 = pmax(incidence, 0) guards the
-    # SIR log-mean against NaN without changing any fit where incidence >= 0.
-    log_mean <- log((incidence + abs(incidence)) * 0.5 + 1e-8)
-  } else {
-    # Resolve intercept: hierarchical or independent
-    is_hierarchical_r <- !is.null(parlist$mu_global)
-    mu_intercept <- if (is_hierarchical_r)
-      as.numeric(parlist$mu_global) + exp(as.numeric(parlist$log_tau_intercept)) * as.numeric(parlist$delta_intercept)
-    else parlist$mu_intercept
-    gamma <- if (data$P > 0) reshape(parlist$gamma, data$P, n_strata) else NULL
-    epidemic_model <- data$epidemic_model
-    if (epidemic_model == 1L) {
-      gp_alpha <- exp(parlist$log_gp_alpha); gp_ell <- exp(parlist$log_gp_ell)
-      spectral_weights <- hsgp_spectral_weights(hsgp_frequencies, gp_alpha, gp_ell, data$gp_kernel)
-      basis_coefs <- reshape(parlist$basis_coefs, ncol(hsgp_basis_matrix), n_strata)
-    } else if (epidemic_model == 2L) {
-      ar_phi   <- -0.999 + 1.998 * stats::plogis(parlist$ar_phi_unc)
-      ar_sigma <- data$ar_sigma_max * stats::plogis(parlist$log_ar_sigma_unc)
-      ar_innov <- reshape(parlist$ar_innov, n_time, n_strata)
-    } else {
-      # Classical time-series trends.  This reads the SAME helpers the tape uses
-      # (see R/13_epidemic_timeseries.R), so a change to a constraint map lands
-      # in both places at once.
-      trend_parameters <- .timeseries_reconstruct_parameters(data, parlist, n_strata)
-    }
-    for (s in seq_len(n_strata)) {
-      col <- rep(mu_intercept[s], n_time)
-      if (!is.null(gamma)) col <- col + as.vector(data$X %*% gamma[, s])
-      if (epidemic_model == 1L) {
-        col <- col + as.vector(hsgp_basis_matrix %*% (basis_coefs[, s] * spectral_weights))
-      } else if (epidemic_model == 2L) {
-        tr <- numeric(n_time); tr[1] <- ar_innov[1, s] * ar_sigma[s] / sqrt(1 - ar_phi[s]^2)
-        if (n_time >= 2) for (t in 2:n_time) tr[t] <- ar_phi[s] * tr[t - 1] + ar_innov[t, s] * ar_sigma[s]
-        col <- col + tr
-      } else {
-        col <- col + .timeseries_trend_column(data, trend_parameters, s, n_time)
-      }
-      log_mean[, s] <- col
-    }
-  }
+  log_mean <- .reconstruct_log_mean(data, parlist, hsgp_basis_matrix,
+                                    hsgp_frequencies, priors = priors)
 
   ub <- data$mu_log_upper_bound
   mu_safe <- ub - log1p(exp(ub - log_mean))

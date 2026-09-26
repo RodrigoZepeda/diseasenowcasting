@@ -36,6 +36,7 @@ Depends:
 Imports:
     cli,
     dplyr,
+    generics,
     ggplot2,
     lifecycle,
     Matrix,
@@ -50,7 +51,6 @@ Imports:
     vctrs
 Suggests:
     future,
-    generics,
     withr,
     testthat (>= 3.0.0),
     knitr,

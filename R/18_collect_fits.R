@@ -507,7 +507,7 @@
 #'   x n_strata]` array (or NULL when unstratified)).
 #' @keywords internal
 #' @noRd
-.pool_fit_draws <- function(fits, target, n_draws = 200L) {
+.pool_fit_draws <- function(fits, target, n_draws = 200L, forecast = NULL) {
   # Draw from each fit separately, then stack the draws.  For a one-stage fit
   # there is a single block; for two-stage there is one block per imputation, and
   # stacking them pools the delay uncertainty across imputations.
@@ -518,8 +518,11 @@
   estimand <- reconstruction <- NULL
   regularization_blocks <- vector("list", length(fits))
   n_strata <- 1L
+  forecast_blocks <- vector("list", length(fits))
   for (fit_index in seq_along(fits)) {
-    fit_draws <- .nowcast_draws(fits[[fit_index]], target = target, n_draws = n_draws)
+    fit_draws <- .nowcast_draws(fits[[fit_index]], target = target,
+                                n_draws = n_draws, forecast = forecast)
+    forecast_blocks[[fit_index]] <- fit_draws$forecast
     nowcast_blocks[[fit_index]] <- fit_draws$M
     lambda_blocks[[fit_index]]  <- fit_draws$lambda_draws
     strata_blocks[[fit_index]]  <- fit_draws$M_strata
@@ -552,6 +555,12 @@
        estimand = estimand,
        cumulative_reconstruction = reconstruction,
        negative_projection_count = projection_count,
+       forecast = if (!is.null(forecast)) list(
+         strata = Reduce(abind_draws, lapply(forecast_blocks, `[[`, "strata")),
+         lambda = Reduce(abind_draws, lapply(forecast_blocks, `[[`, "lambda")),
+         nowcast_strata = Reduce(abind_draws,
+                                 lapply(forecast_blocks, `[[`, "nowcast_strata"))
+       ),
        laplace_sampling = list(
          any_regularized = any(vapply(
            regularization_blocks,

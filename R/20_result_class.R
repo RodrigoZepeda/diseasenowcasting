@@ -57,6 +57,25 @@ diseasenowcasting_result_class <- S7::new_class(
     n_draws = n_draws %||% fit@n_draws,
     seed = seed
   )
+  .result_from_prediction(fit, prediction, quantile_levels)
+}
+
+#' Build the common result from a native fit and one of its predictions
+#'
+#' Shared by [nowcast()] and [forecast()]: the prediction decides the event
+#' axis and the draws, the fit supplies everything else.
+#' @keywords internal
+#' @noRd
+.result_from_prediction <- function(
+    fit, prediction,
+    quantile_levels = tbl.now::nowcast_quantile_levels()) {
+  quantile_levels <- sort(unique(as.numeric(quantile_levels)))
+  if (length(quantile_levels) == 0L || anyNA(quantile_levels) ||
+      any(quantile_levels <= 0 | quantile_levels >= 1)) {
+    cli::cli_abort(
+      "{.arg quantile_levels} must be probabilities strictly between 0 and 1."
+    )
+  }
   fit_diagnostics <- fit@fit_diagnostics
   fit_diagnostics$laplace_sampling <- prediction@laplace_sampling
   fit@fit_diagnostics <- fit_diagnostics

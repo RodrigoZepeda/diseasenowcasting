@@ -69,6 +69,10 @@ theme_diseasenowcasting <- function(base_size = 11) {
 #' @export
 ggplot2::autoplot
 
+#' @importFrom generics forecast
+#' @export
+generics::forecast
+
 # ── autoplot(nowcast_prediction_class) ───────────────────────────────────────
 # Bar-chart style matching the original diseasenowcasting plot().  For each
 # event-time two bars are drawn from zero:

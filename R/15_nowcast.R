@@ -343,34 +343,11 @@
           index <- delay + 1L
           components <- if (!is.null(cc$components_by_cohort))
             cc$components_by_cohort[[s]][[t]] else cc
-          alpha <- reconstructed$lambda[t, s] * components$alpha_unit[index]
-          omega <- reconstructed$lambda[t, s] * components$omega_unit[index]
-          update <- 0
-          if (cc$observation == 1L) {
-            # Anchored update approximation for the level composite.  This is
-            # not an exact conditional draw from the dependent level process.
-            update <- stats::rpois(1L, max(alpha, 0)) -
-              stats::rpois(1L, max(omega, 0))
-          } else {
-            total <- alpha + omega
-            eta <- cc$movement[["intercept"]] +
-              cc$movement[["age"]] * log1p(delay) +
-              cc$movement[["previous"]] * previous_nonzero
-            movement_probability <-
-              .count_cumulative_movement_probability(total, eta)
-            moved <- stats::rbinom(1L, 1L,
-                                    min(max(movement_probability, 0), 1)) == 1L
-            if (moved) {
-              direction <- if (stats::runif(1L) < alpha / total) 1 else -1
-              own_mean <- total / movement_probability
-              magnitude <- if (cc$observation == 2L) {
-                .draw_ztnb_own_mean(own_mean, cc$magnitude_size)
-              } else {
-                .draw_ztpoisson_own_mean(own_mean)
-              }
-              update <- direction * magnitude
-            }
-          }
+          update <- .draw_count_cumulative_update(
+            reconstructed$lambda[t, s] * components$alpha_unit[index],
+            reconstructed$lambda[t, s] * components$omega_unit[index],
+            delay, previous_nonzero, cc
+          )
           running_level <- running_level + update
           previous_nonzero <- update != 0
         }
@@ -390,6 +367,39 @@
       "anchored independent signed-Poisson update approximation" else
       "anchored sequential hurdle updates"
   )
+}
+
+#' One signed count-cumulative update at a given report age
+#'
+#' Shared by the anchored nowcast completion and the forecast of cohorts with
+#' nothing published yet, so the two draw from one update law.
+#' @param alpha,omega Expected addition and withdrawal mass at this age.
+#' @param delay Report age (0-indexed).
+#' @param previous_nonzero Whether the previous update moved the level.
+#' @param cc The reconstructed count-cumulative block.
+#' @keywords internal
+#' @noRd
+.draw_count_cumulative_update <- function(alpha, omega, delay, previous_nonzero, cc) {
+  if (cc$observation == 1L) {
+    # Anchored update approximation for the level composite.  This is
+    # not an exact conditional draw from the dependent level process.
+    return(stats::rpois(1L, max(alpha, 0)) - stats::rpois(1L, max(omega, 0)))
+  }
+  total <- alpha + omega
+  eta <- cc$movement[["intercept"]] +
+    cc$movement[["age"]] * log1p(delay) +
+    cc$movement[["previous"]] * previous_nonzero
+  movement_probability <- .count_cumulative_movement_probability(total, eta)
+  moved <- stats::rbinom(1L, 1L, min(max(movement_probability, 0), 1)) == 1L
+  if (!moved) return(0)
+  direction <- if (stats::runif(1L) < alpha / total) 1 else -1
+  own_mean <- total / movement_probability
+  magnitude <- if (cc$observation == 2L) {
+    .draw_ztnb_own_mean(own_mean, cc$magnitude_size)
+  } else {
+    .draw_ztpoisson_own_mean(own_mean)
+  }
+  direction * magnitude
 }
 
 #' Quantile-table summary of a pooled nowcast draws matrix
@@ -431,17 +441,31 @@ summarise_nowcast_matrix <- function(draws_matrix) {
 #'   summary (default newest).
 #' @param probs Quantile probabilities for the convenience summary.
 #' @param seed Optional RNG seed.
+#' @param forecast Optional forecast specification from `.forecast_spec()`.
+#'   When given, every parameter draw is also carried `forecast$horizon` steps
+#'   past the last event time (see `.forecast_draw_cells()`), so the nowcast and
+#'   the forecast are one joint draw.  `NULL` leaves the nowcast path, and its
+#'   random-number stream, exactly as it was.
 #' @returns list(`M` = predictive draws matrix, `lambda_draws` = latent
 #'   incidence matrix, `nowcast` = [summarise_nowcast_matrix()] table,
-#'   `draws`/`quantiles`/`median`/`observed` at `target`).
+#'   `draws`/`quantiles`/`median`/`observed` at `target`, and `forecast` when
+#'   requested).
 #' @keywords internal
 #' @noRd
 .nowcast_draws <- function(fit, target = NULL, n_draws = 1000L,
                            probs = c(0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975),
-                           seed = sample.int(.Machine$integer.max, 1)) {
+                           seed = sample.int(.Machine$integer.max, 1),
+                           forecast = NULL) {
   if (!is.null(seed)) set.seed(seed)
   # Prior-only nowcasts carry precomputed prior-predictive draws.
-  if (isTRUE(fit$prior_only)) return(.prior_only_draws(fit, target, n_draws, probs))
+  if (isTRUE(fit$prior_only)) {
+    if (!is.null(forecast))
+      cli::cli_abort(c(
+        "A prior-only nowcast cannot be forecast.",
+        "i" = "Fit the model to data first with {.code nowcast(..., prior_only = FALSE)}."
+      ), class = "diseasenowcasting_forecast_unsupported")
+    return(.prior_only_draws(fit, target, n_draws, probs))
+  }
   data <- fit$data; priors <- fit$priors
   n_time <- data$max_time
   target <- target %||% n_time
@@ -545,7 +569,20 @@ summarise_nowcast_matrix <- function(draws_matrix) {
   is_confirmation <- isTRUE(data$is_confirmation == 1L)
   projection_count <- 0L
   cumulative_reconstruction <- NULL
+  if (!is.null(forecast)) {
+    forecast_strata <- array(NA_real_, c(n_draws, forecast$horizon, n_strata))
+    forecast_lambda <- array(NA_real_, c(n_draws, forecast$horizon, n_strata))
+    # The nowcast of a category other than the fit's own estimand (the
+    # "overall" reports, say) is its own array; the estimand itself is
+    # `nowcast_strata`.
+    category_strata <- if (!identical(forecast$part, "target"))
+      array(NA_real_, c(n_draws, n_time, n_strata)) else NULL
+  }
   for (draw_index in seq_len(n_draws)) {
+    # The genuine cases still to be reported, and their mean; only the
+    # line-list revision branch sets them, and only a forecast of another
+    # category reads them.
+    future_genuine <- future_genuine_mean <- NULL
     parlist <- .split_named_vector(setNames(parameter_draws[, draw_index], parameter_names))
     reconstructed <- .joint_reconstruct(data, priors, parlist, fit$Bmat, fit$freq)
     lambda_mat <- matrix(reconstructed$lambda, n_time, n_strata)
@@ -622,6 +659,8 @@ summarise_nowcast_matrix <- function(draws_matrix) {
                            as.numeric(gross_mat * gstar_mat),
                            as.numeric(case_counts_mat), phi_nb),
         n_time, n_strata)
+      future_genuine <- future_cases
+      future_genuine_mean <- matrix(lambda_future, n_time, n_strata)
       pred_cells <- if (is_retraction) {
         # Settled genuine count = (standing rows that turn out to be genuine) +
         # (genuine cases not yet reported).  Each standing row of report age j is
@@ -650,6 +689,17 @@ summarise_nowcast_matrix <- function(draws_matrix) {
     lambda_strata[draw_index, , ]  <- lambda_mat
     nowcast_draws[draw_index, ] <- rowSums(pred_cells)
     lambda_draws[draw_index, ]  <- rowSums(lambda_mat)
+    if (!is.null(forecast)) {
+      cells <- .forecast_draw_cells(
+        data, priors, parlist, fit, reconstructed, forecast,
+        phi_nb = phi_nb, is_negbin = is_negbin, pred_cells = pred_cells,
+        observed_all = case_counts_mat, future_genuine = future_genuine,
+        future_genuine_mean = future_genuine_mean
+      )
+      forecast_strata[draw_index, , ] <- cells$future
+      forecast_lambda[draw_index, , ] <- cells$future_lambda
+      if (!is.null(category_strata)) category_strata[draw_index, , ] <- cells$past
+    }
   }
 
   target_draws <- nowcast_draws[, target]
@@ -665,5 +715,9 @@ summarise_nowcast_matrix <- function(draws_matrix) {
                  as.integer(data$settlement_horizon)) else NULL,
        cumulative_reconstruction = cumulative_reconstruction,
        negative_projection_count = projection_count,
-       laplace_regularization = laplace_regularization)
+       laplace_regularization = laplace_regularization,
+       forecast = if (!is.null(forecast)) list(
+         strata = forecast_strata, lambda = forecast_lambda,
+         nowcast_strata = category_strata %||% nowcast_strata
+       ))
 }
