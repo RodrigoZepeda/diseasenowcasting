@@ -97,6 +97,8 @@ utils::globalVariables(c(
   "movement_previous", "movement_previous_value",
   "log_magnitude_size", "magnitude_size_value",
   "log_revision_magnitude_size", "revision_magnitude_size_value",
+  "initial_frailty", "log_initial_size", "initial_size_value",
+  "initial_size_fixed", "prior_initial_size_dist", "prior_initial_size_params",
   "observation_mask", "cumulative_level_array",
   "previous_nonzero_array", "signed_update_array",
   "prior_cumulative_retraction_mass_dist",

@@ -334,6 +334,10 @@ expectation over the movement probability. The magnitude mean is
 (`plogis(movement_intercept)`) puts `lambda * q_C(H)` below the typical
 published level. Nowcasts anchor on the latest published level and are
 unaffected. Code that simulates new events from zero is not.
+`initial_report = "offset"` replaces the delay-0 hurdle with
+NB(`mu_t q_C(0)`, `initial_size`) and scales the later updates by the event's
+Gamma effect given `C_t(0)`, so `lambda * q_C(0)` tracks `C_t(0)`. Keep
+`initial_size` fixed (default 100); estimated, it can absorb the whole epidemic.
 
 Do not use report-level `revision_process()` for aggregate cumulative data.
 These streams cannot identify a separate confirmation probability and

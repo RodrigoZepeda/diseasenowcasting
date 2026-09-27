@@ -173,3 +173,60 @@ test_that("calendar and compressed publication clocks preserve their intended ga
             max(compressed_prepared$.event_num))
   expect_equal(sort(unique(compressed_prepared$.event_num)), 0:3)
 })
+
+test_that("events older than the first report date have no zero-filled early ages", {
+  # An archive that starts publishing on 2024-01-20: the events of 01-06 and
+  # 01-13 were never seen at ages 0-1 and 0 respectively.
+  observations <- data.frame(
+    event = as.Date(c("2024-01-06", "2024-01-06", "2024-01-13",
+                      "2024-01-13", "2024-01-20", "2024-01-20")),
+    report = as.Date(c("2024-01-20", "2024-01-27", "2024-01-20",
+                       "2024-01-27", "2024-01-20", "2024-01-27")),
+    count = c(8, 9, 6, 7, 5, 6)
+  )
+  archive <- tbl.now::tbl_now(
+    observations, event_date = event, report_date = report,
+    case_count = count, data_type = "count-cumulative",
+    event_units = "weeks", report_units = "weeks",
+    now = as.Date("2024-01-27"), verbose = FALSE
+  )
+  prepared <- diseasenowcasting:::.prepare_count_cumulative_as_of(
+    archive, now = as.Date("2024-01-27"), settlement = 4L
+  )
+  expect_true(all(prepared$report >= as.Date("2024-01-20")))
+  oldest <- prepared[prepared$event == as.Date("2024-01-06"), ]
+  expect_equal(oldest$.delay, 2:3)
+  expect_equal(oldest$.cumulative_level, c(8, 9))
+
+  mod <- model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
+               cumulative = cumulative_process(settlement = 4L))
+  engine <- diseasenowcasting:::prepare_from_tbl_now(archive, mod)$data
+  expect_equal(unname(engine$observation_mask[1:3, 1:3, 1L]),
+               rbind(c(FALSE, FALSE, TRUE),
+                     c(FALSE, TRUE, TRUE),
+                     c(TRUE, TRUE, FALSE)))
+
+  # The first published level of a truncated event is not a signed update:
+  # at one parameter vector and prior bundle, changing it leaves the hurdle
+  # objective unchanged.
+  engine_for <- function(first_level) {
+    observations$count[1:2] <- first_level + 0:1
+    data <- tbl.now::tbl_now(
+      observations, event_date = event, report_date = report,
+      case_count = count, data_type = "count-cumulative",
+      event_units = "weeks", report_units = "weeks",
+      now = as.Date("2024-01-27"), verbose = FALSE
+    )
+    engine <- diseasenowcasting:::prepare_from_tbl_now(data, mod)$data
+    engine$mu_log_upper_bound <- 10
+    engine
+  }
+  small <- engine_for(8)
+  large <- engine_for(80)
+  priors <- default_priors(mod, small)
+  objective <- function(engine) diseasenowcasting:::build_joint_obj(
+    engine, priors, use_random = FALSE
+  )$obj
+  par <- objective(small)$par
+  expect_equal(objective(small)$fn(par), objective(large)$fn(par))
+})

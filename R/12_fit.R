@@ -82,7 +82,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
   set_bounds("^log_R0$", -6, 6)
   set_bounds("^u_gamma$|^u_neff$", -10, 10)
   set_bounds("^log_phi_nb$", -12, 8)
-  set_bounds("^log_magnitude_size$|^log_revision_magnitude_size$", -8, 12)
+  set_bounds("^log_magnitude_size$|^log_revision_magnitude_size$|^log_initial_size$", -8, 12)
   set_bounds("^movement_", -12, 12)
   list(lower = lower, upper = upper)
 }

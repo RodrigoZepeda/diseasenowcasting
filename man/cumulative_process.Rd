@@ -13,7 +13,9 @@ cumulative_process(
   movement_age = normal_prior(0, 1),
   movement_previous = normal_prior(0, 1),
   magnitude_size = NULL,
-  revision_magnitude_size = NULL
+  revision_magnitude_size = NULL,
+  initial_report = c("hurdle", "offset"),
+  initial_size = NULL
 )
 }
 \arguments{
@@ -45,6 +47,23 @@ revisions have very different dispersion relative to their mean: a single
 shared size is pulled to the heavy-tailed revisions and then leaves the
 initial reports too little weight to identify the epidemic trajectory. It
 is used only by \code{"hurdle_ztnb"}.}
+
+\item{initial_report}{How the hurdle models treat the first published level
+\code{C_t(0)}. \code{"hurdle"} treats it as one more signed update. \code{"offset"} gives
+each event a Gamma(\code{initial_size}, \code{initial_size}) effect \code{Xi_t} shared by
+all its updates: \code{C_t(0)} is Poisson with mean \verb{Xi_t mu_t q_C(0)}, hence
+negative binomial, and the later hurdle updates use
+\verb{mu_t E[Xi_t | C_t(0)] = mu_t (initial_size + C_t(0)) / (initial_size + mu_t q_C(0))}. As \code{initial_size} goes to zero the published
+\code{C_t(0) / q_C(0)} becomes an offset for the later updates; as it grows the
+model returns to \code{mu_t}. \verb{E[C_t(H)] = mu_t q_C(H)} holds exactly. Ignored by
+\code{"cumulative"}.}
+
+\item{initial_size}{Positive prior or fixed value for the size \code{kappa} of the
+\code{"offset"} effect. It replaces \code{magnitude_size}, which the offset does not
+use. The default fixes it at 100. The weekly effect and the epidemic trend
+both explain week-to-week variation in \code{C_t(0)}, and only the trend's
+autocorrelation separates them; estimated \code{kappa} can fall to about one,
+leaving the trend flat while the effect absorbs the epidemic.}
 }
 \value{
 A \code{cumulative_process_class} object for
@@ -61,5 +80,6 @@ probability and a conditional revision-delay law.
 cumulative_process()
 cumulative_process(observation = "cumulative", settlement = 52L)
 cumulative_process(observation = "hurdle_ztpoisson", settlement = 6L)
+cumulative_process(initial_report = "offset")
 
 }

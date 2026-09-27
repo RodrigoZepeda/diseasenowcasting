@@ -62,10 +62,16 @@ S7::method(print, cumulative_process_class) <- function(x, ..., digits = 4) {
       .fmt_slot("age", x@movement_age), ", ",
       .fmt_slot("previous", x@movement_previous)))
   }
+  is_offset <- identical(x@initial_report, "offset") &&
+    x@observation %in% c("hurdle_ztnb", "hurdle_ztpoisson")
+  if (is_offset) {
+    cli::cli_text(paste0("{.emph Initial report}: C_t(0) offset, ",
+                         .fmt_slot("size", x@initial_size)))
+  }
   if (identical(x@observation, "hurdle_ztnb")) {
     cli::cli_text(paste0("{.emph Magnitude size}: ",
-                         .fmt_slot("initial", x@magnitude_size), ", ",
-                         .fmt_slot("revision", x@revision_magnitude_size)))
+      if (is_offset) "" else paste0(.fmt_slot("initial", x@magnitude_size), ", "),
+      .fmt_slot("revision", x@revision_magnitude_size)))
   }
   invisible(x)
 }

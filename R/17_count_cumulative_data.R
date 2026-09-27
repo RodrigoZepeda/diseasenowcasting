@@ -39,6 +39,10 @@
   if (!nrow(as_of)) {
     cli::cli_abort("No count-cumulative cells are observable at the requested `now`.")
   }
+  # Nothing was published before the first report date in the data.  An event
+  # older than that has no observed level at the earlier ages: those cells are
+  # unobserved, not zero, and its first published level is not one update.
+  first_report <- min(as_of[[report_col]])
   if (inherits(now, "Date")) {
     as_of <- tbl.now::change_now(as_of, now = now, verbose = FALSE)
   } else {
@@ -60,6 +64,7 @@
   # completion behavior: post-origin and post-horizon cells can never enter the
   # fitted triangle.
   keep <- as_of[[event_col]] <= now & as_of[[report_col]] <= now &
+    as_of[[report_col]] >= first_report &
     as.integer(as_of[[".delay"]]) <= settlement
   as_of <- as_of[which(keep), , drop = FALSE]
 

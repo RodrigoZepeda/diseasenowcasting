@@ -275,6 +275,16 @@ default_priors <- function(mod, data = NULL, ...) {
       hurdle_ztnb = 2L,
       hurdle_ztpoisson = 3L
     )
+    pr$count_cumulative_initial_frailty <- as.integer(
+      identical(cumulative@initial_report, "offset") &&
+        cumulative@observation %in% c("hurdle_ztnb", "hurdle_ztpoisson")
+    )
+    if (pr$count_cumulative_initial_frailty == 1L) {
+      pr$initial_size <- .res(
+        cumulative@initial_size %||% 100, lognormal_prior(log(100), 1),
+        key = "initial_size"
+      )
+    }
     pr$count_cumulative_settlement <- as.integer(cumulative@settlement)
     pr$retraction_mass <- .res(
       cumulative@retraction_mass, beta_prior(1.5, 20),

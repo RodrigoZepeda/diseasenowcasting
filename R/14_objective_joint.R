@@ -227,9 +227,18 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     isTRUE(priors$movement_age$is_constant == 1L)
   movement_previous_fixed <- is_count_cumulative &&
     isTRUE(priors$movement_previous$is_constant == 1L)
+  # Initial-report frailty: the delay-0 level is NB(mu q_C(0), kappa) and the
+  # observed C_t(0) rescales that week's later hurdle updates through the
+  # posterior mean of its Gamma(kappa, kappa) effect.  The delay-0 ZTNB
+  # magnitude is then unused.
+  initial_frailty <- is_count_cumulative &&
+    cumulative_observation %in% c(2L, 3L) &&
+    isTRUE(as.integer(priors$count_cumulative_initial_frailty %||% 0L) == 1L)
+  initial_size_fixed <- initial_frailty &&
+    isTRUE(priors$initial_size$is_constant == 1L)
   magnitude_size_fixed <- is_count_cumulative &&
     cumulative_observation == 2L &&
-    isTRUE(priors$magnitude_size$is_constant == 1L)
+    (initial_frailty || isTRUE(priors$magnitude_size$is_constant == 1L))
   revision_magnitude_size_fixed <- is_count_cumulative &&
     cumulative_observation == 2L &&
     isTRUE(priors$revision_magnitude_size$is_constant == 1L)
@@ -525,8 +534,15 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     prior_movement_previous_params = if (is_count_cumulative &&
       !movement_previous_fixed) .pad3(priors$movement_previous$params) else c(0, 0, 0),
     magnitude_size_fixed = as.integer(magnitude_size_fixed),
-    magnitude_size_value = if (magnitude_size_fixed)
+    magnitude_size_value = if (initial_frailty) 1 else if (magnitude_size_fixed)
       priors$magnitude_size$fixed else 0,
+    initial_frailty = as.integer(initial_frailty),
+    initial_size_fixed = as.integer(initial_size_fixed),
+    initial_size_value = if (initial_size_fixed) priors$initial_size$fixed else 0,
+    prior_initial_size_dist = if (initial_frailty && !initial_size_fixed)
+      priors$initial_size$dist else 0L,
+    prior_initial_size_params = if (initial_frailty && !initial_size_fixed)
+      .pad3(priors$initial_size$params) else c(0, 0, 0),
     prior_magnitude_size_dist = if (is_count_cumulative &&
       cumulative_observation == 2L && !magnitude_size_fixed)
       priors$magnitude_size$dist else 0L,
@@ -700,6 +716,10 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       parameters$log_revision_magnitude_size <-
         if (revision_magnitude_size_fixed) 0 else
           (init$log_revision_magnitude_size %||% log(1))
+    }
+    if (initial_frailty) {
+      parameters$log_initial_size <-
+        if (initial_size_fixed) 0 else (init$log_initial_size %||% log(10))
     }
   }
   # confirmation / retraction parameters (only estimated when free).  A linelist
@@ -909,6 +929,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       map$log_magnitude_size <- factor(NA)
     if (cumulative_observation == 2L && revision_magnitude_size_fixed)
       map$log_revision_magnitude_size <- factor(NA)
+    if (initial_frailty && initial_size_fixed)
+      map$log_initial_size <- factor(NA)
   }
   if (is_custom_epidemic && n_params_custom_epi > 0L && any(epi_is_free == 0L)) {
     epi_map_vals <- rep(NA_integer_, n_params_custom_epi)
@@ -1129,6 +1151,12 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
           revision_magnitude_size_value else exp(log_revision_magnitude_size)
         if (revision_magnitude_size_fixed == 0L)
           log_jacobian <- log_jacobian + log_revision_magnitude_size
+      }
+      if (initial_frailty == 1L) {
+        initial_size <- if (initial_size_fixed == 1L)
+          initial_size_value else exp(log_initial_size)
+        if (initial_size_fixed == 0L)
+          log_jacobian <- log_jacobian + log_initial_size
       }
     }
 
@@ -1417,7 +1445,26 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
           cohort_components <- if (
             has_report_regression == 1L || has_revision_regression == 1L
           ) cumulative_components_by_cohort[[s]][[t]] else cumulative_components
-          for (delay in 0:settlement_horizon) {
+          # Under the initial-report frailty, C_t(0) ~ NB(mu q_C(0), kappa) is
+          # the delay-0 term and E[Xi_t | C_t(0)] scales the later updates.
+          # Without an observed C_t(0) the effect keeps its prior mean of one.
+          frailty_mean <- 1
+          first_delay <- 0L
+          # A signed update needs both of its levels.  An event first
+          # published after delay 0 (older than the data's first report date)
+          # has no observed C_t(0) and no observed update at its first delay.
+          if (initial_frailty == 1L) {
+            first_delay <- 1L
+            if (observation_mask[t, 1L, s]) {
+              initial_level <- cumulative_level_array[t, 1L, s]
+              initial_mean <- lambda[t] * cohort_components$alpha_unit[1L] + 1e-12
+              loglik_counts <- loglik_counts +
+                .nb_mean_size_logpmf(initial_level, initial_mean, initial_size)
+              frailty_mean <- (initial_size + initial_level) /
+                (initial_size + initial_mean)
+            }
+          }
+          for (delay in first_delay:settlement_horizon) {
             delay_index <- delay + 1L
             if (!observation_mask[t, delay_index, s]) next
             if (cumulative_observation == 1L) {
@@ -1429,9 +1476,10 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
                   cumulative_mean, is_negbin, nb_size
                 )
             } else {
-              alpha <- lambda[t] *
+              if (delay > 0L && !observation_mask[t, delay, s]) next
+              alpha <- frailty_mean * lambda[t] *
                 cohort_components$alpha_unit[delay_index] + 1e-12
-              omega <- lambda[t] *
+              omega <- frailty_mean * lambda[t] *
                 cohort_components$omega_unit[delay_index] + 1e-12
               total <- alpha + omega
               movement_eta <- movement_intercept_v +
@@ -1661,6 +1709,11 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         log_prior <- log_prior + prior_lpdf(
           revision_magnitude_size, prior_revision_magnitude_size_dist,
           prior_revision_magnitude_size_params
+        )
+      }
+      if (initial_frailty == 1L && initial_size_fixed == 0L) {
+        log_prior <- log_prior + prior_lpdf(
+          initial_size, prior_initial_size_dist, prior_initial_size_params
         )
       }
     }
@@ -2070,7 +2123,13 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     }
 
     observation <- as.integer(data$count_cumulative_observation)
-    movement <- magnitude_size <- revision_magnitude_size <- NULL
+    movement <- magnitude_size <- revision_magnitude_size <- initial_size <- NULL
+    initial_frailty <- observation %in% c(2L, 3L) &&
+      isTRUE(as.integer(priors$count_cumulative_initial_frailty %||% 0L) == 1L)
+    if (initial_frailty) {
+      initial_size <- if (isTRUE(priors$initial_size$is_constant == 1L))
+        priors$initial_size$fixed else exp(as.numeric(parlist$log_initial_size))
+    }
     if (observation %in% c(2L, 3L)) {
       movement <- c(
         intercept = if (isTRUE(priors$movement_intercept$is_constant == 1L))
@@ -2081,10 +2140,12 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
           priors$movement_previous$fixed else as.numeric(parlist$movement_previous)
       )
     }
-    if (observation == 2L) {
+    if (observation == 2L && !initial_frailty) {
       magnitude_size <- if (isTRUE(priors$magnitude_size$is_constant == 1L))
         priors$magnitude_size$fixed else
           exp(as.numeric(parlist$log_magnitude_size))
+    }
+    if (observation == 2L) {
       revision_magnitude_size <-
         if (isTRUE(priors$revision_magnitude_size$is_constant == 1L))
           priors$revision_magnitude_size$fixed else
@@ -2099,7 +2160,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         retraction_mass = retract_mass,
         movement = movement,
         magnitude_size = magnitude_size,
-        revision_magnitude_size = revision_magnitude_size
+        revision_magnitude_size = revision_magnitude_size,
+        initial_frailty = initial_frailty,
+        initial_size = initial_size
       ),
       components,
       list(components_by_cohort = components_by_cohort)

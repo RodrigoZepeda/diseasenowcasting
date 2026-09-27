@@ -44,6 +44,39 @@ The default is now `lognormal_prior(log(0.1), 1.5)`: a median size of 10, with a
   which uses the likelihood's prior.
 
 
+## Hurdle count-cumulative models can condition on the first published level
+
+`cumulative_process(initial_report = "offset")` gives each event a
+Gamma(`initial_size`, `initial_size`) effect `Xi_t` shared by all its updates,
+as the NB-Skellam model in the diseasenowcastingML experiments does. `C_t(0)`
+is Poisson with mean `Xi_t mu_t q_C(0)`, so its delay-0 term is
+NB(`mu_t q_C(0)`, `initial_size`) instead of a hurdle update. The later hurdle
+updates use `mu_t E[Xi_t | C_t(0)]`: small `initial_size` makes
+`C_t(0) / q_C(0)` an offset, large `initial_size` recovers `mu_t`. Nowcasts
+draw `Xi_t` from its posterior given `C_t(0)`; forecasts draw it from its
+prior. `E[C_t(H)] = mu_t q_C(H)` holds exactly. `initial_size` is fixed at 100
+by default: estimated, it fell to about one on short series, with the effect
+absorbing the epidemic and the AR(1) trend flat. The default remains
+`initial_report = "hurdle"`.
+
+On FluSight California (ZTNB, AR(1), 10 origins from 2023-11-18 to 2024-03-23,
+horizons -1 to 2), mean WIS fell from 114.7 (`"hurdle"`) to 77.0, and 90%
+coverage rose from 0.83 to 0.93. The largest gains are in forecasts: the
+hurdle model's delay-0 movement probability put about a quarter of its
+forecast mass at zero, which the NB delay-0 term does not.
+
+## Count-cumulative events older than the first report date
+
+`complete_zeroes()` filled the ages before a stream's first report date with
+zero. An event published for the first time at age 3 (FluSight's first
+three weeks from September 2023) then looked like three zero levels followed by
+a jump. Those cells are now unobserved, and hurdle likelihoods only use a
+signed update when both of its levels are observed. The level model changes
+too: with the zeros, it learned a long delay tail that partly matched late
+batch revisions in these data. Without them its nowcasts follow the reporting
+observed at each origin (on the FluSight backtest above, its h = -1 WIS went
+from 6.4 to 24.5).
+
 ## Hurdle count-cumulative fits keep `lambda` on the level scale
 
 The signed hurdle likelihoods preserve `E[C_t(H)] = lambda_t q_C(H)`, but their

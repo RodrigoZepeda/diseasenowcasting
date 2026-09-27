@@ -388,10 +388,21 @@ forecast.diseasenowcasting_nowcast <- function(
   for (s in seq_len(ncol(lambda_future))) for (t in seq_len(nrow(lambda_future))) {
     running_level <- 0
     previous_nonzero <- FALSE
-    for (delay in 0:settlement) {
+    intensity <- lambda_future[t, s]
+    first_delay <- 0L
+    if (isTRUE(cc$initial_frailty)) {
+      # The week's Gamma effect scales C_t(0) ~ Poisson and every later
+      # update, so C_t(0) is marginally NB(lambda q_C(0), kappa).
+      intensity <- intensity *
+        stats::rgamma(1L, shape = cc$initial_size, rate = cc$initial_size)
+      running_level <- stats::rpois(1L, intensity * cc$alpha_unit[1L])
+      previous_nonzero <- running_level != 0
+      first_delay <- 1L
+    }
+    for (delay in seq.int(first_delay, settlement)) {
       update <- .draw_count_cumulative_update(
-        lambda_future[t, s] * cc$alpha_unit[delay + 1L],
-        lambda_future[t, s] * cc$omega_unit[delay + 1L],
+        intensity * cc$alpha_unit[delay + 1L],
+        intensity * cc$omega_unit[delay + 1L],
         delay, previous_nonzero, cc
       )
       running_level <- running_level + update

@@ -118,6 +118,11 @@
       parlist$log_revision_magnitude_size <-
         log(max(draw_one(priors$revision_magnitude_size), 1e-6))
     }
+    if (isTRUE(priors$count_cumulative_initial_frailty == 1L) &&
+        !isTRUE(priors$initial_size$is_constant == 1L)) {
+      parlist$log_initial_size <-
+        log(max(draw_one(priors$initial_size), 1e-6))
+    }
   }
 
   # -- epidemic process -----------------------------------------------------

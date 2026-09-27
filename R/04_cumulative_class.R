@@ -32,6 +32,22 @@
 #'   shared size is pulled to the heavy-tailed revisions and then leaves the
 #'   initial reports too little weight to identify the epidemic trajectory. It
 #'   is used only by `"hurdle_ztnb"`.
+#' @param initial_report How the hurdle models treat the first published level
+#'   `C_t(0)`. `"hurdle"` treats it as one more signed update. `"offset"` gives
+#'   each event a Gamma(`initial_size`, `initial_size`) effect `Xi_t` shared by
+#'   all its updates: `C_t(0)` is Poisson with mean `Xi_t mu_t q_C(0)`, hence
+#'   negative binomial, and the later hurdle updates use
+#'   `mu_t E[Xi_t | C_t(0)] = mu_t (initial_size + C_t(0)) /
+#'   (initial_size + mu_t q_C(0))`. As `initial_size` goes to zero the published
+#'   `C_t(0) / q_C(0)` becomes an offset for the later updates; as it grows the
+#'   model returns to `mu_t`. `E[C_t(H)] = mu_t q_C(H)` holds exactly. Ignored by
+#'   `"cumulative"`.
+#' @param initial_size Positive prior or fixed value for the size `kappa` of the
+#'   `"offset"` effect. It replaces `magnitude_size`, which the offset does not
+#'   use. The default fixes it at 100. The weekly effect and the epidemic trend
+#'   both explain week-to-week variation in `C_t(0)`, and only the trend's
+#'   autocorrelation separates them; estimated `kappa` can fall to about one,
+#'   leaving the trend flat while the effect absorbs the epidemic.
 #'
 #' @returns A `cumulative_process_class` object for
 #'   `model(cumulative = )`.
@@ -40,6 +56,7 @@
 #' cumulative_process()
 #' cumulative_process(observation = "cumulative", settlement = 52L)
 #' cumulative_process(observation = "hurdle_ztpoisson", settlement = 6L)
+#' cumulative_process(initial_report = "offset")
 #'
 #' @export
 cumulative_process <- function(
@@ -51,9 +68,26 @@ cumulative_process <- function(
     movement_age = normal_prior(0, 1),
     movement_previous = normal_prior(0, 1),
     magnitude_size = NULL,
-    revision_magnitude_size = NULL) {
+    revision_magnitude_size = NULL,
+    initial_report = c("hurdle", "offset"),
+    initial_size = NULL) {
   observation <- match.arg(observation)
-  if (identical(observation, "hurdle_ztnb") && is.null(magnitude_size))
+  initial_report <- match.arg(initial_report)
+  is_offset <- identical(initial_report, "offset") &&
+    observation %in% c("hurdle_ztnb", "hurdle_ztpoisson")
+  if (is_offset && !is.null(magnitude_size)) {
+    cli::cli_abort(c(
+      "`initial_report = \"offset\"` models `C_t(0)` with `initial_size`, not `magnitude_size`.",
+      "i" = "Omit `magnitude_size`."
+    ))
+  }
+  if (!is_offset && !is.null(initial_size)) {
+    cli::cli_abort("`initial_size` is used only with a hurdle observation and `initial_report = \"offset\"`.")
+  }
+  if (is_offset && is.null(initial_size))
+    initial_size <- 100
+  if (identical(observation, "hurdle_ztnb") && !is_offset &&
+      is.null(magnitude_size))
     magnitude_size <- lognormal_prior(0, 1.5)
   if (identical(observation, "hurdle_ztnb") &&
       is.null(revision_magnitude_size))
@@ -72,6 +106,8 @@ cumulative_process <- function(
     movement_previous = movement_previous,
     magnitude_size = magnitude_size,
     revision_magnitude_size = revision_magnitude_size,
+    initial_report = initial_report,
+    initial_size = initial_size,
     active = TRUE
   )
 }
@@ -91,6 +127,8 @@ cumulative_process_class <- S7::new_class(
     movement_previous = .valid_param_slot,
     magnitude_size = S7::class_any,
     revision_magnitude_size = S7::class_any,
+    initial_report = S7::class_character,
+    initial_size = S7::class_any,
     active = S7::class_logical
   ),
   constructor = function(
@@ -103,6 +141,8 @@ cumulative_process_class <- S7::new_class(
       movement_previous = normal_prior(0, 1),
       magnitude_size = NULL,
       revision_magnitude_size = NULL,
+      initial_report = "hurdle",
+      initial_size = NULL,
       active = TRUE) {
     S7::new_object(
       S7::S7_object(),
@@ -115,6 +155,8 @@ cumulative_process_class <- S7::new_class(
       movement_previous = movement_previous,
       magnitude_size = magnitude_size,
       revision_magnitude_size = revision_magnitude_size,
+      initial_report = initial_report,
+      initial_size = initial_size,
       active = active
     )
   },
@@ -153,7 +195,15 @@ cumulative_process_class <- S7::new_class(
         cli::cli_abort("Fixed `{slot_name}` must be one finite numeric value.")
       }
     }
-    if (identical(self@observation, "hurdle_ztnb") &&
+    if (!self@initial_report %in% c("hurdle", "offset")) {
+      cli::cli_abort("`initial_report` must be \"hurdle\" or \"offset\".")
+    }
+    is_offset <- identical(self@initial_report, "offset") &&
+      self@observation %in% c("hurdle_ztnb", "hurdle_ztpoisson")
+    if (is_offset && !isTRUE(valid_positive_prior(self@initial_size))) {
+      cli::cli_abort("`initial_size` must be a positive prior or fixed positive value.")
+    }
+    if (identical(self@observation, "hurdle_ztnb") && !is_offset &&
         !isTRUE(valid_positive_prior(self@magnitude_size))) {
       cli::cli_abort("`magnitude_size` must be a positive prior or fixed positive value.")
     }

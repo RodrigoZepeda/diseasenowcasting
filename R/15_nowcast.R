@@ -338,14 +338,25 @@
       previous_nonzero <-
         data$signed_update_array[t, horizon + 1L, s] != 0
 
+      components <- if (!is.null(cc$components_by_cohort))
+        cc$components_by_cohort[[s]][[t]] else cc
+      # Initial-report frailty: draw the week's Gamma effect from its
+      # posterior given the published C_t(0); it scales every later update.
+      intensity <- reconstructed$lambda[t, s]
+      if (isTRUE(cc$initial_frailty) && data$observation_mask[t, 1L, s]) {
+        intensity <- intensity * stats::rgamma(
+          1L,
+          shape = cc$initial_size + data$cumulative_level_array[t, 1L, s],
+          rate = cc$initial_size + intensity * components$alpha_unit[1L]
+        )
+      }
+
       if (horizon < H) {
         for (delay in seq.int(horizon + 1L, H)) {
           index <- delay + 1L
-          components <- if (!is.null(cc$components_by_cohort))
-            cc$components_by_cohort[[s]][[t]] else cc
           update <- .draw_count_cumulative_update(
-            reconstructed$lambda[t, s] * components$alpha_unit[index],
-            reconstructed$lambda[t, s] * components$omega_unit[index],
+            intensity * components$alpha_unit[index],
+            intensity * components$omega_unit[index],
             delay, previous_nonzero, cc
           )
           running_level <- running_level + update
