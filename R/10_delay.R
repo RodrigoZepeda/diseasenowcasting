@@ -136,6 +136,10 @@
       log_cdf      = function(delay) .gengamma_log_cdf(delay, shape_Q, log_location, log_scale),
       log_survival = function(delay) .gengamma_log_survival(delay, shape_Q, log_location, log_scale),
       cdf          = function(delay) .gengamma_cdf(delay, shape_Q, log_location, log_scale),
+      # The survival is the Wilson-Hilferty approximation, good in the tail and
+      # poor in the head; consumers that need log S near 0 must take it from the
+      # log-CDF instead (see .stable_log_survival()).
+      survival_is_approximate = TRUE,
       log_location = log_location, log_scale = log_scale
     )
   } else {
@@ -248,5 +252,18 @@
     result
   }
 
-  list(cdf = cdf, log_cdf = log_cdf, log_pmf_raw = log_pmf_raw, survival = survival)
+  # Log-survival written directly too: the process-hazard regressions read the
+  # baseline hazard off log S, and `log(survival(delay))` would underflow to
+  # -Inf once the geometric tail passes exp(-745).
+  log_survival <- function(delay) {
+    result  <- 0 * tail_mass + numeric(length(delay))
+    in_grid <- delay >= 1 & delay < n_bins
+    in_tail <- delay >= n_bins
+    if (any(in_grid)) result[in_grid] <- log1p(-cumulative_probs[delay[in_grid]])
+    if (any(in_tail)) result[in_tail] <- log(tail_mass) - (delay[in_tail] - n_bins)
+    result
+  }
+
+  list(cdf = cdf, log_cdf = log_cdf, log_pmf_raw = log_pmf_raw,
+       survival = survival, log_survival = log_survival)
 }

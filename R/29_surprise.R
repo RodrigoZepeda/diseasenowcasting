@@ -36,6 +36,9 @@
 #'   For `type = "delay"`: a data.frame with columns `delay` (numeric delay
 #'   values) and optionally `weight` (counts with that delay, default 1).
 #'   For `type = "both"`: supply both sets of columns.
+#'   When the fit carries a reporting regression, add an `event_index` column
+#'   (0-indexed event time, and optionally `stratum`) so each delay is scored
+#'   against the law its own cohort faces rather than the untilted baseline.
 #' @param type Which surprise type(s) to compute. One of `"count"`,
 #'   `"delay"`, `"both"` (default `"both"`).
 #' @param n_draws Number of posterior draws (default 500).
@@ -122,6 +125,35 @@ surprise.list <- function(object, new_data, type = c("both","count","delay"),
 #' @returns A delay-distribution function list, or throws (callers wrap in tryCatch).
 #' @keywords internal
 #' @noRd
+#' Reporting-delay law a specific cohort actually faces
+#'
+#' With a reporting regression active the delay law is no longer one stationary
+#' curve: it depends on the calendar dates the cohort's reports can land on.
+#' This returns the same `$cdf` interface as the stationary bundle, but reads it
+#' off that cohort's hazard path, so `surprise()` scores a late report against
+#' the law the fit actually used rather than against the untilted baseline.
+#'
+#' The path is a step function on whole delays, matching the discretisation in
+#' `.discretised_delay_loglik()`: `cdf(x)` is `P(D <= floor(x) - 1)`.
+#' @keywords internal
+#' @noRd
+.tilted_delay_fns <- function(delay_fns, parlist, data, event_index, stratum) {
+  n_time <- as.integer(data$max_time)
+  time <- min(max(as.integer(event_index) + 1L, 1L), n_time)
+  stratum <- min(max(as.integer(stratum), 1L), as.integer(data$num_strata))
+  paths <- .report_hazard_paths(
+    .stable_log_survival(delay_fns, seq_len(n_time), .delay_split(data)),
+    n_time, data$num_strata, data$report_calendar, data$report_cohort,
+    as.numeric(parlist$delay_beta), as.integer(data$P_delay_calendar %||% 0L),
+    as.integer(data$P_delay_cohort %||% 0L)
+  )
+  path_cdf <- c(0, as.numeric(paths[[stratum]][[time]]$cdf))
+  list(cdf = function(delay) {
+    index <- pmin(pmax(floor(as.numeric(delay)) + 1L, 1L), length(path_cdf))
+    path_cdf[index]
+  })
+}
+
 .delay_fns_for_parlist <- function(parlist, data, priors, fit, family) {
   if (family == 4L) {
     # Dirichlet (non-parametric): the delay pmf is a simplex, either fixed or
@@ -247,6 +279,20 @@ surprise.list <- function(object, new_data, type = c("both","count","delay"),
     new_delays    <- as.numeric(new_data$delay)
     delay_weights <- if ("weight" %in% names(new_data)) as.numeric(new_data$weight)
                      else rep(1, length(new_delays))
+    # With a reporting regression the delay law depends on the cohort, so each
+    # queried delay needs the event time it belongs to.
+    has_report_regression <- as.integer(data$P_delay %||% 0L) > 0L
+    delay_event_index <- if ("event_index" %in% names(new_data))
+      as.numeric(new_data$event_index) else rep(NA_real_, length(new_delays))
+    delay_stratum <- if ("stratum" %in% names(new_data))
+      as.numeric(new_data$stratum) else rep(1, length(new_delays))
+    if (has_report_regression && all(is.na(delay_event_index))) {
+      cli::cli_warn(c(
+        "The fit has a reporting regression, but `new_data` carries no {.field event_index}.",
+        "i" = "Delays are scored against the untilted baseline delay law, which ignores the fitted report-date and cohort effects.",
+        "*" = "Add an {.field event_index} column (0-indexed event time) to score each delay against the law its own cohort faces."
+      ))
+    }
 
     # Grid over which each draw's PEAK (modal) pmf is found -- the normaliser for
     # the relative-surprise score.  Covers the realistic delay range and any
@@ -260,10 +306,18 @@ surprise.list <- function(object, new_data, type = c("both","count","delay"),
       # Reconstruct the delay distribution ONCE per draw, then derive all three
       # quantities we need from it (tail prob, pmf at the delay, peak pmf).
       per_draw <- lapply(seq_len(n_par_draws), function(draw_index) {
+        draw_parlist <- parlist_for_draw(draw_index)
         delay_fns <- tryCatch(
-          .delay_fns_for_parlist(parlist_for_draw(draw_index), data, priors, fit, family),
+          .delay_fns_for_parlist(draw_parlist, data, priors, fit, family),
           error = function(e) NULL)
         if (is.null(delay_fns)) return(NULL)
+        if (has_report_regression && !is.na(delay_event_index[row_index])) {
+          delay_fns <- tryCatch(
+            .tilted_delay_fns(delay_fns, draw_parlist, data,
+                              delay_event_index[row_index],
+                              delay_stratum[row_index]),
+            error = function(e) delay_fns)
+        }
         list(tail_prob = as.numeric(1 - delay_fns$cdf(new_delay)),   # P(D >= new_delay)
              pmf_at    = delay_pmf(delay_fns, new_delay),
              peak_pmf  = max(delay_pmf(delay_fns, mode_grid)))

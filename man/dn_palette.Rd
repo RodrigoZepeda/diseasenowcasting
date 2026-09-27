@@ -17,3 +17,6 @@ Returns hex colour codes matching the package's visual identity (derived
 from the hex-sticker logo: dark charcoal background, sage green, burnt
 orange accent).
 }
+\seealso{
+\code{\link[tbl.now:tbl_now_palette]{tbl.now::tbl_now_palette()}}, which supplies the colours.
+}

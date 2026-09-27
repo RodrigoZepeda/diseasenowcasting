@@ -115,8 +115,9 @@ nowcast_class <- S7::new_class(
 #' @section Overdispersion (`phi`):
 #' The negative-binomial overdispersion prior is **not** an argument of
 #' `nowcast()`.  Set it on the likelihood instead, e.g.
-#' `model(nb_likelihood(phi = lognormal_prior(log(5), 0.5)), ...)`.  The default
-#' `nb_likelihood()` already uses `lognormal_prior(log(20), 0.5)`.
+#' `model(nb_likelihood(phi = lognormal_prior(log(0.5), 0.5)), ...)`.  `phi` is
+#' the dispersion `1 / size`; the default `nb_likelihood()` uses
+#' `lognormal_prior(log(0.1), 1.5)` (see [likelihood]).
 #'
 #' @seealso [diseasenowcasting_workflows] for when to use native modelling
 #'   operations versus the shared `tbl.now` result workflow; [backtest()] and

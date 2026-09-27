@@ -11,12 +11,12 @@ poisson_likelihood(mu = numeric(0))
 nb_likelihood(mu = numeric(0), phi = lognormal_prior(log(0.1), 1.5))
 }
 \arguments{
-\item{mu}{Log-scale mean intercept prior (or fixed numeric).}
+\item{mu}{Log-scale mean intercept prior, or a number to hold it there.}
 
-\item{phi}{Negative-binomial overdispersion prior (or fixed numeric);
-NB only.  \code{phi} is the dispersion, the reciprocal of the NB size: counts
-with mean \eqn{\mu} have variance \eqn{\mu + \phi \mu^2}, i.e.
-\code{rnbinom(size = 1 / phi, mu = mu)}.  Larger \code{phi} means more
+\item{phi}{Negative-binomial overdispersion prior, or a number to hold it
+there (> 0); NB only.  \code{phi} is the dispersion, the reciprocal of the NB
+size: counts with mean \eqn{\mu} have variance \eqn{\mu + \phi \mu^2},
+i.e. \code{rnbinom(size = 1 / phi, mu = mu)}.  Larger \code{phi} means more
 overdispersion and wider intervals; \code{phi -> 0} is the Poisson.  This is the
 \emph{only} place to set the overdispersion prior — \code{\link[=nowcast]{nowcast()}} reads it from
 the model and does not accept its own \code{phi} argument.}
@@ -32,7 +32,7 @@ Count observation model for the (truncation-corrected) case counts.
 \code{phi ~ lognormal_prior(log(0.1), 1.5)}: a median size of 10 with a 95\%
 interval for the size of roughly 0.5 to 190.  On long series the data
 dominate this prior; on short series (a few weeks of data) it sets the
-interval width.  The default up to version 2.4.0 was
+interval width.  The default up to version 2.5.0 was
 \code{lognormal_prior(log(20), 0.5)}, which centred the size on 0.05 (see
 \code{NEWS.md}).
 }
@@ -44,5 +44,8 @@ nb_likelihood()
 nb_likelihood(phi = lognormal_prior(log(0.5), 0.5))
 # Close to Poisson (size around 100):
 nb_likelihood(phi = lognormal_prior(log(0.01), 0.5))
+# A number holds the parameter at that value instead of estimating it
+# (phi = 0.05 is size 20):
+nb_likelihood(phi = 0.05)
 
 }

@@ -20,7 +20,10 @@ surprise(
 \code{event_index} (0-indexed) and \code{count} (observed new total at that time).
 For \code{type = "delay"}: a data.frame with columns \code{delay} (numeric delay
 values) and optionally \code{weight} (counts with that delay, default 1).
-For \code{type = "both"}: supply both sets of columns.}
+For \code{type = "both"}: supply both sets of columns.
+When the fit carries a reporting regression, add an \code{event_index} column
+(0-indexed event time, and optionally \code{stratum}) so each delay is scored
+against the law its own cohort faces rather than the untilted baseline.}
 
 \item{type}{Which surprise type(s) to compute. One of \code{"count"},
 \code{"delay"}, \code{"both"} (default \code{"both"}).}

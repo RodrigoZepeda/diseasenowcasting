@@ -11,6 +11,7 @@
 #' @importFrom stats nlminb optim median sd quantile approx setNames coef predict
 #' @importFrom stats rnbinom rpois rnorm rcauchy rt runif rgamma rweibull rlnorm rchisq rexp rlogis rbeta
 #' @importFrom utils head tail
+#' @importFrom vctrs vec_cast vec_ptype2
 ## usethis namespace: end
 NULL
 
@@ -42,6 +43,11 @@ utils::globalVariables(c(
   "log_gp_alpha", "log_gp_ell", "ar_phi_unc", "log_ar_sigma_unc",
   "log_R0", "u_gamma", "u_neff", "log_phi_nb",
   "delay_mu", "log_delay_sigma_excess", "delay_Q",
+  "delay_beta", "report_calendar", "report_cohort", "report_rows",
+  "report_censored_rows", "n_delay_calendar", "n_delay_cohort",
+  "prior_beta_dist", "prior_beta_params",
+  "revision_beta", "revision_calendar", "revision_rows",
+  "revision_row_design",
   "mu_global", "log_tau_intercept", "delta_intercept",
   "delay_mu_fixed", "delay_sigma_fixed", "shape_Q_fixed",
   "case_counts", "d_star", "X", "hsgp_basis_matrix", "hsgp_frequencies",

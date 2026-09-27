@@ -13,9 +13,15 @@ prepare_data(
   delay_only = FALSE,
   max_time = NULL,
   num_strata = NULL,
+  report_calendar = NULL,
+  report_cohort = NULL,
+  revision_calendar = NULL,
+  covariate_roles = NULL,
+  design_schema = NULL,
   gp_L = 1.5,
   gp_boundary_frac = 0.62,
   ar_sigma_max = 1,
+  mu_log_upper_bound = NULL,
   is_confirmation = FALSE,
   cumulative_levels = NULL,
   cumulative_previous_nonzero = NULL,
@@ -46,12 +52,32 @@ delays 1-indexed (single stratum supported in this version).}
 levels). If \code{NULL}, inferred from column 4 of \code{m}. The likelihood is summed
 over all \verb{max_time x num_strata} (time, stratum) cells; \code{1} is unstratified.}
 
+\item{report_calendar}{Optional report-date design matrix over the full
+calendar grid. These columns affect reporting timing, not incidence.}
+
+\item{report_cohort}{Optional event-time by stratum by covariate array for
+cohort-level reporting covariates.}
+
+\item{revision_calendar}{Optional revision-date design matrix over the full
+calendar grid. These columns affect revision timing, not incidence.}
+
+\item{covariate_roles}{Named list recording the event, delay, and revision
+covariate column names discovered on the source data.}
+
+\item{design_schema}{Named list of per-role design schemas (levels,
+contrasts, centring constants, surviving and dropped terms) so later fits
+on the same series reproduce the same columns.}
+
 \item{gp_L}{HSGP boundary factor (> 1). Default 1.5.}
 
 \item{gp_boundary_frac}{Fraction of the HSGP domain placed left of the data.
 Default 0.62.}
 
 \item{ar_sigma_max}{Upper bound on the AR/beta RW innovation SD. Default 1.}
+
+\item{mu_log_upper_bound}{Optional override for the softplus ceiling on the
+latent log-incidence.  \code{NULL} (default) derives it from the observed counts
+with headroom for the reporting fraction; see \code{.mu_log_upper_bound()}.}
 
 \item{is_confirmation}{Deprecated legacy switch.  \code{TRUE} now errors; use the
 dedicated \code{count_cumulative} model component and cumulative arguments.}

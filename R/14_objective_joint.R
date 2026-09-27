@@ -28,15 +28,37 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   is_custom_delay  <- family == 5L
   n_bins           <- if (is_nonparametric) as.integer(data$np_model_length) else 0L
   epidemic_model   <- data$epidemic_model
-  if (!epidemic_model %in% c(1L, 2L, 3L, 4L))
-    cli::cli_abort("build_joint_obj supports HSGP (1), AR1 (2), SIR (3), Custom (4) epidemic.")
+  if (!epidemic_model %in% c(1L, 2L, 3L, 4L, 5L, 6L, 7L))
+    cli::cli_abort(paste0("build_joint_obj supports HSGP (1), AR1 (2), SIR (3), Custom (4), ",
+                          "ARIMA (5), ETS family (6) and STS (7) epidemic processes."))
   is_sir            <- epidemic_model == 3L
   sir_use_beta_rw_trend <- is_sir && isTRUE(data$use_beta_rw_trend == 1L)
   is_custom_epidemic <- epidemic_model == 4L
+  # Classical time-series trends (see R/13_epidemic_timeseries.R).  Every flag
+  # here is DATA, so the tape keeps one shape per model specification.
+  is_arima <- epidemic_model == 5L
+  is_ets   <- epidemic_model == 6L
+  is_sts   <- epidemic_model == 7L
+  arima_p  <- if (is_arima) as.integer(data$arima_p %||% 0L) else 0L
+  arima_d  <- if (is_arima) as.integer(data$arima_d %||% 0L) else 0L
+  arima_q  <- if (is_arima) as.integer(data$arima_q %||% 0L) else 0L
+  arima_has_drift <- is_arima && isTRUE(data$arima_include_drift == 1L)
+  ets_has_slope   <- is_ets && isTRUE(data$ets_has_slope == 1L)
+  ets_is_damped   <- is_ets && ets_has_slope && isTRUE(data$ets_damped == 1L)
+  ets_has_drift   <- is_ets && isTRUE(data$ets_include_drift == 1L)
+  sts_has_slope   <- is_sts && isTRUE(data$sts_has_slope == 1L)
+  sts_reverting   <- is_sts && sts_has_slope && isTRUE(data$sts_reverting_slope == 1L)
   # User-supplied functions need RTMB's AD methods on the search path (see helper).
   if (is_custom_delay || is_custom_epidemic) .assert_rtmb_attached()
   is_negbin <- data$is_negative_binomial == 1L
   n_covariates <- data$P
+  n_delay_covariates <- as.integer(data$P_delay %||% 0L)
+  n_delay_calendar <- as.integer(data$P_delay_calendar %||% 0L)
+  n_delay_cohort <- as.integer(data$P_delay_cohort %||% 0L)
+  has_report_regression <- n_delay_covariates > 0L
+  n_revision_covariates <- as.integer(data$P_revision %||% 0L)
+  n_revision_calendar <- as.integer(data$P_revision_calendar %||% 0L)
+  n_revision_row <- as.integer(data$P_revision_row %||% 0L)
   n_time       <- data$max_time
   n_strata     <- as.integer(data$num_strata)
 
@@ -72,10 +94,20 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
 
   # Precompute the shared-delay Gstar [n_time x n_strata] when the delay is fully
   # fixed (multisample Stage-2): the CDF is then data, not re-taped per step.
-  delay_fully_fixed <- (!is_nonparametric && !is_custom_delay && delay_mu_is_fixed && delay_sigma_is_fixed &&
-                        (!is_gengamma || shape_Q_is_fixed)) || delay_probs_fixed || custom_fully_fixed
+  baseline_delay_fixed <- (!is_nonparametric && !is_custom_delay && delay_mu_is_fixed && delay_sigma_is_fixed &&
+                           (!is_gengamma || shape_Q_is_fixed)) || delay_probs_fixed || custom_fully_fixed
+  # Stage 2 of the cascade fixes the WHOLE reporting process, coefficients
+  # included.  That is what lets the delay likelihood drop out here: Stage 1
+  # already read those observations, and leaving `delay_beta` free would make
+  # Stage 2 read them a second time to identify it.
+  delay_beta_fixed <- priors$delay_beta_fixed %||% numeric(0)
+  report_beta_is_fixed <- has_report_regression &&
+    length(delay_beta_fixed) == n_delay_covariates
+  delay_fully_fixed <- baseline_delay_fixed &&
+    (!has_report_regression || report_beta_is_fixed)
   gstar_precomputed <- matrix(0.0, 0L, 0L)
-  if (delay_fully_fixed) {
+  fixed_delay_fns <- NULL
+  if (baseline_delay_fixed) {
     fixed_delay_fns <- if (is_nonparametric)
         .nonparametric_delay_functions(priors$delay_probs$fixed, n_bins)
       else if (is_gengamma)
@@ -93,6 +125,73 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   appearance_grid_fixed <- NULL
 
   is_hierarchical <- isTRUE(hierarchical_strata) && n_strata > 1L
+
+  # -- parameters the user pinned at a value ----------------------------------
+  # A number in a slot means "hold this here", the same thing it has always meant
+  # on the delay side.  It is honoured the same way: seed the parameter at the
+  # unconstrained value that maps to it, drop it from the optimisation with a
+  # factor(NA) map entry, and skip its prior and Jacobian terms, which are
+  # constants once the parameter stops moving.  These used to be read for their
+  # `$dist` only, so a supplied number was replaced by a standard-normal prior
+  # and the parameter was estimated anyway.
+  uses_intercept <- !is_sir && !is_custom_epidemic
+  uses_ar_trend  <- epidemic_model == 2L || sir_use_beta_rw_trend
+  fixed_intercept <- .resolve_fixed_parameter(
+    priors$mu_intercept, "mu", .unconstrain_identity, n_strata, uses_intercept)
+  if (fixed_intercept$is_fixed && is_hierarchical)
+    cli::cli_abort(c(
+      "A fixed {.arg mu} cannot be combined with hierarchical pooling over strata.",
+      "i" = "The pooling is a model FOR the intercept, so pinning the intercept leaves it nothing to do.",
+      "*" = "Fix {.arg mu} with independent strata, or drop the fixed value and keep the pooling."
+    ), class = "diseasenowcasting_invalid_fixed_value")
+  fixed_phi_nb <- .resolve_fixed_parameter(
+    priors$phi_nb, "phi", .unconstrain_positive, 1L, is_negbin)
+  fixed_gp_alpha <- .resolve_fixed_parameter(
+    priors$gp_alpha, "alpha", .unconstrain_positive, 1L, epidemic_model == 1L)
+  fixed_gp_ell <- .resolve_fixed_parameter(
+    priors$gp_ell, "ell", .unconstrain_positive, 1L, epidemic_model == 1L)
+  fixed_ar_phi <- .resolve_fixed_parameter(
+    priors$ar_phi, "phi", .unconstrain_signed_unit, n_strata, uses_ar_trend)
+  fixed_ar_sigma <- .resolve_fixed_parameter(
+    priors$ar_sigma, "sigma", .unconstrain_bounded_positive(data$ar_sigma_max),
+    n_strata, uses_ar_trend)
+  fixed_R0 <- .resolve_fixed_parameter(
+    priors$R0, "R0", .unconstrain_positive, n_strata, is_sir)
+  fixed_gamma_sir <- .resolve_fixed_parameter(
+    priors$gamma_sir, "gamma", .unconstrain_unit, n_strata, is_sir)
+  fixed_n_eff <- .resolve_fixed_parameter(
+    priors$N_eff, "N_eff", .unconstrain_unit, n_strata, is_sir)
+  # The classical time-series trends, same rules.  Their unconstrained maps live
+  # in R/13_epidemic_timeseries.R; these are the inverses.
+  bounded_sigma <- .unconstrain_bounded_positive(data$ar_sigma_max)
+  fixed_arima_ar <- .resolve_fixed_parameter(
+    priors$arima_ar, "ar", .unconstrain_signed_unit, arima_p, is_arima && arima_p > 0L)
+  fixed_arima_ma <- .resolve_fixed_parameter(
+    priors$arima_ma, "ma", .unconstrain_signed_unit, arima_q, is_arima && arima_q > 0L)
+  fixed_arima_sigma <- .resolve_fixed_parameter(
+    priors$arima_sigma, "sigma", bounded_sigma, n_strata, is_arima)
+  fixed_arima_drift <- .resolve_fixed_parameter(
+    priors$arima_drift, "drift", .unconstrain_identity, n_strata, arima_has_drift)
+  fixed_ets_sigma <- .resolve_fixed_parameter(
+    priors$ets_sigma, "sigma", bounded_sigma, n_strata, is_ets)
+  fixed_ets_beta <- .resolve_fixed_parameter(
+    priors$ets_beta, "beta", .unconstrain_unit, n_strata, ets_has_slope)
+  fixed_ets_damping <- .resolve_fixed_parameter(
+    priors$ets_damping, "damping", .unconstrain_unit, n_strata, ets_is_damped)
+  fixed_ets_drift <- .resolve_fixed_parameter(
+    priors$ets_drift, "drift", .unconstrain_identity, n_strata, ets_has_drift)
+  fixed_ets_slope_init <- .resolve_fixed_parameter(
+    priors$ets_slope_init, "slope_init", .unconstrain_identity, n_strata, ets_has_slope)
+  fixed_sts_level_sigma <- .resolve_fixed_parameter(
+    priors$sts_level_sigma, "level_sigma", bounded_sigma, n_strata, is_sts)
+  fixed_sts_slope_sigma <- .resolve_fixed_parameter(
+    priors$sts_slope_sigma, "slope_sigma", bounded_sigma, n_strata, sts_has_slope)
+  fixed_sts_slope_phi <- .resolve_fixed_parameter(
+    priors$sts_slope_phi, "slope_phi", .unconstrain_signed_unit, n_strata, sts_reverting)
+  fixed_sts_slope_mean <- .resolve_fixed_parameter(
+    priors$sts_slope_mean, "slope_mean", .unconstrain_identity, n_strata, sts_reverting)
+  fixed_sts_slope_init <- .resolve_fixed_parameter(
+    priors$sts_slope_init, "slope_init", .unconstrain_identity, n_strata, sts_has_slope)
 
   # -- revised count-cumulative configuration ---------------------------------
   is_count_cumulative <- isTRUE(data$is_count_cumulative == 1L)
@@ -160,6 +259,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   # lambda_t becomes the gross report rate mu_t = lambda_t / p -- and the
   # appearance-delay block is untouched.
   is_retraction  <- isTRUE(data$is_linelist_retraction == 1L)
+  has_revision_regression <- (is_retraction || is_count_cumulative) &&
+    n_revision_covariates > 0L
   # 0 = retraction (the resolution observed is negative, lag on {1, 2, ...});
   # 1 = confirmation (the resolution observed is positive, lag on {0, 1, ...}).
   resolution_mode <- if (is_retraction) as.integer(data$resolution_mode %||% 0L) else 0L
@@ -214,8 +315,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   censored_rows_of_stratum <- .split_rows_by_stratum(censored_patterns, n_strata)
   n_retracted_by_stratum   <- if (is_retraction) as.numeric(data$n_retracted_by_stratum)
                               else rep(0, n_strata)
-  retract_split <- if (!is.null(retract_table) && nrow(retract_table) > 0)
-    max(2, .wtd_median(retract_table[, "lag"], retract_table[, "count"])) else 2
+  retract_split <- .retract_split(data)
   # Largest delay any censored kernel indexes; 0 disables the grid construction.
   retract_grid_max <- if (is_retraction && !is.null(censored_patterns) &&
                           nrow(censored_patterns) > 0)
@@ -232,6 +332,16 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     custom_is_free = custom_is_free,
     dirichlet_alpha = dirichlet_alpha,
     delay_fully_fixed = as.integer(delay_fully_fixed), gstar_precomputed = gstar_precomputed,
+    report_beta_is_fixed = as.integer(report_beta_is_fixed),
+    baseline_delay_fixed = as.integer(baseline_delay_fixed),
+    has_report_regression = as.integer(has_report_regression),
+    n_delay_covariates = n_delay_covariates,
+    n_delay_calendar = n_delay_calendar,
+    n_delay_cohort = n_delay_cohort,
+    report_calendar = data$report_calendar,
+    report_cohort = data$report_cohort,
+    report_rows = data$m,
+    report_censored_rows = data$m_censored,
     case_counts = data$case_counts, d_star = data$d_star,           # [n_time x n_strata] matrices
     n_time = n_time, n_strata = n_strata, is_hierarchical = as.integer(is_hierarchical),
     obs_delays = data$obs_delays, row_sums = data$row_sums_exact,
@@ -251,7 +361,43 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     prior_shape_dist  = if (is_gengamma) priors$delay_Q$dist else 0L,
     prior_shape_params = if (is_gengamma) .pad3(priors$delay_Q$params) else c(0, 0, 0),
     prior_intercept_dist = priors$mu_intercept$dist, prior_intercept_params = .pad3(priors$mu_intercept$params),
+    intercept_is_fixed = as.integer(fixed_intercept$is_fixed),
+    phi_nb_is_fixed    = as.integer(fixed_phi_nb$is_fixed),
+    gp_alpha_is_fixed  = as.integer(fixed_gp_alpha$is_fixed),
+    gp_ell_is_fixed    = as.integer(fixed_gp_ell$is_fixed),
+    ar_phi_is_fixed    = as.integer(fixed_ar_phi$is_fixed),
+    ar_sigma_is_fixed  = as.integer(fixed_ar_sigma$is_fixed),
+    R0_is_fixed        = as.integer(fixed_R0$is_fixed),
+    gamma_sir_is_fixed = as.integer(fixed_gamma_sir$is_fixed),
+    n_eff_is_fixed     = as.integer(fixed_n_eff$is_fixed),
+    arima_ar_is_fixed        = as.integer(fixed_arima_ar$is_fixed),
+    arima_ma_is_fixed        = as.integer(fixed_arima_ma$is_fixed),
+    arima_sigma_is_fixed     = as.integer(fixed_arima_sigma$is_fixed),
+    arima_drift_is_fixed     = as.integer(fixed_arima_drift$is_fixed),
+    ets_sigma_is_fixed       = as.integer(fixed_ets_sigma$is_fixed),
+    ets_beta_is_fixed        = as.integer(fixed_ets_beta$is_fixed),
+    ets_damping_is_fixed     = as.integer(fixed_ets_damping$is_fixed),
+    ets_drift_is_fixed       = as.integer(fixed_ets_drift$is_fixed),
+    ets_slope_init_is_fixed  = as.integer(fixed_ets_slope_init$is_fixed),
+    sts_level_sigma_is_fixed = as.integer(fixed_sts_level_sigma$is_fixed),
+    sts_slope_sigma_is_fixed = as.integer(fixed_sts_slope_sigma$is_fixed),
+    sts_slope_phi_is_fixed   = as.integer(fixed_sts_slope_phi$is_fixed),
+    sts_slope_mean_is_fixed  = as.integer(fixed_sts_slope_mean$is_fixed),
+    sts_slope_init_is_fixed  = as.integer(fixed_sts_slope_init$is_fixed),
     prior_gamma_dist  = priors$gamma_cov$dist,   prior_gamma_params  = .pad3(priors$gamma_cov$params),
+    has_revision_regression = as.integer(has_revision_regression),
+    # Longest hazard path either regression has to build.  The reporting paths
+    # span the event grid, plus the settlement horizon for a cumulative stream;
+    # the revision paths span the oldest pending report's age.
+    report_horizon = if (is_count_cumulative) settlement_horizon + 1L else 0L,
+    revision_path_max = if (!is.null(data$revision_rows))
+      as.integer(max(data$revision_rows[, "age"])) + 1L else 1L,
+    n_revision_covariates = n_revision_covariates,
+    n_revision_calendar = n_revision_calendar,
+    n_revision_row = n_revision_row,
+    revision_calendar = data$revision_calendar,
+    revision_rows = data$revision_rows,
+    revision_row_design = data$revision_row_design,
     prior_phi_dist    = if (is_negbin) priors$phi_nb$dist else 0L,
     prior_phi_params  = if (is_negbin) .pad3(priors$phi_nb$params) else c(0, 0, 0),
     prior_gp_alpha_dist = if (epidemic_model == 1L) priors$gp_alpha$dist else 0L,
@@ -264,6 +410,44 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     prior_ar_sigma_params = if (epidemic_model == 2L || sir_use_beta_rw_trend) .pad3(priors$ar_sigma$params) else c(0, 0, 0),
     prior_ar_phi_sir_dist = if (sir_use_beta_rw_trend) priors$ar_phi$dist else 0L,
     prior_ar_phi_sir_params = if (sir_use_beta_rw_trend) .pad3(priors$ar_phi$params) else c(0, 0, 0),
+    # -- classical time-series trends ---------------------------------------
+    is_arima = as.integer(is_arima), is_ets = as.integer(is_ets),
+    is_sts = as.integer(is_sts),
+    arima_p = arima_p, arima_d = arima_d, arima_q = arima_q,
+    arima_has_drift = as.integer(arima_has_drift),
+    ets_has_slope = as.integer(ets_has_slope),
+    ets_is_damped = as.integer(ets_is_damped),
+    ets_has_drift = as.integer(ets_has_drift),
+    sts_has_slope = as.integer(sts_has_slope),
+    sts_reverting = as.integer(sts_reverting),
+    prior_arima_ar_dist = if (is_arima) priors$arima_ar$dist else 0L,
+    prior_arima_ar_params = if (is_arima) .pad3(priors$arima_ar$params) else c(0, 0, 0),
+    prior_arima_ma_dist = if (is_arima) priors$arima_ma$dist else 0L,
+    prior_arima_ma_params = if (is_arima) .pad3(priors$arima_ma$params) else c(0, 0, 0),
+    prior_arima_sigma_dist = if (is_arima) priors$arima_sigma$dist else 0L,
+    prior_arima_sigma_params = if (is_arima) .pad3(priors$arima_sigma$params) else c(0, 0, 0),
+    prior_arima_drift_dist = if (is_arima) priors$arima_drift$dist else 0L,
+    prior_arima_drift_params = if (is_arima) .pad3(priors$arima_drift$params) else c(0, 0, 0),
+    prior_ets_sigma_dist = if (is_ets) priors$ets_sigma$dist else 0L,
+    prior_ets_sigma_params = if (is_ets) .pad3(priors$ets_sigma$params) else c(0, 0, 0),
+    prior_ets_beta_dist = if (is_ets) priors$ets_beta$dist else 0L,
+    prior_ets_beta_params = if (is_ets) .pad3(priors$ets_beta$params) else c(0, 0, 0),
+    prior_ets_damping_dist = if (is_ets) priors$ets_damping$dist else 0L,
+    prior_ets_damping_params = if (is_ets) .pad3(priors$ets_damping$params) else c(0, 0, 0),
+    prior_ets_drift_dist = if (is_ets) priors$ets_drift$dist else 0L,
+    prior_ets_drift_params = if (is_ets) .pad3(priors$ets_drift$params) else c(0, 0, 0),
+    prior_ets_slope_init_dist = if (is_ets) priors$ets_slope_init$dist else 0L,
+    prior_ets_slope_init_params = if (is_ets) .pad3(priors$ets_slope_init$params) else c(0, 0, 0),
+    prior_sts_level_sigma_dist = if (is_sts) priors$sts_level_sigma$dist else 0L,
+    prior_sts_level_sigma_params = if (is_sts) .pad3(priors$sts_level_sigma$params) else c(0, 0, 0),
+    prior_sts_slope_sigma_dist = if (is_sts) priors$sts_slope_sigma$dist else 0L,
+    prior_sts_slope_sigma_params = if (is_sts) .pad3(priors$sts_slope_sigma$params) else c(0, 0, 0),
+    prior_sts_slope_phi_dist = if (is_sts) priors$sts_slope_phi$dist else 0L,
+    prior_sts_slope_phi_params = if (is_sts) .pad3(priors$sts_slope_phi$params) else c(0, 0, 0),
+    prior_sts_slope_mean_dist = if (is_sts) priors$sts_slope_mean$dist else 0L,
+    prior_sts_slope_mean_params = if (is_sts) .pad3(priors$sts_slope_mean$params) else c(0, 0, 0),
+    prior_sts_slope_init_dist = if (is_sts) priors$sts_slope_init$dist else 0L,
+    prior_sts_slope_init_params = if (is_sts) .pad3(priors$sts_slope_init$params) else c(0, 0, 0),
     is_sir = as.integer(is_sir), sir_use_beta_rw_trend = as.integer(sir_use_beta_rw_trend),
     N_pop = data$N_pop,
     initial_infected = if (is_sir) data$case_counts[1, ] else numeric(n_strata),
@@ -428,7 +612,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
                   delta_intercept    = init$delta_intercept %||% rep(0, n_strata),
                   gamma = if (n_covariates > 0) (init$gamma %||% matrix(0, n_covariates, n_strata)) else matrix(0, 0, 0)
                 ) else list(
-                  mu_intercept = intercept_init,
+                  mu_intercept = if (fixed_intercept$is_fixed) fixed_intercept$seed else intercept_init,
                   gamma = if (n_covariates > 0) (init$gamma %||% matrix(0, n_covariates, n_strata)) else matrix(0, 0, 0)
                 )
   if (is_nonparametric) {
@@ -457,8 +641,17 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   }
   # phi_nb is the NB dispersion 1/size.  Start at the median of a log-normal
   # prior (the default), otherwise at the default's median phi = 0.1 (size 10).
-  if (is_negbin) parameters$log_phi_nb <- init$log_phi_nb %||%
-    (if (identical(as.integer(priors$phi_nb$dist), 109L)) priors$phi_nb$params[1] else log(0.1))
+  if (is_negbin) parameters$log_phi_nb <- if (fixed_phi_nb$is_fixed) fixed_phi_nb$seed
+    else init$log_phi_nb %||%
+      (if (identical(as.integer(priors$phi_nb$dist), 109L)) priors$phi_nb$params[1] else log(0.1))
+  if (has_report_regression) {
+    parameters$delay_beta <- if (report_beta_is_fixed) as.numeric(delay_beta_fixed)
+                             else init$delay_beta %||% rep(0, n_delay_covariates)
+  }
+  if (has_revision_regression) {
+    parameters$revision_beta <- init$revision_beta %||%
+      rep(0, n_revision_covariates)
+  }
   # Dedicated count-cumulative parameters.  These are deliberately separate
   # from the linelist revision parameters below: the cumulative stream
   # identifies the defective kernel h_R, not a biological confirmation
@@ -525,13 +718,17 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     }
   }
   if (epidemic_model == 1L) {
-    parameters$log_gp_alpha <- init$log_gp_alpha %||% log(1)
-    parameters$log_gp_ell   <- init$log_gp_ell   %||% log(1)
+    parameters$log_gp_alpha <- if (fixed_gp_alpha$is_fixed) fixed_gp_alpha$seed
+                               else (init$log_gp_alpha %||% log(1))
+    parameters$log_gp_ell   <- if (fixed_gp_ell$is_fixed) fixed_gp_ell$seed
+                               else (init$log_gp_ell %||% log(1))
     parameters$basis_coefs  <- init$basis_coefs  %||% matrix(0, data$num_basis, n_strata)
     random <- "basis_coefs"
   } else if (epidemic_model == 2L) {
-    parameters$ar_phi_unc       <- init$ar_phi_unc %||% rep(0, n_strata)
-    parameters$log_ar_sigma_unc <- init$log_ar_sigma_unc %||% rep(-2, n_strata)
+    parameters$ar_phi_unc       <- if (fixed_ar_phi$is_fixed) fixed_ar_phi$seed
+                                   else (init$ar_phi_unc %||% rep(0, n_strata))
+    parameters$log_ar_sigma_unc <- if (fixed_ar_sigma$is_fixed) fixed_ar_sigma$seed
+                                   else (init$log_ar_sigma_unc %||% rep(-2, n_strata))
     parameters$ar_innov         <- init$ar_innov %||% matrix(0, n_time, n_strata)
     random <- "ar_innov"
   } else if (is_custom_epidemic) {
@@ -543,13 +740,75 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     }
     parameters$custom_epidemic_params <- init_vals
     random <- character(0)
+  } else if (is_arima) {
+    # Partial autocorrelations, not coefficients: the map to coefficients is
+    # stationary by construction, so nlminb cannot step outside the region where
+    # the recursion is defined.  A fixed AR/MA vector is one lag-profile shared
+    # by every stratum, so it tiles across the columns.
+    if (arima_p > 0L)
+      parameters$arima_ar_pacf_unc <- if (fixed_arima_ar$is_fixed)
+          matrix(fixed_arima_ar$seed, arima_p, n_strata)
+        else (init$arima_ar_pacf_unc %||% matrix(0, arima_p, n_strata))
+    if (arima_q > 0L)
+      parameters$arima_ma_pacf_unc <- if (fixed_arima_ma$is_fixed)
+          matrix(fixed_arima_ma$seed, arima_q, n_strata)
+        else (init$arima_ma_pacf_unc %||% matrix(0, arima_q, n_strata))
+    parameters$log_arima_sigma_unc <- if (fixed_arima_sigma$is_fixed) fixed_arima_sigma$seed
+                                      else (init$log_arima_sigma_unc %||% rep(-2, n_strata))
+    if (arima_has_drift) parameters$arima_drift <- if (fixed_arima_drift$is_fixed) fixed_arima_drift$seed
+                                                   else (init$arima_drift %||% rep(0, n_strata))
+    parameters$arima_innov <- init$arima_innov %||% matrix(0, n_time, n_strata)
+    random <- "arima_innov"
+  } else if (is_ets) {
+    parameters$log_ets_sigma_unc <- if (fixed_ets_sigma$is_fixed) fixed_ets_sigma$seed
+                                    else (init$log_ets_sigma_unc %||% rep(-2, n_strata))
+    if (ets_has_slope) {
+      parameters$ets_beta_unc   <- if (fixed_ets_beta$is_fixed) fixed_ets_beta$seed
+                                   else (init$ets_beta_unc %||% rep(-2, n_strata))
+      parameters$ets_slope_init <- if (fixed_ets_slope_init$is_fixed) fixed_ets_slope_init$seed
+                                   else (init$ets_slope_init %||% rep(0, n_strata))
+      if (ets_is_damped)
+        parameters$ets_damp_unc <- if (fixed_ets_damping$is_fixed) fixed_ets_damping$seed
+                                   else (init$ets_damp_unc %||% rep(1, n_strata))
+    }
+    if (ets_has_drift) parameters$ets_drift <- if (fixed_ets_drift$is_fixed) fixed_ets_drift$seed
+                                               else (init$ets_drift %||% rep(0, n_strata))
+    parameters$ets_innov <- init$ets_innov %||% matrix(0, n_time, n_strata)
+    random <- "ets_innov"
+  } else if (is_sts) {
+    parameters$log_sts_level_sigma_unc <- if (fixed_sts_level_sigma$is_fixed) fixed_sts_level_sigma$seed
+                                          else (init$log_sts_level_sigma_unc %||% rep(-2, n_strata))
+    parameters$sts_level_innov <- init$sts_level_innov %||% matrix(0, n_time, n_strata)
+    random <- "sts_level_innov"
+    if (sts_has_slope) {
+      parameters$log_sts_slope_sigma_unc <- if (fixed_sts_slope_sigma$is_fixed) fixed_sts_slope_sigma$seed
+                                            else (init$log_sts_slope_sigma_unc %||% rep(-4, n_strata))
+      parameters$sts_slope_init  <- if (fixed_sts_slope_init$is_fixed) fixed_sts_slope_init$seed
+                                    else (init$sts_slope_init %||% rep(0, n_strata))
+      parameters$sts_slope_innov <- init$sts_slope_innov %||% matrix(0, n_time, n_strata)
+      random <- c(random, "sts_slope_innov")
+      if (sts_reverting) {
+        # Seeded at +2 (phi ~ 0.87): a semi-local trend is only worth its extra
+        # parameters when the slope persists, and starting at phi = 0 makes the
+        # optimiser look at a local level model first.
+        parameters$sts_slope_phi_unc <- if (fixed_sts_slope_phi$is_fixed) fixed_sts_slope_phi$seed
+                                        else (init$sts_slope_phi_unc %||% rep(2, n_strata))
+        parameters$sts_slope_mean    <- if (fixed_sts_slope_mean$is_fixed) fixed_sts_slope_mean$seed
+                                        else (init$sts_slope_mean %||% rep(0, n_strata))
+      }
+    }
   } else {  # epidemic_model == 3L: coupled SIR, optionally with an AR(1) beta walk
-    parameters$log_R0  <- init$log_R0  %||% rep(log(2), n_strata)
-    parameters$u_gamma <- init$u_gamma %||% rep(stats::qlogis(1/5), n_strata)
-    parameters$u_neff  <- init$u_neff  %||% rep(stats::qlogis(0.5), n_strata)
+    parameters$log_R0  <- if (fixed_R0$is_fixed) fixed_R0$seed
+                          else (init$log_R0 %||% rep(log(2), n_strata))
+    parameters$u_gamma <- if (fixed_gamma_sir$is_fixed) fixed_gamma_sir$seed
+                          else (init$u_gamma %||% rep(stats::qlogis(1/5), n_strata))
+    parameters$u_neff  <- if (fixed_n_eff$is_fixed) fixed_n_eff$seed
+                          else (init$u_neff %||% rep(stats::qlogis(0.5), n_strata))
     if (sir_use_beta_rw_trend) {
-      parameters$ar_phi_unc       <- init$ar_phi_unc %||% rep(0, n_strata)
-      parameters$log_ar_sigma_unc <- init$log_ar_sigma_unc %||% rep(-2, n_strata)
+      parameters$ar_phi_unc       <- if (fixed_ar_phi$is_fixed) fixed_ar_phi$seed
+                                     else (init$ar_phi_unc %||% rep(0, n_strata))
+      parameters$log_ar_sigma_unc <- if (fixed_ar_sigma$is_fixed) fixed_ar_sigma$seed
+                                     else (init$log_ar_sigma_unc %||% rep(-2, n_strata))
       parameters$ar_innov         <- init$ar_innov %||% matrix(0, n_time, n_strata)
       random <- "ar_innov"
     } else {
@@ -559,11 +818,46 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
 
   # Defensive: per-stratum vector params must have length num_strata even if a
   # warm-start / ladder seed supplied a scalar.
-  for (nm in intersect(c("mu_intercept", "ar_phi_unc", "log_ar_sigma_unc", "log_R0", "u_gamma", "u_neff"),
+  for (nm in intersect(c("mu_intercept", "ar_phi_unc", "log_ar_sigma_unc", "log_R0", "u_gamma", "u_neff",
+                        "log_arima_sigma_unc", "arima_drift",
+                        "log_ets_sigma_unc", "ets_beta_unc", "ets_damp_unc",
+                        "ets_drift", "ets_slope_init",
+                        "log_sts_level_sigma_unc", "log_sts_slope_sigma_unc",
+                        "sts_slope_phi_unc", "sts_slope_mean", "sts_slope_init"),
                        names(parameters)))
     if (length(parameters[[nm]]) != n_strata) parameters[[nm]] <- rep_len(parameters[[nm]], n_strata)
 
   map <- list()
+  # A pinned parameter leaves the optimisation.  `obj$env$parList()` still
+  # reports it at its seed, so `coef()`, `parameters()` and the reconstruction
+  # all see the value the user asked for.
+  pin <- function(name, resolved, length_out) {
+    if (resolved$is_fixed && !is.null(parameters[[name]]))
+      map[[name]] <<- factor(rep(NA_integer_, length_out))
+  }
+  pin("mu_intercept", fixed_intercept, n_strata)
+  pin("log_phi_nb", fixed_phi_nb, 1L)
+  pin("log_gp_alpha", fixed_gp_alpha, 1L)
+  pin("log_gp_ell", fixed_gp_ell, 1L)
+  pin("ar_phi_unc", fixed_ar_phi, n_strata)
+  pin("log_ar_sigma_unc", fixed_ar_sigma, n_strata)
+  pin("log_R0", fixed_R0, n_strata)
+  pin("u_gamma", fixed_gamma_sir, n_strata)
+  pin("u_neff", fixed_n_eff, n_strata)
+  pin("arima_ar_pacf_unc", fixed_arima_ar, arima_p * n_strata)
+  pin("arima_ma_pacf_unc", fixed_arima_ma, arima_q * n_strata)
+  pin("log_arima_sigma_unc", fixed_arima_sigma, n_strata)
+  pin("arima_drift", fixed_arima_drift, n_strata)
+  pin("log_ets_sigma_unc", fixed_ets_sigma, n_strata)
+  pin("ets_beta_unc", fixed_ets_beta, n_strata)
+  pin("ets_damp_unc", fixed_ets_damping, n_strata)
+  pin("ets_drift", fixed_ets_drift, n_strata)
+  pin("ets_slope_init", fixed_ets_slope_init, n_strata)
+  pin("log_sts_level_sigma_unc", fixed_sts_level_sigma, n_strata)
+  pin("log_sts_slope_sigma_unc", fixed_sts_slope_sigma, n_strata)
+  pin("sts_slope_phi_unc", fixed_sts_slope_phi, n_strata)
+  pin("sts_slope_mean", fixed_sts_slope_mean, n_strata)
+  pin("sts_slope_init", fixed_sts_slope_init, n_strata)
   if (!is_nonparametric && !is_custom_delay) {
     if (delay_mu_is_fixed)    map$delay_mu <- factor(NA)
     if (delay_sigma_is_fixed) map$log_delay_sigma_excess <- factor(NA)
@@ -578,6 +872,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       }
     }
     map$custom_delay_params <- factor(map_vals)
+  }
+  if (report_beta_is_fixed) {
+    map$delay_beta <- factor(rep(NA_integer_, n_delay_covariates))
   }
   if (is_count_cumulative) {
     if (cumulative_retraction_mass_fixed)
@@ -608,19 +905,48 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     map$custom_epidemic_params <- factor(epi_map_vals)
   }
 
+  # A process whose every parameter is pinned has a fully determined trajectory:
+  # nothing about the epidemic can adapt, and only the observation model is left
+  # to move.  That is a legitimate thing to ask for -- fitting a delay against a
+  # known epidemic, say -- but it is almost never what someone means, and without
+  # a word here the only symptom is the optimiser failing on all six init rungs.
+  epidemic_parameter_names <- switch(
+    as.character(epidemic_model),
+    "1" = c("log_gp_alpha", "log_gp_ell", "basis_coefs"),
+    "2" = c("ar_phi_unc", "log_ar_sigma_unc", "ar_innov"),
+    "3" = c("log_R0", "u_gamma", "u_neff",
+            if (sir_use_beta_rw_trend) c("ar_phi_unc", "log_ar_sigma_unc", "ar_innov")),
+    "5" = c("arima_ar_pacf_unc", "arima_ma_pacf_unc", "log_arima_sigma_unc",
+            "arima_drift", "arima_innov"),
+    "6" = c("log_ets_sigma_unc", "ets_beta_unc", "ets_damp_unc", "ets_drift",
+            "ets_slope_init", "ets_innov"),
+    "7" = c("log_sts_level_sigma_unc", "log_sts_slope_sigma_unc", "sts_slope_phi_unc",
+            "sts_slope_mean", "sts_slope_init", "sts_level_innov", "sts_slope_innov"),
+    character(0))
+  present <- intersect(epidemic_parameter_names, names(parameters))
+  if (length(present) && all(present %in% names(map)))
+    cli::cli_warn(c(
+      "Every parameter of the {.val {data$epidemic_name %||% 'epidemic'}} process is fixed, so its trajectory cannot adapt to the data.",
+      "i" = "Only the observation model (delay, overdispersion, any revision process) is still being estimated.",
+      "*" = "Leave at least one epidemic parameter free if you meant the epidemic to be fitted."
+    ))
+
   negative_log_posterior <- function(params) {
     RTMB::getAll(params, objective_data)
     "[<-" <- RTMB::ADoverload("[<-")
     log_jacobian <- 0
 
     # -- shared delay distribution ------------------------------------------
-    if (delay_fully_fixed == 1L) {
+    if (delay_fully_fixed == 1L && has_report_regression == 0L) {
+      # Nothing downstream needs a delay law: `gstar_precomputed` is data.
       delay_fns <- NULL
+    } else if (baseline_delay_fixed == 1L) {
+      delay_fns <- fixed_delay_fns
     } else if (is_nonparametric == 1L) {
       exp_logits    <- exp(delay_logits)
       simplex_probs <- c(exp_logits, exp(0 * delay_logits[1])) / (sum(exp_logits) + 1)
       np_fns        <- .nonparametric_delay_functions(simplex_probs, n_bins)
-      delay_fns     <- list(cdf = np_fns$cdf)
+      delay_fns     <- np_fns
     } else if (is_custom_delay == 1L) {
       delay_fns <- cdf_factory(custom_delay_params)
     } else {
@@ -636,7 +962,23 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       delay_fns <- if (is_gengamma == 1L) .delay_distribution_functions(3L, delay_log_mean, shape_Q, delay_sd)
                    else                   .delay_distribution_functions(family, delay_log_mean, delay_sd)
     }
-    cdf_fn <- if (delay_fully_fixed == 1L) NULL else delay_fns$cdf
+    cdf_fn <- if (is.null(delay_fns)) NULL else delay_fns$cdf
+    # Baseline log-survival on the whole grid, shared by the reporting hazard
+    # paths and (for cumulative streams) the cohort kernels below.  The
+    # non-parametric law needs no log-CDF branch; see .stable_log_survival().
+    report_log_survival <- if (has_report_regression == 1L) {
+      .stable_log_survival(delay_fns, seq_len(n_time + report_horizon),
+                           if (is_nonparametric == 1L) 0 else split_delay)
+    } else NULL
+    # Cumulative streams never read these: their reporting law reaches the
+    # likelihood through the finite-horizon cohort kernels instead, so building
+    # one path per event time here would be strata x time wasted tape.
+    report_paths <- if (has_report_regression == 1L && is_count_cumulative == 0L) {
+      .report_hazard_paths(
+        report_log_survival, n_time, n_strata, report_calendar, report_cohort,
+        delay_beta, n_delay_calendar, n_delay_cohort
+      )
+    } else NULL
     upper_bound <- mu_log_upper_bound
     nb_size <- if (is_negbin == 1L) 1.0 / exp(log_phi_nb) else 0
 
@@ -715,6 +1057,43 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         cumulative_report_pmf, cumulative_retraction_pmf,
         cumulative_retraction_mass, settlement_horizon
       )
+      cumulative_components_by_cohort <- NULL
+      if (has_report_regression == 1L || has_revision_regression == 1L) {
+        # Time-varying timing makes the stationary convolution origin-specific,
+        # so every (event time, stratum) cohort gets its own kernel.
+        report_spec <- .cumulative_hazard_spec(
+          pmf = cumulative_report_pmf,
+          log_survival = if (has_report_regression == 1L) report_log_survival
+                         else NULL,
+          active = has_report_regression == 1L,
+          calendar = report_calendar,
+          beta = if (has_report_regression == 1L) delay_beta else numeric(0),
+          n_calendar = n_delay_calendar, cohort = report_cohort,
+          n_row = n_delay_cohort
+        )
+        revision_spec <- .cumulative_hazard_spec(
+          pmf = cumulative_retraction_pmf,
+          # The cumulative kernel has no observed lag table to take a split
+          # from, so the horizon midpoint is used: it keeps the head on the
+          # exact log-CDF and the tail on the family's own log-survival.
+          log_survival = if (has_revision_regression == 1L)
+            .stable_log_survival(cumulative_retraction_fns,
+                                 seq_len(settlement_horizon),
+                                 max(1, settlement_horizon %/% 2L)) else NULL,
+          active = has_revision_regression == 1L,
+          calendar = revision_calendar,
+          beta = if (has_revision_regression == 1L) revision_beta else numeric(0),
+          n_calendar = n_revision_calendar,
+          mass = cumulative_retraction_mass
+        )
+        cumulative_components_by_cohort <- lapply(
+          seq_len(n_strata), function(stratum) lapply(
+            seq_len(n_time), function(time) .cumulative_cohort_components(
+              time, stratum, settlement_horizon, report_spec, revision_spec
+            )
+          )
+        )
+      }
 
       if (cumulative_observation %in% c(2L, 3L)) {
         movement_intercept_v <- if (movement_intercept_fixed == 1L)
@@ -795,27 +1174,64 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         retraction_grid <- .resolution_lag_grid(retract_fns$cdf, retract_grid_max, lag_offset)
       }
 
-      for (stratum in seq_len(n_strata)) {
-        confirm_p_s   <- confirm_p_vec[confirm_p_of_stratum[stratum]]
-        retract_slice <- retract_rows_of_stratum[[stratum]]
-        standing_slice <- standing_rows_of_stratum[[stratum]]
-        loglik_retraction <- loglik_retraction +
-          .loglik_retraction(retract_fns, retract_is_np,
-                             if (length(retract_slice)) retract_table[retract_slice, "lag"] else numeric(0),
-                             if (length(retract_slice)) retract_table[retract_slice, "count"] else numeric(0),
-                             if (length(standing_slice)) standing_table[standing_slice, "age"] else numeric(0),
-                             if (length(standing_slice)) standing_table[standing_slice, "count"] else numeric(0),
-                             n_retracted_by_stratum[stratum], confirm_p_s, retract_split,
-                             lag_offset, resolution_mode,
-                             n_positive_by_stratum[stratum], n_negative_by_stratum[stratum])
-        censored_slice <- censored_rows_of_stratum[[stratum]]
-        if (retract_grid_max > 0L && length(censored_slice) > 0)
+      if (has_revision_regression == 1L) {
+        revision_log_survival <- .stable_log_survival(
+          retract_fns, seq_len(max(1L, revision_path_max)), retract_split
+        )
+        for (row in seq_len(nrow(revision_rows))) {
+          stratum <- as.integer(revision_rows[row, "stratum"])
+          p_s <- confirm_p_vec[confirm_p_of_stratum[stratum]]
+          resolved_probability <- .resolved_probability(p_s, resolution_mode)
+          resolved <- revision_rows[row, "resolved"] == 1
+          positive <- revision_rows[row, "positive"] == 1
+          weight <- revision_rows[row, "count"]
+          if (resolved) {
+            if (positive) loglik_retraction <- loglik_retraction + weight * log(p_s)
+            else loglik_retraction <- loglik_retraction + weight * log1p(-p_s)
+          }
+          age <- as.integer(revision_rows[row, "age"])
+          path_length <- age + lag_offset
+          if (path_length > 0L) {
+            revision_path <- .revision_hazard_path(
+              revision_log_survival,
+              as.integer(revision_rows[row, "report_time"]),
+              path_length, lag_offset, revision_calendar,
+              if (n_revision_row > 0L) revision_row_design[row, ] else NULL,
+              revision_beta, n_revision_calendar, n_revision_row
+            )
+            if (resolved) {
+              lag_index <- as.integer(revision_rows[row, "lag"]) + lag_offset
+              loglik_retraction <- loglik_retraction + weight *
+                revision_path$log_pmf[lag_index]
+            } else {
+              survival <- exp(revision_path$log_survival[path_length])
+              loglik_retraction <- loglik_retraction + weight *
+                log((1 - resolved_probability) +
+                      resolved_probability * survival)
+            }
+          }
+        }
+      } else for (stratum in seq_len(n_strata)) {
+          confirm_p_s   <- confirm_p_vec[confirm_p_of_stratum[stratum]]
+          retract_slice <- retract_rows_of_stratum[[stratum]]
+          standing_slice <- standing_rows_of_stratum[[stratum]]
           loglik_retraction <- loglik_retraction +
-            .loglik_retraction_censored(censored_patterns[censored_slice, , drop = FALSE],
-                                        appearance_grid$pmf, retraction_grid$pmf,
-                                        retraction_grid$cdf, confirm_p_s, lag_offset,
-                                        resolution_mode)
-      }
+            .loglik_retraction(retract_fns, retract_is_np,
+                               if (length(retract_slice)) retract_table[retract_slice, "lag"] else numeric(0),
+                               if (length(retract_slice)) retract_table[retract_slice, "count"] else numeric(0),
+                               if (length(standing_slice)) standing_table[standing_slice, "age"] else numeric(0),
+                               if (length(standing_slice)) standing_table[standing_slice, "count"] else numeric(0),
+                               n_retracted_by_stratum[stratum], confirm_p_s, retract_split,
+                               lag_offset, resolution_mode,
+                               n_positive_by_stratum[stratum], n_negative_by_stratum[stratum])
+          censored_slice <- censored_rows_of_stratum[[stratum]]
+          if (retract_grid_max > 0L && length(censored_slice) > 0)
+            loglik_retraction <- loglik_retraction +
+              .loglik_retraction_censored(censored_patterns[censored_slice, , drop = FALSE],
+                                          appearance_grid$pmf, retraction_grid$pmf,
+                                          retraction_grid$cdf, confirm_p_s, lag_offset,
+                                          resolution_mode)
+        }
     }
 
     # -- per-stratum epidemic mean + S_k accumulation -----------------------
@@ -854,14 +1270,20 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       # valid fit), so successful fits are unchanged; it only replaces the NaN with
       # a finite log(1e-8) penalty in the pathological region so nlminb can recover.
       log_mean_matrix <- log((incidence + abs(incidence)) * 0.5 + 1e-8)
-      log_jacobian <- log_jacobian +
-        sum(log_R0 + log(recovery_rate) + log(1 - recovery_rate) +
-            log(susceptible_frac) + log(1 - susceptible_frac))
+      if (R0_is_fixed == 0L)
+        log_jacobian <- log_jacobian + sum(log_R0)
+      if (gamma_sir_is_fixed == 0L)
+        log_jacobian <- log_jacobian + sum(log(recovery_rate) + log(1 - recovery_rate))
+      if (n_eff_is_fixed == 0L)
+        log_jacobian <- log_jacobian + sum(log(susceptible_frac) + log(1 - susceptible_frac))
       if (sir_use_beta_rw_trend == 1L) {
-        log_jacobian <- log_jacobian +
-          sum(log(1.998) + log(plogis(ar_phi_unc)) + log(1 - plogis(ar_phi_unc)) +
-              log(ar_sigma_max) + log(plogis(log_ar_sigma_unc)) +
-              log(1 - plogis(log_ar_sigma_unc)))
+        if (ar_phi_is_fixed == 0L)
+          log_jacobian <- log_jacobian +
+            sum(log(1.998) + log(plogis(ar_phi_unc)) + log(1 - plogis(ar_phi_unc)))
+        if (ar_sigma_is_fixed == 0L)
+          log_jacobian <- log_jacobian +
+            sum(log(ar_sigma_max) + log(plogis(log_ar_sigma_unc)) +
+                log(1 - plogis(log_ar_sigma_unc)))
       }
     } else if (is_custom_epidemic == 1L) {
       # The user's intensity_fn returns the full log_mean[T x S] directly; no
@@ -870,13 +1292,62 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     } else if (epidemic_model == 1L) {
       gp_alpha <- exp(log_gp_alpha); gp_ell <- exp(log_gp_ell)
       spectral_weights <- hsgp_spectral_weights(hsgp_frequencies, gp_alpha, gp_ell, gp_kernel)
-      log_jacobian <- log_jacobian + log_gp_alpha + log_gp_ell
-    } else {
+      # Only a parameter that still moves contributes a Jacobian.
+      if (gp_alpha_is_fixed == 0L) log_jacobian <- log_jacobian + log_gp_alpha
+      if (gp_ell_is_fixed == 0L)   log_jacobian <- log_jacobian + log_gp_ell
+    } else if (epidemic_model == 2L) {
       ar_phi   <- -0.999 + 1.998 * plogis(ar_phi_unc)
       ar_sigma <- ar_sigma_max * plogis(log_ar_sigma_unc)
-      log_jacobian <- log_jacobian +
-        sum(log(1.998) + log(plogis(ar_phi_unc)) + log(1 - plogis(ar_phi_unc)) +
-            log(ar_sigma_max) + log(plogis(log_ar_sigma_unc)) + log(1 - plogis(log_ar_sigma_unc)))
+      if (ar_phi_is_fixed == 0L)
+        log_jacobian <- log_jacobian +
+          sum(log(1.998) + log(plogis(ar_phi_unc)) + log(1 - plogis(ar_phi_unc)))
+      if (ar_sigma_is_fixed == 0L)
+        log_jacobian <- log_jacobian +
+          sum(log(ar_sigma_max) + log(plogis(log_ar_sigma_unc)) + log(1 - plogis(log_ar_sigma_unc)))
+    } else {
+      # ARIMA / ETS family / STS.  The constrained values are collected into
+      # per-stratum LISTS rather than advector vectors: a list holds AD scalars
+      # and vectors of different lengths without any assumption about how RTMB
+      # preserves `dim()` through an elementwise transform of a matrix.  The
+      # count loop below and the prior block further down both read them.
+      trend_by_stratum <- vector("list", n_strata)
+      for (s in seq_len(n_strata)) {
+        stratum_parameters <- if (is_arima == 1L) {
+          .arima_stratum_parameters(
+            log_arima_sigma_unc[s],
+            if (arima_p > 0L) arima_ar_pacf_unc[, s] else numeric(0),
+            if (arima_q > 0L) arima_ma_pacf_unc[, s] else numeric(0),
+            if (arima_has_drift == 1L) arima_drift[s] else 0,
+            ar_sigma_max,
+            free = list(sigma = arima_sigma_is_fixed == 0L,
+                        ar = arima_ar_is_fixed == 0L,
+                        ma = arima_ma_is_fixed == 0L))
+        } else if (is_ets == 1L) {
+          .ets_stratum_parameters(
+            log_ets_sigma_unc[s],
+            if (ets_has_slope == 1L) ets_beta_unc[s] else 0,
+            if (ets_is_damped == 1L) ets_damp_unc[s] else 0,
+            if (ets_has_drift == 1L) ets_drift[s] else 0,
+            if (ets_has_slope == 1L) ets_slope_init[s] else 0,
+            ets_has_slope == 1L, ets_is_damped == 1L, ar_sigma_max,
+            free = list(sigma = ets_sigma_is_fixed == 0L,
+                        beta = ets_beta_is_fixed == 0L,
+                        damping = ets_damping_is_fixed == 0L))
+        } else {
+          .sts_stratum_parameters(
+            log_sts_level_sigma_unc[s],
+            if (sts_has_slope == 1L) log_sts_slope_sigma_unc[s] else 0,
+            if (sts_reverting == 1L) sts_slope_phi_unc[s] else 0,
+            if (sts_reverting == 1L) sts_slope_mean[s] else 0,
+            if (sts_has_slope == 1L) sts_slope_init[s] else 0,
+            sts_has_slope == 1L, sts_reverting == 1L, ar_sigma_max,
+            free = list(level_sigma = sts_level_sigma_is_fixed == 0L,
+                        slope_sigma = sts_slope_sigma_is_fixed == 0L,
+                        slope_phi = sts_slope_phi_is_fixed == 0L))
+        }
+        log_jacobian <- log_jacobian + stratum_parameters$log_jacobian
+        trend_by_stratum[[s]] <- stratum_parameters
+      }
     }
 
     # -- hierarchical intercept reconstruction ---------------------------------
@@ -896,8 +1367,24 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         if (n_covariates > 0) log_mean_col <- log_mean_col + as.vector(X %*% gamma[, s])
         if (epidemic_model == 1L)
           log_mean_col <- log_mean_col + as.vector(hsgp_basis_matrix %*% (basis_coefs[, s] * spectral_weights))
-        else
+        else if (epidemic_model == 2L)
           log_mean_col <- log_mean_col + ar1_trend(ar_innov[, s], ar_phi[s], ar_sigma[s])
+        else if (is_arima == 1L)
+          log_mean_col <- log_mean_col +
+            arima_trend(arima_innov[, s], trend_by_stratum[[s]]$ar, trend_by_stratum[[s]]$ma,
+                        trend_by_stratum[[s]]$sigma, trend_by_stratum[[s]]$drift, arima_d)
+        else if (is_ets == 1L)
+          log_mean_col <- log_mean_col +
+            ets_trend(ets_innov[, s], trend_by_stratum[[s]]$sigma, trend_by_stratum[[s]]$beta,
+                      trend_by_stratum[[s]]$damping, trend_by_stratum[[s]]$drift,
+                      trend_by_stratum[[s]]$slope_init, ets_has_slope == 1L)
+        else
+          log_mean_col <- log_mean_col +
+            sts_trend(sts_level_innov[, s],
+                      if (sts_has_slope == 1L) sts_slope_innov[, s] else numeric(0),
+                      trend_by_stratum[[s]]$level_sigma, trend_by_stratum[[s]]$slope_sigma,
+                      trend_by_stratum[[s]]$slope_phi, trend_by_stratum[[s]]$slope_mean,
+                      trend_by_stratum[[s]]$slope_init)
       }
       log_mean_capped <- upper_bound - log1p(exp(upper_bound - log_mean_col))
       lambda <- exp(log_mean_capped)
@@ -906,12 +1393,15 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         # uses E[C_t(d)] = mu_t q_C(d); both hurdle variants instead use the
         # signed delay update and preserve E[Delta] = alpha - omega.
         for (t in seq_len(n_time)) {
+          cohort_components <- if (
+            has_report_regression == 1L || has_revision_regression == 1L
+          ) cumulative_components_by_cohort[[s]][[t]] else cumulative_components
           for (delay in 0:settlement_horizon) {
             delay_index <- delay + 1L
             if (!observation_mask[t, delay_index, s]) next
             if (cumulative_observation == 1L) {
               cumulative_mean <- lambda[t] *
-                cumulative_components$q_C[delay_index] + 1e-10
+                cohort_components$q_C[delay_index] + 1e-10
               loglik_counts <- loglik_counts +
                 .count_cumulative_level_logpmf(
                   cumulative_level_array[t, delay_index, s],
@@ -919,9 +1409,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
                 )
             } else {
               alpha <- lambda[t] *
-                cumulative_components$alpha_unit[delay_index] + 1e-12
+                cohort_components$alpha_unit[delay_index] + 1e-12
               omega <- lambda[t] *
-                cumulative_components$omega_unit[delay_index] + 1e-12
+                cohort_components$omega_unit[delay_index] + 1e-12
               total <- alpha + omega
               movement_eta <- movement_intercept_v +
                 movement_age_v * log1p(delay) +
@@ -989,7 +1479,17 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         confirm_p_s    <- if (is_retraction == 1L) confirm_p_vec[confirm_p_of_stratum[s]] else 1
         log_mean_gross <- if (is_retraction == 1L) log_mean_capped - log(confirm_p_s) else log_mean_capped
         lambda_gross   <- if (is_retraction == 1L) lambda / confirm_p_s else lambda
-        gstar  <- if (delay_fully_fixed == 1L) gstar_precomputed[, s] else cdf_fn(d_star[, s] + 1)
+        gstar <- if (has_report_regression == 1L) {
+          value <- report_paths[[s]][[1L]]$cdf * 0
+          for (time in seq_len(n_time)) {
+            value[time] <- report_paths[[s]][[time]]$cdf[
+              as.integer(d_star[time, s]) + 1L
+            ]
+          }
+          value
+        } else if (delay_fully_fixed == 1L) {
+          gstar_precomputed[, s]
+        } else cdf_fn(d_star[, s] + 1)
         counts_col <- case_counts[, s]
         if (is_negbin == 1L) {
           success_prob <- nb_size / (nb_size + lambda_gross)
@@ -1002,7 +1502,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         }
       }
     }
-    if (is_negbin == 1L) log_jacobian <- log_jacobian + log_phi_nb
+    if (is_negbin == 1L && phi_nb_is_fixed == 0L) log_jacobian <- log_jacobian + log_phi_nb
 
     # -- shared delay PMF likelihood (pooled over strata) --------------------
     # Skipped for confirmation: there are no individual delay observations -- the
@@ -1010,11 +1510,17 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     loglik_delay <- 0
     if (is_count_cumulative == 0L && is_confirmation == 0L &&
         delay_fully_fixed == 0L && length(obs_delays) > 0) {
-      loglik_delay <- if (is_nonparametric == 1L)
-        sum(row_sums * np_fns$log_pmf_raw(obs_delays))
-      else
-        .discretised_delay_loglik(obs_delays, row_sums, split_delay,
-                                  delay_fns$log_cdf, delay_fns$log_survival)
+      if (has_report_regression == 1L) {
+        # No conditioning term here: unlike the delay-only objective, the joint
+        # `S_k` factor already carries the reporting truncation.
+        loglik_delay <- .report_hazard_row_loglik(report_paths, report_rows, FALSE)
+      } else {
+        loglik_delay <- if (is_nonparametric == 1L)
+          sum(row_sums * np_fns$log_pmf_raw(obs_delays))
+        else
+          .discretised_delay_loglik(obs_delays, row_sums, split_delay,
+                                    delay_fns$log_cdf, delay_fns$log_survival)
+      }
     }
     # Right-censored delays: we only know the delay is <= j, contributing
     # log G_D(j) (the article's m_j^* term). G_D = CDF of the delay process.
@@ -1025,14 +1531,19 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     if (is_count_cumulative == 0L && is_confirmation == 0L &&
         is_retraction == 0L && delay_fully_fixed == 0L &&
         length(obs_delays_cens) > 0) {
-      log_cdf_cens <- if (is_nonparametric == 1L) np_fns$log_cdf(obs_delays_cens)
-                      else delay_fns$log_cdf(obs_delays_cens)
-      loglik_delay <- loglik_delay + sum(row_sums_cens * log_cdf_cens)
+      if (has_report_regression == 1L) {
+        loglik_delay <- loglik_delay +
+          .report_hazard_row_loglik(report_paths, report_censored_rows, TRUE)
+      } else {
+        log_cdf_cens <- if (is_nonparametric == 1L) np_fns$log_cdf(obs_delays_cens)
+                        else delay_fns$log_cdf(obs_delays_cens)
+        loglik_delay <- loglik_delay + sum(row_sums_cens * log_cdf_cens)
+      }
     }
 
     # -- priors --------------------------------------------------------------
     log_prior <- 0
-    if (delay_fully_fixed == 0L) {
+    if (baseline_delay_fixed == 0L) {
       if (is_nonparametric == 1L) {
         log_prior <- log_prior + dirichlet_lpdf(simplex_probs, dirichlet_alpha) + sum(log(simplex_probs))
       } else if (is_custom_delay == 1L) {
@@ -1054,13 +1565,20 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         log_prior <- log_prior + prior_lpdf(mu_global, prior_intercept_dist, prior_intercept_params)
         log_prior <- log_prior + sum(dnorm(delta_intercept, 0, 1, log = TRUE))
         log_prior <- log_prior + dnorm(tau_int, 0, 1, log = TRUE)   # HalfNormal: tau > 0 always here
-      } else {
+      } else if (intercept_is_fixed == 0L) {
         log_prior <- log_prior + prior_lpdf(mu_intercept, prior_intercept_dist, prior_intercept_params)
       }
     }
     if (is_sir == 0L && is_custom_epidemic == 0L && n_covariates > 0)
       log_prior <- log_prior + prior_lpdf(as.vector(gamma), prior_gamma_dist, prior_gamma_params)
-    if (is_negbin == 1L) log_prior <- log_prior + prior_lpdf(1.0 / nb_size, prior_phi_dist, prior_phi_params)
+    # A fixed coefficient block contributes a constant, and Stage 1 already
+    # scored it against this prior.
+    if (has_report_regression == 1L && report_beta_is_fixed == 0L)
+      log_prior <- log_prior + prior_lpdf(delay_beta, prior_gamma_dist, prior_gamma_params)
+    if (has_revision_regression == 1L)
+      log_prior <- log_prior + prior_lpdf(revision_beta, prior_gamma_dist, prior_gamma_params)
+    if (is_negbin == 1L && phi_nb_is_fixed == 0L)
+      log_prior <- log_prior + prior_lpdf(1.0 / nb_size, prior_phi_dist, prior_phi_params)
     # Count-cumulative priors are intentionally disjoint from confirm_p and the
     # linelist revision-delay priors.  The mass prior is evaluated on h_R's
     # finite-horizon mass; hurdle ZTP has no magnitude-dispersion parameter.
@@ -1137,12 +1655,16 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       }
     }
     if (epidemic_model == 1L) {
-      log_prior <- log_prior + prior_lpdf(gp_alpha, prior_gp_alpha_dist, prior_gp_alpha_params)
-      log_prior <- log_prior + prior_lpdf(gp_ell,   prior_gp_ell_dist,   prior_gp_ell_params)
+      if (gp_alpha_is_fixed == 0L)
+        log_prior <- log_prior + prior_lpdf(gp_alpha, prior_gp_alpha_dist, prior_gp_alpha_params)
+      if (gp_ell_is_fixed == 0L)
+        log_prior <- log_prior + prior_lpdf(gp_ell,   prior_gp_ell_dist,   prior_gp_ell_params)
       log_prior <- log_prior + sum(dnorm(basis_coefs, 0, 1, log = TRUE))
     } else if (epidemic_model == 2L) {
-      log_prior <- log_prior + prior_lpdf(ar_phi,   prior_ar_phi_dist,   prior_ar_phi_params)
-      log_prior <- log_prior + prior_lpdf(ar_sigma, prior_ar_sigma_dist, prior_ar_sigma_params)
+      if (ar_phi_is_fixed == 0L)
+        log_prior <- log_prior + prior_lpdf(ar_phi,   prior_ar_phi_dist,   prior_ar_phi_params)
+      if (ar_sigma_is_fixed == 0L)
+        log_prior <- log_prior + prior_lpdf(ar_sigma, prior_ar_sigma_dist, prior_ar_sigma_params)
       log_prior <- log_prior + sum(dnorm(ar_innov, 0, 1, log = TRUE))
     } else if (is_custom_epidemic == 1L) {
       for (i in seq_len(n_params_custom_epi)) {
@@ -1150,13 +1672,75 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
           log_prior <- log_prior +
             prior_lpdf(custom_epidemic_params[i], epi_prior_dists[i], epi_prior_params[i, ])
       }
+    } else if (is_arima == 1L) {
+      for (s in seq_len(n_strata)) {
+        if (arima_sigma_is_fixed == 0L)
+          log_prior <- log_prior +
+            prior_lpdf(trend_by_stratum[[s]]$sigma, prior_arima_sigma_dist, prior_arima_sigma_params)
+        if (arima_p > 0L && arima_ar_is_fixed == 0L)
+          log_prior <- log_prior +
+            prior_lpdf(trend_by_stratum[[s]]$ar_pacf, prior_arima_ar_dist, prior_arima_ar_params)
+        if (arima_q > 0L && arima_ma_is_fixed == 0L)
+          log_prior <- log_prior +
+            prior_lpdf(trend_by_stratum[[s]]$ma_pacf, prior_arima_ma_dist, prior_arima_ma_params)
+      }
+      if (arima_has_drift == 1L && arima_drift_is_fixed == 0L)
+        log_prior <- log_prior + prior_lpdf(arima_drift, prior_arima_drift_dist, prior_arima_drift_params)
+      log_prior <- log_prior + sum(dnorm(arima_innov, 0, 1, log = TRUE))
+    } else if (is_ets == 1L) {
+      for (s in seq_len(n_strata)) {
+        if (ets_sigma_is_fixed == 0L)
+          log_prior <- log_prior +
+            prior_lpdf(trend_by_stratum[[s]]$sigma, prior_ets_sigma_dist, prior_ets_sigma_params)
+        if (ets_has_slope == 1L) {
+          if (ets_beta_is_fixed == 0L)
+            log_prior <- log_prior +
+              prior_lpdf(trend_by_stratum[[s]]$beta, prior_ets_beta_dist, prior_ets_beta_params)
+          if (ets_is_damped == 1L && ets_damping_is_fixed == 0L)
+            log_prior <- log_prior +
+              prior_lpdf((trend_by_stratum[[s]]$damping - 0.8) / 0.198,
+                         prior_ets_damping_dist, prior_ets_damping_params)
+        }
+      }
+      if (ets_has_slope == 1L && ets_slope_init_is_fixed == 0L)
+        log_prior <- log_prior + prior_lpdf(ets_slope_init, prior_ets_slope_init_dist, prior_ets_slope_init_params)
+      if (ets_has_drift == 1L && ets_drift_is_fixed == 0L)
+        log_prior <- log_prior + prior_lpdf(ets_drift, prior_ets_drift_dist, prior_ets_drift_params)
+      log_prior <- log_prior + sum(dnorm(ets_innov, 0, 1, log = TRUE))
+    } else if (is_sts == 1L) {
+      for (s in seq_len(n_strata)) {
+        if (sts_level_sigma_is_fixed == 0L)
+          log_prior <- log_prior +
+            prior_lpdf(trend_by_stratum[[s]]$level_sigma, prior_sts_level_sigma_dist, prior_sts_level_sigma_params)
+        if (sts_has_slope == 1L) {
+          if (sts_slope_sigma_is_fixed == 0L)
+            log_prior <- log_prior +
+              prior_lpdf(trend_by_stratum[[s]]$slope_sigma, prior_sts_slope_sigma_dist, prior_sts_slope_sigma_params)
+          if (sts_reverting == 1L && sts_slope_phi_is_fixed == 0L)
+            log_prior <- log_prior +
+              prior_lpdf(trend_by_stratum[[s]]$slope_phi, prior_sts_slope_phi_dist, prior_sts_slope_phi_params)
+        }
+      }
+      if (sts_has_slope == 1L) {
+        if (sts_slope_init_is_fixed == 0L)
+          log_prior <- log_prior + prior_lpdf(sts_slope_init, prior_sts_slope_init_dist, prior_sts_slope_init_params)
+        log_prior <- log_prior + sum(dnorm(sts_slope_innov, 0, 1, log = TRUE))
+        if (sts_reverting == 1L && sts_slope_mean_is_fixed == 0L)
+          log_prior <- log_prior + prior_lpdf(sts_slope_mean, prior_sts_slope_mean_dist, prior_sts_slope_mean_params)
+      }
+      log_prior <- log_prior + sum(dnorm(sts_level_innov, 0, 1, log = TRUE))
     } else {  # epidemic_model == 3L: SIR
-      log_prior <- log_prior + prior_lpdf(R0, prior_R0_dist, prior_R0_params)
-      log_prior <- log_prior + prior_lpdf(recovery_rate, prior_gamma_sir_dist, prior_gamma_sir_params)
-      log_prior <- log_prior + prior_lpdf(susceptible_frac, prior_n_eff_dist, prior_n_eff_params)
+      if (R0_is_fixed == 0L)
+        log_prior <- log_prior + prior_lpdf(R0, prior_R0_dist, prior_R0_params)
+      if (gamma_sir_is_fixed == 0L)
+        log_prior <- log_prior + prior_lpdf(recovery_rate, prior_gamma_sir_dist, prior_gamma_sir_params)
+      if (n_eff_is_fixed == 0L)
+        log_prior <- log_prior + prior_lpdf(susceptible_frac, prior_n_eff_dist, prior_n_eff_params)
       if (sir_use_beta_rw_trend == 1L) {
-        log_prior <- log_prior + prior_lpdf(ar_phi, prior_ar_phi_sir_dist, prior_ar_phi_sir_params)
-        log_prior <- log_prior + prior_lpdf(ar_sigma, prior_ar_sigma_dist, prior_ar_sigma_params)
+        if (ar_phi_is_fixed == 0L)
+          log_prior <- log_prior + prior_lpdf(ar_phi, prior_ar_phi_sir_dist, prior_ar_phi_sir_params)
+        if (ar_sigma_is_fixed == 0L)
+          log_prior <- log_prior + prior_lpdf(ar_sigma, prior_ar_sigma_dist, prior_ar_sigma_params)
         log_prior <- log_prior + sum(dnorm(ar_innov, 0, 1, log = TRUE))
       }
     }
@@ -1170,6 +1754,155 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
        Bmat = hsgp_basis_matrix, freq = hsgp_frequencies, n_strata = n_strata)
 }
 
+#' Latent log-mean `[n_time + horizon, n_strata]` from one parameter list
+#'
+#' The plain-R mirror of the epidemic half of the tape.  With `horizon = 0` it
+#' is exactly what `.joint_reconstruct()` has always computed.  With
+#' `horizon > 0` every recursive process simply keeps running: each latent
+#' innovation series gains `horizon` fresh standard-normal rows, the HSGP basis
+#' is evaluated on the extended grid, and the covariate matrix gains the rows in
+#' `X_future`.  That is the whole forecast.  Innovations after `now` never enter
+#' the likelihood (nothing has been reported for them), so their posterior IS
+#' their N(0, 1) prior, independent of every other coordinate; drawing them fresh
+#' next to a posterior draw of everything else is an exact draw from the joint
+#' posterior of the extended model.
+#'
+#' The first `n_time` rows never depend on the horizon: every recursion is
+#' causal and the HSGP grid is anchored on `tmax_model`, not on its length.
+#'
+#' @param data Prepared engine.
+#' @param parlist Parameter list with pinned parameters already restored.
+#' @param hsgp_basis_matrix,hsgp_frequencies The fit's HSGP basis (in-sample).
+#' @param horizon Number of steps past the last event time.
+#' @param X_future `[horizon x P]` covariate rows for the new event times.
+#' @param priors Prior bundle (only the custom epidemic reads it).
+#' @keywords internal
+#' @noRd
+.reconstruct_log_mean <- function(data, parlist, hsgp_basis_matrix,
+                                  hsgp_frequencies, horizon = 0L,
+                                  X_future = NULL, priors = NULL) {
+  n_time <- as.integer(data$max_time); n_strata <- as.integer(data$num_strata)
+  horizon <- as.integer(horizon)
+  n_out <- n_time + horizon
+  reshape <- function(x, nr, nc) matrix(as.numeric(x), nr, nc)
+  # Future innovations: the posterior of an innovation no observation touches is
+  # its standard-normal prior.
+  extend <- function(innovations) {
+    if (horizon == 0L) return(innovations)
+    rbind(innovations, matrix(stats::rnorm(horizon * ncol(innovations)),
+                              horizon, ncol(innovations)))
+  }
+  log_mean <- matrix(0.0, n_out, n_strata)
+  if (data$epidemic_model == 4L) {                              # custom epidemic
+    if (horizon > 0L)
+      cli::cli_abort(c(
+        "A {.fn custom_epidemic} cannot be extended past its fitted event grid.",
+        "i" = "Its {.arg intensity_fn} returns a matrix of fixed length, so there is no recursion to continue."
+      ), class = "diseasenowcasting_forecast_unsupported")
+    theta_epi <- as.numeric(parlist$custom_epidemic_params)
+    return(matrix(as.numeric(priors$intensity_fn(theta_epi)), n_time, n_strata))
+  }
+  if (data$epidemic_model == 3L) {                              # coupled SIR
+    R0 <- exp(parlist$log_R0); recovery_rate <- stats::plogis(parlist$u_gamma)
+    susceptible_frac <- stats::plogis(parlist$u_neff); effective_pop <- susceptible_frac * data$N_pop
+    initial_infected <- data$case_counts[1, ]
+    trend <- matrix(0.0, n_out, n_strata)
+    if (isTRUE(data$use_beta_rw_trend == 1L)) {
+      ar_phi   <- -0.999 + 1.998 * stats::plogis(parlist$ar_phi_unc)
+      ar_sigma <- data$ar_sigma_max * stats::plogis(parlist$log_ar_sigma_unc)
+      ar_innov <- extend(reshape(parlist$ar_innov, n_time, n_strata))
+      for (s in seq_len(n_strata)) {
+        trend[1, s] <- ar_innov[1, s] * ar_sigma[s] / sqrt(1 - ar_phi[s]^2)
+        if (n_out >= 2) for (t in 2:n_out)
+          trend[t, s] <- ar_phi[s] * trend[t - 1, s] + ar_innov[t, s] * ar_sigma[s]
+      }
+    }
+    beta0 <- log(R0 * recovery_rate); incidence <- matrix(0.0, n_out, n_strata)
+    susceptible <- 1 - initial_infected / effective_pop; infected <- initial_infected / effective_pop
+    for (t in seq_len(n_out)) {
+      total_infectious <- sum(infected)
+      for (s in seq_len(n_strata)) {
+        beta_ts <- exp(beta0[s] + trend[t, s])
+        new_inf <- susceptible[s] * (1 - exp(-beta_ts * total_infectious))
+        incidence[t, s] <- new_inf * effective_pop[s]
+        susceptible[s]  <- susceptible[s] * exp(-beta_ts * total_infectious)
+        infected[s]     <- new_inf + (1 - recovery_rate[s]) * infected[s]
+      }
+    }
+    # (incidence+|incidence|)/2 = pmax(incidence, 0) guards the SIR log-mean
+    # against NaN without changing any fit where incidence >= 0.
+    return(log((incidence + abs(incidence)) * 0.5 + 1e-8))
+  }
+  # Resolve intercept: hierarchical or independent
+  is_hierarchical_r <- !is.null(parlist$mu_global)
+  mu_intercept <- if (is_hierarchical_r)
+    as.numeric(parlist$mu_global) + exp(as.numeric(parlist$log_tau_intercept)) * as.numeric(parlist$delta_intercept)
+  else parlist$mu_intercept
+  gamma <- if (data$P > 0) reshape(parlist$gamma, data$P, n_strata) else NULL
+  X <- data$X
+  if (!is.null(gamma) && horizon > 0L) {
+    if (is.null(X_future) || nrow(X_future) != horizon || ncol(X_future) != data$P)
+      cli::cli_abort("Internal error: {.arg X_future} must be a {horizon} x {data$P} matrix.")
+    X <- rbind(X, X_future)
+  }
+  epidemic_model <- data$epidemic_model
+  if (epidemic_model == 1L) {
+    gp_alpha <- exp(parlist$log_gp_alpha); gp_ell <- exp(parlist$log_gp_ell)
+    spectral_weights <- hsgp_spectral_weights(hsgp_frequencies, gp_alpha, gp_ell, data$gp_kernel)
+    basis_coefs <- reshape(parlist$basis_coefs, ncol(hsgp_basis_matrix), n_strata)
+    if (horizon > 0L) hsgp_basis_matrix <- .hsgp_extended_basis(data, n_out)
+  } else if (epidemic_model == 2L) {
+    ar_phi   <- -0.999 + 1.998 * stats::plogis(parlist$ar_phi_unc)
+    ar_sigma <- data$ar_sigma_max * stats::plogis(parlist$log_ar_sigma_unc)
+    ar_innov <- extend(reshape(parlist$ar_innov, n_time, n_strata))
+  } else {
+    # Classical time-series trends.  This reads the SAME helpers the tape uses
+    # (see R/13_epidemic_timeseries.R), so a change to a constraint map lands
+    # in both places at once.
+    trend_parameters <- .timeseries_reconstruct_parameters(data, parlist, n_strata)
+    trend_parameters$innovations <- extend(trend_parameters$innovations)
+    if (!is.null(trend_parameters$slope_innovations))
+      trend_parameters$slope_innovations <- extend(trend_parameters$slope_innovations)
+  }
+  for (s in seq_len(n_strata)) {
+    col <- rep(mu_intercept[s], n_out)
+    if (!is.null(gamma)) col <- col + as.vector(X %*% gamma[, s])
+    if (epidemic_model == 1L) {
+      col <- col + as.vector(hsgp_basis_matrix %*% (basis_coefs[, s] * spectral_weights))
+    } else if (epidemic_model == 2L) {
+      tr <- numeric(n_out); tr[1] <- ar_innov[1, s] * ar_sigma[s] / sqrt(1 - ar_phi[s]^2)
+      if (n_out >= 2) for (t in 2:n_out) tr[t] <- ar_phi[s] * tr[t - 1] + ar_innov[t, s] * ar_sigma[s]
+      col <- col + tr
+    } else {
+      col <- col + .timeseries_trend_column(data, trend_parameters, s, n_out)
+    }
+    log_mean[, s] <- col
+  }
+  log_mean
+}
+
+#' HSGP basis on an event grid extended past the fitted one
+#'
+#' The standardised grid is anchored on `tmax_model`, so extending it only
+#' appends points to the right.  The basis is defined on
+#' `[-gp_L_left, gp_L_right]`; past the right edge the Dirichlet eigenfunctions
+#' reflect back rather than extrapolate, so a horizon that reaches it is refused.
+#' @keywords internal
+#' @noRd
+.hsgp_extended_basis <- function(data, n_out) {
+  time_scaled <- hsgp_time_scaled(n_out, data$tmax_model)
+  if (max(time_scaled) >= data$gp_L_right) {
+    reachable <- sum(time_scaled[-seq_len(data$max_time)] < data$gp_L_right)
+    cli::cli_abort(c(
+      "The forecast horizon runs past the edge of the HSGP domain.",
+      "i" = "This fit's basis can extrapolate at most {reachable} step{?s} past {.arg now}.",
+      "*" = "Use a shorter horizon, refit with a smaller {.arg gp_boundary_frac} (more room on the right), or use a recursive process such as {.fn ar1_epidemic}."
+    ), class = "diseasenowcasting_forecast_unsupported")
+  }
+  hsgp_basis(time_scaled, data$gp_L_left, data$gp_L_right, data$num_basis,
+             data$gp_basis)
+}
+
 #' Reconstruct per-(time, stratum) lambda / Gstar (plain numeric) from a fit
 #'
 #' Mirrors the objective's per-stratum / coupled-SIR mean construction in base
@@ -1179,6 +1912,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
 #' @keywords internal
 #' @noRd
 .joint_reconstruct <- function(data, priors, parlist, hsgp_basis_matrix, hsgp_frequencies) {
+  # A posterior draw omits every pinned parameter (it is not in the Laplace
+  # precision), so restore them before anything reads the list.
+  parlist <- .fill_fixed_parameters(parlist, data, priors)
   n_time <- data$max_time; n_strata <- as.integer(data$num_strata)
   family <- data$delay_family; is_gengamma <- family == 3L; is_nonparametric <- family == 4L
   is_custom_delay_r <- family == 5L
@@ -1207,75 +1943,31 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   d_star <- if (is.matrix(data$d_star)) data$d_star else matrix(data$d_star, n_time, n_strata)
 
   # -- per-(time, stratum) log-mean -------------------------------------------
-  log_mean <- matrix(0.0, n_time, n_strata)
-  if (data$epidemic_model == 4L) {                              # custom epidemic
-    theta_epi <- as.numeric(parlist$custom_epidemic_params)
-    log_mean   <- matrix(as.numeric(priors$intensity_fn(theta_epi)), n_time, n_strata)
-  } else if (data$epidemic_model == 3L) {                       # coupled SIR
-    R0 <- exp(parlist$log_R0); recovery_rate <- stats::plogis(parlist$u_gamma)
-    susceptible_frac <- stats::plogis(parlist$u_neff); effective_pop <- susceptible_frac * data$N_pop
-    initial_infected <- data$case_counts[1, ]
-    trend <- matrix(0.0, n_time, n_strata)
-    if (isTRUE(data$use_beta_rw_trend == 1L)) {
-      ar_phi   <- -0.999 + 1.998 * stats::plogis(parlist$ar_phi_unc)
-      ar_sigma <- data$ar_sigma_max * stats::plogis(parlist$log_ar_sigma_unc)
-      ar_innov <- reshape(parlist$ar_innov, n_time, n_strata)
-      for (s in seq_len(n_strata)) {
-        trend[1, s] <- ar_innov[1, s] * ar_sigma[s] / sqrt(1 - ar_phi[s]^2)
-        if (n_time >= 2) for (t in 2:n_time)
-          trend[t, s] <- ar_phi[s] * trend[t - 1, s] + ar_innov[t, s] * ar_sigma[s]
-      }
-    }
-    beta0 <- log(R0 * recovery_rate); incidence <- matrix(0.0, n_time, n_strata)
-    susceptible <- 1 - initial_infected / effective_pop; infected <- initial_infected / effective_pop
-    for (t in seq_len(n_time)) {
-      total_infectious <- sum(infected)
-      for (s in seq_len(n_strata)) {
-        beta_ts <- exp(beta0[s] + trend[t, s])
-        new_inf <- susceptible[s] * (1 - exp(-beta_ts * total_infectious))
-        incidence[t, s] <- new_inf * effective_pop[s]
-        susceptible[s]  <- susceptible[s] * exp(-beta_ts * total_infectious)
-        infected[s]     <- new_inf + (1 - recovery_rate[s]) * infected[s]
-      }
-    }
-    # See the note above: (incidence+|incidence|)/2 = pmax(incidence, 0) guards the
-    # SIR log-mean against NaN without changing any fit where incidence >= 0.
-    log_mean <- log((incidence + abs(incidence)) * 0.5 + 1e-8)
-  } else {
-    # Resolve intercept: hierarchical or independent
-    is_hierarchical_r <- !is.null(parlist$mu_global)
-    mu_intercept <- if (is_hierarchical_r)
-      as.numeric(parlist$mu_global) + exp(as.numeric(parlist$log_tau_intercept)) * as.numeric(parlist$delta_intercept)
-    else parlist$mu_intercept
-    gamma <- if (data$P > 0) reshape(parlist$gamma, data$P, n_strata) else NULL
-    if (data$epidemic_model == 1L) {
-      gp_alpha <- exp(parlist$log_gp_alpha); gp_ell <- exp(parlist$log_gp_ell)
-      spectral_weights <- hsgp_spectral_weights(hsgp_frequencies, gp_alpha, gp_ell, data$gp_kernel)
-      basis_coefs <- reshape(parlist$basis_coefs, ncol(hsgp_basis_matrix), n_strata)
-    } else {
-      ar_phi   <- -0.999 + 1.998 * stats::plogis(parlist$ar_phi_unc)
-      ar_sigma <- data$ar_sigma_max * stats::plogis(parlist$log_ar_sigma_unc)
-      ar_innov <- reshape(parlist$ar_innov, n_time, n_strata)
-    }
-    for (s in seq_len(n_strata)) {
-      col <- rep(mu_intercept[s], n_time)
-      if (!is.null(gamma)) col <- col + as.vector(data$X %*% gamma[, s])
-      if (data$epidemic_model == 1L) {
-        col <- col + as.vector(hsgp_basis_matrix %*% (basis_coefs[, s] * spectral_weights))
-      } else {
-        tr <- numeric(n_time); tr[1] <- ar_innov[1, s] * ar_sigma[s] / sqrt(1 - ar_phi[s]^2)
-        if (n_time >= 2) for (t in 2:n_time) tr[t] <- ar_phi[s] * tr[t - 1] + ar_innov[t, s] * ar_sigma[s]
-        col <- col + tr
-      }
-      log_mean[, s] <- col
-    }
-  }
+  log_mean <- .reconstruct_log_mean(data, parlist, hsgp_basis_matrix,
+                                    hsgp_frequencies, priors = priors)
 
   ub <- data$mu_log_upper_bound
   mu_safe <- ub - log1p(exp(ub - log_mean))
   lambda  <- exp(mu_safe)
   Gstar   <- matrix(0.0, n_time, n_strata)
-  for (s in seq_len(n_strata)) Gstar[, s] <- as.numeric(delay_fns$cdf(d_star[, s] + 1))
+  if (as.integer(data$P_delay %||% 0L) > 0L) {
+    delay_beta <- as.numeric(parlist$delay_beta %||% priors$delay_beta_fixed %||% numeric(0))
+    report_paths <- .report_hazard_paths(
+      .stable_log_survival(delay_fns, seq_len(n_time), .delay_split(data)),
+      n_time, n_strata, data$report_calendar,
+      data$report_cohort, delay_beta,
+      as.integer(data$P_delay_calendar %||% 0L),
+      as.integer(data$P_delay_cohort %||% 0L)
+    )
+    for (s in seq_len(n_strata)) for (t in seq_len(n_time)) {
+      Gstar[t, s] <- as.numeric(report_paths[[s]][[t]]$cdf[
+        as.integer(d_star[t, s]) + 1L
+      ])
+    }
+  } else {
+    for (s in seq_len(n_strata))
+      Gstar[, s] <- as.numeric(delay_fns$cdf(d_star[, s] + 1))
+  }
   uses_nb_dispersion <- data$is_negative_binomial == 1L &&
     (!isTRUE(data$is_count_cumulative == 1L) ||
        identical(as.integer(data$count_cumulative_observation), 1L))
@@ -1312,6 +2004,42 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     components <- .count_cumulative_components(
       report_pmf, retract_pmf, retract_mass, H
     )
+    # Same cohort kernels the tape builds, through the same helper: the two
+    # must not be allowed to drift, because a mismatch would give a correct
+    # likelihood and wrong predictions.
+    components_by_cohort <- NULL
+    has_report_regression <- as.integer(data$P_delay %||% 0L) > 0L
+    has_revision_regression <- as.integer(data$P_revision %||% 0L) > 0L
+    if (has_report_regression || has_revision_regression) {
+      report_spec <- .cumulative_hazard_spec(
+        pmf = report_pmf,
+        log_survival = if (has_report_regression) .stable_log_survival(
+          delay_fns, seq_len(H + 1L), .delay_split(data)) else NULL,
+        active = has_report_regression,
+        calendar = data$report_calendar,
+        beta = as.numeric(parlist$delay_beta %||% numeric(0)),
+        n_calendar = as.integer(data$P_delay_calendar %||% 0L),
+        cohort = data$report_cohort,
+        n_row = as.integer(data$P_delay_cohort %||% 0L)
+      )
+      revision_spec <- .cumulative_hazard_spec(
+        pmf = retract_pmf,
+        log_survival = if (has_revision_regression) .stable_log_survival(
+          retract_fns, seq_len(H), max(1L, H %/% 2L)) else NULL,
+        active = has_revision_regression,
+        calendar = data$revision_calendar,
+        beta = as.numeric(parlist$revision_beta %||% numeric(0)),
+        n_calendar = as.integer(data$P_revision_calendar %||% 0L),
+        mass = retract_mass
+      )
+      components_by_cohort <- lapply(
+        seq_len(n_strata), function(stratum) lapply(
+          seq_len(n_time), function(time) .cumulative_cohort_components(
+            time, stratum, H, report_spec, revision_spec
+          )
+        )
+      )
+    }
 
     observation <- as.integer(data$count_cumulative_observation)
     movement <- magnitude_size <- NULL
@@ -1340,7 +2068,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         movement = movement,
         magnitude_size = magnitude_size
       ),
-      components
+      components,
+      list(components_by_cohort = components_by_cohort)
     )
   }
 
@@ -1407,25 +2136,29 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
                             else rep(confirm_p_vec[1], n_strata)
     confirm_p <- confirm_p_vec[1]
     retract_family <- as.integer(priors$retract_family)
-    survival_fn <- if (retract_family == 4L) {
+    # Keep the whole family bundle: the pooled lookup below needs only the
+    # survival, but the row-level revision regression reads the baseline hazard
+    # off the log-survival (and the log-CDF in the head).
+    retract_fns <- if (retract_family == 4L) {
       retract_simplex <- if (isTRUE(priors$retract_probs$is_constant == 1L)) priors$retract_probs$fixed
         else { exp_logits <- exp(as.numeric(parlist$retract_logits))
                c(exp_logits, 1) / (sum(exp_logits) + 1) }
-      .nonparametric_delay_functions(retract_simplex, as.integer(priors$retract_probs$bins))$survival
+      .nonparametric_delay_functions(retract_simplex, as.integer(priors$retract_probs$bins))
     } else {
       retract_mu_v <- if (isTRUE(priors$retract_mu$is_constant == 1L)) priors$retract_mu$fixed
                       else as.numeric(parlist$retract_mu)
       retract_sd_v <- if (isTRUE(priors$retract_sigma$is_constant == 1L)) priors$retract_sigma$fixed
                       else 0.01 + exp(as.numeric(parlist$log_retract_sd_exc))
-      retract_fns <- if (retract_family == 3L) {
+      if (retract_family == 3L) {
         retract_shape_Q <- if (isTRUE(priors$retract_Q$is_constant == 1L)) priors$retract_Q$fixed
                            else .gengamma_shape_transform(as.numeric(parlist$retract_Q))$shape_Q
         .delay_distribution_functions(3L, retract_mu_v, retract_shape_Q, retract_sd_v)
       } else {
         .delay_distribution_functions(retract_family, retract_mu_v, retract_sd_v)
       }
-      function(age) exp(as.numeric(retract_fns$log_survival(age)))
     }
+    survival_fn <- if (retract_family == 4L) retract_fns$survival
+                   else function(age) exp(as.numeric(retract_fns$log_survival(age)))
     resolution_mode <- as.integer(data$resolution_mode %||% 0L)
     lag_offset <- if (resolution_mode == 0L) 0L else 1L
     # rho[age + 1, stratum]: the exact-row lookup used by the predictive thinning.
@@ -1436,6 +2169,46 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
                   ),
                   numeric(length(report_ages)))
     rho <- matrix(rho, length(report_ages), n_strata)
+
+    revision_pending_rows <- NULL
+    rho_revision <- NULL
+    if (as.integer(data$P_revision %||% 0L) > 0L) {
+      rows <- data$revision_rows
+      row_design <- data$revision_row_design
+      beta <- as.numeric(parlist$revision_beta)
+      n_calendar <- as.integer(data$P_revision_calendar %||% 0L)
+      n_row <- as.integer(data$P_revision_row %||% 0L)
+      pending <- which(rows[, "resolved"] == 0)
+      rho_revision <- numeric(length(pending))
+      revision_log_survival <- .stable_log_survival(
+        retract_fns, seq_len(max(1L, as.integer(max(rows[, "age"])) + 1L)),
+        max(1L, .retract_split(data))
+      )
+      for (pending_index in seq_along(pending)) {
+        row <- pending[pending_index]
+        stratum <- as.integer(rows[row, "stratum"])
+        p_s <- confirm_p_by_stratum[stratum]
+        age <- as.integer(rows[row, "age"])
+        path_length <- age + lag_offset
+        survival <- 1
+        if (path_length > 0L) {
+          path <- .revision_hazard_path(
+            revision_log_survival, as.integer(rows[row, "report_time"]),
+            path_length, lag_offset, data$revision_calendar,
+            if (n_row > 0L) row_design[row, ] else NULL,
+            beta, n_calendar, n_row
+          )
+          survival <- exp(as.numeric(path$log_survival[path_length]))
+        }
+        rho_revision[pending_index] <- switch(
+          as.character(resolution_mode),
+          "0" = p_s / (p_s + (1 - p_s) * survival),
+          "1" = p_s * survival / ((1 - p_s) + p_s * survival),
+          "2" = p_s
+        )
+      }
+      revision_pending_rows <- rows[pending, c("cell", "count"), drop = FALSE]
+    }
 
     # Censored standing rows: rho has to be averaged over the appearance delays the
     # row is compatible with, so it is computed per pattern rather than looked up.
@@ -1460,6 +2233,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
 
     retraction <- list(p = confirm_p, p_by_stratum = confirm_p_by_stratum,
                        ages = report_ages, rho = rho, rho_censored = rho_censored,
+                       revision_pending_rows = revision_pending_rows,
+                       rho_revision = rho_revision,
                        # A CONFIRMED row is already in the target and enters the
                        # nowcast with weight 1; a RETRACTED one is gone (weight 0).
                        # A CONFIRMED row is already in the target (weight 1); a

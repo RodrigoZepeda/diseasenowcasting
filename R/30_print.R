@@ -154,6 +154,37 @@ S7::method(print, sir_epidemic_class) <- function(x, ..., digits = 4) {
 }
 
 #' @noRd
+S7::method(print, arima_epidemic_class) <- function(x, ..., digits = 4) {
+  cli::cli_text(paste0(cli::col_magenta("ARIMA"), "(", x@p, ",", x@d, ",", x@q, ")(",
+                       .fmt_slot("sigma", x@sigma),
+                       " ; {.emph drift} = {.val ", if (isTRUE(x@include_drift)) "TRUE" else "FALSE",
+                       "})"))
+  invisible(x)
+}
+
+#' @noRd
+S7::method(print, sts_epidemic_class) <- function(x, ..., digits = 4) {
+  cli::cli_text(paste0(cli::col_magenta("STS"), "(",
+    .fmt_slot("level_sigma", x@level_sigma), ", ", .fmt_slot("slope_sigma", x@slope_sigma),
+    " ; {.emph trend} = {.val ", x@trend, "})"))
+  invisible(x)
+}
+
+#' @noRd
+# One method for the whole ETS engine: the random walk, naive and Theta
+# constructors are the same process with parts switched off, and `name` is what
+# tells them apart on a scoreboard.
+S7::method(print, ets_epidemic_class) <- function(x, ..., digits = 4) {
+  trend_label <- if (identical(x@trend, "additive"))
+    paste0("additive", if (isTRUE(x@damped)) ", damped" else "") else "none"
+  cli::cli_text(paste0(cli::col_magenta(x@name), "(",
+    .fmt_slot("sigma", x@sigma),
+    " ; {.emph trend} = {.val ", trend_label,
+    "}, {.emph drift} = {.val ", if (isTRUE(x@include_drift)) "TRUE" else "FALSE", "})"))
+  invisible(x)
+}
+
+#' @noRd
 S7::method(print, custom_epidemic_class) <- function(x, ..., digits = 4) {
   n_free  <- sum(vapply(x@priors, function(p) S7::S7_inherits(p, prior_class), logical(1)))
   n_fixed <- x@n_params - n_free

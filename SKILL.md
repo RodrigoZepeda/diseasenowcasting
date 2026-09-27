@@ -221,7 +221,27 @@ nowcast_diagnostic(fit)         # delay, latent epidemic, and nowcast panels
 fit_check(fit)                  # RTMB optimizer/Laplace diagnostics
 ```
 
-Do not confuse posterior-predictive counts with latent incidence. For generic
+Do not confuse posterior-predictive counts with latent incidence.
+
+## Forecast past `now`
+
+```r
+fc <- forecast(fit, h = 2)                          # nowcast + 2 steps ahead
+forecast(fit, h = 1, include_nowcast = FALSE)       # the new event times only
+forecast(fit, h = 1, category = "overall")          # revision data: all reports
+forecast(fit, h = 1, new_data = future_covariates)  # event covariates, if any
+```
+
+`forecast()` reuses the fit's posterior draws and runs each latent recursion
+`h` more steps; nothing is refitted. The result is a `tbl_nowcast` with a
+`.horizon` column (`0` at `now`, `1..h` in the future). Recursive epidemic
+processes (AR(1), ARIMA, ETS, STS, random walks, SIR) forecast any horizon;
+HSGP only up to its domain edge; custom epidemics cannot be forecast. With a
+revision process, `category` is the eventual status: `"overall"`,
+`"confirmed"`, `"retracted"` or `"pending"`, restricted to the categories the
+mode observes; the default is the fit's own estimand. Count-cumulative fits
+forecast `C_t(H)` from an empty level. Temporal effects are extended from the
+calendar; other event covariates must be supplied in `new_data`. For generic
 plotting, scoring, and ensembling, use the common `tbl.now` layer. For RTMB fit
 quality and model parameters, use the native functions above.
 

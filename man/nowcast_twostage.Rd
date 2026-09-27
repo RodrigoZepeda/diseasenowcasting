@@ -17,7 +17,7 @@ nowcast_twostage(
   floor_sig_frac = 0.08,
   np_spread = 1,
   n_draws_per = 200L,
-  phi = lognormal_prior(log(20), 0.5),
+  phi = NULL,
   probs = c(0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975),
   seed = sample.int(.Machine$integer.max, 1)
 )
@@ -50,7 +50,8 @@ full-series posterior); values > 1 widen the simplex spread.}
 
 \item{n_draws_per}{Posterior nowcast draws per imputation.}
 
-\item{phi}{NB overdispersion prior (default \code{lognormal_prior(log(20), 0.5)}).}
+\item{phi}{Optional NB overdispersion prior that overrides the model's
+(see \link{likelihood}).  The default \code{NULL} uses the likelihood's \code{phi}.}
 
 \item{probs}{Quantile probabilities to report.}
 

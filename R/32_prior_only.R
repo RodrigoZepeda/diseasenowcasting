@@ -153,10 +153,15 @@
       parlist$log_gp_alpha <- log(max(draw_one(priors$gp_alpha), 1e-3))
       parlist$log_gp_ell   <- log(max(draw_one(priors$gp_ell),   1e-3))
       parlist$basis_coefs  <- matrix(stats::rnorm(num_basis * n_strata), num_basis, n_strata)
-    } else {                                         # AR(1)
+    } else if (epidemic_model == 2L) {               # AR(1)
       parlist$ar_phi_unc       <- stats::qlogis((clamp(draw_one(priors$ar_phi), -0.998, 0.998) + 0.999) / 1.998)
       parlist$log_ar_sigma_unc <- stats::qlogis(clamp(draw_one(priors$ar_sigma), 1e-4, ar_sigma_max - 1e-4) / ar_sigma_max)
       parlist$ar_innov         <- matrix(stats::rnorm(n_time * n_strata), n_time, n_strata)
+    } else {                                         # ARIMA / ETS family / STS
+      parlist <- utils::modifyList(
+        parlist,
+        .simulate_timeseries_parlist(engine, priors, n_time, n_strata, ar_sigma_max,
+                                     draw_one, clamp))
     }
   }
   parlist
@@ -272,4 +277,76 @@
   list(
     Bmat = hsgp_basis(ts, engine$gp_L_left, engine$gp_L_right, engine$num_basis, engine$gp_basis),
     freq = seq_len(engine$num_basis) * pi / (engine$gp_L_left + engine$gp_L_right))
+}
+
+#' Prior draw of the classical time-series trend parameters
+#'
+#' Each natural-scale draw is pushed back onto the unconstrained scale the
+#' objective parameterises in, which is the same round trip the HSGP and AR(1)
+#' branches do above: the reconstruction only knows how to read unconstrained
+#' values, so a prior draw has to arrive in that coordinate system.
+#' @keywords internal
+#' @noRd
+.simulate_timeseries_parlist <- function(engine, priors, n_time, n_strata,
+                                         ar_sigma_max, draw_one, clamp) {
+  epidemic_model <- as.integer(engine$epidemic_model)
+  to_bounded_positive <- function(value, upper)
+    stats::qlogis(clamp(value, 1e-4, upper - 1e-4) / upper)
+  to_signed_unit <- function(value)
+    stats::qlogis((clamp(value, -0.998, 0.998) + 0.999) / 1.998)
+  per_stratum <- function(prior) vapply(seq_len(n_strata),
+                                        function(s) draw_one(prior), numeric(1))
+  parlist <- list()
+
+  if (epidemic_model == 5L) {
+    ar_order <- as.integer(engine$arima_p %||% 0L)
+    ma_order <- as.integer(engine$arima_q %||% 0L)
+    if (ar_order > 0L)
+      parlist$arima_ar_pacf_unc <- matrix(
+        to_signed_unit(vapply(seq_len(ar_order * n_strata),
+                              function(i) draw_one(priors$arima_ar), numeric(1))),
+        ar_order, n_strata)
+    if (ma_order > 0L)
+      parlist$arima_ma_pacf_unc <- matrix(
+        to_signed_unit(vapply(seq_len(ma_order * n_strata),
+                              function(i) draw_one(priors$arima_ma), numeric(1))),
+        ma_order, n_strata)
+    parlist$log_arima_sigma_unc <- to_bounded_positive(per_stratum(priors$arima_sigma), ar_sigma_max)
+    if (isTRUE(engine$arima_include_drift == 1L))
+      parlist$arima_drift <- per_stratum(priors$arima_drift)
+    parlist$arima_innov <- matrix(stats::rnorm(n_time * n_strata), n_time, n_strata)
+    return(parlist)
+  }
+
+  if (epidemic_model == 6L) {
+    has_slope <- isTRUE(engine$ets_has_slope == 1L)
+    parlist$log_ets_sigma_unc <- to_bounded_positive(per_stratum(priors$ets_sigma), ar_sigma_max)
+    if (has_slope) {
+      parlist$ets_beta_unc <- stats::qlogis(clamp(per_stratum(priors$ets_beta), 1e-4, 1 - 1e-4))
+      parlist$ets_slope_init <- per_stratum(priors$ets_slope_init)
+      # `ets_damping` is a prior on the (0, 1) proportion, not on the damping
+      # itself: the objective maps it with 0.8 + 0.198 * p, so a prior draw is
+      # already p and only needs the logit.
+      if (isTRUE(engine$ets_damped == 1L))
+        parlist$ets_damp_unc <- stats::qlogis(clamp(per_stratum(priors$ets_damping), 1e-4, 1 - 1e-4))
+    }
+    if (isTRUE(engine$ets_include_drift == 1L))
+      parlist$ets_drift <- per_stratum(priors$ets_drift)
+    parlist$ets_innov <- matrix(stats::rnorm(n_time * n_strata), n_time, n_strata)
+    return(parlist)
+  }
+
+  has_slope <- isTRUE(engine$sts_has_slope == 1L)
+  parlist$log_sts_level_sigma_unc <- to_bounded_positive(per_stratum(priors$sts_level_sigma), ar_sigma_max)
+  parlist$sts_level_innov <- matrix(stats::rnorm(n_time * n_strata), n_time, n_strata)
+  if (has_slope) {
+    parlist$log_sts_slope_sigma_unc <- to_bounded_positive(per_stratum(priors$sts_slope_sigma), ar_sigma_max)
+    parlist$sts_slope_init <- per_stratum(priors$sts_slope_init)
+    parlist$sts_slope_innov <- matrix(stats::rnorm(n_time * n_strata), n_time, n_strata)
+    if (isTRUE(engine$sts_reverting_slope == 1L)) {
+      parlist$sts_slope_phi_unc <- to_signed_unit(per_stratum(priors$sts_slope_phi))
+      parlist$sts_slope_mean <- per_stratum(priors$sts_slope_mean)
+    }
+  }
+  parlist
 }

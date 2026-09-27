@@ -15,6 +15,9 @@
 #' @param model A [model()] object (delay family etc. drive prepare_data()).
 #' @param now As-of date: only events and reports up to `now` are used.  If
 #'   `NULL`, uses `get_now(data)` and falls back to the latest report date.
+#' @param schema Design schema from an earlier fit (`engine$design_schema`), so
+#'   a backtest date or an [update()] rebuilds the same columns, reference
+#'   levels and centring constants.  `NULL` builds a fresh one.
 #' @param revision_mode `"none"`, `"confirmation_only"`, `"retraction_only"` or
 #'   `"both"`, as resolved by [nowcast()] from the `tbl_now`'s `revision_type`
 #'   column.  Anything but `"none"` switches on the revision (cure-model)
@@ -25,7 +28,7 @@
 #' @keywords internal
 #' @noRd
 prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
-                                 revision_mode = "none", ...) {
+                                 revision_mode = "none", schema = NULL, ...) {
   if ("revision_censored" %in% names(list(...))) {
     cli::cli_abort(c(
       "{.arg revision_censored} is not accepted here.",
@@ -38,6 +41,7 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
   event_unit  <- tbl.now::get_event_units(data)
   .validate_tblnow_engine_units(data)
   effect_cols <- tbl.now::get_temporal_effect_cols(data)
+  roles <- .covariate_roles(data)
 
   now <- now %||% tbl.now::get_now(data)
   report_values <- data[[report_col]]
@@ -106,6 +110,18 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
                             "retraction_only" = 0L, 0L)
   has_revision  <- !identical(revision_mode, "none") &&
                      isTRUE(.tblnow_has_revision(data))
+  if (length(roles$revision) > 0L && !has_revision) {
+    cli::cli_inform(c(
+      "i" = "Revision covariates are present but this model has no revision process; they were not used.",
+      "*" = "Add {.code revision = revision_process()} to the {.fn model}, or drop the {.fn as_revision_covariates} tag."
+    ))
+  }
+  if (is_cumulative && length(roles$revision) > 0L) {
+    cli::cli_abort(c(
+      "Row-level revision covariates are not defined for count-cumulative streams.",
+      "i" = "Use revision-date temporal effects, or provide a keyed process-covariate series in a format that covers dates with zero updates."
+    ))
+  }
   resolution_name <- if (resolution_mode == 1L) "confirmation" else "retraction"
   revision_censor_col <- if (has_revision) {
     .tblnow_get_is_censored_revision(data)
@@ -263,20 +279,43 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
   # 1..max_time grid -- including event-times with no observed cases and event-
   # times AFTER the last observation but before `now`.  Computing them from the
   # observed data alone would (incorrectly) leave those rows at zero.
-  X_temporal <- .temporal_effect_matrix(
-    covariate_source, min_event, event_unit, max_time, effect_cols
+  temporal_matrices <- .temporal_effect_matrices(
+    covariate_source, min_event, event_unit, max_time, effect_cols,
+    process_horizon = if (is_cumulative) 2L * cumulative_settlement else 0L,
+    schema = schema[c("delay_calendar", "revision_calendar")]
   )
-  # User covariates (attached via `tbl_now(covariates = ...)` / add_covariates())
-  # are event-level values placed on the same 1..max_time grid, then column-bound
-  # to the temporal effects.  Both feed the epidemic mean as X %*% gamma, shared
-  # by the ordinary and count-cumulative observation models alike.
+  # A revision-date temporal effect with nothing to revise is as inert as a
+  # revision-tagged covariate would be, and it used to pass silently while still
+  # reporting P_revision > 0 on the engine.  Say so, and drop the columns.
+  if (!has_revision &&
+      ncol(temporal_matrices[["revision"]] %||% matrix(0, 0, 0)) > 0L) {
+    cli::cli_inform(c(
+      "i" = "Revision-date temporal effects are attached but this model has no revision process; they were not used.",
+      "*" = "Add {.code revision = revision_process()} to the {.fn model}, or remove them with {.code tbl.now::remove_temporal_effects(date_type = \"revision_date\")}."
+    ))
+    temporal_matrices[["revision"]] <- NULL
+    temporal_matrices$schemas$revision <- .empty_design_schema()
+  }
+  X_temporal <- temporal_matrices$event
+  # Untagged and explicitly event-tagged covariates are placed on the same
+  # 1..max_time grid as event-date temporal effects. Delay- and revision-tagged
+  # covariates are prepared separately below.
   X_covariate <- .covariate_matrix(
-    covariate_source, event_col, min_event, unit_steps, max_time
+    as_of, event_col, min_event, unit_steps, max_time,
+    covariate_cols = roles$event, schema = schema$event_covariate
   )
   X <- if (is.null(X_temporal) && is.null(X_covariate)) NULL
        else cbind(X_temporal %||% matrix(0.0, max_time, 0L),
                   X_covariate %||% matrix(0.0, max_time, 0L))
   if (!is.null(X) && ncol(X) == 0L) X <- NULL
+  # `schema` pins contrasts, reference levels, centring constants and the
+  # surviving columns, so a backtest or an `update()` rebuilds exactly the design
+  # the coefficients were fitted against.
+  cohort_built <- .cohort_covariate_array(
+    as_of, roles$delay, event_col, unit_steps, max_time,
+    strata_cols, cell_levels, schema = schema$delay_cohort
+  )
+  report_cohort <- cohort_built$array
 
   # -- retraction sufficient statistics ----------------------------------------
   # Pooled cure tables (retracted rows by lag, standing rows by report age) per
@@ -311,11 +350,51 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
       weights = row_weights,
       lag_offset = if (resolution_mode == 0L) 0L else 1L,
       resolution_positive = resolution_positive)
+    if (ncol(temporal_matrices$revision %||% matrix(0, max_time, 0L)) > 0L ||
+        length(roles$revision) > 0L) {
+      if (any(report_censored_flag) || any(retract_censored)) {
+        cli::cli_abort(c(
+          "Revision regressions currently require exact report and revision dates.",
+          "i" = "Remove the revision role or resolve the censored dates before fitting."
+        ))
+      }
+      revision_built <- .row_covariate_matrix(as_of_frame, roles$revision,
+                                              schema = schema$revision_row)
+      revision_design <- revision_built$design
+      resolved <- !is.na(retraction_step)
+      positive <- if (is.null(resolution_positive))
+        rep(resolution_mode == 1L, length(resolved)) else resolution_positive
+      retraction$revision_rows <- cbind(
+        cell = ((if (length(strata_cols) > 0)
+          match(cell_string(as_of_frame), cell_levels) else rep(1L, nrow(as_of_frame))) - 1L) *
+          max_time + unit_steps(as_of_frame[[event_col]]) + 1L,
+        stratum = if (length(strata_cols) > 0)
+          match(cell_string(as_of_frame), cell_levels) else rep(1L, nrow(as_of_frame)),
+        resolved = as.integer(resolved),
+        positive = as.integer(positive),
+        lag = ifelse(resolved,
+          retraction_step - unit_steps(as_of_frame[[report_col]]), 0L),
+        age = now_step - unit_steps(as_of_frame[[report_col]]),
+        report_time = unit_steps(as_of_frame[[report_col]]) + 1L,
+        count = row_weights
+      )
+      retraction$revision_row_design <- revision_design
+      retraction$revision_row_schema <- revision_built$schema
+    }
   }
 
   engine <- prepare_data(model, m,
                          m_censored = if (nrow(m_censored) > 0) m_censored else NULL,
                          X = X, d_star = d_star, max_time = max_time,
+                         report_calendar = temporal_matrices[["delay"]],
+                         report_cohort = report_cohort,
+                         revision_calendar = temporal_matrices[["revision"]],
+                         covariate_roles = roles,
+                         design_schema = list(
+                           delay_cohort = cohort_built$schema,
+                           delay_calendar = temporal_matrices$schemas$delay,
+                           revision_calendar = temporal_matrices$schemas$revision
+                         ),
                          num_strata = num_strata, delay_only = delay_only,
                          is_confirmation = FALSE,
                          cumulative_levels = if (is_cumulative)
@@ -385,41 +464,119 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
 #' @keywords internal
 #' @noRd
 .temporal_effect_matrix <- function(data, min_event, event_unit, max_time, effect_cols) {
-  if (length(effect_cols) == 0L) return(NULL)
+  .temporal_effect_matrices(
+    data, min_event, event_unit, max_time, effect_cols
+  )$event
+}
+
+#' Deterministic role-specific temporal-effect matrices over the full grid
+#'
+#' Each matrix is indexed by its own calendar date. Report and revision matrices
+#' are subsequently looked up by destination date inside their hazard models.
+#' Keeping the three matrices separate prevents observation-process effects from
+#' leaking into the epidemic mean.
+#' @keywords internal
+#' @noRd
+.temporal_effect_matrices <- function(data, min_event, event_unit, max_time,
+                                      effect_cols = character(0),
+                                      process_horizon = 0L, schema = NULL) {
   specs <- tryCatch(tbl.now::get_temporal_effects(data), error = function(e) NULL)
-  if (is.null(specs) || length(specs) == 0L) return(NULL)
+  empty <- list(event = NULL, delay = NULL, revision = NULL,
+                schemas = list(delay = .empty_design_schema(),
+                               revision = .empty_design_schema()))
+  if (is.null(specs) || length(specs) == 0L) return(empty)
 
-  grid_dates <- .grid_event_dates(min_event, event_unit, max_time)
-  grid_df <- data.frame(onset = grid_dates, reported = grid_dates)
+  calendar_length <- max_time + as.integer(process_horizon)
+  grid_dates <- .grid_event_dates(min_event, event_unit, calendar_length)
+  grid_df <- data.frame(
+    onset = grid_dates,
+    reported = grid_dates,
+    revised = grid_dates,
+    revision_outcome = rep("confirmed", calendar_length)
+  )
 
+  build_error <- NULL
   built <- tryCatch({
     gtn <- tbl.now::tbl_now(grid_df,
                             event_date  = !!as.symbol("onset"),
                             report_date = !!as.symbol("reported"),
+                            revision_date = !!as.symbol("revised"),
+                            revision_type = !!as.symbol("revision_outcome"),
                             data_type = "linelist", verbose = FALSE)
-    for (spec in specs) gtn <- tbl.now::add_temporal_effects(gtn, spec$t_effects)
+    for (spec in specs) {
+      gtn <- tbl.now::add_temporal_effects(
+        gtn, spec$t_effects, date_type = spec$date_type %||% "event_date"
+      )
+    }
     gtn <- tbl.now::compute_temporal_effects(gtn)
-    as.data.frame(gtn)
-  }, error = function(e) NULL)
+    list(frame = as.data.frame(gtn),
+         columns = tbl.now::get_temporal_effect_cols(gtn))
+  }, error = function(e) {
+    build_error <<- e
+    NULL
+  })
 
   if (is.null(built)) {
-    cli::cli_warn(c("Could not recompute temporal effects on the full grid; using observed-only values.",
-                    "i" = conditionMessage(attr(built, "condition") %||% simpleError(""))))
-    return(NULL)
+    cli::cli_warn(c(
+      "Could not recompute temporal effects on the full grid.",
+      "i" = conditionMessage(build_error)
+    ))
+    return(empty)
   }
-  present <- intersect(effect_cols, names(built))
-  if (length(present) == 0L) return(NULL)
-  # Convert one column at a time. as.matrix.data.frame() first promotes a mixed
-  # factor/numeric frame to character, turning day-of-week labels into NA when
-  # storage.mode is changed to double.
-  X <- vapply(present, function(column) {
-    value <- built[[column]][seq_len(max_time)]
-    if (is.factor(value)) as.numeric(value) else suppressWarnings(as.numeric(value))
-  }, numeric(max_time))
-  if (is.null(dim(X))) X <- matrix(X, ncol = 1L)
-  X[!is.finite(X)] <- 0
-  colnames(X) <- present
-  X
+  built_cols <- intersect(built$columns, names(built$frame))
+  if (length(effect_cols)) built_cols <- intersect(built_cols, effect_cols)
+
+  # One encoder for all three calendars (and for the event covariates): an
+  # unordered day-of-week gets reference-level dummies, an ordered effect keeps
+  # its ordinal score.  Going through .encode_design_column() also keeps the
+  # encoding independent of the session's `options("contrasts")`.
+  make_matrix <- function(prefix) {
+    present <- built_cols[startsWith(built_cols, prefix)]
+    if (!length(present)) return(NULL)
+    encoded <- lapply(present, function(column) {
+      value <- built$frame[[column]][seq_len(calendar_length)]
+      levels_for_column <- if (is.factor(value)) levels(value) else
+        if (is.character(value)) sort(unique(as.character(value[!is.na(value)])))
+        else NULL
+      .encode_design_column(value, column, levels_for_column, is.ordered(value))
+    })
+    encoded <- Filter(Negate(is.null), encoded)
+    if (!length(encoded)) return(NULL)
+    X <- do.call(cbind, encoded)
+    X[!is.finite(X)] <- 0
+    storage.mode(X) <- "double"
+    X
+  }
+  # The event matrix keeps its historical encoding (it feeds `gamma`, the
+  # epidemic mean).  The two observation-process calendars go through the shared
+  # design builder so their contrasts, centring and rank are pinned by a schema
+  # the engine stores -- see R/06_process_design.R.
+  process_matrix <- function(prefix, role, schema) {
+    raw <- make_matrix(prefix)
+    if (is.null(raw)) return(list(matrix = NULL, schema = .empty_design_schema()))
+    frame <- as.data.frame(raw)
+    built <- .process_design(frame, names(frame), role, schema,
+                             standardize = FALSE)
+    if (!ncol(built$design)) return(list(matrix = NULL, schema = built$schema))
+    list(matrix = built$design, schema = built$schema)
+  }
+  delay_built <- process_matrix(".report_", "delay", schema$delay_calendar)
+  revision_built <- process_matrix(".revision_", "revision",
+                                   schema$revision_calendar)
+  # Schemas live in their own sub-list rather than as `delay_schema` /
+  # `revision_schema` siblings: `$` partial-matches, so dropping `$revision`
+  # would otherwise start resolving to `$revision_schema` and hand a schema list
+  # to code expecting a design matrix.
+  list(
+    event = {
+      value <- make_matrix(".event_")
+      if (is.null(value)) NULL else value[seq_len(max_time), , drop = FALSE]
+    },
+    delay = delay_built$matrix,
+    revision = revision_built$matrix,
+    schemas = list(delay = delay_built$schema,
+                   revision = revision_built$schema)
+  )
 }
 
 #' Number of whole event-units from `from` to `to` (0 at `from`).
@@ -441,37 +598,169 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
 
 #' Event-level covariate matrix over the full event grid.
 #'
-#' User covariates attached to a `tbl_now` (via `covariates =` / add_covariates())
-#' are values carried on each observation row.  This places them on the complete
-#' `1..max_time` event-time grid: for each covariate column the value is taken per
-#' event date (they are event-level, so constant within an event date), matched to
-#' the grid, and event-times with no observation are filled with 0.  Returns `NULL`
-#' when the data carry no covariates.
-#' @param data A `tbl_now`.
+#' Event-role covariates are values carried on each observation row. This places
+#' them on the complete `1..max_time` event-time grid: each covariate is encoded
+#' the same way the observation-process designs are -- unordered factors as
+#' reference-level dummies, ordered factors as an ordinal score, numerics as
+#' themselves -- and then matched to the grid by event date (they are
+#' event-level, so constant within an event date). Returns `NULL` when there are
+#' no event covariates.
+#'
+#' Event-times with no observation are filled with zero, which for a factor means
+#' the reference level. That is a statement the data did not make, so it is
+#' warned about: a covariate with gaps belongs in a stratum, or on a complete
+#' grid the package can read.
+#'
+#' @param data The as-of `tbl_now`.
 #' @param event_col Event-date column name.
-#' @param min_event Grid origin (earliest event date).
-#' @param unit_steps Closure mapping a date to its 0-indexed grid position.
+#' @param min_event Grid origin.
+#' @param unit_steps Function mapping a date to its 0-indexed event-time.
 #' @param max_time Grid length.
 #' @keywords internal
 #' @noRd
-.covariate_matrix <- function(data, event_col, min_event, unit_steps, max_time) {
-  covariate_cols <- tryCatch(tbl.now::get_covariates(data), error = function(e) character(0))
-  covariate_cols <- intersect(covariate_cols, names(as.data.frame(data)))
+.covariate_matrix <- function(data, event_col, min_event, unit_steps, max_time,
+                              covariate_cols = NULL, schema = NULL) {
+  frame <- as.data.frame(data)
+  if (is.null(covariate_cols)) {
+    covariate_cols <- tryCatch(tbl.now::get_covariates(data), error = function(e) character(0))
+  }
+  covariate_cols <- intersect(covariate_cols, names(frame))
   if (length(covariate_cols) == 0L) return(NULL)
 
-  observations <- as.data.frame(data)
-  grid_index   <- as.integer(unit_steps(observations[[event_col]])) + 1L      # 1-indexed event-time
-  X <- matrix(0.0, max_time, length(covariate_cols), dimnames = list(NULL, covariate_cols))
-  for (covariate_col in covariate_cols) {
-    covariate_values <- suppressWarnings(as.numeric(observations[[covariate_col]]))
-    valid_rows <- !is.na(covariate_values) & !is.na(grid_index) &
+  # Standardisation is deliberately off: these coefficients are the long-standing
+  # `gamma` block on the epidemic mean, and centring them would silently move
+  # every existing numeric-covariate fit.
+  built <- .process_design(frame, covariate_cols, "event", schema,
+                           standardize = FALSE)
+  row_design <- built$design
+  if (!ncol(row_design)) return(NULL)
+
+  grid_index <- as.integer(unit_steps(frame[[event_col]])) + 1L
+  X <- matrix(0.0, max_time, ncol(row_design),
+              dimnames = list(NULL, colnames(row_design)))
+  filled <- rep(FALSE, max_time)
+  for (column in seq_len(ncol(row_design))) {
+    values <- row_design[, column]
+    valid <- is.finite(values) & !is.na(grid_index) &
       grid_index >= 1L & grid_index <= max_time
-    # One value per event-time (covariates are event-level, so constant within an
-    # event date): the last matching row wins.
-    X[grid_index[valid_rows], covariate_col] <- covariate_values[valid_rows]
+    # One value per event-time; the last matching row wins.
+    X[grid_index[valid], column] <- values[valid]
+    filled[grid_index[valid]] <- TRUE
+  }
+  # Zero-filling a numeric covariate is long-standing documented behaviour.  For
+  # a DUMMY column zero is not "no value", it is the reference level -- a claim
+  # the data never made -- so only that case is worth interrupting the user for.
+  dummy_covariates <- names(Filter(
+    function(column) !is.null(built$schema$levels[[column]]) &&
+      !isTRUE(built$schema$ordered[[column]]),
+    stats::setNames(as.list(built$schema$columns), built$schema$columns)
+  ))
+  if (any(!filled) && length(dummy_covariates)) {
+    missing_times <- sum(!filled)
+    cli::cli_warn(c(
+      "{missing_times} event {cli::qty(missing_times)}time{?s} {?has/have} no observed value for the categorical event {cli::qty(length(dummy_covariates))}covariate{?s} {.val {dummy_covariates}}.",
+      "i" = "Those event times were filled with zero, which reads as the reference level rather than as {.val unknown}.",
+      "*" = "Make the variable a stratum, or supply a value for every event time."
+    ))
   }
   storage.mode(X) <- "double"
   X
+}
+
+#' Cohort covariates indexed by event time and stratum
+#'
+#' Reporting covariates must be known for the complete latent reporting risk
+#' set, not just for the reports that have arrived.  Values may differ between
+#' strata, but must be constant within an event time by stratum cell -- that is
+#' what keeps the marks i.i.d. within a cell, and so keeps `q_empty` equal to a
+#' single `1 - G_R,t(d*)` per cell.  Empty cells are filled only when the
+#' covariate is constant for that stratum (for example, when the covariate is
+#' itself a stratum) or has one unambiguous value at that event time.
+#' @keywords internal
+#' @noRd
+.cohort_covariate_array <- function(data, covariate_cols, event_col, unit_steps,
+                                    max_time, strata_cols, cell_levels,
+                                    schema = NULL) {
+  frame <- as.data.frame(data)
+  n_strata <- length(cell_levels)
+  empty <- list(array = array(0.0, c(max_time, n_strata, 0L)),
+                schema = .empty_design_schema())
+  if (!length(intersect(covariate_cols, names(frame))) && is.null(schema$terms)) {
+    return(empty)
+  }
+
+  built <- .process_design(frame, covariate_cols, "delay", schema)
+  row_design <- built$design
+  if (!ncol(row_design)) return(empty)
+
+  cell_string <- function(tbl) do.call(paste, c(lapply(strata_cols, function(column) {
+    value <- as.character(tbl[[column]])
+    value[is.na(value) | value == ""] <- "missing"
+    value
+  }), sep = "|"))
+  stratum <- if (length(strata_cols)) match(cell_string(frame), cell_levels)
+             else rep(1L, nrow(frame))
+  time <- as.integer(unit_steps(frame[[event_col]])) + 1L
+
+  out <- array(NA_real_, c(max_time, n_strata, ncol(row_design)),
+               dimnames = list(NULL, cell_levels, colnames(row_design)))
+  for (j in seq_len(ncol(row_design))) {
+    for (t in seq_len(max_time)) for (s in seq_len(n_strata)) {
+      at_cell <- which(time == t & stratum == s)
+      values <- unique(row_design[at_cell, j])
+      values <- values[is.finite(values)]
+      if (length(values) > 1L) {
+        cli::cli_abort(c(
+          "Delay covariate {.val {colnames(row_design)[j]}} varies within an event-time by stratum cell.",
+          "i" = "Make the variable a stratum or supply one cohort-level value for every reporting risk set."
+        ))
+      }
+      if (length(values) == 1L) out[t, s, j] <- values
+    }
+    # A stratum-constant covariate (including a stratum variable itself) is known
+    # even at event times with no observed reports.
+    for (s in seq_len(n_strata)) {
+      values <- unique(row_design[stratum == s, j])
+      values <- values[is.finite(values)]
+      if (length(values) == 1L) out[is.na(out[, s, j]), s, j] <- values
+    }
+    # A cohort value shared by all observed strata can fill an otherwise empty
+    # stratum cell at that event time.
+    for (t in seq_len(max_time)) {
+      values <- unique(row_design[time == t, j])
+      values <- values[is.finite(values)]
+      if (length(values) == 1L) out[t, is.na(out[t, , j]), j] <- values
+    }
+    if (anyNA(out[, , j])) {
+      cli::cli_abort(c(
+        "Delay covariate {.val {colnames(row_design)[j]}} is unknown for part of the reporting risk set.",
+        "i" = "Supply cohort-level values for every event-time by stratum cell; unknown values are not filled with zero.",
+        "*" = "A calendar-indexed operational series belongs on the report date as a temporal effect, not on the observation rows."
+      ))
+    }
+  }
+  list(array = out, schema = built$schema)
+}
+
+#' Encode row-level revision covariates without an intercept
+#'
+#' The revision risk set is observable once a report exists, so unlike the
+#' reporting covariates these may vary from report to report.  The likelihood is
+#' then CONDITIONAL on them, which is only meaningful if they are unrelated to
+#' whether the report was made at all.
+#' @keywords internal
+#' @noRd
+.row_covariate_matrix <- function(data, covariate_cols, schema = NULL) {
+  frame <- as.data.frame(data)
+  for (column in intersect(covariate_cols, names(frame))) {
+    if (anyNA(frame[[column]])) {
+      cli::cli_abort(c(
+        "Revision covariate {.val {column}} is missing for pending or resolved reports.",
+        "i" = "Revision covariates must be known when the report enters the revision risk set."
+      ))
+    }
+  }
+  .process_design(frame, covariate_cols, "revision", schema)
 }
 
 #' Validate the tbl.now date grids the engine can consume

@@ -42,7 +42,17 @@ test_that("revision nowcasting composes with built-in epidemic processes", {
   processes <- list(
     hsgp = hsgp_epidemic(alpha = 0.5, ell = 5, num_basis = 6),
     ar = ar1_epidemic(phi = 0.7, sigma = 0.1),
-    sir = sir_epidemic(R0 = 2, gamma = 0.2, N_eff = 0.8,
+    # SIR's parameters are given as PRIORS, not as fixed values.  Passing the
+    # three numbers directly used to be inert -- fixed values in an epidemic slot
+    # were silently discarded and the parameter estimated anyway -- so this read
+    # like a pinned SIR while actually fitting a free one.  Now that a number is
+    # honoured, pinning R0, gamma and N_eff together with no beta random walk
+    # leaves the trajectory fully determined and nothing for the fit to move,
+    # which is not what this test is about: the axis under test is that the
+    # revision layer COMPOSES with each process.
+    sir = sir_epidemic(R0 = lognormal_prior(log(2), 0.2),
+                       gamma = beta_prior(2, 8),
+                       N_eff = beta_prior(8, 2),
                        N_pop = 100000, use_beta_rw_trend = FALSE)
   )
 

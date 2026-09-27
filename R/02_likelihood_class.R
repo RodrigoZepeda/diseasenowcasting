@@ -29,7 +29,7 @@ poisson_likelihood_class <- S7::new_class(
     mu = .valid_param_slot   # log-scale mean intercept
   ),
   constructor = function(mu = numeric(0)) {
-    S7::new_object(S7::S7_object(), name = "poisson", num_id = 0L, mu = mu)
+    S7::new_object(likelihood_class(name = "poisson", num_id = 0L), mu = mu)
   }
 )
 
@@ -44,7 +44,11 @@ nb_likelihood_class <- S7::new_class(
     phi = .valid_param_slot   # NB dispersion 1/size (> 0)
   ),
   constructor = function(mu = numeric(0), phi = lognormal_prior(log(0.1), 1.5)) {
-    S7::new_object(S7::S7_object(), name = "nb", num_id = 1L, mu = mu, phi = phi)
+    S7::new_object(likelihood_class(name = "nb", num_id = 1L), mu = mu, phi = phi)
+  },
+  validator = function(self) {
+    .check_fixed_domain(self@phi, "phi", "nb_likelihood", "the positive line",
+                        function(v) v > 0)
   }
 )
 
@@ -52,11 +56,11 @@ nb_likelihood_class <- S7::new_class(
 #'
 #' Count observation model for the (truncation-corrected) case counts.
 #'
-#' @param mu  Log-scale mean intercept prior (or fixed numeric).
-#' @param phi Negative-binomial overdispersion prior (or fixed numeric);
-#'   NB only.  `phi` is the dispersion, the reciprocal of the NB size: counts
-#'   with mean \eqn{\mu} have variance \eqn{\mu + \phi \mu^2}, i.e.
-#'   `rnbinom(size = 1 / phi, mu = mu)`.  Larger `phi` means more
+#' @param mu  Log-scale mean intercept prior, or a number to hold it there.
+#' @param phi Negative-binomial overdispersion prior, or a number to hold it
+#'   there (> 0); NB only.  `phi` is the dispersion, the reciprocal of the NB
+#'   size: counts with mean \eqn{\mu} have variance \eqn{\mu + \phi \mu^2},
+#'   i.e. `rnbinom(size = 1 / phi, mu = mu)`.  Larger `phi` means more
 #'   overdispersion and wider intervals; `phi -> 0` is the Poisson.  This is the
 #'   *only* place to set the overdispersion prior — [nowcast()] reads it from
 #'   the model and does not accept its own `phi` argument.
@@ -65,7 +69,7 @@ nb_likelihood_class <- S7::new_class(
 #' `phi ~ lognormal_prior(log(0.1), 1.5)`: a median size of 10 with a 95%
 #' interval for the size of roughly 0.5 to 190.  On long series the data
 #' dominate this prior; on short series (a few weeks of data) it sets the
-#' interval width.  The default up to version 2.4.0 was
+#' interval width.  The default up to version 2.5.0 was
 #' `lognormal_prior(log(20), 0.5)`, which centred the size on 0.05 (see
 #' `NEWS.md`).
 #'
@@ -78,6 +82,9 @@ nb_likelihood_class <- S7::new_class(
 #' nb_likelihood(phi = lognormal_prior(log(0.5), 0.5))
 #' # Close to Poisson (size around 100):
 #' nb_likelihood(phi = lognormal_prior(log(0.01), 0.5))
+#' # A number holds the parameter at that value instead of estimating it
+#' # (phi = 0.05 is size 20):
+#' nb_likelihood(phi = 0.05)
 #'
 #' @name likelihood
 NULL

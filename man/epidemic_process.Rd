@@ -59,9 +59,17 @@ sir_epidemic(
 An \code{epidemic_process_class} object.
 }
 \description{
-Specify the latent epidemic process.  Parameter slots accept a fixed
-numeric, a \code{prior_class}, or \code{numeric(0)} for the default prior.  The
-log-incidence mean intercept is inherited from the likelihood (\code{mu}).
+Specify the latent epidemic process.  Parameter slots accept a \code{prior_class}
+(estimate it), a fixed numeric (hold it at that value), or \code{numeric(0)} for
+the default prior.  The log-incidence mean intercept is inherited from the
+likelihood (\code{mu}).
+}
+\details{
+A fixed value is held exactly: the parameter is seeded there, dropped from the
+optimisation, and its prior and Jacobian terms drop with it.  For a stratified
+fit, supply one value to share across strata or one per stratum.  \code{coef()}
+reports a held parameter; \code{parameters()} does not, because it reports
+estimates with credible intervals and a held parameter has none.
 }
 \section{Default priors}{
 

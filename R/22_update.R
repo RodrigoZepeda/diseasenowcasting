@@ -38,7 +38,12 @@
   }
   init <- list()
   per_stratum <- c("mu_intercept", "ar_phi_unc", "log_ar_sigma_unc",
-                   "log_R0", "u_gamma", "u_neff")
+                   "log_R0", "u_gamma", "u_neff",
+                   "log_arima_sigma_unc", "arima_drift",
+                   "log_ets_sigma_unc", "ets_beta_unc", "ets_damp_unc",
+                   "ets_drift", "ets_slope_init",
+                   "log_sts_level_sigma_unc", "log_sts_slope_sigma_unc",
+                   "sts_slope_phi_unc", "sts_slope_mean", "sts_slope_init")
   for (nm in intersect(per_stratum, names(old_parlist)))
     init[[nm]] <- resize(old_parlist[[nm]], n_strata)
   # Shared scalar parameters carry over unchanged.
@@ -58,8 +63,23 @@
     init$ar_innov <- resize_strata(old_parlist$ar_innov, new_engine$max_time)
   if (!is.null(old_parlist$basis_coefs))
     init$basis_coefs <- resize_strata(old_parlist$basis_coefs, new_engine$num_basis)
+  # Time-series trends: innovations grow with the series, the AR/MA partial
+  # autocorrelation blocks do not.
+  for (nm in intersect(c("arima_innov", "ets_innov", "sts_level_innov", "sts_slope_innov"),
+                       names(old_parlist)))
+    init[[nm]] <- resize_strata(old_parlist[[nm]], new_engine$max_time)
+  if (!is.null(old_parlist$arima_ar_pacf_unc))
+    init$arima_ar_pacf_unc <- resize_strata(old_parlist$arima_ar_pacf_unc,
+                                            as.integer(new_engine$arima_p %||% 0L))
+  if (!is.null(old_parlist$arima_ma_pacf_unc))
+    init$arima_ma_pacf_unc <- resize_strata(old_parlist$arima_ma_pacf_unc,
+                                            as.integer(new_engine$arima_q %||% 0L))
   if (!is.null(old_parlist$delay_logits))
     init$delay_logits <- resize(old_parlist$delay_logits, as.integer(new_engine$np_model_length))
+  if (!is.null(old_parlist$delay_beta))
+    init$delay_beta <- resize(old_parlist$delay_beta, as.integer(new_engine$P_delay %||% 0L))
+  if (!is.null(old_parlist$revision_beta))
+    init$revision_beta <- resize(old_parlist$revision_beta, as.integer(new_engine$P_revision %||% 0L))
   init
 }
 
@@ -94,6 +114,7 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
   # than substituting the package defaults).  tbl.now's internal data-shaping
   # warnings (e.g. non-unique rows) are not actionable here, so they are muffled.
   orig_spec   <- tryCatch(tbl.now::get_temporal_effects(object@data), error = function(e) NULL)
+  orig_roles  <- .covariate_roles(object@data)
   had_effects <- !is.null(orig_spec) && length(orig_spec) > 0L
   strip_te <- function(d) {
     # Avoid calling remove_temporal_effects() when there is nothing to remove.
@@ -108,13 +129,23 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
     m <- stats::update(strip_te(object@data), new_data = strip_te(new_data))
     if (had_effects) {
       m <- tryCatch({
-        for (s in orig_spec) m <- tbl.now::add_temporal_effects(m, s$t_effects)
+        for (s in orig_spec) m <- tbl.now::add_temporal_effects(
+          m, s$t_effects, date_type = s$date_type %||% "event_date"
+        )
         tbl.now::compute_temporal_effects(m)
       }, error = function(e) m)
     }
+    for (role in names(orig_roles)) for (column in intersect(orig_roles[[role]], names(m))) {
+      m[[column]] <- .tag_covariate_role(m[[column]], role)
+    }
     m
   })
+  # Reuse the fitted design schema: an update continues the SAME fit, so its
+  # coefficients must keep meaning the same columns.  (A backtest deliberately
+  # does not do this -- each as-of date may only use the design its own data
+  # support, and replaying a later schema would leak.)
   prepared <- prepare_from_tbl_now(merged, object@model, now = now, delay_only = FALSE,
+                                   schema = object@engine$design_schema,
                                    revision_mode = object@revision_mode)
   engine   <- prepared$data
   engine$min_event <- prepared$min_event
@@ -238,11 +269,19 @@ extreme_values <- function(nc) {
     eu  <- tbl.now::get_event_units(merged); mn <- min(merged[[ev]], na.rm = TRUE)
     new_rep <- which(merged[[rp]] > object@now)
     if (length(new_rep) == 0L) NULL else {
-      d_u <- .unit_steps(mn, merged[[rp]][new_rep], eu) - .unit_steps(mn, merged[[ev]][new_rep], eu)
-      d_u <- d_u[is.finite(d_u) & d_u >= 0]
+      e_u <- .unit_steps(mn, merged[[ev]][new_rep], eu)
+      d_u <- .unit_steps(mn, merged[[rp]][new_rep], eu) - e_u
+      usable <- is.finite(d_u) & d_u >= 0 & is.finite(e_u)
+      d_u <- d_u[usable]; e_u <- e_u[usable]
       if (length(d_u) == 0L) NULL else {
-        tab <- as.data.frame(table(delay = d_u), stringsAsFactors = FALSE)
-        data.frame(delay = as.numeric(tab$delay), weight = as.numeric(tab$Freq))
+        # Carry the event time: with a reporting regression the delay law is
+        # cohort-specific, so surprise() needs to know which cohort each delay
+        # came from (see .tilted_delay_fns()).
+        tab <- stats::aggregate(list(weight = rep(1, length(d_u))),
+                                list(delay = d_u, event_index = e_u), sum)
+        data.frame(delay = as.numeric(tab$delay),
+                   event_index = as.numeric(tab$event_index),
+                   weight = as.numeric(tab$weight))
       }
     }
   }, error = function(e) NULL)

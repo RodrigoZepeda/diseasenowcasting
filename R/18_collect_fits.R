@@ -29,6 +29,10 @@
       convergence = integer(), objective = numeric(), max_gradient = numeric(),
       projected_gradient = numeric(), quadratic_gap = numeric(),
       hessian_positive_definite = logical(), hessian_status = character(),
+      log_mean_upper_bound = numeric(), log_mean_headroom = numeric(),
+      log_mean_cap_bound = logical(), log_mean_cap_reportable = logical(),
+      arma_ridge = logical(), arma_ridge_correlation = numeric(),
+      log_mean_upper_bound_legacy = numeric(),
       reasons = character(),
       stringsAsFactors = FALSE
     ))
@@ -46,6 +50,14 @@
       quadratic_gap = summary$quadratic_gap,
       hessian_positive_definite = summary$hessian_positive_definite,
       hessian_status = summary$hessian_status,
+      log_mean_upper_bound = summary$log_mean_upper_bound,
+      log_mean_headroom = summary$log_mean_headroom,
+      log_mean_cap_bound = summary$log_mean_cap_bound,
+      log_mean_cap_reportable = summary$log_mean_cap_reportable %||%
+        summary$log_mean_cap_bound,
+      arma_ridge = isTRUE(summary$arma_ridge),
+      arma_ridge_correlation = summary$arma_ridge_correlation %||% NA_real_,
+      log_mean_upper_bound_legacy = summary$log_mean_upper_bound_legacy,
       reasons = paste(summary$reasons, collapse = "; "),
       stringsAsFactors = FALSE
     )
@@ -64,7 +76,10 @@
   diagnostics$collection_warning_emitted <- FALSE
 
   if (isTRUE(warn)) {
-    retained_bad <- diagnostics$retained_fit_diagnostics$status != "pass"
+    # `adequate`, not `status`: a fit whose only complaint is the `log_mean`
+    # ceiling has converged, and gets its own warning below rather than being
+    # filed under "optimizer adequacy".
+    retained_bad <- !diagnostics$retained_fit_diagnostics$adequate
     problems <- character()
     if (diagnostics$excluded_K > 0L) {
       problems <- c(
@@ -94,6 +109,28 @@
         "i" = "Run {.code fit_check(result, warn = FALSE)} for retained-fit details."
       ))
     }
+    # The ARMA ridge warns here as well as in `fit_check()`, for the same reason
+    # the cap does: a caller who only runs `nowcast()` must still hear about it.
+    ridged <- which(diagnostics$retained_fit_diagnostics$arma_ridge)
+    if (length(ridged)) {
+      .warn_arma_ridge(
+        diagnostics$retained_fit_diagnostics$arma_ridge_correlation[ridged],
+        n_fits = nrow(diagnostics$retained_fit_diagnostics),
+        context = paste("retained", rung, "fit")
+      )
+    }
+    # count-cumulative fits are excluded; see `.joint_fit_diagnostic()`
+    capped <- which(diagnostics$retained_fit_diagnostics$log_mean_cap_reportable)
+    if (length(capped)) {
+      .warn_log_mean_cap(
+        diagnostics$retained_fit_diagnostics$log_mean_headroom[capped],
+        diagnostics$retained_fit_diagnostics$log_mean_upper_bound[capped],
+        n_fits = nrow(diagnostics$retained_fit_diagnostics),
+        context = paste("retained", rung, "fit"),
+        legacy_bound =
+          diagnostics$retained_fit_diagnostics$log_mean_upper_bound_legacy[capped]
+      )
+    }
   }
 
   list(
@@ -116,8 +153,10 @@
   retained <- diagnostics$retained_fit_diagnostics
   # A degraded retained fit has already generated the collection warning. Its
   # sampling regularization remains visible in `fit_check()` without producing
-  # a second warning for the same final fit.
-  if (!is.null(retained) && any(retained$status != "pass")) {
+  # a second warning for the same final fit.  The test is optimizer adequacy,
+  # not `status`: a fit whose only complaint is the `log_mean` ceiling has not
+  # produced that warning, and its regularized precision is separate news.
+  if (!is.null(retained) && any(!retained$adequate)) {
     return(invisible(FALSE))
   }
   regularized_count <- sum(vapply(
@@ -229,7 +268,12 @@
     delay_engine <- prepare_data(
       model, m, X = engine$X,
       d_star = matrix(engine$d_star, ncol = 1),
-      max_time = max_time, delay_only = TRUE
+      max_time = max_time, delay_only = TRUE,
+      num_strata = engine$num_strata,
+      report_calendar = if (ncol(engine$report_calendar) > 0L)
+        engine$report_calendar else NULL,
+      report_cohort = if (dim(engine$report_cohort)[3L] > 0L)
+        engine$report_cohort else NULL
     )
     stage1 <- tryCatch(
       fit(
@@ -252,20 +296,24 @@
     }
 
     if (!is.null(stage1) && .fit_is_adequate(stage1)) {
-      logits_mode <- as.numeric(stage1$delay_logits)
-      precision <- methods::as(
-        stage1$obj$he(logits_mode), "sparseMatrix"
-      ) / np_spread
-      logit_draws <- .sample_mvnorm_precision(logits_mode, precision, K)
+      # One draw over the whole Stage-1 vector: with a reporting regression that
+      # is the simplex logits AND the hazard coefficients, which are correlated.
+      n_delay_covariates <- as.integer(engine$P_delay %||% 0L)
+      stage1_draws <- .stage1_joint_draws(stage1, K, spread = np_spread)
+      logit_rows <- which(rownames(stage1_draws) == "delay_logits")
+      beta_rows <- which(rownames(stage1_draws) == "delay_beta")
       warm_epidemic_inits <- warm_inits[
-        setdiff(names(warm_inits), "delay_logits")
+        setdiff(names(warm_inits), c("delay_logits", "delay_beta"))
       ]
       collected <- list()
       for (k in seq_len(K)) {
         diagnostics$attempted_K <- diagnostics$attempted_K + 1L
-        exp_logits <- exp(logit_draws[, k])
+        exp_logits <- exp(stage1_draws[logit_rows, k])
         imputed_simplex <- c(exp_logits, 1) / (sum(exp_logits) + 1)
         imputation_priors <- fix_param(priors, "delay_probs", imputed_simplex)
+        if (n_delay_covariates > 0L)
+          imputation_priors$delay_beta_fixed <-
+            as.numeric(stage1_draws[beta_rows, k])
         fit_error <- NULL
         imputation_fit <- tryCatch(
           fit(
@@ -310,8 +358,15 @@
     stage1_error <- NULL
     delay_fit <- tryCatch({
       window <- .window_delay_m(m, max_time, delay_window)
+      windowed <- .window_report_designs(engine, window$since)
+      # `num_strata` has to be carried: a stratum with no reports inside the
+      # window would otherwise shrink the engine and no longer match the cohort
+      # design sliced above.
       delay_engine <- prepare_data(
-        model, window$m, max_time = window$max_time, delay_only = TRUE
+        model, window$m, max_time = window$max_time, delay_only = TRUE,
+        num_strata = engine$num_strata,
+        report_calendar = windowed$report_calendar,
+        report_cohort = windowed$report_cohort
       )
       fit(
         model, delay_engine, priors = default_priors(model, delay_engine),
@@ -343,19 +398,37 @@
   is_gengamma <- model@delay@num_id == 3L
 
   if (!is.null(delay_estimate) && !is.null(warm_inits)) {
-    spread_mu    <- max(floor_mu, if (is.finite(delay_estimate$mu_sd)) delay_estimate$mu_sd else 0)
-    spread_sigma <- max(floor_sig_frac * delay_estimate$sigma,
-                        if (is.finite(delay_estimate$sigma_sd)) delay_estimate$sigma_sd else 0)
-    imputed_mu    <- rnorm(K, delay_estimate$mu, spread_mu)
-    imputed_sigma <- pmax(0.05, rnorm(K, delay_estimate$sigma, spread_sigma))
+    n_delay_covariates <- as.integer(engine$P_delay %||% 0L)
+    imputations <- if (n_delay_covariates > 0L) {
+      # The reporting baseline and its hazard coefficients are one process, so
+      # they are drawn together; see .stage1_imputations().
+      .stage1_imputations(delay_fit, K, n_delay_covariates, is_gengamma,
+                          floor_mu, floor_sig_frac)
+    } else {
+      # Untouched stationary path: independent normals with the tuned floors.
+      spread_mu    <- max(floor_mu, if (is.finite(delay_estimate$mu_sd)) delay_estimate$mu_sd else 0)
+      spread_sigma <- max(floor_sig_frac * delay_estimate$sigma,
+                          if (is.finite(delay_estimate$sigma_sd)) delay_estimate$sigma_sd else 0)
+      imputed_mu    <- rnorm(K, delay_estimate$mu, spread_mu)
+      imputed_sigma <- pmax(0.05, rnorm(K, delay_estimate$sigma, spread_sigma))
+      lapply(seq_len(K), function(k) list(
+        delay_mu = imputed_mu[k], delay_sigma = imputed_sigma[k],
+        delay_Q = delay_estimate$shape_Q %||% NA_real_,
+        delay_beta = numeric(0)
+      ))
+    }
     warm_epidemic_inits <- warm_inits[setdiff(names(warm_inits),
-                                              c("delay_mu", "log_delay_sigma_excess", "delay_Q"))]
+                                              c("delay_mu", "log_delay_sigma_excess",
+                                                "delay_Q", "delay_beta"))]
     collected <- list()
     for (k in seq_len(K)) {
-      imputation_priors <- fix_param(fix_param(priors, "delay_mu", imputed_mu[k]),
-                                     "delay_sigma", imputed_sigma[k])
-      if (is_gengamma && is.finite(delay_estimate$shape_Q %||% NA))
-        imputation_priors <- fix_param(imputation_priors, "delay_Q", delay_estimate$shape_Q)
+      imputation <- imputations[[k]]
+      imputation_priors <- fix_param(fix_param(priors, "delay_mu", imputation$delay_mu),
+                                     "delay_sigma", imputation$delay_sigma)
+      if (is_gengamma && is.finite(imputation$delay_Q %||% NA))
+        imputation_priors <- fix_param(imputation_priors, "delay_Q", imputation$delay_Q)
+      if (n_delay_covariates > 0L)
+        imputation_priors$delay_beta_fixed <- imputation$delay_beta
       diagnostics$attempted_K <- diagnostics$attempted_K + 1L
       fit_error <- NULL
       imputation_fit <- tryCatch(
@@ -436,7 +509,7 @@
 #'   x n_strata]` array (or NULL when unstratified)).
 #' @keywords internal
 #' @noRd
-.pool_fit_draws <- function(fits, target, n_draws = 200L) {
+.pool_fit_draws <- function(fits, target, n_draws = 200L, forecast = NULL) {
   # Draw from each fit separately, then stack the draws.  For a one-stage fit
   # there is a single block; for two-stage there is one block per imputation, and
   # stacking them pools the delay uncertainty across imputations.
@@ -447,8 +520,11 @@
   estimand <- reconstruction <- NULL
   regularization_blocks <- vector("list", length(fits))
   n_strata <- 1L
+  forecast_blocks <- vector("list", length(fits))
   for (fit_index in seq_along(fits)) {
-    fit_draws <- .nowcast_draws(fits[[fit_index]], target = target, n_draws = n_draws)
+    fit_draws <- .nowcast_draws(fits[[fit_index]], target = target,
+                                n_draws = n_draws, forecast = forecast)
+    forecast_blocks[[fit_index]] <- fit_draws$forecast
     nowcast_blocks[[fit_index]] <- fit_draws$M
     lambda_blocks[[fit_index]]  <- fit_draws$lambda_draws
     strata_blocks[[fit_index]]  <- fit_draws$M_strata
@@ -481,6 +557,12 @@
        estimand = estimand,
        cumulative_reconstruction = reconstruction,
        negative_projection_count = projection_count,
+       forecast = if (!is.null(forecast)) list(
+         strata = Reduce(abind_draws, lapply(forecast_blocks, `[[`, "strata")),
+         lambda = Reduce(abind_draws, lapply(forecast_blocks, `[[`, "lambda")),
+         nowcast_strata = Reduce(abind_draws,
+                                 lapply(forecast_blocks, `[[`, "nowcast_strata"))
+       ),
        laplace_sampling = list(
          any_regularized = any(vapply(
            regularization_blocks,

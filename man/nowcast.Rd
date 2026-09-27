@@ -123,8 +123,9 @@ the revision block remains downstream of a report.
 
 The negative-binomial overdispersion prior is \strong{not} an argument of
 \code{nowcast()}.  Set it on the likelihood instead, e.g.
-\code{model(nb_likelihood(phi = lognormal_prior(log(5), 0.5)), ...)}.  The default
-\code{nb_likelihood()} already uses \code{lognormal_prior(log(20), 0.5)}.
+\code{model(nb_likelihood(phi = lognormal_prior(log(0.5), 0.5)), ...)}.  \code{phi} is
+the dispersion \code{1 / size}; the default \code{nb_likelihood()} uses
+\code{lognormal_prior(log(0.1), 1.5)} (see \link{likelihood}).
 }
 
 \examples{

@@ -86,10 +86,14 @@ test_that(".temporal_effect_matrix spans the full grid and matches wday", {
   expect_equal(nrow(X), prep$data$max_time)
   expect_false(any(rowSums(abs(X)) == 0))    # every event-time has covariates
 
-  # day-of-week column equals lubridate-style wday on the grid
+  # Day of week is reference-coded as a categorical effect on the grid.
   grid <- as.Date("2020-01-01") + (seq_len(prep$data$max_time) - 1L)
-  expect_equal(as.numeric(X[, ".event_day_of_week"]),
-               as.numeric(as.POSIXlt(grid)$wday + 1))
+  dow_columns <- grep("^\\.event_day_of_week\\[", colnames(X), value = TRUE)
+  expect_length(dow_columns, 6L)
+  for (column in dow_columns) {
+    level <- sub("^\\.event_day_of_week\\[(.*)\\]$", "\\1", column)
+    expect_equal(as.numeric(X[, column]), as.numeric(weekdays(grid) == level))
+  }
 })
 
 test_that("nowcast works when there are no recent observations before `now`", {

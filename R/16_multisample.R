@@ -24,7 +24,28 @@
   keep <- m[, 1] >= since
   mw <- m[keep, , drop = FALSE]
   mw[, 1] <- mw[, 1] - since + 1L
-  list(m = mw, max_time = as.integer(max_time - since + 1L))
+  # `since` is returned because a reporting regression has to be windowed too:
+  # its calendar and cohort designs are indexed on the FULL event grid, and the
+  # window re-indexes time, so the caller must slice rows `since..max_time` to
+  # keep destination dates lined up with the re-indexed cohorts.
+  list(m = mw, max_time = as.integer(max_time - since + 1L), since = since)
+}
+
+#' Slice a reporting regression's designs onto a Stage-1 window
+#'
+#' Window cohort `t_w` is global event time `since + t_w - 1`, and its bin `k`
+#' lands on global destination `since + t_w + k - 2`.  Dropping the first
+#' `since - 1` calendar rows makes that the same arithmetic in window indices.
+#' @keywords internal
+#' @noRd
+.window_report_designs <- function(engine, since) {
+  rows <- since:engine$max_time
+  list(
+    report_calendar = if (ncol(engine$report_calendar) > 0L)
+      engine$report_calendar[rows, , drop = FALSE] else NULL,
+    report_cohort = if (dim(engine$report_cohort)[3L] > 0L)
+      engine$report_cohort[rows, , , drop = FALSE] else NULL
+  )
 }
 
 #' Two-stage multiple-imputation nowcast
@@ -44,7 +65,8 @@
 #'   covariance scaled by `np_spread`).  Default 1 (the raw, well-informed
 #'   full-series posterior); values > 1 widen the simplex spread.
 #' @param n_draws_per Posterior nowcast draws per imputation.
-#' @param phi NB overdispersion prior (default `lognormal_prior(log(20), 0.5)`).
+#' @param phi Optional NB overdispersion prior that overrides the model's
+#'   (see [likelihood]).  The default `NULL` uses the likelihood's `phi`.
 #' @param probs Quantile probabilities to report.
 #' @param seed Optional RNG seed.
 #' @returns A list with `quantiles`, `median`, pooled `draws`, the `rung` used
@@ -58,7 +80,7 @@ nowcast_twostage <- function(model, m, X = NULL, d_star = NULL, max_time = NULL,
                              floor_mu = 0.08, floor_sig_frac = 0.08,
                              np_spread = 1,
                              n_draws_per = 200L,
-                             phi = lognormal_prior(log(20), 0.5),
+                             phi = NULL,
                              probs = c(0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975),
                              seed = sample.int(.Machine$integer.max, 1)) {
   if (!is.null(seed)) set.seed(seed)
@@ -103,4 +125,102 @@ nowcast_twostage <- function(model, m, X = NULL, d_star = NULL, max_time = NULL,
     observed = if (is.matrix(case_counts)) rowSums(case_counts)[target] else case_counts[target],
     fit_diagnostics = collected$diagnostics
   )
+}
+
+# =============================================================================
+# Stage-1 imputation draws
+# =============================================================================
+# Stage 2 hard-fixes the reporting process at K imputed values, so the draws ARE
+# the delay uncertainty the pooled nowcast carries.  There are two ways to make
+# them, and which one is used depends only on whether a reporting regression is
+# active:
+#
+#   stationary  independent normals on (delay_mu, delay_sigma) with the tuned
+#               `floor_mu` / `floor_sig_frac` spreads.  Left exactly as it was:
+#               the published benchmark and the convergence behaviour on the
+#               real datasets were tuned against this, and it is not this
+#               feature's business to move them.
+#
+#   regression  one draw from the Stage-1 joint Laplace over the whole free
+#               parameter vector.  `delay_beta` and the baseline are strongly
+#               correlated a posteriori -- a weekend effect and a wider sigma
+#               explain overlapping variation in the same delays -- so drawing
+#               them independently would misstate the propagated uncertainty.
+#               The floors survive as a MINIMUM marginal spread.
+# =============================================================================
+
+#' Draw the whole Stage-1 parameter vector from its joint Laplace
+#'
+#' Draws are taken on the UNCONSTRAINED scale the objective optimises, which is
+#' also what retires the `pmax(0.05, .)` truncation the natural-scale draws
+#' needed: `delay_sigma = 0.01 + exp(log_delay_sigma_excess)` is positive by
+#' construction.
+#' @param delay_fit A Stage-1 `fit()` result (needs `$obj`).
+#' @param K Number of imputations.
+#' @param spread Divides the precision, widening the draws (as `np_spread` does).
+#' @returns A `[n_parameter x K]` matrix with parameter names as rownames.
+#' @keywords internal
+#' @noRd
+.stage1_joint_draws <- function(delay_fit, K, spread = 1) {
+  mode <- delay_fit$obj$env$last.par.best
+  precision <- methods::as(delay_fit$obj$he(mode), "sparseMatrix") / spread
+  draws <- .sample_mvnorm_precision(as.numeric(mode), precision, K)
+  rownames(draws) <- names(mode)
+  draws
+}
+
+#' Widen selected coordinates to a minimum marginal spread
+#'
+#' Scaling one coordinate's deviations from the mode multiplies its marginal SD
+#' and leaves the correlation matrix alone, so the tuned floors can be imposed
+#' without discarding the joint structure that made the draw worth taking.
+#' @param minimum_sd Named numeric: parameter name -> smallest acceptable SD.
+#' @keywords internal
+#' @noRd
+.inflate_marginal_spread <- function(draws, minimum_sd) {
+  centre <- rowMeans(draws)
+  for (parameter in names(minimum_sd)) {
+    rows <- which(rownames(draws) == parameter)
+    if (!length(rows) || !is.finite(minimum_sd[[parameter]])) next
+    observed <- apply(draws[rows, , drop = FALSE], 1L, stats::sd)
+    widen <- pmax(1, minimum_sd[[parameter]] / pmax(observed, 1e-12))
+    draws[rows, ] <- centre[rows] +
+      (draws[rows, , drop = FALSE] - centre[rows]) * widen
+  }
+  draws
+}
+
+#' Turn Stage-1 draws into the per-imputation values Stage 2 fixes
+#'
+#' Parameters Stage 1 held fixed never appear in its draw, so they fall back to
+#' the fitted value.
+#' @keywords internal
+#' @noRd
+.stage1_imputations <- function(delay_fit, K, n_delay_covariates, is_gengamma,
+                                floor_mu, floor_sig_frac) {
+  fitted_sigma <- delay_fit$delay_sigma
+  # A floor stated on the natural sigma scale becomes, by the delta method,
+  # floor / (sigma - 0.01) on the log-excess scale the objective uses.
+  minimum_sd <- c(
+    delay_mu = floor_mu,
+    log_delay_sigma_excess = if (is.finite(fitted_sigma) && fitted_sigma > 0.02)
+      floor_sig_frac * fitted_sigma / (fitted_sigma - 0.01) else NA_real_
+  )
+  draws <- .inflate_marginal_spread(.stage1_joint_draws(delay_fit, K), minimum_sd)
+  value <- function(parameter, column, fallback) {
+    rows <- which(rownames(draws) == parameter)
+    if (!length(rows)) return(fallback)
+    draws[rows, column]
+  }
+  lapply(seq_len(K), function(k) list(
+    delay_mu = value("delay_mu", k, delay_fit$delay_mu),
+    delay_sigma = {
+      excess <- value("log_delay_sigma_excess", k, NA_real_)
+      if (is.na(excess)) fitted_sigma else 0.01 + exp(excess)
+    },
+    delay_Q = if (is_gengamma)
+      .gengamma_shape_transform(value("delay_Q", k, NA_real_))$shape_Q else NA_real_,
+    delay_beta = if (n_delay_covariates > 0L)
+      as.numeric(value("delay_beta", k, rep(0, n_delay_covariates))) else numeric(0)
+  ))
 }

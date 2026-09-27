@@ -41,6 +41,491 @@ The default is now `lognormal_prior(log(0.1), 1.5)`: a median size of 10, with a
   `nb_likelihood()` default instead of `exponential_prior(1)`.
 
 
+# 2.5.0
+
+## `forecast()`: carrying a nowcast past `now`
+
+`forecast(fit, h = 1)` extends a fitted nowcast `h` event times past `now`
+without refitting. After `now` nothing has been reported, so those event times
+contribute nothing to the likelihood and the posterior of the epidemic there is
+the fitted process's own transition from its posterior at `now`. The forecast
+therefore reuses the nowcast's Laplace draws, runs each latent recursion `h`
+more steps with fresh standard-normal innovations, and applies the same
+observation model. The nowcast and forecast are one joint draw.
+
+* Every recursive epidemic process forecasts: `ar1_epidemic()`,
+  `arima_epidemic()`, `ets_epidemic()`, `sts_epidemic()`, the random walks,
+  `theta_epidemic()` and `sir_epidemic()`. `hsgp_epidemic()` extrapolates up
+  to the edge of its domain and refuses a longer horizon; a `custom_epidemic()`
+  cannot be extended.
+* With a report-level `revision_process()`, `category` selects the
+  `"overall"`, `"confirmed"`, `"retracted"` or `"pending"` reports by their
+  eventual status. Gross reports are one negative-binomial cloud and the
+  genuine share is binomial in `p`, so the categories add up draw by draw.
+* Count-cumulative fits forecast the settled `C_t(H)` by running the fitted
+  signed updates from an empty level. The forecast is only as good as the scale
+  of the fitted latent incidence: the level composite
+  (`observation = "cumulative"`) ties it to the published levels, whereas the
+  hurdle observations can fit it well below them.
+* Temporal effects are recomputed for the new dates; other event covariates
+  are supplied through `new_data`.
+* The result is a `tbl_nowcast` with a `.horizon` column (`0` at `now`,
+  negative for the nowcast, `1..h` for the forecast), so `autoplot()`, `tidy()`
+  and scoring work unchanged. `generics` moves to `Imports` for the generic
+  (it was already installed as a `dplyr` dependency).
+* `.joint_reconstruct()` now builds the epidemic log-mean through
+  `.reconstruct_log_mean()`, which takes the horizon; the fitted event times are
+  unchanged.
+* New vignette: `vignette("Forecasting")`.
+
+## Model components construct their S7 parent explicitly
+
+The development version of S7 requires `new_object()` to receive an instance of
+the parent class. Likelihood, delay and epidemic constructors now build that
+instance instead of passing a bare `S7_object()`, which works with both the
+CRAN and the development S7.
+
+## A joint fit takes the Newton step its own adequacy check has priced
+
+`.joint_fit_diagnostic()` judges a fit on `quadratic_gap = 0.5 r' H_FF^-1 r`,
+which is exactly the objective decrease a Newton step on the free subspace
+would buy. Where that gap was the only thing failing a fit, and the Hessian it
+was computed from is positive definite, the optimizer has not failed and the
+curvature is not suspect -- it has stopped just short of a step it can compute.
+`fit()` now takes that step instead of reporting the shortfall.
+
+It matters on long series. At 985 event-times `sts_epidemic("semilocal")`
+carries 2T latent innovations, and the quasi-Newton leaves roughly a thousand
+of them about 0.05 from the mode against curvature of order 30. No single
+coordinate is badly off -- the sum is, at 0.019 against a tolerance of 0.01, on
+an objective of 63,405. A five-vector L-BFGS-B cannot find the direction that
+fixes a thousand coordinates at once; one Newton step does. On dengue at
+`2008-11-10` this turns a `warning` into a `pass`, with the gap going from
+0.019 to 9.9e-05 and no Laplace regularization, and `ets_epidemic()` gains its
+sixth adequate init rung (gap 3.2e-04 to 1.7e-05).
+
+**The tempting version of this is wrong and makes things worse.** A Newton step
+is a local model, and on a problem with a condition number of 1e6 to 1e7 a full
+step can lower the objective and still land where the Hessian is indefinite. A
+line search that accepts on objective alone takes that trade: across the three
+STS-with-slope cells at 985 event-times it fixed one and broke two, costing the
+Laplace precision diagonal ridges of 4.7 and 478.5 -- and the precision matrix
+is what the posterior draws are sampled from. Three things prevent it:
+
+* the refinement discards any step whose landing point it did not certify with
+  a successful Cholesky, so it never returns a point worse in that sense than
+  the one it stepped from;
+* the refined point is a CANDIDATE, kept only where a re-run diagnostic is
+  positive definite and either adequate or strictly lower-gap;
+* `last.par.best` is restored on every decline. RTMB records it whenever
+  `fn()` sees a lower objective, and `.nowcast_draws()` samples the Laplace
+  posterior at that vector -- so a line search that evaluates a
+  better-but-rejected candidate leaves the DRAWS on a point the fit discarded.
+  This is invisible in every optimizer statistic: the fit came back
+  bit-identical to its pre-refinement self and still took a ridge of 4.711.
+
+**It is not a blanket cure for long-series STS.** Where no step can be
+certified the refinement declines and the fit is returned exactly as before,
+and on the one-stage STS-with-slope cells at 985 event-times that is four
+cases out of five: lognormal (gap 0.0165), gengamma (0.0273), `dengue_strata`
+(0.0553) and `local_linear` (0.1094) all step onto indefinite curvature on
+every one of their six init rungs. Those fits still need
+`type = "two_stage"`, `trend = "local_level"`, or `hsgp_epidemic()`. A fit that already passed pays nothing
+and is unchanged to the last digit -- the gate declines with
+`already_adequate` before computing anything.
+
+`fit()` carries the outcome as `$refinement` alongside `$polish`, and
+`attempt_diagnostics` gains `newton_steps`, `newton_objective_change` and
+`newton_reason`.
+
+
+## `fit_check()` reports when an ARMA is only weakly identified
+
+An `arima_epidemic(p, d, q)` with `p >= 1` and `q >= 1` can sit on a flat ridge
+that trades an AR coefficient against an MA one. The likelihood barely moves
+along it, so the fit converges and the Hessian stays positive definite -- the
+flatness is a 2x2 block, not a global near-singularity, which is why
+`hessian_positive_definite` never caught it. What it costs is the predictive
+interval. At 985 event-times an ARIMA(1,1,1) returned 90% bands of 175x to 691x
+the settled count against about 7x for the matching ARIMA(2,1,0), while
+reporting a converged fit.
+
+`fit_check()` now carries `arma_ridge_correlation` -- the largest absolute
+correlation between an AR and an MA coordinate in the Laplace covariance -- and
+`arma_ridge`, and both `nowcast()` and `fit_check()` warn above 0.6. Like the
+`log_mean` cap this stays out of `optimizer_adequate` and only sets
+`fit_status == "warning"`: the optimizer has arrived, at a mode that happens to
+sit on a ridge, and the two failures want different remedies.
+
+The threshold is calibrated over 65 fits against the ratio of the ARIMA(p,d,q)
+band to the ARIMA(p+q,d,0) band on the same cell. The two populations separate
+cleanly -- median correlation 0.198 where the band ratio is at most 5x, 0.834
+where it exceeds it -- and every cut in `[0.5, 0.7]` flags the same 24 fits with
+no false alarms.
+
+**It detects near-collinearity only.** The six blow-ups it does not flag are all
+`q = 2`, with correlations of 0.16-0.26 and objectives 8.6 to 37.0 nll units
+better than their reference: that is overfitting, a different failure. A silent
+check is not a guarantee that the interval is sound, and the warning says so.
+
+The documentation for `arima_epidemic()` has been corrected accordingly. It
+previously said an ARMA(1,1) "sits close to a common factor, where `ar` and `ma`
+nearly cancel". The fitted `ar + ma` is in fact nowhere near zero; it is the
+curvature, not the point estimate, that shows the cancellation.
+
+## The `log_mean` cap warning is suppressed for count-cumulative fits
+
+On a count-cumulative stream the horizon-0 nowcast is built by the cohort kernels
+from the observed cumulative rather than from `lambda`, so a saturated cap has no
+predictive consequence there. Lifting the bound from about 12 to 20 on flusight
+moved the median by 0.5% and -0.2% and the objective by noise, while `lambda`
+peaked in the interior of the series, nowhere near the event-time being scored.
+Left reportable the warning fired on 52-65% of those fits and would have taught
+callers to ignore something that matters a great deal on the count-incidence
+path.
+
+`fit_check()` gains `log_mean_cap_reportable`, which is `FALSE` for such fits and
+is the column to act on. `log_mean_cap_bound` still records the fact, and the
+warning is unchanged on count-incidence streams.
+
+## The cap on the latent incidence no longer truncates the nowcast
+
+The objective caps the latent `log_mean` with a softplus so a bad optimiser step
+cannot overflow `exp()`. The ceiling was
+`min(max(6, log1p(casemax)), 16)`, where `casemax` is the largest count
+**reported so far**. But the latent incidence exceeds the reported count by
+`1/Gstar`, the reciprocal of the reporting fraction -- which is precisely the
+quantity a nowcast exists to estimate. On a stream that is growing while only a
+percent or two has arrived, the ceiling sat *below* the answer and the fit
+pinned to it.
+
+On the `covid_us` case series the ceiling was below the settled truth at six of
+seven as-of dates in March-April 2020 (ceiling over truth 0.14 to 0.54) and the
+median nowcast came out at 8.7% of the settled count. Because the cap is applied
+downstream of every epidemic process, all nine were biased identically -- which
+is why the effect looked like a property of the data rather than of the engine.
+
+The bound is now `min(max(6, log1p(casemax)) + log(100), 16)`. The `log(100)`
+admits a hundredfold reporting inflation, which covers what early-2020
+`covid_us` needs; `exp(16)` (about 8.9 million) remains the hard overflow stop,
+which was always the guard's actual job. `prepare_data()` and, through `...`,
+`nowcast()` accept `mu_log_upper_bound = ` to set it explicitly.
+
+The failure was silent, in the same way the `iter.max = 500` one below was, so
+it is now audible. `fit_check()` reports `log_mean_upper_bound`,
+`max_log_mean`, `log_mean_headroom` and `log_mean_cap_bound`, and `nowcast()`
+warns whenever the fitted `log_mean` comes within three log units of the
+ceiling. Three is where the distortion stops being negligible: the softplus
+keeps exactly `plogis(bound - log_mean)` of `lambda`, which is 95.3% three units
+down, 88.1% two units down and 50% at the bound, and once it saturates the
+gradient vanishes, so the trend is unidentified above the ceiling and `lambda`
+goes flat.
+
+The check reads the **uncapped** `log_mean`. A cap-bound fit is reported as
+`fit_status == "warning"` while `optimizer_adequate` stays `TRUE`: the optimiser
+has converged, to a ceiling, and the two failures want different remedies.
+
+## `reporting_fraction()`: the multiplier a nowcast is applying
+
+Every nowcast is at bottom one number per event-time -- the fraction of that
+cohort that has arrived by the as-of date. The engine has always computed it as
+`Gstar`, but nothing exposed it. `reporting_fraction()` now returns it per
+(event-time, stratum) together with `inflation = 1 / reporting_fraction`, which
+is exactly the multiplier applied to the observed count, and with the range over
+retained fits -- under `type = "two_stage"` that spread is the delay uncertainty
+the cascade propagates.
+
+It is worth reading because it is where most nowcast level errors live and it
+does not appear in the predictive summary. On `covid_colombia` at
+`now = 2020-08-01`, every configuration tried -- three epidemic processes, one-
+and two-stage, and a susceptible-pool sweep spanning four orders of magnitude --
+put the horizon-0 inflation at 132-208, while the settled truth for that cohort
+was 9,171 against 309 reported, an inflation of 29.7. No epidemic process can be
+right when it is handed a reporting fraction five times too small.
+
+**It deliberately does not warn.** A very large inflation on a young cohort is
+correct, not suspicious: early-2020 `covid_us` genuinely needs 37-83x. There is
+no threshold that is universally wrong, so the number is reported and the
+judgement is left to the caller.
+
+## `hsgp_epidemic()` warns when the basis outnumbers the series
+
+The basis count sets the shortest wavelength the trend can resolve, and the
+place an over-flexible basis bends is the right-hand edge of the series, where
+reporting is least complete and the likelihood constrains it least. On mpox at
+`now = 2022-08-09` — 33 event-times, settled truth 64 — `num_basis = 20` gives a
+median of 1,540 with a 90% band of [180, 13,373], where the automatic count of
+12 gives 186 with [19, 1,913] and covers.
+
+`prepare_data()` now warns when an explicitly supplied `num_basis` exceeds half
+the event-times. An automatic count never warns: the ladder's floor of 12 is
+itself more than half of a 20-step series, so checking it would fire on the
+package's own default path -- eleven times across this package's own test suite,
+none of them a choice anyone made. Short series are already handled better by
+`auto_nowcast()`, which keeps HSGP out of its candidate grid below
+`min_hsgp = 30`. What is actionable is a number the caller supplied, typically
+one carried over from a longer series: the `num_basis = 20L` recommended for
+COVID-length daily data is exactly the value that breaks a 33-day one. The
+warning is skipped for `delay_only` Stage-1 fits, which build no epidemic
+process.
+
+This was previously invisible because the `log_mean` ceiling clipped the runaway
+into something plausible-looking.
+
+## Classical time-series epidemic processes
+
+The epidemic-process menu gains five constructors beyond HSGP, AR(1) and SIR:
+`arima_epidemic(p, d, q)`, `sts_epidemic(trend = "semilocal")`,
+`ets_epidemic(trend, damped)`, `random_walk_epidemic()` / `naive_epidemic()`
+and `theta_epidemic()`. Each supplies the latent trend in
+`log_mean[t, s] = mu_intercept[s] + (X gamma)[t, s] + trend[s](t)`, the same slot
+HSGP and AR(1) fill, so `tbl_now` covariates and temporal effects apply to them
+unchanged and every trend coefficient is estimated per stratum.
+
+Seasonality stays on the covariate path rather than in the state vector: there
+is no SARIMA `(P, D, Q)_s` and no Holt-Winters seasonal block.
+`temporal_effects(day_of_week = TRUE)` contributes reference-coded weekday
+dummies and `temporal_effects(seasons = )` contributes Fourier pairs, which cost
+a handful of coefficients where a seasonal state would cost `s` latent states
+per stratum -- the difference between a fit that converges on these series and
+one that does not.
+
+ARIMA is parameterised by the partial autocorrelations of its AR and MA
+polynomials and mapped to coefficients through Levinson-Durbin, so stationarity
+and invertibility hold by construction and the optimiser cannot step into a
+region where the recursion explodes. A drift is included by default once
+`d >= 1` and is refused at `d = 0`, where the ARMA mean and `mu_intercept` are
+the same quantity.
+
+Exponential smoothing is written with `sigma` as the level innovation SD and
+`beta` as Hyndman's `beta* = beta / alpha`, because the classical
+`(alpha, beta, sigma)` triple is identified only up to a common rescaling once
+the innovation is latent rather than observed. For the same reason
+`ets_epidemic(trend = "none")` is documented as being the random walk, and
+`theta_epidemic()` as the random walk with drift: under a count likelihood the
+exponential smoothing of the classical methods is what the Kalman filter for a
+local level model already performs.
+
+## The optimiser's iteration budget scales with the problem
+
+`fit()` hard-coded `iter.max = 500` regardless of how many parameters the tape
+had. The joint fit optimises one latent innovation per event-time, so that count
+is a property of the data: 28 for an HSGP on any series, 1,623 for a structural
+time series on a 1,095-week one. Five hundred iterations is generous for the
+first and nowhere near enough for the second.
+
+The failure was silent. `nlminb` returns code 1, the fit is kept, and the only
+trace is a `fit_check()` warning about a non-positive-definite Hessian -- never
+an error, so a caller who did not inspect the diagnostics got a fit that had
+stopped short of a mode. On the package's 1,095-week dengue series this affected
+six of the nine epidemic processes: `ets_epidemic()` passed `fit_check()` on 15%
+of fits and `sts_epidemic()` on 39%. At 500 iterations ETS stopped with a maximum
+gradient of 6.6 and `theta_epidemic()` with 107.
+
+`fit(control = NULL)`, the new default, sizes the budget from the tape:
+`iter.max = max(500, min(50000, 25 * n_parameters))`. All nine processes now pass
+`fit_check()` on dengue with a positive-definite Hessian, ETS and Theta reaching
+maximum gradients of 0.32 and 0.036, and ETS finding a better mode than it
+previously stopped at (objective 53061.5 against 53049.0). The L-BFGS-B polish
+step scales the same way. A supplied `control` list is still used verbatim.
+
+Raising a cap costs nothing when it does not bind, which is what makes this
+safe: short series converge in the same number of steps and return a
+bit-identical objective. Long series pay for the iterations they were previously
+skipping -- a structural trend on 1,095 weeks now takes around five minutes
+rather than ninety seconds, and converges.
+
+This also revises the note added with the time-series processes above: they do
+not have an inherent scaling limit, they had an optimiser budget that did not
+scale. They remain the expensive choice on a long series, where `hsgp_epidemic()`
+keeps a fixed-size basis.
+
+## Fixed parameters are honoured instead of discarded
+
+A number in a parameter slot has always meant "hold this here" on the delay
+side. For the epidemic-process and likelihood parameters it meant nothing at
+all: `build_joint_obj()` read the prior entry's `$dist` and never its
+`$is_constant` or `$fixed`, so a supplied number was replaced by a
+standard-normal prior and the parameter was estimated anyway. Nine slots were
+affected -- `nb_likelihood(mu =, phi =)`, `hsgp_epidemic(alpha =, ell =)`,
+`ar1_epidemic(phi =, sigma =)` and `sir_epidemic(R0 =, gamma =, N_eff =)` --
+including two that the roxygen examples advertised as working.
+
+They are now held the way the delay parameters are: the parameter is seeded at
+the unconstrained value that maps to the supplied one, mapped out of the
+optimisation, and its prior and Jacobian terms are skipped. The same applies to
+every parameter of the new time-series processes, which until now refused a
+fixed value outright because there was no machinery to honour one. Stratified
+fits take either a single shared value or one per stratum.
+
+`coef()` reports a held parameter; `parameters()` does not, because it reports
+estimates with credible intervals and a held parameter has none.
+
+A held value outside its domain is now refused where it can be seen. Domains
+that are a property of the parameter -- an autocorrelation in (-1, 1), a
+probability in (0, 1), a scale above zero -- are checked by the constructor.
+`sigma` is bounded by the engine's `ar_sigma_max`, which the constructor cannot
+know, so it is checked during the fit and rethrown past the initialisation
+ladder: no retry rescues a value outside its domain, and burying it under
+"failed to converge for all init attempts" hid the one message that said what
+to change.
+
+Fixing `mu` under `strata_pooling = "hierarchical"` is an error. The pooling is
+a model for the intercept, so pinning the intercept leaves it nothing to do.
+
+Fits that pin nothing are unaffected: the joint objective and every
+reconstruction are unchanged to the last digit.
+
+## Classical time-series epidemic processes (continued)
+
+`arima_epidemic()` defaults to order `(2, 1, 0)`. An MA term remains available
+but is not the default: on a latent trend an ARMA(1, 1) sits close to a common
+factor, where the AR and MA polynomials nearly cancel and neither is identified.
+Across a 2,376-fit backtest on nine dataset variants, `(1, 1, 1)` was the worst
+of the nine processes compared, with intervals 2.4 times the settled count and
+15 of the 21 over-wide fits recorded in the whole grid; `(2, 1, 0)` converged
+more often, scored better and produced two.
+
+These trends carry one latent innovation per event-time, so the Laplace
+Hessian grows with the series and they do not scale the way HSGP does. On the
+1,095-week dengue series `fit_check()` pass rates fall to 15% (ETS), 39% (STS)
+and 71% (random walk), against 96-100% for all of them on the other seven
+datasets; `ar1_epidemic()` shows the same pattern more mildly at 86%, and
+`hsgp_epidemic()` is unaffected at 100%. Past roughly 500 event-times, HSGP
+remains the right choice. This is documented under "Long series" in
+`?timeseries_epidemic`.
+
+Unlike the older constructors, these refuse a fixed numeric in a parameter slot.
+`arima_epidemic(sigma = 0.1)` is an error rather than a value that is silently
+estimated anyway.
+
+The trend recursions and their constraint maps have a single implementation that
+serves both the RTMB tape and the plain-R reconstruction `predict()` runs on, so
+the two cannot disagree about the model that was fitted.
+
+# 2.4.1
+
+## Reporting-delay hazard: correct tails, pinned designs
+
+The discrete-hazard regressions now read their baseline hazard off the delay
+law's **log-survival** instead of differencing its CDF. Differencing lost every
+bin past the point where `F` saturates to 1 in double precision -- delay 16 for a
+LogNormal with mean 3 and SD 0.6 -- and replaced the true tail hazards with a
+floor, so a report at delay 40 cost 42 log-units less than it should. The effect
+was worst exactly where reporting is fast and an occasional report is very late.
+Zero coefficients now reproduce the stationary likelihood over the whole
+parameter space rather than only where the CDF had not saturated.
+
+Design matrices for the delay and revision roles are built once and pinned as a
+schema on the fitted object. Reference levels come from a factor's declared
+`levels()`, so a level that has not appeared yet keeps its slot instead of
+renumbering every other coefficient at the next as-of date; a character column
+warns that its reference level is not pinned. Constant, duplicate and exactly
+collinear columns are dropped before fitting, by name, instead of surfacing as a
+singular Hessian. `update()` replays the fitted schema; `backtest()` deliberately
+rebuilds it per date, since replaying a later one would leak.
+
+`surprise()` scores a delay against the law its own cohort faces when the fit
+carries a reporting regression -- pass an `event_index` column, which `update()`
+now does automatically. Without one it warns rather than silently comparing
+against the untilted baseline.
+
+The two-stage cascade now carries a reporting regression, instead of silently
+falling back to a single joint fit. Stage 1 fits the delay *and* its hazard
+coefficients as one censored regression on the recent window, with the calendar
+and cohort designs sliced to that window; the whole parameter vector is drawn
+from the Stage-1 joint Laplace; and Stage 2 hard-fixes all of it, so the delay
+observations are read exactly once across the two stages.
+
+The stationary imputation is deliberately untouched: it keeps its independent
+normals on `(delay_mu, delay_sigma)` and the tuned `floor_mu` / `floor_sig_frac`
+spreads, because the convergence behaviour on real data was tuned against them.
+Only a model with `P_delay > 0` takes the joint draw, where the floors survive as
+a minimum marginal spread applied without disturbing the correlation structure.
+Drawing on the unconstrained scale also retires the `pmax(0.05, .)` truncation
+that the natural-scale sigma draws needed.
+
+Tape construction for regression models is several times faster than in the first
+cut, but still grows roughly quadratically in the number of event times.
+
+## Covariates can target event, reporting-delay, or revision processes
+
+`as_event_covariates()`, `as_delay_covariates()`, and
+`as_revision_covariates()` now attach process-role S3 classes to vectors (or
+selected columns of a data frame / `tbl_now`). Untagged `tbl.now` covariates
+remain event covariates. Report- and revision-date temporal effects and tagged
+covariates are fitted as discrete-hazard regressions; they no longer enter the
+epidemic mean. Coefficients are reported as `event_beta`, `delay_beta`, and
+`revision_beta`, with hazard odds-ratio interpretations for the latter two.
+Categorical temporal effects use reference-level contrasts, and tagged factor
+strata remain compatible with `tbl.now` grid-completion joins.
+
+**This changes existing daily fits.** Day-of-week previously entered the epidemic
+mean as a single column of weekday numbers, which imposed an artificial linear
+trend across the week; it is now six reference-level dummies. Since
+`temporal_effects = "auto"` is the default, nowcasts, `P`, the shape of `gamma`
+and saved warm starts all change for daily data. Earlier fits are not comparable
+with this release.
+
+The same rule now applies to user covariates in every role, which it previously
+did not: an **unordered** factor becomes reference-level dummies, an **ordered**
+factor keeps a single ordinal score, and a numeric column is used as it stands.
+A factor event covariate used to be flattened to its integer codes, which
+asserted that its levels were equally spaced and in alphabetical order. Dummies
+are built by comparison rather than through `model.matrix()`, so the encoding no
+longer depends on the session's `options("contrasts")`. An event covariate with
+no value at some event time is still filled with zero, but now says so: for a
+factor that means the reference level, which the data did not state.
+
+This release removes three things `diseasenowcasting` was duplicating from
+`tbl.now`. All three were invisible in normal use and none change results.
+
+## `covid_colombia` moved to tbl.now
+
+The `covid_colombia` dataset is gone from this package; it now lives in
+`tbl.now`, alongside the other example datasets (`denguedat`, `mpoxdat`,
+`flusight`, ...). The two copies were byte-identical, and shipping the same
+35,501-row data frame from two packages that are always attached together only
+made `?covid_colombia` and `data(covid_colombia)` ambiguous.
+
+Nothing changes for users: `diseasenowcasting` depends on `tbl.now`, so
+`library(diseasenowcasting)` still puts `covid_colombia` on the search path.
+Code that qualified the name as `diseasenowcasting::covid_colombia` must now
+say `tbl.now::covid_colombia`.
+
+`LazyData` was dropped from `DESCRIPTION` along with the now-empty `data/`
+directory.
+
+## `?revision_delay` pointed at the wrong package
+
+`diseasenowcasting` and `tbl.now` both documented a help topic named
+`revision_delay`, meaning different things: the revision-lag *distributions*
+here (`lognormal_revision()`, `dirichlet_revision()`, ...) and the
+confirmed-vs-retracted *diagnostic* there (`diagnose_revision_delay()`,
+`plot_revision_delay()`). With both packages attached -- which is always, since
+one depends on the other -- `?revision_delay` prompted for a disambiguation and
+then resolved to `tbl.now`, so a user who had just called `lognormal_revision()`
+was shown the wrong page.
+
+This package's topic is now `revision_distributions`; `?revision_delay`
+unambiguously means `tbl.now`'s. No function was renamed, and
+`?lognormal_revision` and its siblings still land on the right page. Only a
+literal `?revision_delay` or a `[revision_delay]` doc link needs updating.
+
+## `dn_palette()` no longer keeps its own copy of the colours
+
+All eight `dn_palette()` colours were the `tbl.now::tbl_now_palette()` defaults
+hard-coded a second time under different role names (`reported` for `epidemic`,
+`accent` for `reporting`, and so on). Nowcast plots are routinely drawn beside
+`tbl_now` plots in one document, so the copy would have stopped matching the
+moment `tbl.now` retuned a colour -- silently, with no error to notice.
+
+`dn_palette()` now reads `tbl.now::tbl_now_palette()` and renames the roles.
+The returned values, names, order and `n` behaviour are unchanged, so plots
+render identically. `theme_diseasenowcasting()` and the `autoplot()` bar
+colours, which had their own hard-coded copies of the same two hexes, now go
+through `dn_palette()` as well; the `color` argument still accepts any colour.
+
 # 2.4.0
 
 ## Documentation: vignettes split into CRAN vignettes and website articles
