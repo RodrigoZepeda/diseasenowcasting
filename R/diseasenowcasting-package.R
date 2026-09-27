@@ -96,6 +96,7 @@ utils::globalVariables(c(
   "movement_age", "movement_age_value",
   "movement_previous", "movement_previous_value",
   "log_magnitude_size", "magnitude_size_value",
+  "log_revision_magnitude_size", "revision_magnitude_size_value",
   "observation_mask", "cumulative_level_array",
   "previous_nonzero_array", "signed_update_array",
   "prior_cumulative_retraction_mass_dist",
@@ -109,5 +110,7 @@ utils::globalVariables(c(
   "prior_movement_intercept_dist", "prior_movement_intercept_params",
   "prior_movement_age_dist", "prior_movement_age_params",
   "prior_movement_previous_dist", "prior_movement_previous_params",
-  "prior_magnitude_size_dist", "prior_magnitude_size_params"
+  "prior_magnitude_size_dist", "prior_magnitude_size_params",
+  "prior_revision_magnitude_size_dist",
+  "prior_revision_magnitude_size_params"
 ))

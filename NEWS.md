@@ -39,7 +39,49 @@ The default is now `lognormal_prior(log(0.1), 1.5)`: a median size of 10, with a
   prior instead of always at `phi = 20`.
 * An empty `phi` slot (`nb_likelihood(phi = numeric(0))`) now falls back to the
   `nb_likelihood()` default instead of `exponential_prior(1)`.
+* `nowcast_twostage()` had its own `phi = lognormal_prior(log(20), 0.5)`
+  argument that overrode the model's `phi` prior. It now defaults to `NULL`,
+  which uses the likelihood's prior.
 
+
+## Hurdle count-cumulative fits keep `lambda` on the level scale
+
+The signed hurdle likelihoods preserve `E[C_t(H)] = lambda_t q_C(H)`, but their
+fitted `lambda` could still collapse to one flat value at the season average.
+On FluSight California (weekly, `now = 2024-01-27`) the `hurdle_ztnb` fit put
+every week at `lambda = 321` while published levels peaked at 1,750, and AR(1)
+innovation SD sat at its floor. Nowcasts hid this because they anchor on the
+latest published level; simulations of new events from zero did not.
+
+Three separate causes, each now fixed:
+
+1. **The log-mean ceiling bound every count-cumulative fit.** The softplus cap
+   keeps `B x / (B + x)` of the latent mean, and `B` was the largest published
+   count. A count-cumulative `lambda` lives on that same scale, so the cap
+   halved the peak and made a flat trajectory the optimiser's basin: data
+   simulated from the ZTNB hurdle observation law collapsed in 8 of 8 fits.
+   The 2.5.0 widening of the ceiling by `log(100)` for every fit removes this.
+2. **One ZTNB size served two different quantities.** Delay-0 magnitudes (the
+   initial report) are nearly Poisson around their mean, while later revisions
+   are heavy-tailed relative to theirs. The shared size was pulled to about 0.6,
+   which left the initial reports too little information to move `lambda_t`,
+   so the AR(1) prior flattened it. On FluSight the flat trajectory was then
+   the genuine maximum. `cumulative_process()` gains `revision_magnitude_size`
+   (delays `1:H`); `magnitude_size` now applies to delay 0 only. Nowcast and
+   `forecast()` draws use the delay-0 size for a first report and the revision
+   size after it.
+3. **Every cold rung started inside the flat basin.** Hurdle AR(1) fits now add
+   one rung that starts on the log of each event's latest published level; MAP
+   selection keeps it only when its objective is lower. On FluSight it is
+   (423.6 vs 439.2).
+
+Remaining limitation: the movement probability at delay 0 is
+`plogis(movement_intercept)` and is shared with the revision regression. On
+FluSight it fits about 0.73 although every week publishes an initial report.
+The magnitude mean is `total / movement_probability`, so fitted
+`lambda q_C(H)` sits about 25% below the published levels there. Anchored
+nowcasts are unaffected; anything simulating new events from zero inherits a
+27% chance of no initial report.
 
 # 2.5.0
 

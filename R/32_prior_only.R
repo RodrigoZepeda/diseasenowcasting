@@ -113,6 +113,11 @@
       parlist$log_magnitude_size <-
         log(max(draw_one(priors$magnitude_size), 1e-6))
     }
+    if (engine$count_cumulative_observation == 2L &&
+        !isTRUE(priors$revision_magnitude_size$is_constant == 1L)) {
+      parlist$log_revision_magnitude_size <-
+        log(max(draw_one(priors$revision_magnitude_size), 1e-6))
+    }
   }
 
   # -- epidemic process -----------------------------------------------------

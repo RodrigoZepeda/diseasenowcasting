@@ -395,7 +395,9 @@
   direction <- if (stats::runif(1L) < alpha / total) 1 else -1
   own_mean <- total / movement_probability
   magnitude <- if (cc$observation == 2L) {
-    .draw_ztnb_own_mean(own_mean, cc$magnitude_size)
+    # The first report and later revisions have separate ZTNB sizes.
+    .draw_ztnb_own_mean(own_mean,
+      if (delay == 0L) cc$magnitude_size else cc$revision_magnitude_size)
   } else {
     .draw_ztpoisson_own_mean(own_mean)
   }

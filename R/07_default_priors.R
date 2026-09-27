@@ -297,6 +297,10 @@ default_priors <- function(mod, data = NULL, ...) {
         cumulative@magnitude_size, lognormal_prior(0, 1.5),
         key = "magnitude_size"
       )
+      pr$revision_magnitude_size <- .res(
+        cumulative@revision_magnitude_size, lognormal_prior(0, 1.5),
+        key = "revision_magnitude_size"
+      )
     }
 
     retraction_delay <- cumulative@retraction_delay

@@ -230,6 +230,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
   magnitude_size_fixed <- is_count_cumulative &&
     cumulative_observation == 2L &&
     isTRUE(priors$magnitude_size$is_constant == 1L)
+  revision_magnitude_size_fixed <- is_count_cumulative &&
+    cumulative_observation == 2L &&
+    isTRUE(priors$revision_magnitude_size$is_constant == 1L)
 
   # The ordinary NB dispersion is part of the cumulative-level marginal only.
   # Both hurdle models have their own magnitude law; `nb_likelihood()@phi` is not
@@ -530,6 +533,15 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     prior_magnitude_size_params = if (is_count_cumulative &&
       cumulative_observation == 2L && !magnitude_size_fixed)
       .pad3(priors$magnitude_size$params) else c(0, 0, 0),
+    revision_magnitude_size_fixed = as.integer(revision_magnitude_size_fixed),
+    revision_magnitude_size_value = if (revision_magnitude_size_fixed)
+      priors$revision_magnitude_size$fixed else 0,
+    prior_revision_magnitude_size_dist = if (is_count_cumulative &&
+      cumulative_observation == 2L && !revision_magnitude_size_fixed)
+      priors$revision_magnitude_size$dist else 0L,
+    prior_revision_magnitude_size_params = if (is_count_cumulative &&
+      cumulative_observation == 2L && !revision_magnitude_size_fixed)
+      .pad3(priors$revision_magnitude_size$params) else c(0, 0, 0),
     # confirmation / retraction
     is_confirmation = as.integer(is_confirmation), conf_D = conf_D, retract_family = retract_family,
     increment_array = if (is_confirmation) data$increment_array else array(0.0, c(0L, 0L, 0L)),
@@ -685,6 +697,9 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       parameters$log_magnitude_size <-
         if (magnitude_size_fixed) 0 else
           (init$log_magnitude_size %||% log(10))
+      parameters$log_revision_magnitude_size <-
+        if (revision_magnitude_size_fixed) 0 else
+          (init$log_revision_magnitude_size %||% log(1))
     }
   }
   # confirmation / retraction parameters (only estimated when free).  A linelist
@@ -892,6 +907,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     }
     if (cumulative_observation == 2L && magnitude_size_fixed)
       map$log_magnitude_size <- factor(NA)
+    if (cumulative_observation == 2L && revision_magnitude_size_fixed)
+      map$log_revision_magnitude_size <- factor(NA)
   }
   if (is_custom_epidemic && n_params_custom_epi > 0L && any(epi_is_free == 0L)) {
     epi_map_vals <- rep(NA_integer_, n_params_custom_epi)
@@ -1108,6 +1125,10 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
           magnitude_size_value else exp(log_magnitude_size)
         if (magnitude_size_fixed == 0L)
           log_jacobian <- log_jacobian + log_magnitude_size
+        revision_magnitude_size <- if (revision_magnitude_size_fixed == 1L)
+          revision_magnitude_size_value else exp(log_revision_magnitude_size)
+        if (revision_magnitude_size_fixed == 0L)
+          log_jacobian <- log_jacobian + log_revision_magnitude_size
       }
     }
 
@@ -1424,7 +1445,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
                 loglik_counts <- loglik_counts +
                   .hurdle_ztnb_update_logpmf(
                     update, alpha, omega, movement_probability,
-                    magnitude_size
+                    if (delay == 0L) magnitude_size else
+                      revision_magnitude_size
                   )
               } else {
                 loglik_counts <- loglik_counts +
@@ -1633,6 +1655,12 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         log_prior <- log_prior + prior_lpdf(
           magnitude_size, prior_magnitude_size_dist,
           prior_magnitude_size_params
+        )
+      }
+      if (cumulative_observation == 2L && revision_magnitude_size_fixed == 0L) {
+        log_prior <- log_prior + prior_lpdf(
+          revision_magnitude_size, prior_revision_magnitude_size_dist,
+          prior_revision_magnitude_size_params
         )
       }
     }
@@ -2042,7 +2070,7 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     }
 
     observation <- as.integer(data$count_cumulative_observation)
-    movement <- magnitude_size <- NULL
+    movement <- magnitude_size <- revision_magnitude_size <- NULL
     if (observation %in% c(2L, 3L)) {
       movement <- c(
         intercept = if (isTRUE(priors$movement_intercept$is_constant == 1L))
@@ -2057,6 +2085,10 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
       magnitude_size <- if (isTRUE(priors$magnitude_size$is_constant == 1L))
         priors$magnitude_size$fixed else
           exp(as.numeric(parlist$log_magnitude_size))
+      revision_magnitude_size <-
+        if (isTRUE(priors$revision_magnitude_size$is_constant == 1L))
+          priors$revision_magnitude_size$fixed else
+            exp(as.numeric(parlist$log_revision_magnitude_size))
     }
     count_cumulative <- c(
       list(
@@ -2066,7 +2098,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
         retraction_pmf = retract_pmf,
         retraction_mass = retract_mass,
         movement = movement,
-        magnitude_size = magnitude_size
+        magnitude_size = magnitude_size,
+        revision_magnitude_size = revision_magnitude_size
       ),
       components,
       list(components_by_cohort = components_by_cohort)

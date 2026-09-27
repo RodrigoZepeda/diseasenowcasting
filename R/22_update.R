@@ -54,7 +54,8 @@
                          "log_cumulative_retraction_sigma_excess",
                          "cumulative_retraction_Q",
                          "movement_intercept", "movement_age",
-                         "movement_previous", "log_magnitude_size"),
+                         "movement_previous", "log_magnitude_size",
+                         "log_revision_magnitude_size"),
                        names(old_parlist)))
     init[[nm]] <- old_parlist[[nm]]
   if (!is.null(old_parlist$gamma) && new_engine$P > 0)

@@ -124,7 +124,7 @@ S7::method(parameters, nowcast_class) <- function(x, conf.level = 0.95, ...) {
 
   # -- categorise each parameter by which model component it belongs to -------
   classify_parameter <- function(parameter_name) {
-    if (grepl("^cumulative_retraction|^log_cumulative_retraction|^movement_|^log_magnitude_size$",
+    if (grepl("^cumulative_retraction|^log_cumulative_retraction|^movement_|^log_magnitude_size$|^log_revision_magnitude_size$",
               parameter_name)) "count_cumulative"
     # Resolution first: `logit_confirm_p` would otherwise match the delay rule.
     else if (grepl("^logit_confirm_p|^retract_|^log_retract_|^negative_|^log_negative_",
@@ -183,6 +183,9 @@ S7::method(parameters, nowcast_class) <- function(x, conf.level = 0.95, ...) {
     ),
     .natural_scale_rows(
       out, "log_magnitude_size", "magnitude_size", exp
+    ),
+    .natural_scale_rows(
+      out, "log_revision_magnitude_size", "revision_magnitude_size", exp
     )
   )
 

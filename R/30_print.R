@@ -64,7 +64,8 @@ S7::method(print, cumulative_process_class) <- function(x, ..., digits = 4) {
   }
   if (identical(x@observation, "hurdle_ztnb")) {
     cli::cli_text(paste0("{.emph Magnitude size}: ",
-                         .fmt_slot("size", x@magnitude_size)))
+                         .fmt_slot("initial", x@magnitude_size), ", ",
+                         .fmt_slot("revision", x@revision_magnitude_size)))
   }
   invisible(x)
 }

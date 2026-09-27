@@ -82,7 +82,7 @@ fit <- function(model, data, priors = NULL, init = NULL,
   set_bounds("^log_R0$", -6, 6)
   set_bounds("^u_gamma$|^u_neff$", -10, 10)
   set_bounds("^log_phi_nb$", -12, 8)
-  set_bounds("^log_magnitude_size$", -8, 12)
+  set_bounds("^log_magnitude_size$|^log_revision_magnitude_size$", -8, 12)
   set_bounds("^movement_", -12, 12)
   list(lower = lower, upper = upper)
 }
@@ -1120,6 +1120,56 @@ fit <- function(model, data, priors = NULL, init = NULL,
   )
 }
 
+#' Cold-start values that follow the observed count-cumulative trajectory
+#'
+#' Returns `NULL` unless the engine is a hurdle count-cumulative AR(1) fit.  The latest published level of each event is a noisy,
+#' downward-biased (young events) proxy of `lambda`; its log is written as an
+#' AR(1) path with `phi = 0.9` and innovation SD equal to the path's own
+#' step-to-step SD, clamped inside the optimiser box.
+#' @keywords internal
+#' @noRd
+.count_cumulative_trajectory_init <- function(data) {
+  if (!isTRUE(data$is_count_cumulative == 1L) ||
+      !as.integer(data$count_cumulative_observation) %in% c(2L, 3L) ||
+      !identical(as.integer(data$epidemic_model), 2L)) {
+    return(NULL)
+  }
+  n_time <- as.integer(data$max_time)
+  n_strata <- as.integer(data$num_strata %||% 1L)
+  ar_sigma_max <- data$ar_sigma_max %||% 1
+  phi <- 0.9
+  intercept <- numeric(n_strata)
+  sigma <- numeric(n_strata)
+  innovations <- matrix(0, n_time, n_strata)
+  for (s in seq_len(n_strata)) {
+    latest <- rep(NA_real_, n_time)
+    for (t in seq_len(n_time)) {
+      observed <- which(data$observation_mask[t, , s])
+      if (length(observed))
+        latest[t] <- data$cumulative_level_array[t, max(observed), s]
+    }
+    if (!any(is.finite(latest))) return(NULL)
+    target <- log(pmax(latest, 1))
+    # Carry the nearest observed value into events without a published cell.
+    target <- stats::approx(seq_len(n_time), target, seq_len(n_time),
+                            rule = 2, ties = "ordered")$y
+    intercept[s] <- mean(target)
+    trend <- target - intercept[s]
+    step_sd <- if (n_time > 2L) stats::sd(diff(target)) else 0.1
+    sigma[s] <- min(max(step_sd, 0.05), 0.9 * ar_sigma_max)
+    innovations[1L, s] <- trend[1L] * sqrt(1 - phi^2) / sigma[s]
+    if (n_time >= 2L) {
+      innovations[-1L, s] <- (trend[-1L] - phi * trend[-n_time]) / sigma[s]
+    }
+  }
+  list(
+    mu_intercept = intercept,
+    ar_phi_unc = rep(stats::qlogis((phi + 0.999) / 1.998), n_strata),
+    log_ar_sigma_unc = stats::qlogis(sigma / ar_sigma_max),
+    ar_innov = innovations
+  )
+}
+
 #' @keywords internal
 #' @noRd
 .fit_joint <- function(model, data, priors, init = NULL, n_tries = 6L,
@@ -1146,31 +1196,42 @@ fit <- function(model, data, priors = NULL, init = NULL,
   # complete initialization ladder so admissibility and MAP selection remain
   # separate; warm Stage-2 fits avoid multiplying K imputations by six rungs.
   attempt_count <- if (is.null(init)) as.integer(n_tries) else 1L
-  for (j in seq_len(attempt_count)) {
-    ini <- base_init
-    off <- mu_offsets[((j - 1) %% length(mu_offsets)) + 1]
-    # Intercept init: for hierarchical we set mu_global + delta; for independent, per-stratum vector
-    if (isTRUE(hierarchical_strata) && n_strata > 1L) {
-      ini$mu_global         <- (base_init$mu_global %||% mean(intercept_base)) + off
-      ini$delta_intercept   <- base_init$delta_intercept %||% rep(0, n_strata)
-      ini$log_tau_intercept <- base_init$log_tau_intercept %||% 0
+  # Hurdle count-cumulative fits are joint MAP fits whose AR trend has a flat
+  # basin (innovations and their SD both near zero) that every intercept rung
+  # starts inside.  One extra cold rung starts on the observed level
+  # trajectory; MAP selection keeps it only when it reaches a lower objective.
+  trajectory_init <- if (is.null(init) &&
+                         !(isTRUE(hierarchical_strata) && n_strata > 1L))
+    .count_cumulative_trajectory_init(data) else NULL
+  for (j in seq_len(attempt_count + !is.null(trajectory_init))) {
+    if (j > attempt_count) {
+      ini <- trajectory_init
     } else {
-      base_intercept   <- base_init$mu_intercept %||% intercept_base
-      ini$mu_intercept <- base_intercept + off
+      ini <- base_init
+      off <- mu_offsets[((j - 1) %% length(mu_offsets)) + 1]
+      # Intercept init: for hierarchical we set mu_global + delta; for independent, per-stratum vector
+      if (isTRUE(hierarchical_strata) && n_strata > 1L) {
+        ini$mu_global         <- (base_init$mu_global %||% mean(intercept_base)) + off
+        ini$delta_intercept   <- base_init$delta_intercept %||% rep(0, n_strata)
+        ini$log_tau_intercept <- base_init$log_tau_intercept %||% 0
+      } else {
+        base_intercept   <- base_init$mu_intercept %||% intercept_base
+        ini$mu_intercept <- base_intercept + off
+      }
+      if (data$epidemic_model == 1L && is.null(base_init$log_gp_alpha))
+        ini$log_gp_alpha <- log(1) + (j - 1) * 0.15          # shared GP amplitude (scalar)
+      if (data$epidemic_model == 2L && is.null(base_init$log_ar_sigma_unc))
+        ini$log_ar_sigma_unc <- rep(-2 + (j - 1) * 0.3, n_strata)   # per-stratum AR innovation SD
+      # The time-series trends get the same innovation-SD ladder: their sigma is the
+      # one parameter whose starting value decides whether the first fit sees a flat
+      # trend or a noisy one, and a cold start at the wrong end can stall there.
+      if (data$epidemic_model == 5L && is.null(base_init$log_arima_sigma_unc))
+        ini$log_arima_sigma_unc <- rep(-2 + (j - 1) * 0.3, n_strata)
+      if (data$epidemic_model == 6L && is.null(base_init$log_ets_sigma_unc))
+        ini$log_ets_sigma_unc <- rep(-2 + (j - 1) * 0.3, n_strata)
+      if (data$epidemic_model == 7L && is.null(base_init$log_sts_level_sigma_unc))
+        ini$log_sts_level_sigma_unc <- rep(-2 + (j - 1) * 0.3, n_strata)
     }
-    if (data$epidemic_model == 1L && is.null(base_init$log_gp_alpha))
-      ini$log_gp_alpha <- log(1) + (j - 1) * 0.15          # shared GP amplitude (scalar)
-    if (data$epidemic_model == 2L && is.null(base_init$log_ar_sigma_unc))
-      ini$log_ar_sigma_unc <- rep(-2 + (j - 1) * 0.3, n_strata)   # per-stratum AR innovation SD
-    # The time-series trends get the same innovation-SD ladder: their sigma is the
-    # one parameter whose starting value decides whether the first fit sees a flat
-    # trend or a noisy one, and a cold start at the wrong end can stall there.
-    if (data$epidemic_model == 5L && is.null(base_init$log_arima_sigma_unc))
-      ini$log_arima_sigma_unc <- rep(-2 + (j - 1) * 0.3, n_strata)
-    if (data$epidemic_model == 6L && is.null(base_init$log_ets_sigma_unc))
-      ini$log_ets_sigma_unc <- rep(-2 + (j - 1) * 0.3, n_strata)
-    if (data$epidemic_model == 7L && is.null(base_init$log_sts_level_sigma_unc))
-      ini$log_sts_level_sigma_unc <- rep(-2 + (j - 1) * 0.3, n_strata)
 
     res <- tryCatch({
       built <- build_joint_obj(data, priors, init = ini, use_random = use_random,

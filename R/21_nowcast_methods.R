@@ -44,6 +44,8 @@ S7::method(coef, nowcast_class) <- function(object, ...) {
         cumulative$movement
     if (!is.null(cumulative$magnitude_size))
       out["magnitude_size"] <- cumulative$magnitude_size
+    if (!is.null(cumulative$revision_magnitude_size))
+      out["revision_magnitude_size"] <- cumulative$revision_magnitude_size
   }
 
   # Append whichever epidemic-process hyperparameters this model actually has

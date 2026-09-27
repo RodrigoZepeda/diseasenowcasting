@@ -12,7 +12,8 @@ cumulative_process(
   movement_intercept = normal_prior(-1, 2),
   movement_age = normal_prior(0, 1),
   movement_previous = normal_prior(0, 1),
-  magnitude_size = NULL
+  magnitude_size = NULL,
+  revision_magnitude_size = NULL
 )
 }
 \arguments{
@@ -35,7 +36,15 @@ values for the bounded movement-probability regression. Set
 \code{movement_previous = 0} to disable previous-movement dependence.}
 
 \item{magnitude_size}{Positive prior or fixed value for the ZTNB magnitude
-size. It is used only by \code{"hurdle_ztnb"}.}
+size of the first update of each event (delay 0). It is used only by
+\code{"hurdle_ztnb"}.}
+
+\item{revision_magnitude_size}{Positive prior or fixed value for the ZTNB
+magnitude size of later updates (delays \code{1:H}). Initial reports and later
+revisions have very different dispersion relative to their mean: a single
+shared size is pulled to the heavy-tailed revisions and then leaves the
+initial reports too little weight to identify the epidemic trajectory. It
+is used only by \code{"hurdle_ztnb"}.}
 }
 \value{
 A \code{cumulative_process_class} object for

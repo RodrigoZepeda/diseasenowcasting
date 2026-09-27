@@ -325,6 +325,15 @@ fit <- nowcast(x, mdl)
 Observation options are `"hurdle_ztnb"`, `"hurdle_ztpoisson"`, and
 `"cumulative"`. If omitted, `nowcast()` installs the documented default signed
 hurdle-ZTNB process. `settlement` defines the finite target horizon.
+The ZTNB magnitude has one size for the initial update (`magnitude_size`,
+delay 0) and one for later revisions (`revision_magnitude_size`).
+
+The hurdle models' latent `lambda` is the settled-level mean only in
+expectation over the movement probability. The magnitude mean is
+`total / movement_probability`, so a delay-0 movement probability below one
+(`plogis(movement_intercept)`) puts `lambda * q_C(H)` below the typical
+published level. Nowcasts anchor on the latest published level and are
+unaffected. Code that simulates new events from zero is not.
 
 Do not use report-level `revision_process()` for aggregate cumulative data.
 These streams cannot identify a separate confirmation probability and

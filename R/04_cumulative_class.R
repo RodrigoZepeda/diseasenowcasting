@@ -24,7 +24,14 @@
 #'   values for the bounded movement-probability regression. Set
 #'   `movement_previous = 0` to disable previous-movement dependence.
 #' @param magnitude_size Positive prior or fixed value for the ZTNB magnitude
-#'   size. It is used only by `"hurdle_ztnb"`.
+#'   size of the first update of each event (delay 0). It is used only by
+#'   `"hurdle_ztnb"`.
+#' @param revision_magnitude_size Positive prior or fixed value for the ZTNB
+#'   magnitude size of later updates (delays `1:H`). Initial reports and later
+#'   revisions have very different dispersion relative to their mean: a single
+#'   shared size is pulled to the heavy-tailed revisions and then leaves the
+#'   initial reports too little weight to identify the epidemic trajectory. It
+#'   is used only by `"hurdle_ztnb"`.
 #'
 #' @returns A `cumulative_process_class` object for
 #'   `model(cumulative = )`.
@@ -43,13 +50,17 @@ cumulative_process <- function(
     movement_intercept = normal_prior(-1, 2),
     movement_age = normal_prior(0, 1),
     movement_previous = normal_prior(0, 1),
-    magnitude_size = NULL) {
+    magnitude_size = NULL,
+    revision_magnitude_size = NULL) {
   observation <- match.arg(observation)
   if (identical(observation, "hurdle_ztnb") && is.null(magnitude_size))
     magnitude_size <- lognormal_prior(0, 1.5)
+  if (identical(observation, "hurdle_ztnb") &&
+      is.null(revision_magnitude_size))
+    revision_magnitude_size <- lognormal_prior(0, 1.5)
   if (identical(observation, "hurdle_ztpoisson") &&
-      !is.null(magnitude_size)) {
-    cli::cli_abort("`hurdle_ztpoisson` has no magnitude-dispersion parameter; omit `magnitude_size`.")
+      (!is.null(magnitude_size) || !is.null(revision_magnitude_size))) {
+    cli::cli_abort("`hurdle_ztpoisson` has no magnitude-dispersion parameter; omit `magnitude_size` and `revision_magnitude_size`.")
   }
   cumulative_process_class(
     observation = observation,
@@ -60,6 +71,7 @@ cumulative_process <- function(
     movement_age = movement_age,
     movement_previous = movement_previous,
     magnitude_size = magnitude_size,
+    revision_magnitude_size = revision_magnitude_size,
     active = TRUE
   )
 }
@@ -78,6 +90,7 @@ cumulative_process_class <- S7::new_class(
     movement_age = .valid_param_slot,
     movement_previous = .valid_param_slot,
     magnitude_size = S7::class_any,
+    revision_magnitude_size = S7::class_any,
     active = S7::class_logical
   ),
   constructor = function(
@@ -89,6 +102,7 @@ cumulative_process_class <- S7::new_class(
       movement_age = normal_prior(0, 1),
       movement_previous = normal_prior(0, 1),
       magnitude_size = NULL,
+      revision_magnitude_size = NULL,
       active = TRUE) {
     S7::new_object(
       S7::S7_object(),
@@ -100,6 +114,7 @@ cumulative_process_class <- S7::new_class(
       movement_age = movement_age,
       movement_previous = movement_previous,
       magnitude_size = magnitude_size,
+      revision_magnitude_size = revision_magnitude_size,
       active = active
     )
   },
@@ -142,8 +157,13 @@ cumulative_process_class <- S7::new_class(
         !isTRUE(valid_positive_prior(self@magnitude_size))) {
       cli::cli_abort("`magnitude_size` must be a positive prior or fixed positive value.")
     }
+    if (identical(self@observation, "hurdle_ztnb") &&
+        !isTRUE(valid_positive_prior(self@revision_magnitude_size))) {
+      cli::cli_abort("`revision_magnitude_size` must be a positive prior or fixed positive value.")
+    }
     if (identical(self@observation, "hurdle_ztpoisson") &&
-        !is.null(self@magnitude_size)) {
+        (!is.null(self@magnitude_size) ||
+           !is.null(self@revision_magnitude_size))) {
       cli::cli_abort("`hurdle_ztpoisson` has no magnitude-dispersion parameter.")
     }
   }
