@@ -63,7 +63,7 @@
 #' @param data Optional prepared-data list from [prepare_data()] (used for the
 #'   data-informed location/scale defaults).  May also be a bare list with an
 #'   `m` matrix.
-#' @param ... Per-key overrides (e.g. `phi = lognormal_prior(log(20), 0.5)`,
+#' @param ... Per-key overrides (e.g. `phi = lognormal_prior(log(0.5), 0.5)`,
 #'   `delay_mu = normal_prior(log(5), 0.3)`).
 #' @returns A named list of prior specs.
 #'
@@ -146,7 +146,7 @@ default_priors <- function(mod, data = NULL, ...) {
   pr$mu_intercept <- .res(mu_slot, default_mu_prior, key = "mu")
 
   if (S7::S7_inherits(lik, nb_likelihood_class)) {
-    pr$phi_nb <- .res(lik@phi, exponential_prior(1), key = "phi")
+    pr$phi_nb <- .res(lik@phi, nb_likelihood()@phi, key = "phi")
   }
 
   # -- Covariate coefficients ------------------------------------------------

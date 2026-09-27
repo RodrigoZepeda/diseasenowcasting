@@ -41,9 +41,9 @@ nb_likelihood_class <- S7::new_class(
   parent = likelihood_class,
   properties = list(
     mu  = .valid_param_slot,  # log-scale mean intercept
-    phi = .valid_param_slot   # NB overdispersion (> 0)
+    phi = .valid_param_slot   # NB dispersion 1/size (> 0)
   ),
-  constructor = function(mu = numeric(0), phi = lognormal_prior(log(20), 0.5)) {
+  constructor = function(mu = numeric(0), phi = lognormal_prior(log(0.1), 1.5)) {
     S7::new_object(S7::S7_object(), name = "nb", num_id = 1L, mu = mu, phi = phi)
   }
 )
@@ -54,17 +54,30 @@ nb_likelihood_class <- S7::new_class(
 #'
 #' @param mu  Log-scale mean intercept prior (or fixed numeric).
 #' @param phi Negative-binomial overdispersion prior (or fixed numeric);
-#'   NB only.  Defaults to `lognormal_prior(log(20), 0.5)`.  This is the *only*
-#'   place to set the overdispersion prior — [nowcast()] reads it from the model
-#'   and does not accept its own `phi` argument.
+#'   NB only.  `phi` is the dispersion, the reciprocal of the NB size: counts
+#'   with mean \eqn{\mu} have variance \eqn{\mu + \phi \mu^2}, i.e.
+#'   `rnbinom(size = 1 / phi, mu = mu)`.  Larger `phi` means more
+#'   overdispersion and wider intervals; `phi -> 0` is the Poisson.  This is the
+#'   *only* place to set the overdispersion prior — [nowcast()] reads it from
+#'   the model and does not accept its own `phi` argument.
+#'
+#' @section Default priors:
+#' `phi ~ lognormal_prior(log(0.1), 1.5)`: a median size of 10 with a 95%
+#' interval for the size of roughly 0.5 to 190.  On long series the data
+#' dominate this prior; on short series (a few weeks of data) it sets the
+#' interval width.  The default up to version 2.4.0 was
+#' `lognormal_prior(log(20), 0.5)`, which centred the size on 0.05 (see
+#' `NEWS.md`).
 #'
 #' @returns A `likelihood_class` object.
 #'
 #' @examples
 #' poisson_likelihood()
 #' nb_likelihood()
-#' # Wider overdispersion (heavier-tailed counts) -- set via the likelihood:
-#' nb_likelihood(phi = lognormal_prior(log(5), 0.5))
+#' # More overdispersion (heavier-tailed counts, size around 2):
+#' nb_likelihood(phi = lognormal_prior(log(0.5), 0.5))
+#' # Close to Poisson (size around 100):
+#' nb_likelihood(phi = lognormal_prior(log(0.01), 0.5))
 #'
 #' @name likelihood
 NULL
@@ -77,6 +90,6 @@ poisson_likelihood <- function(mu = numeric(0)) {
 
 #' @rdname likelihood
 #' @export
-nb_likelihood <- function(mu = numeric(0), phi = lognormal_prior(log(20), 0.5)) {
+nb_likelihood <- function(mu = numeric(0), phi = lognormal_prior(log(0.1), 1.5)) {
   nb_likelihood_class(mu = mu, phi = phi)
 }

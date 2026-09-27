@@ -174,20 +174,23 @@ Rico). However the qualitative impact of the priors can be translated to any
 other disease.
 
 
-# 1. Likelihood prior: NB precision (`phi`)
+# 1. Likelihood prior: NB overdispersion (`phi`)
 
-The negative-binomial precision `phi` controls how much count variability is
-*not* explained by the trend. It is the single biggest driver of **interval
-width**. Small precision `phi` results in a very overdispersed  process 
-(wide intervals); a large `phi` is very precise (tight intervals).
+The negative-binomial overdispersion `phi` controls how much count variability
+is *not* explained by the trend: counts have variance `mu + phi * mu^2`, so
+`phi = 1 / size` in the `rnbinom(size = , mu = )` sense. It is the single
+biggest driver of **interval width**. A large `phi` gives a very overdispersed
+process (wide intervals); `phi` near 0 approaches the Poisson (tight
+intervals). The default `lognormal_prior(log(0.1), 1.5)` centres on size 10 and
+lets the data choose anything from about 0.5 to 190.
 
 ```{r fig-phi, echo=FALSE}
 plot_prior("phi_nb (prior)",   "NB overdispersion (phi)")
 ```
 
 > **What to watch:** `phi`'s main job is the **width** of the epidemic process (both nowcast and smoothed epidemic); it barely moves the delay (panel 1). If your 90%
-intervals routinely miss the truth, use a smaller `phi` (more overdispersion); if
-they are too wide, use a larger one.
+intervals routinely miss the truth, use a larger `phi` (more overdispersion); if
+they are too wide, use a smaller one.
 
 # 2. Reporting-delay parameters
 
@@ -458,7 +461,7 @@ mdl <- model(nb_likelihood(), hsgp_epidemic(num_basis = 5),
              lognormal_delay(mu = log(2)))
 
 # Or give priors (tight = confident, loose = diffuse):
-mdl <- model(nb_likelihood(phi = lognormal_prior(log(5), 0.5)),
+mdl <- model(nb_likelihood(phi = lognormal_prior(log(0.2), 0.5)),
              hsgp_epidemic(alpha = half_normal_prior(0, 5)),
              lognormal_delay(mu = normal_prior(log(7), 0.1)))
 

@@ -108,7 +108,10 @@ $$\ell(\theta) = \sum_{t} \ell_t(\theta_t \mid m_0^{(t)}, \ldots, m_L^{(t)}).$$
 $$\ln S_k(\theta_t)
 = k \ln \lambda_t - \ln k! - G_D(d^*_t \mid \theta_t)\, \lambda_t.$$
 
-**Negative Binomial** ($N_t \sim \mathrm{NB}(r_t, p_t)$, mean $r_t(1-p_t)/p_t$):
+**Negative Binomial** ($N_t \sim \mathrm{NB}(r_t, p_t)$, mean $r_t(1-p_t)/p_t$).
+The size is $r_t = 1/\phi$ for the dispersion $\phi$ of `nb_likelihood(phi = )`,
+and $p_t = r_t/(r_t + \lambda_t)$, so $\mathbb E[N_t] = \lambda_t$ and
+$\operatorname{Var}[N_t] = \lambda_t + \phi\lambda_t^2$:
 
 $$\ln S_k(\theta_t)
 = k\ln(1-p_t) + r_t \ln p_t + \ln\binom{k + r_t - 1}{k}
@@ -268,7 +271,8 @@ via a sparse Cholesky factorisation of $H$.
 $$\lambda_t^{(i)} = \exp\!\bigl(\text{cap}\bigl(\mu_t^{(i)}\bigr)\bigr),
 \quad G^*{}^{(i)}_t = G_D\!\bigl(d^*_t + 1 \mid \theta_t^{(i)}\bigr),$$
 $$\text{Nowcast}_t^{(i)} = k_t + \mathrm{NB}\!\bigl(\lambda_t^{(i)}(1 - G^*{}^{(i)}_t),\; \phi^{(i)}\bigr),$$
-where $\mathrm{cap}(\cdot)$ is a smooth upper-bound function preventing overflow:
+where $\mathrm{NB}(m, \phi)$ has mean $m$ and size $1/\phi$, and
+$\mathrm{cap}(\cdot)$ is a smooth upper-bound function preventing overflow:
 $$\text{cap}(x) = U - \log\!\bigl(1 + e^{U - x}\bigr), \quad U = \min(\max(6,\, \log(1 + k_{\max})),\, 16).$$
 
 The posterior-predictive distribution of the nowcast at event time $t$ is then

@@ -32,11 +32,11 @@ test_that("nowcast() has no phi argument", {
   expect_false("phi" %in% names(formals(nowcast)))
 })
 
-test_that("nb_likelihood() default phi is lognormal_prior(log(20), 0.5)", {
+test_that("nb_likelihood() default phi is lognormal_prior(log(0.1), 1.5)", {
   ph <- nb_likelihood()@phi
   expect_true(S7::S7_inherits(ph, diseasenowcasting:::prior_class))
   expect_equal(ph@name, "LogNormal")
-  expect_equal(ph@stan_params[1:2], c(log(20), 0.5), tolerance = 1e-8)
+  expect_equal(ph@stan_params[1:2], c(log(0.1), 1.5), tolerance = 1e-8)
 })
 
 test_that("phi set on the likelihood flows into the fitted priors", {

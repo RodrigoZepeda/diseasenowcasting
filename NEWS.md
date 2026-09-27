@@ -1,3 +1,46 @@
+# diseasenowcasting (development version)
+
+## Breaking: the default negative-binomial overdispersion prior is now on the right scale
+
+`nb_likelihood()`'s `phi` is the dispersion, the reciprocal of the NB size:
+counts with mean `mu` have variance `mu + phi * mu^2`. The objective, the
+predictive draws and `coef()` have always used it that way. The default prior
+`lognormal_prior(log(20), 0.5)` came from diseasenowcast2 (Stan), where the same
+numbers were a prior on the size. Applied to `1 / size`, it centred the size on
+0.05, which is extreme overdispersion.
+
+The default is now `lognormal_prior(log(0.1), 1.5)`: a median size of 10, with a
+95% prior interval for the size of about 0.5 to 190.
+
+* **Where it matters.** On long series the data dominate this prior. Fitted to
+  30 days of simulated counts with size 20, the old default estimated size 1.7.
+  On the benchmark's 50 dates per disease, fitting only the last 40 weeks or
+  days cut the mean WIS of the nine models by 12% (COVID-19), 18% (dengue) and
+  22% (mpox). The old default's 90% intervals covered 97-100% of truths there;
+  the new one's cover 79-89%.
+* **Full histories.** The benchmark tables were re-run with the new default.
+  WIS changes by -1.5% on dengue, -14% on mpox and +1.7% on COVID-19. The 90%
+  coverage of COVID-19, already below nominal, falls from 0.82 to 0.78: the old
+  prior's wide intervals had partly hidden it.
+* **Custom priors.** A `phi` prior you pass is used unchanged, and it has always
+  been a prior on the dispersion. Some earlier documentation described `phi`
+  as a precision: the `nb_likelihood()` example, the "Understanding priors"
+  vignette, and the prior-sensitivity labels. If you followed that advice and
+  chose a *larger* `phi` for wider intervals, you got narrower ones, and vice
+  versa. The documentation now states the parameterisation.
+* To keep the old behaviour, pass `nb_likelihood(phi = lognormal_prior(log(20), 0.5))`.
+
+## Bug fixes
+
+* The anchored-prior fallback of the two-stage fit replaced the model's `phi`
+  prior with `lognormal_prior(log(20), 0.5)`: it read `priors$phi_nb_prior`,
+  which nothing set. It now keeps the caller's prior.
+* The NB dispersion starts the optimiser at the median of a log-normal `phi`
+  prior instead of always at `phi = 20`.
+* An empty `phi` slot (`nb_likelihood(phi = numeric(0))`) now falls back to the
+  `nb_likelihood()` default instead of `exponential_prior(1)`.
+
+
 # 2.4.0
 
 ## Documentation: vignettes split into CRAN vignettes and website articles

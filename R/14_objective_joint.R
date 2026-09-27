@@ -455,7 +455,10 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     parameters$log_delay_sigma_excess <- if (delay_sigma_is_fixed) 0 else log(max(delay_sigma_init - 0.01, 1e-6))
     if (is_gengamma) parameters$delay_Q <- if (shape_Q_is_fixed) 0 else (init$delay_Q %||% -2)
   }
-  if (is_negbin) parameters$log_phi_nb <- init$log_phi_nb %||% log(20)
+  # phi_nb is the NB dispersion 1/size.  Start at the median of a log-normal
+  # prior (the default), otherwise at the default's median phi = 0.1 (size 10).
+  if (is_negbin) parameters$log_phi_nb <- init$log_phi_nb %||%
+    (if (identical(as.integer(priors$phi_nb$dist), 109L)) priors$phi_nb$params[1] else log(0.1))
   # Dedicated count-cumulative parameters.  These are deliberately separate
   # from the linelist revision parameters below: the cumulative stream
   # identifies the defective kernel h_R, not a biological confirmation

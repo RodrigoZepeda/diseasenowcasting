@@ -126,6 +126,9 @@ Add `revision = revision_process(...)` or
 - `poisson_likelihood()` is simpler when equidispersion is defensible.
 
 The NB `phi` prior belongs on `nb_likelihood(phi = ...)`, not on `nowcast()`.
+`phi` is the dispersion `1 / size` (variance `mu + phi * mu^2`): a larger `phi`
+gives wider intervals. The default `lognormal_prior(log(0.1), 1.5)` centres on
+size 10.
 Constructor arguments accept a prior object to estimate a parameter or a single
 number to fix it.
 

@@ -13,7 +13,7 @@ default_priors(mod, data = NULL, ...)
 data-informed location/scale defaults).  May also be a bare list with an
 \code{m} matrix.}
 
-\item{...}{Per-key overrides (e.g. \code{phi = lognormal_prior(log(20), 0.5)},
+\item{...}{Per-key overrides (e.g. \code{phi = lognormal_prior(log(0.5), 0.5)},
 \code{delay_mu = normal_prior(log(5), 0.3)}).}
 }
 \value{

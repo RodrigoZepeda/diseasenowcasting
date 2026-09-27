@@ -229,7 +229,7 @@ cat(conv_note("dengue"))
 
 **Key findings (dengue):** the `diseasenowcasting` HSGP variants take the top
 spots, beating both NobBS and the best Epinowcast variant on WIS. Best model:
-**HSGP / LogNormal** (WIS $\approx$ 7, cov90 $\approx$ 0.94).
+**HSGP / GeneralizedGamma** (WIS $\approx$ 7, cov90 $\approx$ 0.92).
 
 ### Mpox (daily, USA)
 
@@ -253,9 +253,11 @@ view_table("mpox", "baselinenowcast", "Mpox: diseasenowcasting vs baselinenowcas
 cat(conv_note("mpox"))
 ```
 
-**Key findings (mpox):** the `diseasenowcasting` Generalized-Gamma variants
-achieve the lowest WIS, roughly **2× better than NobBS** and well ahead of
-Epinowcast.
+**Key findings (mpox):** the `diseasenowcasting` models with a LogNormal or
+Generalized-Gamma delay achieve WIS $\approx$ 4, several times better than NobBS
+and the best Epinowcast variant; the Dirichlet delay is much weaker on these
+small daily counts. The HSGP variants are close to nominal coverage (cov90
+$\approx$ 0.9); the AR(1) variants are sharper but under-cover.
 
 ### COVID-19 (daily, Colombia)
 
@@ -280,14 +282,62 @@ cat(conv_note("covid"))
 ```
 
 **Key findings (COVID-19):** `diseasenowcasting` again leads on WIS, though the
-margin over NobBS depends on the delay family.
+margin over NobBS depends on the delay family. The reporting delay of this
+series drifts strongly over 2020, and the most accurate models' 90% intervals
+under-cover (cov90 $\approx$ 0.7–0.8).
 
 ## Conclusion
 
 Across three diseases with very different reporting patterns, scored against the
 counts that eventually arrived, **`diseasenowcasting` matched or beat NobBS,
-epinowcast and baselinenowcast** on accuracy (WIS) while keeping its uncertainty
-intervals trustworthy. 
+epinowcast and baselinenowcast** on accuracy (WIS). Its intervals are close to
+nominal on dengue and for the HSGP models on mpox, and too narrow on COVID-19.
+
+## The negative-binomial overdispersion prior
+
+The accuracy tables were re-run in September 2026 after a correction to the
+default overdispersion prior of `nb_likelihood()`. `phi` is the dispersion
+(variance $\mu + \phi\mu^2$, size $1/\phi$). The old default,
+`lognormal_prior(log(20), 0.5)`, had been ported from a Stan implementation that
+placed it on the size, so it centred the size on 0.05 (extreme overdispersion).
+The new default, `lognormal_prior(log(0.1), 1.5)`, centres the size on 10.
+
+We compared the old default, the Stan prior on its intended scale
+(`lognormal_prior(log(1/20), 0.5)`, size ~ 20) and the new default on the same
+50 dates. We fitted both the full history, as in the tables above, and only
+the last 40 weeks (dengue) or days (mpox, COVID-19), where the prior matters
+most. `Rel. WIS` is the geometric mean over the nine models of each model's WIS
+relative to the old default (below 1 is better).
+
+```{r phi-prior, echo = FALSE}
+phi_file <- find_rds("benchmark_phi_prior.rds")
+if (!is.na(phi_file)) {
+  phi_tab <- readRDS(phi_file)
+  phi_tab$arm <- c(default = "old default: lognormal(log(20), 0.5)",
+                   size20 = "Stan scale: lognormal(log(1/20), 0.5)",
+                   size10wide = "new default: lognormal(log(0.1), 1.5)")[phi_tab$arm]
+  phi_tab <- phi_tab[order(phi_tab$history, phi_tab$disease), ]
+  knitr::kable(
+    data.frame(History = phi_tab$history, Disease = phi_tab$disease,
+               Prior = phi_tab$arm, `Rel. WIS` = phi_tab$geo_rel_wis,
+               Cov50 = phi_tab$mean_cov50, Cov90 = phi_tab$mean_cov90,
+               check.names = FALSE),
+    row.names = FALSE,
+    caption = "Mean over the nine diseasenowcasting models of each prior.")
+}
+```
+
+On full histories the data dominate the prior and the accuracy barely moves:
+the new default is 1.5% better on dengue, 14% better on mpox, and 1.7% worse
+on COVID-19. On short windows it cuts WIS by 12–22% on every disease. The old
+prior's wide intervals had also hidden some under-coverage. Its 90% intervals
+covered 97–100% of truths on mpox and on the short windows. With the new
+default, coverage falls to 0.79–0.89 there, and on full-history COVID-19 from
+0.82 to 0.78.
+
+The own-model fit times in the tables above are from the June 2026 run. The
+September re-run shared the machine with other jobs, so its wall times are not
+comparable.
 
 ## How to reproduce
 
@@ -303,6 +353,12 @@ it):
 ```sh
 RUN_AUTO=FALSE Rscript devel/benchmark_full.R                   # skip auto_nowcast (faster)
 ```
+
+The prior comparison re-runs only the `diseasenowcasting` models, with
+`devel/benchmark_phi_prior.R` (one prior per run, optionally on a moving
+window), scores them against the comparators cached by `benchmark_full.R` with
+`devel/score_phi_prior.R`, and writes the shipped files with
+`devel/update_benchmark_rds.R`.
 
 > Requirements: `NobBS` and `epinowcast` (the latter needs `cmdstanr` + a working
 > CmdStan). The COVID series uses the aggregated Colombia data at the path in the

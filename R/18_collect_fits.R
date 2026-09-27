@@ -391,9 +391,11 @@
 
   # -- Fallback: anchored prior (parametric) then plain one-stage ---------------
   if (!is.null(delay_estimate)) {
-    anchored_priors <- default_priors(model, engine, phi = priors$phi_nb_prior %||% lognormal_prior(log(20), 0.5),
+    anchored_priors <- default_priors(model, engine,
       delay_mu    = normal_prior(delay_estimate$mu, max(0.10, delay_estimate$mu_sd %||% 0.10)),
       delay_sigma = gamma_prior(4, 4 / max(0.5, delay_estimate$sigma)))
+    # Only the delay is anchored; keep the caller's NB dispersion prior.
+    if (!is.null(priors$phi_nb)) anchored_priors$phi_nb <- priors$phi_nb
     anchored_error <- NULL
     anchored_fit <- tryCatch(
       fit(
