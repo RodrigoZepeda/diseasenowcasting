@@ -359,3 +359,42 @@ test_that("count-cumulative cohorts are forecast from an empty level", {
   expect_error(forecast(fitted, category = "retracted"),
                class = "diseasenowcasting_forecast_category")
 })
+
+test_that("damping shrinks each forecast step geometrically", {
+  path <- c(1, 2, 4, 5, 7, 10)
+  # The fitted part (the first three points) never changes.
+  expect_equal(.damp_forecast_path(path, 3L, 1), path)
+  expect_equal(.damp_forecast_path(path, 3L, 0), c(1, 2, 4, 4, 4, 4))
+  expect_equal(.damp_forecast_path(path, 3L, 0.5),
+               c(1, 2, 4, 4 + 0.5, 4 + 0.5 + 0.25 * 2, 4 + 0.5 + 0.25 * 2 + 0.125 * 3))
+  expect_equal(.damp_forecast_path(path, 6L, 0.3), path)
+})
+
+test_that("damping acts on the HSGP forecast only", {
+  hsgp <- .forecast_fit(hsgp_epidemic(tmax_model = 64), n_draws = 20)
+  pieces <- .mode_parlist(hsgp)
+  fit <- pieces$fit
+  n_time <- fit$data$max_time
+  reconstruct <- function(damping) .reconstruct_log_mean(
+    fit$data, pieces$parlist, fit$Bmat, fit$freq, horizon = 4L,
+    priors = fit$priors, damping = damping)
+  undamped <- reconstruct(1)
+  held <- reconstruct(0)
+  expect_equal(held[seq_len(n_time), ], undamped[seq_len(n_time), ])
+  # With no covariates the damped path is the GP held at `now`.
+  expect_equal(held[n_time + 1:4, ], rep(held[n_time, ], 4))
+  expect_false(isTRUE(all.equal(undamped[n_time + 1:4, ], held[n_time + 1:4, ])))
+
+  # damping = 1 is the default forecast, draw for draw.
+  expect_equal(forecast(hsgp, h = 2, n_draws = 20, seed = 5)@draws,
+               forecast(hsgp, h = 2, n_draws = 20, seed = 5, damping = 1)@draws)
+
+  # Recursive processes ignore it.
+  ar1 <- .forecast_fit(ar1_epidemic(), n_draws = 20)
+  expect_equal(forecast(ar1, h = 2, n_draws = 20, seed = 5)@draws,
+               forecast(ar1, h = 2, n_draws = 20, seed = 5, damping = 0.3)@draws)
+
+  expect_error(forecast(hsgp, h = 1, damping = 1.5), "must be a single number")
+  expect_error(forecast(hsgp, h = 1, damping = -0.1), "must be a single number")
+  expect_error(forecast(hsgp, h = 1, damping = c(0.5, 0.7)), "must be a single number")
+})

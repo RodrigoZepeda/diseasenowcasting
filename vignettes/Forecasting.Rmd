@@ -90,7 +90,10 @@ interval(fc@predictions) |>
 Every recursive epidemic process forecasts any horizon: `ar1_epidemic()`,
 `arima_epidemic()`, `ets_epidemic()`, `sts_epidemic()`, the random walks and
 `sir_epidemic()`. `hsgp_epidemic()` extrapolates its basis only up to the edge
-of its domain, and a `custom_epidemic()` cannot be extended. Temporal effects
+of its domain, and a `custom_epidemic()` cannot be extended. A smooth GP also
+carries its latest trend on for about one lengthscale, so past a turning point
+it can run away; `forecast(fit, h, damping = 0.7)` fades that trend step by
+step (`1`, the default, leaves it as fitted). Temporal effects
 are recomputed for the new dates; any other event covariate needs its future
 values in `new_data`.
 

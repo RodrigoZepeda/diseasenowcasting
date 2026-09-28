@@ -1,5 +1,20 @@
 # diseasenowcasting (development version)
 
+## `forecast()` can damp an HSGP's trend
+
+A Gaussian process with a smooth kernel extrapolates by continuing its latest
+trend for about one lengthscale before reverting to its intercept. On the log
+scale that trend compounds: at a turning point the forecast runs away (or, with
+a short lengthscale, collapses to the intercept). `forecast(damping = )`
+multiplies each step of the GP path past `now` by `damping^k`, a damped trend;
+the intercept and covariate terms are not damped. The default, `1`, leaves the
+forecast unchanged, and other epidemic processes ignore the argument.
+
+On FluSight California (HSGP with 52-week Fourier seasonality, 52-week window,
+13 origins in 2024-25), `damping = 0.7` cut the mean WIS over horizons 1-8 from
+0.85 to 0.43 of a flat baseline's and raised 90% coverage from 0.65 to 0.85.
+The damping was chosen on these same origins, so treat the gain as optimistic.
+
 ## Count-cumulative fits no longer invent levels at unpublished vintages
 
 Two gaps in the count-cumulative data broke stratified FluSight forecasts:

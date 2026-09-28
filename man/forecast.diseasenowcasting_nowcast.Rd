@@ -10,6 +10,7 @@
   category = NULL,
   new_data = NULL,
   include_nowcast = TRUE,
+  damping = 1,
   n_draws = NULL,
   quantile_levels = tbl.now::nowcast_quantile_levels(),
   seed = sample.int(.Machine$integer.max, 1),
@@ -29,6 +30,12 @@ default) for the fit's own estimand. See \emph{Revision categories}.}
 dates: the \code{tbl_now}'s event-date column plus every event covariate, one row
 per new event time. Needed only when the model uses event covariates other
 than temporal effects.}
+
+\item{damping}{Damping factor in \verb{[0, 1]} for \code{\link[=hsgp_epidemic]{hsgp_epidemic()}} forecasts.
+Each step of the Gaussian-process path past \code{now} is multiplied by
+\code{damping^k} (a damped trend), so \code{1} (the default) extrapolates the GP
+unchanged and \code{0} holds it at its value at \code{now}; the intercept and
+covariate terms are not damped. Other epidemic processes ignore it.}
 
 \item{include_nowcast}{If \code{TRUE} (the default), the result covers the nowcast
 event times as well as the forecast; if \code{FALSE}, only the \code{h} new ones.}
@@ -75,7 +82,11 @@ Epidemic processes differ in how far they can reach:
 horizon.
 \item \code{\link[=hsgp_epidemic]{hsgp_epidemic()}} evaluates its basis past \code{now} only up to the edge of its
 domain, and reverts towards the intercept as it approaches it; a longer
-horizon is an error.
+horizon is an error. Its smooth kernel also carries the latest trend on
+for about one lengthscale, which on the log scale compounds into runaway
+growth (or collapse) past a turning point. \code{damping} below one fades that
+trend: on weekly FluSight data \code{damping = 0.7} roughly halved the 1-8 week
+WIS of California's 2024-25 forecasts.
 \item A \code{\link[=custom_epidemic]{custom_epidemic()}} returns a matrix of fixed length and cannot be
 extended.
 }
