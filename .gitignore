@@ -28,3 +28,6 @@ devel/
 
 # Paper drafts live next to the code but are versioned in the manuscript repo.
 /*.tex
+ANALYTIC_XGBOOST_GRADIENTS.md
+PYTHON_JOINT_MODEL_SESSION_HANDOFF.md
+vignettes/articles/Mathematics.html
