@@ -1,5 +1,33 @@
 # diseasenowcasting (development version)
 
+## Count-cumulative fits no longer invent levels at unpublished vintages
+
+Two gaps in the count-cumulative data broke stratified FluSight forecasts:
+
+* **An event first published after delay 0 now enters the likelihood.** With
+  `cumulative_process(initial_report = "offset")`, only `C_t(0)` and the signed
+  updates between two observed levels reached the likelihood, so an event first
+  seen at age `k > 0` (older than the first report date, or skipped by a
+  missing vintage) left `mu_t` unanchored. Its first published level now enters
+  as `C_t(k) ~ NB(mu_t q_C(k), initial_size)`, and the nowcast draws the week's
+  effect from its posterior given that level. On 52 FluSight states jointly
+  (AR(1), origin 2023-12-02) the shared terminal retention went from 0.36 to
+  0.97, and California's 90% nowcast interval from [0, 26364] to [557, 698]
+  (truth 683).
+* **A skipped vintage is unobserved, not zero.** Zero completion filled the
+  cells of report dates at which nothing was published (FluSight skipped several
+  weeks in December 2024 and January 2025) with a zero leading level or a
+  carried-forward level. The fit then explained "0 at delay 0" by setting
+  `q_C(0)` near 0.05 and inflating the latent incidence about twentyfold. Only
+  report dates actually published for a stratum are kept; `q_C(0)` for
+  California is 0.90 and the latent follows the published levels.
+
+## `sir_epidemic()` accepts one population per stratum
+
+`N_pop` may be a vector named by stratum level (or unnamed, in stratum order),
+so each stratum's susceptible pool can be on its own scale. The default is
+unchanged. `N_pop` must now be positive.
+
 ## Breaking: the default negative-binomial overdispersion prior is now on the right scale
 
 `nb_likelihood()`'s `phi` is the dispersion, the reciprocal of the NB size:

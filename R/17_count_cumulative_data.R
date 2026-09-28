@@ -43,6 +43,15 @@
   # older than that has no observed level at the earlier ages: those cells are
   # unobserved, not zero, and its first published level is not one update.
   first_report <- min(as_of[[report_col]])
+  # Likewise a report date with no publication for a stratum (a skipped
+  # vintage) observed nothing there: completion must not invent a zero level
+  # for an event first published later, nor a carried-forward "no movement".
+  strata_cols <- tbl.now::get_strata(data)
+  publication_key <- function(frame) {
+    frame <- as.data.frame(frame)
+    do.call(paste, c(unname(frame[c(report_col, strata_cols)]), sep = "\r"))
+  }
+  published <- unique(publication_key(as_of))
   if (inherits(now, "Date")) {
     as_of <- tbl.now::change_now(as_of, now = now, verbose = FALSE)
   } else {
@@ -65,10 +74,10 @@
   # fitted triangle.
   keep <- as_of[[event_col]] <= now & as_of[[report_col]] <= now &
     as_of[[report_col]] >= first_report &
+    publication_key(as_of) %in% published &
     as.integer(as_of[[".delay"]]) <= settlement
   as_of <- as_of[which(keep), , drop = FALSE]
 
-  strata_cols <- tbl.now::get_strata(data)
   ordering_cols <- c(event_col, strata_cols, ".delay", report_col)
   row_order <- do.call(order, unname(as.data.frame(as_of)[ordering_cols]))
   as_of <- as_of[row_order, , drop = FALSE]
