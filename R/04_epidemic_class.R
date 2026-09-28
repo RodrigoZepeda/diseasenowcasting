@@ -85,7 +85,7 @@ sir_epidemic_class <- S7::new_class(
                          N_pop = 10000, use_beta_rw_trend = TRUE) {
     S7::new_object(epidemic_process_class(name = "SIR", num_id = 3L),
                    R0 = R0, gamma = gamma, N_eff = N_eff,
-                   N_pop = as.numeric(N_pop), use_beta_rw_trend = as.logical(use_beta_rw_trend))
+                   N_pop = stats::setNames(as.numeric(N_pop), names(N_pop)), use_beta_rw_trend = as.logical(use_beta_rw_trend))
   },
   validator = function(self) {
     if (!valid_positive_prior(self@R0))    cli::cli_abort("Invalid `R0`.")
@@ -97,7 +97,7 @@ sir_epidemic_class <- S7::new_class(
                         function(v) v > 0 & v < 1)
     .check_fixed_domain(self@R0, "R0", "sir_epidemic", "the positive line",
                         function(v) v > 0)
-    if (self@N_pop < 0) cli::cli_abort("`N_pop` should be >= 0.")
+    if (any(self@N_pop <= 0)) cli::cli_abort("`N_pop` should be > 0.")
     if (length(self@use_beta_rw_trend) > 1) cli::cli_abort("`use_beta_rw_trend` should be a single TRUE/FALSE.")
   }
 )
@@ -127,7 +127,8 @@ sir_epidemic_class <- S7::new_class(
 #' @param R0    SIR basic reproduction number prior (> 0).
 #' @param gamma SIR recovery rate prior in (0, 1).
 #' @param N_eff SIR effective susceptible fraction prior in (0, 1).
-#' @param N_pop SIR total population (default 10000).
+#' @param N_pop SIR total population (default 10000): one value shared by
+#'   every stratum, or one per stratum, named by stratum level.
 #' @param use_beta_rw_trend SIR: beta follows an AR(1) walk if TRUE (default).
 #'
 #' @returns An `epidemic_process_class` object.

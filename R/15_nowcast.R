@@ -343,11 +343,14 @@
       # Initial-report frailty: draw the week's Gamma effect from its
       # posterior given the published C_t(0); it scales every later update.
       intensity <- reconstructed$lambda[t, s]
-      if (isTRUE(cc$initial_frailty) && data$observation_mask[t, 1L, s]) {
+      if (isTRUE(cc$initial_frailty)) {
+        # Posterior of the week's effect given its first published level
+        # C_t(k), k = 0 unless the event was first published later.
+        entry_index <- min(observed_delays)
         intensity <- intensity * stats::rgamma(
           1L,
-          shape = cc$initial_size + data$cumulative_level_array[t, 1L, s],
-          rate = cc$initial_size + intensity * components$alpha_unit[1L]
+          shape = cc$initial_size + data$cumulative_level_array[t, entry_index, s],
+          rate = cc$initial_size + intensity * components$q_C[entry_index]
         )
       }
 

@@ -1454,17 +1454,27 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
           # published after delay 0 (older than the data's first report date)
           # has no observed C_t(0) and no observed update at its first delay.
           if (initial_frailty == 1L) {
-            first_delay <- 1L
-            if (observation_mask[t, 1L, s]) {
-              initial_level <- cumulative_level_array[t, 1L, s]
-              initial_mean <- lambda[t] * cohort_components$alpha_unit[1L] + 1e-12
+            # The event's first published level enters as
+            # C_t(k) ~ NB(mu q_C(k), kappa): k = 0 normally, later for an
+            # event first published after delay 0.  Without this term such an
+            # event's level never reaches the likelihood (only its updates do),
+            # leaving mu_t free to drift and the shared kernel to absorb it.
+            first_observed <- which(observation_mask[t, , s])
+            if (length(first_observed)) {
+              entry_index <- min(first_observed)
+              first_delay <- entry_index
+              initial_level <- cumulative_level_array[t, entry_index, s]
+              initial_mean <- lambda[t] *
+                cohort_components$q_C[entry_index] + 1e-12
               loglik_counts <- loglik_counts +
                 .nb_mean_size_logpmf(initial_level, initial_mean, initial_size)
               frailty_mean <- (initial_size + initial_level) /
                 (initial_size + initial_mean)
+            } else {
+              first_delay <- settlement_horizon + 1L
             }
           }
-          for (delay in first_delay:settlement_horizon) {
+          for (delay in seq.int(first_delay, length.out = max(0L, settlement_horizon - first_delay + 1L))) {
             delay_index <- delay + 1L
             if (!observation_mask[t, delay_index, s]) next
             if (cumulative_observation == 1L) {

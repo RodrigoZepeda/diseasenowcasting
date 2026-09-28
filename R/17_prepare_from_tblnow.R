@@ -407,6 +407,7 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
                          resolution_mode = resolution_mode, ...)
   engine$resolution_label <- .resolution_label(engine$resolution_mode,
                                                engine$is_linelist_retraction)
+  engine$N_pop <- .resolve_stratum_values(engine$N_pop, cell_levels, "N_pop")
   list(data = engine, now = now, event_col = event_col, min_event = min_event,
        event_unit = event_unit, max_time = max_time,
        strata_cols = strata_cols, strata_levels = cell_levels)
@@ -807,4 +808,25 @@ prepare_from_tbl_now <- function(data, model, now = NULL, delay_only = FALSE,
   }
 
   invisible(data)
+}
+
+#' Align a scalar-or-per-stratum value with the fitted stratum order
+#'
+#' A single value is shared by every stratum.  A vector gives one value per
+#' stratum: named by stratum level (any order), or unnamed in the order of
+#' the strata levels.
+#' @keywords internal
+#' @noRd
+.resolve_stratum_values <- function(value, strata_levels, arg) {
+  if (length(value) <= 1L) return(value)
+  n_strata <- max(1L, length(strata_levels))
+  if (!is.null(names(value))) {
+    missing_levels <- setdiff(strata_levels, names(value))
+    if (length(missing_levels))
+      cli::cli_abort("{.arg {arg}} has no value for stratum {.val {missing_levels}}.")
+    return(unname(value[strata_levels]))
+  }
+  if (length(value) != n_strata)
+    cli::cli_abort("{.arg {arg}} must have length 1 or one value per stratum ({n_strata}), not {length(value)}.")
+  value
 }
