@@ -17,6 +17,7 @@ nowcast(
   floor_sig_frac = 0.08,
   temporal_effects = "auto",
   prior_only = FALSE,
+  marginal_latent = NULL,
   quantile_levels = tbl.now::nowcast_quantile_levels(),
   seed = sample.int(.Machine$integer.max, 1),
   ...
@@ -61,6 +62,20 @@ data (e.g. how the SIR \code{R0} prior or the AR(1) \code{phi} prior reshapes th
 epidemic). The result uses the same common grammar as an ordinary fit, so
 \code{predict()} / \code{autoplot()} / \code{median()} / \code{quantile()} all work; \code{data}
 only supplies the time grid. Default \code{FALSE}.}
+
+\item{marginal_latent}{How the latent epidemic innovations are fitted.
+\code{NULL} (the default) keeps the automatic choice: a joint mode over the
+parameters and the innovations, except for the count-cumulative level
+observation, which integrates them out. \code{TRUE} integrates them out with a
+Laplace approximation (RTMB \verb{random=}); \code{FALSE} forces the joint mode.
+A joint mode shrinks the non-centred innovations and inflates their
+standard deviation to compensate. Forecasts inherit that standard
+deviation, so random-walk, ARIMA, ETS and STS forecast intervals widen far
+too fast. Nowcasts anchored on a published level (count-cumulative offset
+fits) are essentially unchanged; line-list and count-incidence nowcasts of
+the newest event times lean on the latent path and were more accurate with
+\code{TRUE} in simulations. \code{TRUE} costs about 1.5-2 times the fitting time and
+more memory. See \code{vignette("Forecasting")}.}
 
 \item{quantile_levels}{Probabilities at which to summarise the predictive
 draws in the returned \link[tbl.now:tbl_nowcast]{tbl.now::tbl_nowcast}.}

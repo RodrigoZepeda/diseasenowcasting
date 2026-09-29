@@ -149,6 +149,7 @@ S7::method(update, nowcast_class) <- function(object, new_data, now = NULL,
                                    schema = object@engine$design_schema,
                                    revision_mode = object@revision_mode)
   engine   <- prepared$data
+  engine$use_random_request <- object@engine$use_random_request
   engine$min_event <- prepared$min_event
   engine$event_unit <- as.character(prepared$event_unit)
   engine$strata_levels <- prepared$strata_levels

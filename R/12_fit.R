@@ -1176,6 +1176,11 @@ fit <- function(model, data, priors = NULL, init = NULL,
                        use_random = NULL,
                        control = NULL,
                        hierarchical_strata = FALSE, warn = TRUE) {
+  # An explicit request made at nowcast() (`marginal_latent`) travels on the
+  # engine, so every fit of that nowcast -- two-stage imputations, update(),
+  # a reload -- honours it.
+  if (is.null(use_random) && !is.null(data$use_random_request))
+    use_random <- isTRUE(data$use_random_request)
   if (is.null(use_random)) {
     use_random <- if (isTRUE(data$is_count_cumulative == 1L)) {
       identical(as.integer(data$count_cumulative_observation), 1L)

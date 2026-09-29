@@ -101,6 +101,19 @@ nowcast_class <- S7::new_class(
 #'   epidemic). The result uses the same common grammar as an ordinary fit, so
 #'   `predict()` / `autoplot()` / `median()` / `quantile()` all work; `data`
 #'   only supplies the time grid. Default `FALSE`.
+#' @param marginal_latent How the latent epidemic innovations are fitted.
+#'   `NULL` (the default) keeps the automatic choice: a joint mode over the
+#'   parameters and the innovations, except for the count-cumulative level
+#'   observation, which integrates them out. `TRUE` integrates them out with a
+#'   Laplace approximation (RTMB `random=`); `FALSE` forces the joint mode.
+#'   A joint mode shrinks the non-centred innovations and inflates their
+#'   standard deviation to compensate. Forecasts inherit that standard
+#'   deviation, so random-walk, ARIMA, ETS and STS forecast intervals widen far
+#'   too fast. Nowcasts anchored on a published level (count-cumulative offset
+#'   fits) are essentially unchanged; line-list and count-incidence nowcasts of
+#'   the newest event times lean on the latent path and were more accurate with
+#'   `TRUE` in simulations. `TRUE` costs about 1.5-2 times the fitting time and
+#'   more memory. See `vignette("Forecasting")`.
 #' @param quantile_levels Probabilities at which to summarise the predictive
 #'   draws in the returned [tbl.now::tbl_nowcast].
 #' @param seed Optional RNG seed (imputation draws).
@@ -136,6 +149,7 @@ nowcast <- function(data, model = diseasenowcasting::model(),
                     floor_mu = 0.08, floor_sig_frac = 0.08,
                     temporal_effects = "auto",
                     prior_only = FALSE,
+                    marginal_latent = NULL,
                     quantile_levels = tbl.now::nowcast_quantile_levels(),
                     seed = sample.int(.Machine$integer.max, 1), ...) {
   if ("revision_censored" %in% names(list(...))) {
@@ -145,6 +159,9 @@ nowcast <- function(data, model = diseasenowcasting::model(),
     ))
   }
   type <- match.arg(type)
+  if (!is.null(marginal_latent) &&
+      (!is.logical(marginal_latent) || length(marginal_latent) != 1L || is.na(marginal_latent)))
+    cli::cli_abort("{.arg marginal_latent} must be {.code NULL}, {.code TRUE} or {.code FALSE}.")
   if (!is.null(seed)) set.seed(seed)
   # The NB overdispersion prior lives on the likelihood, not on nowcast().
   phi <- .likelihood_phi(model)
@@ -224,6 +241,7 @@ nowcast <- function(data, model = diseasenowcasting::model(),
   prepared <- prepare_from_tbl_now(data, model, now = now, delay_only = FALSE,
                                    revision_mode = revision_mode, ...)
   engine   <- prepared$data
+  engine$use_random_request <- marginal_latent
   priors   <- default_priors(model, engine)
 
   if (isTRUE(prior_only)) {
