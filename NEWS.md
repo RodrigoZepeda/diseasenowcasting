@@ -1,4 +1,4 @@
-# diseasenowcasting (development version)
+# diseasenowcasting 2.6.0
 
 ## `nowcast(marginal_latent = TRUE)` estimates the innovation scale from the marginal likelihood
 
