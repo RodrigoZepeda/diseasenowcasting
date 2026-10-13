@@ -8,8 +8,8 @@
 # where the count draw is NB-2 (size = 1/phi_nb) or Poisson, with overflow
 # guards.  Posterior parameter draws come from the Laplace approximation:
 # sample the parameter vector from N(mode, precision^{-1}) -- joint Hessian for
-# the joint-mode fit (cmdstanr $laplace() regime) or the sdreport joint
-# precision for the marginal (random=) fit.
+# a joint-mode fit when requested internally or the sdreport joint precision
+# for the default marginal (random=) fit.
 # =============================================================================
 
 #' Split a named flat parameter vector into a parList-style named list
@@ -485,36 +485,18 @@ summarise_nowcast_matrix <- function(draws_matrix) {
   data <- fit$data; priors <- fit$priors
   n_time <- data$max_time
   target <- target %||% n_time
-  obj <- fit$obj
   is_count_cumulative <- isTRUE(data$is_count_cumulative == 1L)
   is_negbin <- data$is_negative_binomial == 1L &&
     (!is_count_cumulative ||
        identical(as.integer(data$count_cumulative_observation), 1L))
 
   # Laplace posterior precision at the mode.
-  #  - joint-mode fit (no random=, the fast default): precision = Hessian of the
-  #    joint nll = obj$he(mode).  This is exactly cmdstanr $laplace().
-  #  - marginal fit (random=): precision = sdreport joint precision over (fixed, random).
-  if (is.null(obj)) {
-    # A saved/loaded fit: the live RTMB tape is gone, but save_nowcast() stored
-    # the Laplace mode and precision -- sample from those directly (any n_draws).
-    mode_vector      <- fit$mode
-    precision_matrix <- fit$precision
-    if (is.null(mode_vector) || is.null(precision_matrix))
-      cli::cli_abort(c("This fit has no live RTMB objective and no stored Laplace mode/precision.",
-                       "i" = "Re-load with {.code load_nowcast(file, rebuild = TRUE)}, or re-fit."))
-  } else if (isFALSE(fit$use_random %||% FALSE)) {
-    mode_vector <- obj$env$last.par.best
-    precision_matrix <- methods::as(obj$he(mode_vector), "sparseMatrix")
-  } else {
-    sd_report <- RTMB::sdreport(obj, getJointPrecision = TRUE)
-    precision_matrix <- sd_report$jointPrecision
-    mode_vector <- obj$env$last.par.best
-    if (is.null(precision_matrix)) {
-      precision_matrix <- methods::as(solve(sd_report$cov.fixed), "sparseMatrix")
-      mode_vector <- sd_report$par.fixed
-    }
-  }
+  #  - joint-mode fit (no random=): precision = Hessian of the joint nll.
+  #  - default marginal fit (random=): precision = sdreport joint precision
+  #    over (fixed, random).
+  laplace <- .fit_laplace_mode_precision(fit)
+  mode_vector <- laplace$mode
+  precision_matrix <- laplace$precision
   parameter_names <- names(mode_vector)
   free_coordinates <- fit$diagnostic$free_coordinates %||% logical()
   if (length(free_coordinates) == length(mode_vector) &&

@@ -47,7 +47,7 @@ test_that("hurdle ZTPoisson supports fit, prediction, save/load, and update", {
   )
   expect_true(tbl.now::is_tbl_nowcast(fitted))
   expect_identical(fitted@rung, "onestage")
-  expect_false(fitted@fits[[1L]]$use_random)
+  expect_true(fitted@fits[[1L]]$use_random)
   expect_lte(fitted@fits[[1L]]$max_gradient, 0.1)
   expect_null(fitted@fits[[1L]]$parList$log_magnitude_size)
 
@@ -116,7 +116,7 @@ test_that("hurdle ZTPoisson supports prior-only and finite-horizon backtesting",
   expect_true(all(is.finite(evaluated$scores$.observed)))
 })
 
-test_that("cumulative-level fits use Laplace while hurdle fits use MAP", {
+test_that("cumulative-level and hurdle fits integrate latent epidemic innovations", {
   data <- .make_count_cumulative_workflow_fixture(12L)
   now <- as.Date("2023-01-07") + 10L * 7L
   level_model <- model(
@@ -139,7 +139,7 @@ test_that("cumulative-level fits use Laplace while hurdle fits use MAP", {
   level_fit <- fit(level_model, level_engine, priors = level_priors)
   hurdle_fit <- fit(hurdle_model, hurdle_engine, priors = hurdle_priors)
   expect_true(level_fit$use_random)
-  expect_false(hurdle_fit$use_random)
+  expect_true(hurdle_fit$use_random)
   expect_lte(level_fit$max_gradient, 0.1)
   expect_lte(hurdle_fit$max_gradient, 0.1)
 })

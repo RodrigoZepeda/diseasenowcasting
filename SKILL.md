@@ -189,7 +189,9 @@ fit <- nowcast(
 Count-cumulative models use one-stage regardless of the request. Fit warnings
 and `fit_check()` matter: inspect convergence, projected gradient, curvature,
 excluded imputations, and any precision regularization before relying on a
-result.
+result. The fit integrates latent epidemic innovations or basis coefficients
+with RTMB's Laplace approximation when estimating process parameters, including
+the innovation SD. This also applies to cumulative hurdle models.
 
 Use `prior_only = TRUE` to inspect prior-predictive epidemic trajectories without
 fitting:

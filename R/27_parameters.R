@@ -49,9 +49,9 @@ S7::method(parameters, nowcast_class) <- function(x, conf.level = 0.95, ...) {
   # -- posterior precision from the Laplace mode ------------------------------
   # `last.par.best` is the joint mode (fixed + random effects); its names label
   # every estimated parameter, and its values are the point estimates.
-  obj             <- fit$obj
   # A saved/loaded fit has no live tape: use the stored Laplace mode + precision.
-  posterior_mode  <- if (is.null(obj)) fit$mode else obj$env$last.par.best
+  laplace <- .fit_laplace_mode_precision(fit)
+  posterior_mode <- laplace$mode
   parameter_names <- names(posterior_mode)
   relabel_block <- function(parameter_names, base, labels) {
     index <- which(parameter_names == base)
@@ -86,7 +86,7 @@ S7::method(parameters, nowcast_class) <- function(x, conf.level = 0.95, ...) {
   # definite at a weakly-identified mode, so we retry the Cholesky factorisation
   # with a progressively larger diagonal ridge until it succeeds.
   std_errors <- tryCatch({
-    hessian <- if (is.null(obj)) fit$precision else methods::as(obj$he(posterior_mode), "sparseMatrix")
+    hessian <- laplace$precision
     n_par   <- nrow(hessian)
 
     cholesky_factor <- NULL
@@ -113,8 +113,7 @@ S7::method(parameters, nowcast_class) <- function(x, conf.level = 0.95, ...) {
     # exactly: estimate the marginal SDs from Laplace draws, exactly as predict()
     # samples them.  Approximate, but far better than a column of NAs.
     tryCatch({
-      hessian <- if (is.null(obj)) fit$precision else methods::as(obj$he(posterior_mode), "sparseMatrix")
-      draws <- .sample_mvnorm_precision(estimates, hessian, 1000L)
+      draws <- .sample_mvnorm_precision(estimates, laplace$precision, 1000L)
       apply(draws, 1, stats::sd)
     }, error = function(e2) rep(NA_real_, length(estimates)))
   })

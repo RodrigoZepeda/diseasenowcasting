@@ -237,6 +237,7 @@ test_that("offset fits keep E[C_t(H)] = lambda q_C(H) on simulated data", {
     temporal_effects = "none", n_draws = 20L, seed = 1L
   )
   fit <- fitted@fits[[1L]]
+  expect_true(fit$use_random)
   expect_true(diseasenowcasting:::.fit_is_adequate(fit))
 
   engine <- fit$data

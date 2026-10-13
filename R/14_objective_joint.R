@@ -11,8 +11,8 @@
 # infection (beta^(s) * sum_s' I^(s')).  At num_strata = 1 everything reduces
 # exactly to the single-stratum model.
 #
-# Latent epidemic coefficients are `random` only when use_random = TRUE (the
-# marginal Laplace); the default joint-mode keeps them as fixed effects.
+# Latent epidemic coefficients are `random` by default so RTMB integrates them
+# with a marginal Laplace approximation when estimating process hyperparameters.
 # =============================================================================
 
 #' Build the joint RTMB objective (stratified)

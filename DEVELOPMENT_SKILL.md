@@ -176,6 +176,10 @@ continuation of the same draws: `.reconstruct_log_mean(horizon = h)` runs each
 epidemic recursion `h` more steps with fresh N(0, 1) innovations and must leave
 the fitted rows unchanged (tested). A new epidemic process must either support
 that horizon or refuse it with class `diseasenowcasting_forecast_unsupported`.
+Fit latent epidemic innovations with RTMB's `random=` marginal Laplace path by
+default for every data type. Profiling standardized innovations at a joint mode
+can inflate their fitted SD. Posterior draws, parameter intervals, and saved
+fits must use the resulting joint mode and precision from `sdreport()`.
 Revision categories split one gross report cloud, so they add up draw by draw;
 keep `.forecast_category()` in step with the revision modes.
 

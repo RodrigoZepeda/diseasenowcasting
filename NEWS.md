@@ -1,5 +1,23 @@
 # diseasenowcasting (development version)
 
+## Innovation SDs are estimated with the latent epidemic trajectory integrated out
+
+The default RTMB fit now uses a marginal Laplace objective for every epidemic
+process with latent innovations or basis coefficients, including count-incidence
+and count-cumulative hurdle data. The previous joint-mode approximation could
+inflate innovation SDs as the series grew: increasing the SD made the fitted
+standardized innovations smaller without paying for their integration volume.
+On simulated weekly counts generated with SD 0.25, marginal estimates were
+0.20–0.25 across ARIMA, AR(1), ETS, and STS on both data types, while joint-mode
+estimates were 0.31–0.76. Forecast intervals and fit times will change. The
+internal `diseasenowcasting.use_random = FALSE` option retains joint-mode fitting
+for diagnostic comparisons on incidence and hurdle data. `parameters()` now
+uses the joint precision of a marginal fit for its reported uncertainty,
+matching posterior prediction.
+Cold cumulative hurdle fits first use the cheaper joint objective to find a
+starting point, then optimize the marginal objective once; an inadequate
+marginal fit still triggers the full initialization search.
+
 ## Count-cumulative fits no longer invent levels at unpublished vintages
 
 Two gaps in the count-cumulative data broke stratified FluSight forecasts:

@@ -137,21 +137,9 @@ load_nowcast <- function(file, rebuild = FALSE) {
     fit$obj <- NULL; fit$opt <- NULL
     return(fit)
   }
-  obj <- fit$obj
-  if (isFALSE(fit$use_random %||% FALSE)) {
-    mode_vec  <- obj$env$last.par.best
-    precision <- methods::as(obj$he(mode_vec), "sparseMatrix")
-  } else {
-    sd_report <- RTMB::sdreport(obj, getJointPrecision = TRUE)
-    precision <- sd_report$jointPrecision
-    mode_vec  <- obj$env$last.par.best
-    if (is.null(precision)) {
-      precision <- methods::as(solve(sd_report$cov.fixed), "sparseMatrix")
-      mode_vec  <- sd_report$par.fixed
-    }
-  }
-  fit$mode      <- mode_vec
-  fit$precision <- precision
+  laplace <- .fit_laplace_mode_precision(fit)
+  fit$mode      <- laplace$mode
+  fit$precision <- laplace$precision
   fit$obj <- NULL; fit$opt <- NULL
   fit
 }
@@ -167,7 +155,9 @@ load_nowcast <- function(file, rebuild = FALSE) {
                              use_random = isTRUE(fit$use_random %||% FALSE))
     obj <- built$obj
     if (!is.null(fit$mode)) {
-      obj$fn(as.numeric(fit$mode))         # populate internal state at the mode
+      # A marginal objective accepts fixed parameters only; the full joint
+      # mode also contains the latent innovations restored through `init`.
+      obj$fn(obj$par)
       obj$env$last.par.best <- fit$mode    # pin the optimum (names preserved)
     }
     obj

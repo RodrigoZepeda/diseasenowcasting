@@ -1176,11 +1176,53 @@ fit <- function(model, data, priors = NULL, init = NULL,
                        use_random = NULL,
                        control = NULL,
                        hierarchical_strata = FALSE, warn = TRUE) {
+  fit_started <- proc.time()[["elapsed"]]
   if (is.null(use_random)) {
-    use_random <- if (isTRUE(data$is_count_cumulative == 1L)) {
-      identical(as.integer(data$count_cumulative_observation), 1L)
+    # Profiling the standardized epidemic innovations into a joint mode omits
+    # their integration volume. As the series grows, that can drive innovation
+    # SDs upward even when the observed log changes stay at the same scale.
+    # Integrate them for every observation type, including cumulative hurdles.
+    use_random <- if (isTRUE(data$is_count_cumulative == 1L) &&
+                      identical(as.integer(data$count_cumulative_observation), 1L)) {
+      TRUE
     } else {
-      getOption("diseasenowcasting.use_random", FALSE)
+      getOption("diseasenowcasting.use_random", TRUE)
+    }
+  }
+  # For a cold cumulative hurdle fit, locating a basin with the inexpensive
+  # joint objective first avoids repeating the costly marginal calculation at
+  # every intercept start. Only the marginal optimum is returned. If its
+  # diagnostics fail, the full marginal initialization ladder below still runs.
+  is_hurdle <- isTRUE(data$is_count_cumulative == 1L) &&
+    isTRUE(as.integer(data$count_cumulative_observation) %in% c(2L, 3L))
+  if (isTRUE(use_random) && is.null(init) && is_hurdle) {
+    seed_fit <- tryCatch(
+      .fit_joint(model, data, priors, n_tries = n_tries,
+                 use_random = FALSE, control = control,
+                 hierarchical_strata = hierarchical_strata, warn = FALSE),
+      error = function(e) NULL
+    )
+    if (!is.null(seed_fit)) {
+      marginal <- tryCatch(
+        .fit_joint(model, data, priors, init = seed_fit$parList,
+                   n_tries = 1L, use_random = TRUE, control = control,
+                   hierarchical_strata = hierarchical_strata, warn = FALSE),
+        error = function(e) NULL
+      )
+      if (!is.null(marginal) && .fit_is_adequate(marginal)) {
+        marginal$elapsed <- proc.time()[["elapsed"]] - fit_started
+        if (isTRUE(warn)) {
+          .warn_joint_fit(marginal)
+          if (isTRUE(marginal$diagnostic$log_mean_cap_bound)) {
+            .warn_log_mean_cap(
+              marginal$diagnostic$log_mean_headroom,
+              marginal$diagnostic$log_mean_upper_bound, n_fits = 1L,
+              legacy_bound = marginal$diagnostic$log_mean_upper_bound_legacy
+            )
+          }
+        }
+        return(marginal)
+      }
     }
   }
   base_init <- init %||% list()
@@ -1191,15 +1233,14 @@ fit <- function(model, data, priors = NULL, init = NULL,
     if (length(positive)) log(stats::median(positive)) else 0 })   # one per stratum
   candidates <- list()
   attempt_errors <- character()
-  fit_started <- proc.time()[["elapsed"]]
   # A supplied warm start already identifies one basin. Cold fits evaluate the
-  # complete initialization ladder so admissibility and MAP selection remain
+  # complete initialization ladder so admissibility and objective selection remain
   # separate; warm Stage-2 fits avoid multiplying K imputations by six rungs.
   attempt_count <- if (is.null(init)) as.integer(n_tries) else 1L
-  # Hurdle count-cumulative fits are joint MAP fits whose AR trend has a flat
-  # basin (innovations and their SD both near zero) that every intercept rung
-  # starts inside.  One extra cold rung starts on the observed level
-  # trajectory; MAP selection keeps it only when it reaches a lower objective.
+  # Hurdle count-cumulative fits can have a flat initial basin (innovations and
+  # their SD both near zero) that every intercept rung starts inside.
+  # One extra cold rung starts on the observed level
+  # trajectory; candidate selection keeps it only when warranted by the objective.
   trajectory_init <- if (is.null(init) &&
                          !(isTRUE(hierarchical_strata) && n_strata > 1L))
     .count_cumulative_trajectory_init(data) else NULL
@@ -1247,8 +1288,8 @@ fit <- function(model, data, priors = NULL, init = NULL,
       )
       if (!is.finite(opt$objective)) stop("non-finite objective")
       # A nominal nlminb convergence code is not enough for either inference
-      # strategy.  Hurdle fits are joint MAP fits (use_random = FALSE), and can
-      # need the same bounded quasi-Newton polish as Laplace-marginal fits.
+      # strategy. Hurdle fits can need the same bounded quasi-Newton polish as
+      # other Laplace-marginal fits.
       polish_result <- .polish_joint_candidate(obj, opt, bounds)
       opt <- polish_result$opt
       max_gradient <- polish_result$max_gradient
@@ -1419,6 +1460,35 @@ fit <- function(model, data, priors = NULL, init = NULL,
     ))
   }
   cli::cli_abort("Joint fit failed to converge for all init attempts.")
+}
+
+#' Laplace mode and joint precision for posterior reconstruction
+#'
+#' A marginal RTMB objective has a Hessian only for the fixed parameters.
+#' Posterior draws and parameter intervals also need the latent innovations,
+#' so they must use sdreport's joint precision after a random-effects fit.
+#' @keywords internal
+#' @noRd
+.fit_laplace_mode_precision <- function(fit) {
+  obj <- fit$obj
+  if (is.null(obj)) {
+    if (is.null(fit$mode) || is.null(fit$precision))
+      cli::cli_abort("This fit has no live RTMB objective and no stored Laplace mode/precision.")
+    return(list(mode = fit$mode, precision = fit$precision))
+  }
+  if (!isTRUE(fit$use_random %||% FALSE)) {
+    mode <- obj$env$last.par.best
+    return(list(mode = mode,
+                precision = methods::as(obj$he(mode), "sparseMatrix")))
+  }
+  report <- RTMB::sdreport(obj, getJointPrecision = TRUE)
+  precision <- report$jointPrecision
+  mode <- obj$env$last.par.best
+  if (is.null(precision)) {
+    precision <- methods::as(solve(report$cov.fixed), "sparseMatrix")
+    mode <- report$par.fixed
+  }
+  list(mode = mode, precision = precision)
 }
 
 #' Delay-only fit with a small init ladder (parametric families 1/2/3; the
