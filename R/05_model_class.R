@@ -32,6 +32,16 @@ model_class <- S7::new_class(
   validator = function(self) {
     if (!self@strata_pooling %in% c("independent", "hierarchical"))
       cli::cli_abort("`strata_pooling` must be \"independent\" or \"hierarchical\".")
+    cumulative <- self@cumulative
+    if (isTRUE(cumulative@active) &&
+        .cumulative_observation_code(cumulative, self@likelihood) == 3L &&
+        (!is.null(cumulative@magnitude_size) ||
+           !is.null(cumulative@revision_magnitude_size))) {
+      cli::cli_abort(c(
+        "The Poisson hurdle has no magnitude-dispersion parameter.",
+        "i" = "Omit `magnitude_size` and `revision_magnitude_size`, or use {.fn nb_likelihood} for a ZTNB magnitude."
+      ))
+    }
   }
 )
 
@@ -60,8 +70,10 @@ model_class <- S7::new_class(
 #'   Only relevant when `num_strata > 1`.
 #' @param cumulative Dedicated count-cumulative observation configuration
 #'   from [cumulative_process()]. It is inert by default for linelist and
-#'   count-incidence data; count-cumulative data use the hurdle--ZTNB default
-#'   unless configured explicitly.
+#'   count-incidence data; count-cumulative data use the default hurdle
+#'   observation unless configured explicitly. The `likelihood` sets the hurdle
+#'   magnitude law: ZTNB under [nb_likelihood()], ZTPoisson under
+#'   [poisson_likelihood()].
 #'
 #' @returns A `model_class` object.
 #'

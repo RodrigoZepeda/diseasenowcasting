@@ -1,5 +1,31 @@
 # diseasenowcasting (development version)
 
+## Breaking: the likelihood sets the count-cumulative hurdle magnitude (#140)
+
+`cumulative_process(observation = )` now takes `"hurdle"` or `"plain"`. The
+hurdle's magnitude law follows `model(likelihood = )`: zero-truncated negative
+binomial under `nb_likelihood()`, zero-truncated Poisson under
+`poisson_likelihood()`. Before, `"hurdle_ztnb"` and `"hurdle_ztpoisson"` chose
+the magnitude law and the likelihood was ignored, so
+`model(poisson_likelihood(), cumulative = cumulative_process("hurdle_ztnb"))`
+fitted a negative-binomial hurdle while printing a Poisson likelihood. `"plain"`
+replaces `"cumulative"`, and the old strings are no longer accepted.
+
+* `poisson_likelihood()` on count-cumulative data without an explicit
+  `cumulative_process()` now fits the zero-truncated Poisson hurdle; it used to
+  fit the ZTNB one.
+* `magnitude_size` and `revision_magnitude_size` stay in `cumulative_process()`;
+  the hurdle does not use `nb_likelihood()`'s `phi`. Setting either one under
+  `poisson_likelihood()` or with `"plain"` is now an error, not silently ignored.
+
+## Breaking: `nowcast_diagnostic()` is now `plot_nowcast_decomposition()` (#141)
+
+The three-panel plot of the fitted delay, the smoothed epidemic and the nowcast
+does not test convergence, fit, or predictive performance, so the old name was
+misleading. It is renamed with the same arguments; `nowcast_diagnostic()` is
+removed. Use `fit_check()` for optimizer diagnostics and `backtest()` for
+predictive performance.
+
 ## Innovation SDs are estimated with the latent epidemic trajectory integrated out
 
 The default RTMB fit now uses a marginal Laplace objective for every epidemic

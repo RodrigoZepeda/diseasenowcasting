@@ -5,7 +5,7 @@
 \title{Count-cumulative observation process}
 \usage{
 cumulative_process(
-  observation = c("hurdle_ztnb", "hurdle_ztpoisson", "cumulative"),
+  observation = c("hurdle", "plain"),
   retraction_delay = lognormal_delay(),
   settlement = 26L,
   retraction_mass = beta_prior(1.5, 20),
@@ -19,11 +19,12 @@ cumulative_process(
 )
 }
 \arguments{
-\item{observation}{Observation composite likelihood. \code{"cumulative"} uses
-cumulative Poisson or negative-binomial marginals according to the model's
-\link{likelihood}. \code{"hurdle_ztnb"} uses signed hurdle updates with a
-zero-truncated-negative-binomial magnitude. \code{"hurdle_ztpoisson"} uses the
-corresponding zero-truncated-Poisson magnitude.}
+\item{observation}{Observation composite likelihood. \code{"hurdle"} uses signed
+hurdle updates whose magnitude law follows the model's \link{likelihood}: a
+zero-truncated negative binomial under \code{\link[=nb_likelihood]{nb_likelihood()}} and a
+zero-truncated Poisson under \code{\link[=poisson_likelihood]{poisson_likelihood()}}. \code{"plain"} uses
+cumulative Poisson or negative-binomial marginals, again according to the
+model's likelihood.}
 
 \item{retraction_delay}{Parametric delay family for retraction ages \code{1:H}.
 Lognormal, gamma, and generalized gamma are supported.}
@@ -39,14 +40,17 @@ values for the bounded movement-probability regression. Set
 
 \item{magnitude_size}{Positive prior or fixed value for the ZTNB magnitude
 size of the first update of each event (delay 0). It is used only by
-\code{"hurdle_ztnb"}.}
+\code{"hurdle"} under \code{\link[=nb_likelihood]{nb_likelihood()}}, where \code{NULL} (the default) means
+\code{lognormal_prior(0, 1.5)}; the Poisson hurdle has no magnitude size. The
+likelihood's own \code{phi} is not used by the hurdle.}
 
 \item{revision_magnitude_size}{Positive prior or fixed value for the ZTNB
 magnitude size of later updates (delays \code{1:H}). Initial reports and later
 revisions have very different dispersion relative to their mean: a single
 shared size is pulled to the heavy-tailed revisions and then leaves the
 initial reports too little weight to identify the epidemic trajectory. It
-is used only by \code{"hurdle_ztnb"}.}
+is used only by \code{"hurdle"} under \code{\link[=nb_likelihood]{nb_likelihood()}}, where \code{NULL} (the
+default) means \code{lognormal_prior(0, 1.5)}.}
 
 \item{initial_report}{How the hurdle models treat the first published level
 \code{C_t(0)}. \code{"hurdle"} treats it as one more signed update. \code{"offset"} gives
@@ -78,8 +82,11 @@ probability and a conditional revision-delay law.
 }
 \examples{
 cumulative_process()
-cumulative_process(observation = "cumulative", settlement = 52L)
-cumulative_process(observation = "hurdle_ztpoisson", settlement = 6L)
+cumulative_process(observation = "plain", settlement = 52L)
 cumulative_process(initial_report = "offset")
+
+# The likelihood chooses the hurdle magnitude law:
+model(nb_likelihood(), cumulative = cumulative_process("hurdle"))      # ZTNB
+model(poisson_likelihood(), cumulative = cumulative_process("hurdle")) # ZTPoisson
 
 }

@@ -459,12 +459,12 @@ process and the delay process each on their own result in a combined
 
 <a><img src="man/figures/nowcasting_panels_resized.svg" align="center" alt="Image showing how a nowcast can be decomposed into the epidemic and delay processes"/></a>
 
-In `diseasenowcasting`, the `nowcast_diagnostic()` function plots these
+In `diseasenowcasting`, the `plot_nowcast_decomposition()` function plots these
 processes separately so you can see the reconstructed epidemic and delay
 processes fitted to the data:
 
 ``` r
-nowcast_diagnostic(ncast)
+plot_nowcast_decomposition(ncast)
 ```
 
 <img src="man/figures/README-unnamed-chunk-7-1.png" alt="" width="100%" />

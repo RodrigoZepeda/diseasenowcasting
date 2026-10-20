@@ -219,7 +219,7 @@ summary(predict(fit))
 mean(fit); median(fit); quantile(fit) # latent epidemic incidence
 parameters(fit)                 # parameter table with uncertainty
 coef(fit)                       # compact point estimates
-nowcast_diagnostic(fit)         # delay, latent epidemic, and nowcast panels
+plot_nowcast_decomposition(fit) # delay, latent epidemic, and nowcast panels
 fit_check(fit)                  # RTMB optimizer/Laplace diagnostics
 ```
 
@@ -315,7 +315,7 @@ mdl <- model(
   ar1_epidemic(),
   lognormal_delay(),
   cumulative = cumulative_process(
-    observation = "hurdle_ztnb",
+    observation = "hurdle",
     retraction_delay = lognormal_delay(),
     settlement = 26
   )
@@ -324,9 +324,11 @@ mdl <- model(
 fit <- nowcast(x, mdl)
 ```
 
-Observation options are `"hurdle_ztnb"`, `"hurdle_ztpoisson"`, and
-`"cumulative"`. If omitted, `nowcast()` installs the documented default signed
-hurdle-ZTNB process. `settlement` defines the finite target horizon.
+Observation options are `"hurdle"` and `"plain"`. The likelihood sets the
+hurdle magnitude law: ZTNB under `nb_likelihood()`, ZTPoisson under
+`poisson_likelihood()`; there is no way to pair a Poisson hurdle with an NB
+likelihood or the reverse. If omitted, `nowcast()` installs the default signed
+hurdle process. `settlement` defines the finite target horizon.
 The ZTNB magnitude has one size for the initial update (`magnitude_size`,
 delay 0) and one for later revisions (`revision_magnitude_size`).
 

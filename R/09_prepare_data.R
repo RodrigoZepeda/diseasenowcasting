@@ -413,10 +413,8 @@ prepare_data <- function(model, m, m_censored = NULL, X = NULL, d_star = NULL,
     increment_array = increment_array, max_conf_delay = max_conf_delay,
     is_count_cumulative = as.integer(is_count_cumulative),
     count_cumulative_observation = if (is_count_cumulative &&
-      isTRUE(model@cumulative@active)) switch(
-        model@cumulative@observation,
-        cumulative = 1L, hurdle_ztnb = 2L, hurdle_ztpoisson = 3L
-      ) else 0L,
+      isTRUE(model@cumulative@active))
+      .cumulative_observation_code(model@cumulative, lik) else 0L,
     settlement_horizon = settlement_horizon,
     cumulative_level_array = cumulative_level_array,
     signed_update_array = signed_update_array,

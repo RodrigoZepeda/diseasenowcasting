@@ -269,15 +269,11 @@ default_priors <- function(mod, data = NULL, ...) {
   # -- Count-cumulative collapsed retraction and hurdle priors ----------------
   cumulative <- tryCatch(mod@cumulative, error = function(e) NULL)
   if (!is.null(cumulative) && isTRUE(cumulative@active)) {
-    pr$count_cumulative_observation <- switch(
-      cumulative@observation,
-      cumulative = 1L,
-      hurdle_ztnb = 2L,
-      hurdle_ztpoisson = 3L
-    )
+    pr$count_cumulative_observation <-
+      .cumulative_observation_code(cumulative, mod@likelihood)
     pr$count_cumulative_initial_frailty <- as.integer(
       identical(cumulative@initial_report, "offset") &&
-        cumulative@observation %in% c("hurdle_ztnb", "hurdle_ztpoisson")
+        identical(cumulative@observation, "hurdle")
     )
     if (pr$count_cumulative_initial_frailty == 1L) {
       pr$initial_size <- .res(
@@ -302,7 +298,7 @@ default_priors <- function(mod, data = NULL, ...) {
       cumulative@movement_previous, normal_prior(0, 1),
       key = "movement_previous"
     )
-    if (identical(cumulative@observation, "hurdle_ztnb")) {
+    if (pr$count_cumulative_observation == 2L) {
       pr$magnitude_size <- .res(
         cumulative@magnitude_size, lognormal_prior(0, 1.5),
         key = "magnitude_size"

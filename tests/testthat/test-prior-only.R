@@ -114,7 +114,7 @@ test_that("count-cumulative data promotes the inert default to the dedicated pro
     "signed hurdle--ZTNB")
   expect_identical(fitted@model@revision@active, FALSE)
   expect_identical(fitted@model@cumulative@active, TRUE)
-  expect_identical(fitted@model@cumulative@observation, "hurdle_ztnb")
+  expect_identical(fitted@model@cumulative@observation, "hurdle")
   expect_identical(as.integer(fitted@model@cumulative@settlement), 26L)
   expect_identical(fitted@fits[[1]]$convergence, 0L)
 })
@@ -146,7 +146,7 @@ test_that("the prior sampler supplies every name .joint_reconstruct() reads", {
   ztnb <- basis_for(model(
     nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
     cumulative = cumulative_process(
-      observation = "hurdle_ztnb", settlement = 6L
+      observation = "hurdle", settlement = 6L
     )
   ))
   parlist <- .sample_prior_parlist(ztnb$eng, ztnb$pri,
@@ -162,9 +162,9 @@ test_that("the prior sampler supplies every name .joint_reconstruct() reads", {
                                      ztnb$b$Bmat, ztnb$b$freq))
 
   ztp <- basis_for(model(
-    nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
+    poisson_likelihood(), hsgp_epidemic(), lognormal_delay(),
     cumulative = cumulative_process(
-      observation = "hurdle_ztpoisson", settlement = 6L
+      observation = "hurdle", settlement = 6L
     )
   ))
   parlist_ztp <- .sample_prior_parlist(ztp$eng, ztp$pri,
@@ -180,9 +180,9 @@ test_that(".simulate_prior_draws() aborts instead of returning an all-NA result"
   # entirely missing answer with no warning at all.
   x     <- make_cumulative_grid()
   mdl <- model(
-    nb_likelihood(), hsgp_epidemic(), lognormal_delay(),
+    poisson_likelihood(), hsgp_epidemic(), lognormal_delay(),
     cumulative = cumulative_process(
-      observation = "hurdle_ztpoisson", settlement = 6L
+      observation = "hurdle", settlement = 6L
     )
   )
   eng   <- prepare_from_tbl_now(x, mdl, now = tbl.now::get_now(x), delay_only = FALSE)$data

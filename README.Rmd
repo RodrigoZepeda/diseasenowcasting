@@ -378,10 +378,10 @@ The image below explains the main idea: what is observed are the outcomes at a c
 
 <a><img src="man/figures/nowcasting_panels_resized.svg" align="center" alt="Image showing how a nowcast can be decomposed into the epidemic and delay processes"/></a>
  
-In `diseasenowcasting`, the `nowcast_diagnostic()` function plots these processes separately so you can see the reconstructed epidemic and delay processes fitted to the data:
+In `diseasenowcasting`, the `plot_nowcast_decomposition()` function plots these processes separately so you can see the reconstructed epidemic and delay processes fitted to the data:
 
 ```{r, fig.height=8}
-nowcast_diagnostic(ncast)
+plot_nowcast_decomposition(ncast)
 ```
 
 As a user, you can construct your own models within the `diseasenowcasting` framework via the `custom_delay()` and `custom_epidemic()` functions. You can see more in the [Custom delays and epidemic processes vignette](https://rodrigozepeda.github.io/diseasenowcasting/articles/Custom_delays_and_processes.html)

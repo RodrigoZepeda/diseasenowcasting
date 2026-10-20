@@ -45,33 +45,44 @@ S7::method(print, nb_likelihood_class) <- function(x, ..., digits = 4) {
 }
 
 #' @noRd
-S7::method(print, cumulative_process_class) <- function(x, ..., digits = 4) {
-  label <- switch(
-    x@observation,
-    cumulative = "Cumulative-level composite",
-    hurdle_ztnb = "Signed hurdle--ZTNB update composite",
-    hurdle_ztpoisson = "Signed hurdle--ZTPoisson update composite"
-  )
+S7::method(print, cumulative_process_class) <- function(x, ..., digits = 4,
+                                                       likelihood = NULL) {
+  # The hurdle magnitude law comes from the model likelihood, which a bare
+  # `cumulative_process()` does not know; `print(<model>)` passes it in.
+  is_hurdle <- identical(x@observation, "hurdle")
+  code <- if (is.null(likelihood)) NA_integer_ else
+    .cumulative_observation_code(x, likelihood)
+  label <- if (!is_hurdle) {
+    "Cumulative-level composite"
+  } else if (is.na(code)) {
+    "Signed hurdle update composite (ZTNB or ZTPoisson magnitude from the likelihood)"
+  } else if (code == 2L) {
+    "Signed hurdle--ZTNB update composite"
+  } else {
+    "Signed hurdle--ZTPoisson update composite"
+  }
   cli::cli_text("{.emph Observation}: {label}")
   cli::cli_text("{.emph Settlement horizon}: H = {as.integer(x@settlement)} model steps")
   cli::cli_text("{.emph Retraction kernel}: h_R(l) = mass * {x@retraction_delay@name}(l)")
   cli::cli_text(paste0("{.emph Retraction mass}: ", .fmt_slot("mass", x@retraction_mass)))
-  if (x@observation %in% c("hurdle_ztnb", "hurdle_ztpoisson")) {
+  if (is_hurdle) {
     cli::cli_text(paste0("{.emph Movement}: ",
       .fmt_slot("intercept", x@movement_intercept), ", ",
       .fmt_slot("age", x@movement_age), ", ",
       .fmt_slot("previous", x@movement_previous)))
   }
-  is_offset <- identical(x@initial_report, "offset") &&
-    x@observation %in% c("hurdle_ztnb", "hurdle_ztpoisson")
+  is_offset <- identical(x@initial_report, "offset") && is_hurdle
   if (is_offset) {
     cli::cli_text(paste0("{.emph Initial report}: C_t(0) offset, ",
                          .fmt_slot("size", x@initial_size)))
   }
-  if (identical(x@observation, "hurdle_ztnb")) {
-    cli::cli_text(paste0("{.emph Magnitude size}: ",
-      if (is_offset) "" else paste0(.fmt_slot("initial", x@magnitude_size), ", "),
-      .fmt_slot("revision", x@revision_magnitude_size)))
+  if (is_hurdle && !isTRUE(code == 3L)) {
+    default_size <- lognormal_prior(0, 1.5)
+    cli::cli_text(paste0("{.emph Magnitude size}",
+      if (is.na(code)) " (NB likelihood only)" else "", ": ",
+      if (is_offset) "" else
+        paste0(.fmt_slot("initial", x@magnitude_size %||% default_size), ", "),
+      .fmt_slot("revision", x@revision_magnitude_size %||% default_size)))
   }
   invisible(x)
 }
@@ -231,7 +242,7 @@ S7::method(print, model_class) <- function(x, ..., digits = 4) {
   }
   if (isTRUE(x@cumulative@active)) {
     cli::cli_h3("Count-cumulative process")
-    print(x@cumulative, digits = digits)
+    print(x@cumulative, digits = digits, likelihood = x@likelihood)
   }
   cli::cli_h3("Covariate prior")
   print(x@covariate_prior, digits = digits)

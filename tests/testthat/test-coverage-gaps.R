@@ -294,22 +294,22 @@ test_that("parameters() classifies HSGP and SIR parameters into the right groups
   expect_true("epidemic_sir" %in% ts$type)
 })
 
-# ── 26_nowcast_diagnostic.R (0% → target high) ──────────────────────────────
+# ── 26_plot_nowcast_decomposition.R ──────────────────────────────────────────
 
-test_that("nowcast_diagnostic() returns three diagnostic panels (parametric delay)", {
+test_that("plot_nowcast_decomposition() returns three panels (parametric delay)", {
   tn <- .make_synth_tblnow(Tn = 50L, seed = 53)
   nc <- nowcast(tn, model(nb_likelihood(), ar1_epidemic(), lognormal_delay()),
                 type = "one_stage", n_draws = 80, seed = 1)
-  d <- nowcast_diagnostic(nc, n_draws = 60, seed = 1, previous_times = 20)
+  d <- plot_nowcast_decomposition(nc, n_draws = 60, seed = 1, previous_times = 20)
   # patchwork is in Suggests: combined plot if present, else a list of 3 ggplots
   expect_true(inherits(d, "patchwork") || (is.list(d) && length(d) == 3L))
 })
 
-test_that("nowcast_diagnostic() handles a nonparametric delay and previous_times = Inf", {
+test_that("plot_nowcast_decomposition() handles a nonparametric delay and previous_times = Inf", {
   tn <- .make_synth_tblnow(Tn = 45L, seed = 54)
   nc <- nowcast(tn, model(nb_likelihood(), hsgp_epidemic(), dirichlet_delay()),
                 type = "one_stage", n_draws = 60, seed = 1)
-  d <- nowcast_diagnostic(nc, n_draws = 50, seed = 2, previous_times = Inf)
+  d <- plot_nowcast_decomposition(nc, n_draws = 50, seed = 2, previous_times = Inf)
   expect_true(inherits(d, "patchwork") || (is.list(d) && length(d) == 3L))
 })
 

@@ -27,8 +27,10 @@ knitr::opts_chunk$set(
 
 Use `diseasenowcasting`'s native interface when specifying the statistical
 model: `model()`, `nowcast()`, and `auto_nowcast()` expose its epidemic, delay,
-likelihood, revision, and cumulative-process choices. Use `fit_check()` and
-`nowcast_diagnostic()` for diagnostics that are specifically about the RTMB fit.
+likelihood, revision, and cumulative-process choices. Use `fit_check()` for
+diagnostics that are specifically about the RTMB fit, and
+`plot_nowcast_decomposition()` to plot the fitted delay, epidemic, and nowcast
+components.
 
 The returned object is already a `tbl.now::tbl_nowcast`. Plotting, tidying,
 predictive scoring, ensembling, saving, and loading therefore use the common
@@ -157,10 +159,10 @@ summary(pred_dengue) |> tail(6)
 ```
 
 
-Additionally the `nowcast_diagnostic()` shows the fitted distribution for the delay, the smoothed epidemic process as well as the aggregated nowcast (for the sum of all strata):
+Additionally `plot_nowcast_decomposition()` shows the fitted distribution for the delay, the smoothed epidemic process as well as the aggregated nowcast (for the sum of all strata):
 
-```{r dengue-diagnostic, fig.height=10}
-nowcast_diagnostic(nc_dengue) 
+```{r dengue-decomposition, fig.height=10}
+plot_nowcast_decomposition(nc_dengue) 
 ```
 
 
@@ -507,27 +509,29 @@ compressed_tbl <- tbl_now(
 ```
 
 Count-cumulative data use their own component. `settlement = 26L` targets
-$C_t(26)$, finite-horizon database retention. The cumulative-level model and the
-two signed hurdle models share the same collapsed retraction kernel; the
-zero-truncated Poisson magnitude has no dispersion parameter.
+$C_t(26)$, finite-horizon database retention. The plain cumulative-level model
+and the signed hurdle model share the same collapsed retraction kernel. The
+likelihood sets the hurdle magnitude law: zero-truncated negative binomial under
+`nb_likelihood()` and zero-truncated Poisson, with no dispersion parameter,
+under `poisson_likelihood()`.
 
 ```{r flusight-nowcast, eval = FALSE}
 level_model <- model(
   nb_likelihood(), ar1_epidemic(), lognormal_delay(),
   cumulative = cumulative_process(
-    observation = "cumulative", settlement = 26L
+    observation = "plain", settlement = 26L
   )
 )
 ztnb_model <- model(
   nb_likelihood(), ar1_epidemic(), lognormal_delay(),
   cumulative = cumulative_process(
-    observation = "hurdle_ztnb", settlement = 26L
+    observation = "hurdle", settlement = 26L
   )
 )
 ztp_model <- model(
   poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
   cumulative = cumulative_process(
-    observation = "hurdle_ztpoisson", settlement = 26L
+    observation = "hurdle", settlement = 26L
   )
 )
 

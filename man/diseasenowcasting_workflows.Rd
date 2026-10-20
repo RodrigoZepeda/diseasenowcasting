@@ -14,9 +14,10 @@ explicit conversion.
 
 Use \code{\link[=model]{model()}}, \code{\link[=nowcast]{nowcast()}}, and \code{\link[=auto_nowcast]{auto_nowcast()}} when you need this package's
 epidemic, delay, likelihood, revision, or cumulative-process components.
-Use \code{\link[=fit_check]{fit_check()}} and \code{\link[=nowcast_diagnostic]{nowcast_diagnostic()}} for RTMB-specific convergence and
-fit diagnostics. These functions automatically unwrap the retained native
-fit from the common result.
+Use \code{\link[=fit_check]{fit_check()}} for RTMB-specific convergence and fit diagnostics, and
+\code{\link[=plot_nowcast_decomposition]{plot_nowcast_decomposition()}} to plot the fitted delay, epidemic, and nowcast
+components. These functions automatically unwrap the retained native fit from
+the common result.
 
 \code{\link[=backtest]{backtest()}} is a native model-specification convenience, not a second
 evaluation system: it translates each \code{\link[=model]{model()}} into a

@@ -348,7 +348,7 @@ test_that("count-cumulative cohorts are forecast from an empty level", {
                         align_weeks = TRUE, verbose = FALSE)
   fitted <- quiet_nowcast(
     x, model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
-             cumulative = cumulative_process(observation = "cumulative",
+             cumulative = cumulative_process(observation = "plain",
                                              settlement = 8L)),
     temporal_effects = "none", n_draws = 50, seed = 1)
   result <- forecast(fitted, h = 1, n_draws = 50, seed = 1)

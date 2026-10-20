@@ -184,7 +184,7 @@ nowcast <- function(data, model = diseasenowcasting::model(),
 
   if (is_cumulative && !isTRUE(model@cumulative@active)) {
     cumulative_process <- cumulative_process(
-      observation = "hurdle_ztnb",
+      observation = "hurdle",
       retraction_delay = lognormal_delay(),
       settlement = 26L,
       retraction_mass = beta_prior(1.5, 20)
@@ -198,8 +198,11 @@ nowcast <- function(data, model = diseasenowcasting::model(),
       strata_pooling = model@strata_pooling,
       cumulative = cumulative_process
     )
+    magnitude_law <- if (.cumulative_observation_code(cumulative_process,
+                                                      model@likelihood) == 2L)
+      "ZTNB" else "ZTPoisson"
     cli::cli_inform(c(
-      "i" = "Using the default signed hurdle--ZTNB count-cumulative model with a 26-step settlement horizon.",
+      "i" = "Using the default signed hurdle--{magnitude_law} count-cumulative model with a 26-step settlement horizon.",
       "*" = "Configure it with {.code model(cumulative = cumulative_process(...))}."
     ))
   }

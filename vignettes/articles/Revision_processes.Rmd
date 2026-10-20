@@ -329,16 +329,16 @@ retraction kernel with `cumulative_process()` instead:
 model(
   nb_likelihood(), ar1_epidemic(), lognormal_delay(),
   cumulative = cumulative_process(
-    observation = "hurdle_ztnb", settlement = 26L
+    observation = "hurdle", settlement = 26L
   )
 )
 ```
 
 The component reports the finite-horizon retraction mass, $h_R$, $S_R$, $q_C$,
 and terminal retention. It never labels one minus the retraction mass as an
-identified truth probability. `hurdle_ztpoisson` is also available when the
-non-zero update magnitude should be zero-truncated Poisson with no dispersion
-parameter. See §9 of the [Mathematics article](Mathematics.html).
+identified truth probability. With `poisson_likelihood()` the non-zero update
+magnitude is zero-truncated Poisson with no dispersion parameter instead of
+zero-truncated negative binomial. See §9 of the [Mathematics article](Mathematics.html).
 
 ## Backtesting
 

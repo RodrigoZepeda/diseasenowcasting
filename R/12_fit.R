@@ -1428,9 +1428,9 @@ fit <- function(model, data, priors = NULL, init = NULL,
           identical(as.integer(data$count_cumulative_observation), 3L) &&
           !.fit_is_adequate(selected)) {
         cli::cli_warn(c(
-          "The `hurdle_ztpoisson` optimizer did not pass the adequacy check.",
+          "The Poisson-hurdle optimizer did not pass the adequacy check.",
           "x" = "{paste(selected$diagnostic_reasons, collapse = '; ')}.",
-          "i" = "Try `cumulative_process(observation = \"hurdle_ztnb\")`; the ZTNB magnitude law was stable in the package-wide sweep.",
+          "i" = "Try {.fn nb_likelihood} for a ZTNB magnitude; the ZTNB magnitude law was stable in the package-wide sweep.",
           "i" = "Inspect the returned `fit$diagnostic` before using predictions."
         ))
       } else {
@@ -1454,9 +1454,9 @@ fit <- function(model, data, priors = NULL, init = NULL,
       "no optimizer result was returned"
     }
     cli::cli_warn(c(
-      "The `hurdle_ztpoisson` optimizer failed for every initialization.",
+      "The Poisson-hurdle optimizer failed for every initialization.",
       "x" = "Last optimizer error: {optimizer_error}",
-      "i" = "Try `cumulative_process(observation = \"hurdle_ztnb\")`; the ZTNB magnitude law was stable in the package-wide sweep."
+      "i" = "Try {.fn nb_likelihood} for a ZTNB magnitude; the ZTNB magnitude law was stable in the package-wide sweep."
     ))
   }
   cli::cli_abort("Joint fit failed to converge for all init attempts.")

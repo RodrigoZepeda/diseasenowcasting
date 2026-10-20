@@ -42,7 +42,7 @@
 #'     overfitting instead, which leaves the correlation low, so a quiet check is
 #'     not a guarantee that the interval is sound.
 #' @seealso [diseasenowcasting_workflows] for the distinction between native fit
-#'   diagnostics and predictive scoring; [nowcast_diagnostic()],
+#'   diagnostics and predictive scoring; [plot_nowcast_decomposition()],
 #'   [tbl.now::score_nowcast()], [tbl.now::nowcast_backtest()]
 #' @export
 fit_check <- function(object, warn = TRUE) {
@@ -120,7 +120,7 @@ fit_check <- function(object, warn = TRUE) {
     if (any(problematic)) {
       cli::cli_warn(c(
         "{sum(problematic)} of {nrow(out)} retained RTMB fit{?s} failed the optimizer diagnostic check.",
-        "i" = "Inspect {.code fit_check(object, warn = FALSE)} and {.fn nowcast_diagnostic}."
+        "i" = "Inspect {.code fit_check(object, warn = FALSE)}."
       ))
     }
     ridged <- applicable & out$arma_ridge

@@ -387,6 +387,6 @@ nc_ode <- nowcast(mpox_tn,
                   model(nb_likelihood(), sir_ode_epidemic, lognormal_delay()),
                   temporal_effects = "none")
 
-nowcast_diagnostic(nc_ode)
+plot_nowcast_decomposition(nc_ode)
 ```
 

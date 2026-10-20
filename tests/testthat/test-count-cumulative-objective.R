@@ -50,10 +50,10 @@
 
 test_that("all count-cumulative objectives have finite values and gradients", {
   specifications <- list(
-    list("cumulative", poisson_likelihood()),
-    list("cumulative", nb_likelihood()),
-    list("hurdle_ztnb", nb_likelihood()),
-    list("hurdle_ztpoisson", nb_likelihood())
+    list("plain", poisson_likelihood()),
+    list("plain", nb_likelihood()),
+    list("hurdle", nb_likelihood()),
+    list("hurdle", poisson_likelihood())
   )
 
   for (specification in specifications) {
@@ -69,16 +69,29 @@ test_that("all count-cumulative objectives have finite values and gradients", {
 
 test_that("hurdle ZTPoisson does not carry a magnitude dispersion parameter", {
   objective <- .build_count_cumulative_test_objective(
-    "hurdle_ztpoisson", nb_likelihood()
+    "hurdle", poisson_likelihood()
   )
   expect_false(any(grepl("magnitude_size", names(objective$par))))
   expect_false(any(grepl("phi_nb", names(objective$par))))
 })
 
+test_that("hurdle ZTNB uses its magnitude sizes, not the likelihood phi", {
+  objective <- .build_count_cumulative_test_objective(
+    "hurdle", nb_likelihood()
+  )
+  expect_true(any(grepl("magnitude_size", names(objective$par))))
+  expect_false(any(grepl("phi_nb", names(objective$par))))
+})
+
 test_that("count-cumulative reconstruction reports the finite-horizon objects", {
-  for (observation in c("cumulative", "hurdle_ztnb", "hurdle_ztpoisson")) {
+  specifications <- list(
+    list("plain", nb_likelihood()),
+    list("hurdle", nb_likelihood()),
+    list("hurdle", poisson_likelihood())
+  )
+  for (specification in specifications) {
     bundle <- .build_count_cumulative_test_bundle(
-      observation, nb_likelihood()
+      specification[[1L]], specification[[2L]]
     )
     bundle$built$obj$fn(bundle$built$obj$par)
     reconstructed <- diseasenowcasting:::.joint_reconstruct(
@@ -95,14 +108,14 @@ test_that("count-cumulative reconstruction reports the finite-horizon objects", 
     expect_equal(sum(component$h_R), component$retraction_mass,
                  tolerance = 1e-10)
     expect_equal(component$terminal_retention, component$q_C[7L])
-    if (observation == "hurdle_ztpoisson")
+    if (identical(bundle$engine$count_cumulative_observation, 3L))
       expect_null(component$magnitude_size)
   }
 })
 
 test_that("anchored hurdle predictions preserve the future-update mean", {
   bundle <- .build_count_cumulative_test_bundle(
-    "hurdle_ztpoisson", poisson_likelihood()
+    "hurdle", poisson_likelihood()
   )
   bundle$built$obj$fn(bundle$built$obj$par)
   reconstructed <- diseasenowcasting:::.joint_reconstruct(

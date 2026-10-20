@@ -83,5 +83,5 @@ subset(rf, horizon == 0)$inflation     # what the nowcast is multiplying by
 }
 \seealso{
 \code{\link[=fit_check]{fit_check()}} for optimizer diagnostics and the \code{log_mean} ceiling,
-\code{\link[=nowcast_diagnostic]{nowcast_diagnostic()}}, \code{\link[=predict]{predict()}}
+\code{\link[=plot_nowcast_decomposition]{plot_nowcast_decomposition()}}, \code{\link[=predict]{predict()}}
 }

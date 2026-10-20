@@ -64,7 +64,7 @@
 #'   uncertainty the cascade propagates.
 #'
 #' @seealso [fit_check()] for optimizer diagnostics and the `log_mean` ceiling,
-#'   [nowcast_diagnostic()], [predict()]
+#'   [plot_nowcast_decomposition()], [predict()]
 #' @examples
 #' \dontrun{
 #' nc <- nowcast(tn, model(), type = "two_stage")

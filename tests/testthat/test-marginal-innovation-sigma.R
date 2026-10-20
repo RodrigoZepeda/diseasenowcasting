@@ -36,7 +36,7 @@ test_that("marginal fitting recovers innovation SD across epidemic processes", {
     )
   )
   cumulative <- cumulative_process(
-    observation = "hurdle_ztpoisson", settlement = 4L,
+    observation = "hurdle", settlement = 4L,
     initial_report = "offset", initial_size = 1000,
     retraction_delay = lognormal_delay(mu = -5, sigma = 0.1),
     retraction_mass = 0.001, movement_intercept = -3,

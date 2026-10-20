@@ -163,13 +163,13 @@ test_that("the trajectory rung starts the AR(1) path on the published levels", {
     diseasenowcasting:::prepare_from_tbl_now(data, mod)$data
   }
   expect_null(diseasenowcasting:::.count_cumulative_trajectory_init(
-    make_engine("cumulative")
+    make_engine("plain")
   ))
   expect_null(diseasenowcasting:::.count_cumulative_trajectory_init(
-    make_engine("hurdle_ztnb", hsgp_epidemic())
+    make_engine("hurdle", hsgp_epidemic())
   ))
 
-  engine <- make_engine("hurdle_ztnb")
+  engine <- make_engine("hurdle")
   init <- diseasenowcasting:::.count_cumulative_trajectory_init(engine)
   latest <- vapply(seq_len(engine$max_time), function(event_index) {
     observed <- which(engine$observation_mask[event_index, , 1L])

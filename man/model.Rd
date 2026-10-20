@@ -40,8 +40,10 @@ Only relevant when \code{num_strata > 1}.}
 
 \item{cumulative}{Dedicated count-cumulative observation configuration
 from \code{\link[=cumulative_process]{cumulative_process()}}. It is inert by default for linelist and
-count-incidence data; count-cumulative data use the hurdle--ZTNB default
-unless configured explicitly.}
+count-incidence data; count-cumulative data use the default hurdle
+observation unless configured explicitly. The \code{likelihood} sets the hurdle
+magnitude law: ZTNB under \code{\link[=nb_likelihood]{nb_likelihood()}}, ZTPoisson under
+\code{\link[=poisson_likelihood]{poisson_likelihood()}}.}
 }
 \value{
 A \code{model_class} object.

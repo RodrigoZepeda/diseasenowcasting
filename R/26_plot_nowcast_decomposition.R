@@ -1,18 +1,21 @@
 # =============================================================================
-# nowcast_diagnostic() -- three-panel internal diagnostic plot
+# plot_nowcast_decomposition() -- three-panel decomposition of a fitted nowcast
 # =============================================================================
 # Not autoplot() -- the main autoplot(nowcast_class) is the bar-chart style in
 # 25_autoplot.R.  This function gives a deeper look: delay histogram + fitted
 # density, smoothed lambda, and the predictive nowcast as a line+ribbon.
-# Call it explicitly: nowcast_diagnostic(nc, seed = 1)
+# Call it explicitly: plot_nowcast_decomposition(nc, seed = 1)
 # =============================================================================
 
-#' Three-panel diagnostic plot for a fitted nowcast
+#' Plot the fitted components of a nowcast
 #'
-#' Produces three stacked panels: (1) reporting-delay histogram with the
-#' fitted density, (2) smoothed latent incidence lambda with 50/90% CI, and (3)
-#' posterior-predictive nowcast with observed counts.  Requires the
-#' `patchwork` package for a combined output.
+#' Decomposes a fitted nowcast into three stacked panels: (1) reporting-delay
+#' histogram with the fitted density, (2) smoothed latent incidence lambda with
+#' 50/90% CI, and (3) posterior-predictive nowcast with observed counts.  The
+#' panels show what the model fitted; they do not check convergence, fit, or
+#' predictive performance.  Use [fit_check()] for optimizer diagnostics and
+#' [backtest()] for predictive performance.  Requires the `patchwork` package
+#' for a combined output.
 #'
 #' @param object A `nowcast_class` object.
 #' @param n_draws Number of posterior draws (default: min(`object@n_draws`, 500)).
@@ -24,8 +27,9 @@
 #'   `NULL`) to show every event-time.
 #' @returns A `patchwork` combined plot (or a named list of three ggplots).
 #' @export
-nowcast_diagnostic <- function(object, n_draws = NULL, seed = sample.int(.Machine$integer.max, 1),
-                               previous_times = 30) {
+plot_nowcast_decomposition <- function(object, n_draws = NULL,
+                                       seed = sample.int(.Machine$integer.max, 1),
+                                       previous_times = 30) {
   object <- .unwrap_nowcast(object)
   if (!is.null(seed)) set.seed(seed)
   n_draws <- n_draws %||% min(object@n_draws, 500L)

@@ -684,14 +684,14 @@ $0<\pi_t(d)\leq\min\{1,\alpha_t(d)+\omega_t(d)\}$. Given movement, the sign is
 positive with probability $\alpha/(\alpha+\omega)$ and the unsigned magnitude
 has its own mean $(\alpha+\omega)/\pi$.
 
-For `observation = "hurdle_ztnb"`, the magnitude follows a zero-truncated
-negative binomial. If $z$ is its requested own mean and $s$ its size, the parent
+Under `nb_likelihood()`, the magnitude of `observation = "hurdle"` follows a
+zero-truncated negative binomial. If $z$ is its requested own mean and $s$ its size, the parent
 NB mean $m$ is obtained on the automatic-differentiation tape by solving
 
 $$z=\Psi_s(m)=\frac{m}{1-\Pr\{\mathrm{NB}(m,s)=0\}}.$$
 
-Using $z$ directly as the parent NB mean is wrong. For
-`observation = "hurdle_ztpoisson"`, the same construction uses a
+Using $z$ directly as the parent NB mean is wrong. Under
+`poisson_likelihood()`, the same construction uses a
 zero-truncated Poisson indexed by own mean $(\alpha+\omega)/\pi$ and has no
 magnitude-dispersion parameter.
 

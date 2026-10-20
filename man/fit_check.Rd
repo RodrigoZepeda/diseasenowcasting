@@ -51,6 +51,6 @@ diseasenowcasting.
 }
 \seealso{
 \link{diseasenowcasting_workflows} for the distinction between native fit
-diagnostics and predictive scoring; \code{\link[=nowcast_diagnostic]{nowcast_diagnostic()}},
+diagnostics and predictive scoring; \code{\link[=plot_nowcast_decomposition]{plot_nowcast_decomposition()}},
 \code{\link[tbl.now:score_nowcast]{tbl.now::score_nowcast()}}, \code{\link[tbl.now:nowcast_backtest]{tbl.now::nowcast_backtest()}}
 }

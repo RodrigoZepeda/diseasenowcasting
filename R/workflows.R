@@ -9,9 +9,10 @@
 #'
 #' Use [model()], [nowcast()], and [auto_nowcast()] when you need this package's
 #' epidemic, delay, likelihood, revision, or cumulative-process components.
-#' Use [fit_check()] and [nowcast_diagnostic()] for RTMB-specific convergence and
-#' fit diagnostics. These functions automatically unwrap the retained native
-#' fit from the common result.
+#' Use [fit_check()] for RTMB-specific convergence and fit diagnostics, and
+#' [plot_nowcast_decomposition()] to plot the fitted delay, epidemic, and nowcast
+#' components. These functions automatically unwrap the retained native fit from
+#' the common result.
 #'
 #' [backtest()] is a native model-specification convenience, not a second
 #' evaluation system: it translates each [model()] into a

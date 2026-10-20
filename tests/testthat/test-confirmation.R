@@ -249,7 +249,7 @@ test_that("count-cumulative data is detected and signed updates rebuild each lev
   cumulative_model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
     cumulative = cumulative_process(
-      observation = "hurdle_ztpoisson", settlement = 6L
+      observation = "hurdle", settlement = 6L
     )
   )
   prepared <- diseasenowcasting:::prepare_from_tbl_now(
@@ -273,7 +273,7 @@ test_that("down-revisions produce negative signed increments", {
   cumulative_model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
     cumulative = cumulative_process(
-      observation = "hurdle_ztpoisson", settlement = 6L
+      observation = "hurdle", settlement = 6L
     )
   )
   prepared <- diseasenowcasting:::prepare_from_tbl_now(
@@ -291,7 +291,7 @@ test_that("count-cumulative priors contain h_R parameters and no separate p", {
   cumulative_model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
     cumulative = cumulative_process(
-      observation = "hurdle_ztpoisson", settlement = 6L
+      observation = "hurdle", settlement = 6L
     )
   )
   engine <- diseasenowcasting:::prepare_from_tbl_now(
@@ -335,7 +335,7 @@ test_that("count-cumulative nowcast() -> predict() runs end-to-end", {
   cumulative_model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
     cumulative = cumulative_process(
-      observation = "hurdle_ztpoisson", settlement = 6L
+      observation = "hurdle", settlement = 6L
     )
   )
   now_date <- as.Date("2023-01-07") + 13L * 7L
@@ -364,7 +364,7 @@ test_that("the settled count is never negative, even when the stream revises dow
   cumulative_model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
     cumulative = cumulative_process(
-      observation = "hurdle_ztpoisson", settlement = 6L
+      observation = "hurdle", settlement = 6L
     )
   )
   now_date <- as.Date("2023-01-07") + 13L * 7L

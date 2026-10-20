@@ -67,20 +67,21 @@
 }
 
 .offset_bundle <- function(data, initial_size, settlement = 4L,
-                           observation = "hurdle_ztnb") {
-  process <- if (identical(observation, "hurdle_ztnb")) {
+                           likelihood = nb_likelihood()) {
+  process <- if (S7::S7_inherits(likelihood,
+                                 diseasenowcasting:::nb_likelihood_class)) {
     cumulative_process(
-      observation = observation, settlement = settlement,
+      settlement = settlement,
       initial_report = "offset", initial_size = initial_size,
       revision_magnitude_size = 3
     )
   } else {
     cumulative_process(
-      observation = observation, settlement = settlement,
+      settlement = settlement,
       initial_report = "offset", initial_size = initial_size
     )
   }
-  mod <- model(nb_likelihood(), ar1_epidemic(), lognormal_delay(),
+  mod <- model(likelihood, ar1_epidemic(), lognormal_delay(),
                cumulative = process)
   engine <- diseasenowcasting:::prepare_from_tbl_now(data, mod)$data
   priors <- default_priors(mod, engine)
@@ -107,10 +108,9 @@ test_that("cumulative_process() validates the initial-report offset", {
   expect_error(cumulative_process(initial_size = 2), "offset")
   expect_error(cumulative_process(initial_report = "offset", initial_size = 0),
                "positive")
-  expect_no_error(cumulative_process(
-    observation = "hurdle_ztpoisson", initial_report = "offset",
-    initial_size = 10
-  ))
+  expect_no_error(model(poisson_likelihood(), cumulative = cumulative_process(
+    initial_report = "offset", initial_size = 10
+  )))
 
   priors <- default_priors(model(
     nb_likelihood(), ar1_epidemic(), lognormal_delay(),
@@ -185,7 +185,7 @@ test_that("the offset objective is NB at delay 0 and rescales later updates", {
 test_that("offset draws preserve the settled mean for new and anchored events", {
   data <- .simulate_offset_cumulative(3L, n_events = 10L, settlement = 4L)$data
   bundle <- .offset_bundle(data, initial_size = 4,
-                           observation = "hurdle_ztpoisson")
+                           likelihood = poisson_likelihood())
   bundle$built$obj$fn(bundle$built$obj$par)
   reconstructed <- diseasenowcasting:::.joint_reconstruct(
     bundle$engine, bundle$priors, bundle$built$obj$env$parList(),

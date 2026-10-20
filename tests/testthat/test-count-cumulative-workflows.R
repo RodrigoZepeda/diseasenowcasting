@@ -29,7 +29,7 @@
   model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
     cumulative = cumulative_process(
-      observation = "hurdle_ztpoisson", settlement = 6L,
+      observation = "hurdle", settlement = 6L,
       movement_previous = 0
     )
   )
@@ -73,7 +73,7 @@ test_that("hurdle ZTPoisson supports fit, prediction, save/load, and update", {
   expect_invisible(suppressMessages(save_nowcast(fitted, path)))
   restored <- load_nowcast(path)
   expect_identical(restored@model@cumulative@observation,
-                   "hurdle_ztpoisson")
+                   "hurdle")
   expect_identical(as.integer(restored@model@cumulative@settlement), 6L)
   expect_equal(
     predict(fitted, n_draws = 40L, seed = 99L)@draws,
@@ -84,7 +84,7 @@ test_that("hurdle ZTPoisson supports fit, prediction, save/load, and update", {
     fitted, data, now = later_now, compute_surprise = FALSE
   )
   expect_identical(updated@model@cumulative@observation,
-                   "hurdle_ztpoisson")
+                   "hurdle")
   expect_identical(updated@engine$settlement_horizon, 6L)
   expect_lte(updated@fits[[1L]]$max_gradient, 0.1)
   expect_true(all(is.finite(
@@ -122,7 +122,7 @@ test_that("cumulative-level and hurdle fits integrate latent epidemic innovation
   level_model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
     cumulative = cumulative_process(
-      observation = "cumulative", settlement = 6L
+      observation = "plain", settlement = 6L
     )
   )
   hurdle_model <- .ztp_workflow_model()

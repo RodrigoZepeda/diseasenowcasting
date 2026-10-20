@@ -10,11 +10,12 @@
 #' `h_R(l) = retraction_mass * g_R(l)`; it does not separately identify a truth
 #' probability and a conditional revision-delay law.
 #'
-#' @param observation Observation composite likelihood. `"cumulative"` uses
-#'   cumulative Poisson or negative-binomial marginals according to the model's
-#'   [likelihood]. `"hurdle_ztnb"` uses signed hurdle updates with a
-#'   zero-truncated-negative-binomial magnitude. `"hurdle_ztpoisson"` uses the
-#'   corresponding zero-truncated-Poisson magnitude.
+#' @param observation Observation composite likelihood. `"hurdle"` uses signed
+#'   hurdle updates whose magnitude law follows the model's [likelihood]: a
+#'   zero-truncated negative binomial under [nb_likelihood()] and a
+#'   zero-truncated Poisson under [poisson_likelihood()]. `"plain"` uses
+#'   cumulative Poisson or negative-binomial marginals, again according to the
+#'   model's likelihood.
 #' @param retraction_delay Parametric delay family for retraction ages `1:H`.
 #'   Lognormal, gamma, and generalized gamma are supported.
 #' @param settlement Positive integer settlement horizon `H`, in model steps.
@@ -25,13 +26,16 @@
 #'   `movement_previous = 0` to disable previous-movement dependence.
 #' @param magnitude_size Positive prior or fixed value for the ZTNB magnitude
 #'   size of the first update of each event (delay 0). It is used only by
-#'   `"hurdle_ztnb"`.
+#'   `"hurdle"` under [nb_likelihood()], where `NULL` (the default) means
+#'   `lognormal_prior(0, 1.5)`; the Poisson hurdle has no magnitude size. The
+#'   likelihood's own `phi` is not used by the hurdle.
 #' @param revision_magnitude_size Positive prior or fixed value for the ZTNB
 #'   magnitude size of later updates (delays `1:H`). Initial reports and later
 #'   revisions have very different dispersion relative to their mean: a single
 #'   shared size is pulled to the heavy-tailed revisions and then leaves the
 #'   initial reports too little weight to identify the epidemic trajectory. It
-#'   is used only by `"hurdle_ztnb"`.
+#'   is used only by `"hurdle"` under [nb_likelihood()], where `NULL` (the
+#'   default) means `lognormal_prior(0, 1.5)`.
 #' @param initial_report How the hurdle models treat the first published level
 #'   `C_t(0)`. `"hurdle"` treats it as one more signed update. `"offset"` gives
 #'   each event a Gamma(`initial_size`, `initial_size`) effect `Xi_t` shared by
@@ -54,13 +58,16 @@
 #'
 #' @examples
 #' cumulative_process()
-#' cumulative_process(observation = "cumulative", settlement = 52L)
-#' cumulative_process(observation = "hurdle_ztpoisson", settlement = 6L)
+#' cumulative_process(observation = "plain", settlement = 52L)
 #' cumulative_process(initial_report = "offset")
+#'
+#' # The likelihood chooses the hurdle magnitude law:
+#' model(nb_likelihood(), cumulative = cumulative_process("hurdle"))      # ZTNB
+#' model(poisson_likelihood(), cumulative = cumulative_process("hurdle")) # ZTPoisson
 #'
 #' @export
 cumulative_process <- function(
-    observation = c("hurdle_ztnb", "hurdle_ztpoisson", "cumulative"),
+    observation = c("hurdle", "plain"),
     retraction_delay = lognormal_delay(),
     settlement = 26L,
     retraction_mass = beta_prior(1.5, 20),
@@ -74,7 +81,7 @@ cumulative_process <- function(
   observation <- match.arg(observation)
   initial_report <- match.arg(initial_report)
   is_offset <- identical(initial_report, "offset") &&
-    observation %in% c("hurdle_ztnb", "hurdle_ztpoisson")
+    identical(observation, "hurdle")
   if (is_offset && !is.null(magnitude_size)) {
     cli::cli_abort(c(
       "`initial_report = \"offset\"` models `C_t(0)` with `initial_size`, not `magnitude_size`.",
@@ -86,16 +93,6 @@ cumulative_process <- function(
   }
   if (is_offset && is.null(initial_size))
     initial_size <- 100
-  if (identical(observation, "hurdle_ztnb") && !is_offset &&
-      is.null(magnitude_size))
-    magnitude_size <- lognormal_prior(0, 1.5)
-  if (identical(observation, "hurdle_ztnb") &&
-      is.null(revision_magnitude_size))
-    revision_magnitude_size <- lognormal_prior(0, 1.5)
-  if (identical(observation, "hurdle_ztpoisson") &&
-      (!is.null(magnitude_size) || !is.null(revision_magnitude_size))) {
-    cli::cli_abort("`hurdle_ztpoisson` has no magnitude-dispersion parameter; omit `magnitude_size` and `revision_magnitude_size`.")
-  }
   cumulative_process_class(
     observation = observation,
     retraction_delay = retraction_delay,
@@ -132,7 +129,7 @@ cumulative_process_class <- S7::new_class(
     active = S7::class_logical
   ),
   constructor = function(
-      observation = "hurdle_ztnb",
+      observation = "hurdle",
       retraction_delay = lognormal_delay(),
       settlement = 26,
       retraction_mass = beta_prior(1.5, 20),
@@ -162,8 +159,7 @@ cumulative_process_class <- S7::new_class(
   },
   validator = function(self) {
     if (!isTRUE(self@active)) return(NULL)
-    if (!self@observation %in%
-        c("cumulative", "hurdle_ztnb", "hurdle_ztpoisson")) {
+    if (!self@observation %in% c("hurdle", "plain")) {
       cli::cli_abort("Unsupported count-cumulative observation model {.val {self@observation}}.")
     }
     .validate_settlement_horizon(self@settlement)
@@ -199,25 +195,38 @@ cumulative_process_class <- S7::new_class(
       cli::cli_abort("`initial_report` must be \"hurdle\" or \"offset\".")
     }
     is_offset <- identical(self@initial_report, "offset") &&
-      self@observation %in% c("hurdle_ztnb", "hurdle_ztpoisson")
+      identical(self@observation, "hurdle")
     if (is_offset && !isTRUE(valid_positive_prior(self@initial_size))) {
       cli::cli_abort("`initial_size` must be a positive prior or fixed positive value.")
     }
-    if (identical(self@observation, "hurdle_ztnb") && !is_offset &&
+    if (!is.null(self@magnitude_size) &&
         !isTRUE(valid_positive_prior(self@magnitude_size))) {
       cli::cli_abort("`magnitude_size` must be a positive prior or fixed positive value.")
     }
-    if (identical(self@observation, "hurdle_ztnb") &&
+    if (!is.null(self@revision_magnitude_size) &&
         !isTRUE(valid_positive_prior(self@revision_magnitude_size))) {
       cli::cli_abort("`revision_magnitude_size` must be a positive prior or fixed positive value.")
     }
-    if (identical(self@observation, "hurdle_ztpoisson") &&
+    if (identical(self@observation, "plain") &&
         (!is.null(self@magnitude_size) ||
            !is.null(self@revision_magnitude_size))) {
-      cli::cli_abort("`hurdle_ztpoisson` has no magnitude-dispersion parameter.")
+      cli::cli_abort("`magnitude_size` and `revision_magnitude_size` are used only by the hurdle observation.")
     }
   }
 )
+
+#' Internal count-cumulative observation code
+#'
+#' The engine keeps one integer per observation law: 1 the plain
+#' cumulative-level composite, 2 the hurdle with a ZTNB magnitude, 3 the hurdle
+#' with a ZTPoisson magnitude. The hurdle magnitude follows the model
+#' likelihood.
+#' @keywords internal
+#' @noRd
+.cumulative_observation_code <- function(cumulative, likelihood) {
+  if (identical(cumulative@observation, "plain")) return(1L)
+  if (isTRUE(likelihood@num_id == 1L)) 2L else 3L
+}
 
 #' Inert count-cumulative configuration for non-cumulative data
 #' @keywords internal

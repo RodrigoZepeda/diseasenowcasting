@@ -84,7 +84,7 @@ test_that("engine arrays distinguish observed zeroes from masked future cells", 
   model <- model(
     poisson_likelihood(), ar1_epidemic(), lognormal_delay(),
     cumulative = cumulative_process(
-      observation = "hurdle_ztpoisson", settlement = 6L
+      observation = "hurdle", settlement = 6L
     )
   )
   engine <- diseasenowcasting:::prepare_from_tbl_now(
