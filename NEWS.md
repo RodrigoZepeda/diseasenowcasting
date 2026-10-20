@@ -1,4 +1,48 @@
-# diseasenowcasting (development version)
+# diseasenowcasting 2.6.0
+
+## `nowcast(marginal_latent = )` chooses how the latent innovations are fitted
+
+The latent epidemic innovations are non-centred (`sigma * z`, `z ~ N(0, 1)`).
+A joint mode over the parameters and the innovations can shrink `z` and
+inflate `sigma` to compensate. A forecast then applies that `sigma` to fresh
+`N(0, 1)` innovations, so its intervals widen far too fast. Fits now integrate
+the innovations out with a Laplace approximation (RTMB `random=`) by default;
+see "Innovation SDs are estimated with the latent epidemic trajectory
+integrated out" below. `marginal_latent = FALSE` forces the joint mode, and
+`TRUE` asks for the marginal fit explicitly. The choice travels with the fit
+through `update()` and `save_nowcast()`. The marginal fit against the joint
+mode:
+
+* **Forecasts.** On FluSight (8 states, 13 origins in 2024-25, 52-week window,
+  Fourier seasonality, hurdle-ZTNB with `initial_report = "offset"`) the 1-8
+  week WIS relative to a flat baseline went from 1.10 to 0.58 (random walk),
+  1.34 to 0.75 (STS), 3.08 to 1.20 (ARIMA) and 5.07 to 1.19 (ETS), and was
+  better in every state. The median 95%/5% interval ratio fell from hundreds or
+  thousands to 11-55. AR(1) and a damped HSGP were unchanged in WIS; AR(1)'s
+  90% coverage fell from 0.81 to 0.66, so `marginal_latent = FALSE` remains
+  the better choice for it there.
+* **Nowcasts.** Count-cumulative offset nowcasts are anchored on the published
+  level and did not change. In simulated line-list data, where the newest
+  nowcasts lean on the latent path, the marginal fit cut the error of the last
+  five days' nowcast from 10.1 to 5.3 (random walk) and 18.4 to 4.9 (AR(1)).
+* **Cost.** About 1.5-2 times the fitting time, and more memory: 5 of 78
+  eight-state FluSight jobs run three at a time ran out of memory, none of the
+  joint ones.
+
+## `forecast()` can damp an HSGP's trend
+
+A Gaussian process with a smooth kernel extrapolates by continuing its latest
+trend for about one lengthscale before reverting to its intercept. On the log
+scale that trend compounds: at a turning point the forecast runs away (or, with
+a short lengthscale, collapses to the intercept). `forecast(damping = )`
+multiplies each step of the GP path past `now` by `damping^k`, a damped trend;
+the intercept and covariate terms are not damped. The default, `1`, leaves the
+forecast unchanged, and other epidemic processes ignore the argument.
+
+On FluSight California (HSGP with 52-week Fourier seasonality, 52-week window,
+13 origins in 2024-25), `damping = 0.7` cut the mean WIS over horizons 1-8 from
+0.85 to 0.43 of a flat baseline's and raised 90% coverage from 0.65 to 0.85.
+The damping was chosen on these same origins, so treat the gain as optimistic.
 
 ## Breaking: the likelihood sets the count-cumulative hurdle magnitude (#140)
 
@@ -35,9 +79,10 @@ inflate innovation SDs as the series grew: increasing the SD made the fitted
 standardized innovations smaller without paying for their integration volume.
 On simulated weekly counts generated with SD 0.25, marginal estimates were
 0.20–0.25 across ARIMA, AR(1), ETS, and STS on both data types, while joint-mode
-estimates were 0.31–0.76. Forecast intervals and fit times will change. The
-internal `diseasenowcasting.use_random = FALSE` option retains joint-mode fitting
-for diagnostic comparisons on incidence and hurdle data. `parameters()` now
+estimates were 0.31–0.76. Forecast intervals and fit times will change.
+`nowcast(marginal_latent = FALSE)`, or the internal
+`diseasenowcasting.use_random = FALSE` option, retains joint-mode fitting on
+incidence and hurdle data. `parameters()` now
 uses the joint precision of a marginal fit for its reported uncertainty,
 matching posterior prediction.
 Cold cumulative hurdle fits first use the cheaper joint objective to find a

@@ -1177,6 +1177,11 @@ fit <- function(model, data, priors = NULL, init = NULL,
                        control = NULL,
                        hierarchical_strata = FALSE, warn = TRUE) {
   fit_started <- proc.time()[["elapsed"]]
+  # An explicit request made at nowcast() (`marginal_latent`) travels on the
+  # engine, so every fit of that nowcast -- two-stage imputations, update(),
+  # a reload -- honours it.
+  if (is.null(use_random) && !is.null(data$use_random_request))
+    use_random <- isTRUE(data$use_random_request)
   if (is.null(use_random)) {
     # Profiling the standardized epidemic innovations into a joint mode omits
     # their integration volume. As the series grows, that can drive innovation

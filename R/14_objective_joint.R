@@ -1871,7 +1871,8 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
 #' @noRd
 .reconstruct_log_mean <- function(data, parlist, hsgp_basis_matrix,
                                   hsgp_frequencies, horizon = 0L,
-                                  X_future = NULL, priors = NULL) {
+                                  X_future = NULL, priors = NULL,
+                                  damping = 1) {
   n_time <- as.integer(data$max_time); n_strata <- as.integer(data$num_strata)
   horizon <- as.integer(horizon)
   n_out <- n_time + horizon
@@ -1959,7 +1960,10 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     col <- rep(mu_intercept[s], n_out)
     if (!is.null(gamma)) col <- col + as.vector(X %*% gamma[, s])
     if (epidemic_model == 1L) {
-      col <- col + as.vector(hsgp_basis_matrix %*% (basis_coefs[, s] * spectral_weights))
+      gp_path <- as.vector(hsgp_basis_matrix %*% (basis_coefs[, s] * spectral_weights))
+      if (horizon > 0L && damping < 1)
+        gp_path <- .damp_forecast_path(gp_path, n_time, damping)
+      col <- col + gp_path
     } else if (epidemic_model == 2L) {
       tr <- numeric(n_out); tr[1] <- ar_innov[1, s] * ar_sigma[s] / sqrt(1 - ar_phi[s]^2)
       if (n_out >= 2) for (t in 2:n_out) tr[t] <- ar_phi[s] * tr[t - 1] + ar_innov[t, s] * ar_sigma[s]
@@ -1970,6 +1974,23 @@ build_joint_obj <- function(data, priors, init = NULL, use_random = TRUE,
     log_mean[, s] <- col
   }
   log_mean
+}
+
+#' Damp the steps of a latent path past the last fitted time
+#'
+#' Keeps `path[1:n_time]` and replaces each later step
+#' `path[t] - path[t - 1]` by `damping^(t - n_time)` times itself, as a damped
+#' trend: `damping = 1` leaves the path unchanged and `damping = 0` holds it at
+#' `path[n_time]`.
+#' @keywords internal
+#' @noRd
+.damp_forecast_path <- function(path, n_time, damping) {
+  n_out <- length(path)
+  if (n_out <= n_time) return(path)
+  future <- seq.int(n_time + 1L, n_out)
+  steps <- diff(path[c(n_time, future)]) * damping^seq_along(future)
+  path[future] <- path[n_time] + cumsum(steps)
+  path
 }
 
 #' HSGP basis on an event grid extended past the fitted one

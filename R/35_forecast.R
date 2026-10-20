@@ -38,7 +38,11 @@
 #'   horizon.
 #' * [hsgp_epidemic()] evaluates its basis past `now` only up to the edge of its
 #'   domain, and reverts towards the intercept as it approaches it; a longer
-#'   horizon is an error.
+#'   horizon is an error. Its smooth kernel also carries the latest trend on
+#'   for about one lengthscale, which on the log scale compounds into runaway
+#'   growth (or collapse) past a turning point. `damping` below one fades that
+#'   trend: on weekly FluSight data `damping = 0.7` roughly halved the 1-8 week
+#'   WIS of California's 2024-25 forecasts.
 #' * A [custom_epidemic()] returns a matrix of fixed length and cannot be
 #'   extended.
 #'
@@ -74,6 +78,11 @@
 #'   dates: the `tbl_now`'s event-date column plus every event covariate, one row
 #'   per new event time. Needed only when the model uses event covariates other
 #'   than temporal effects.
+#' @param damping Damping factor in `[0, 1]` for [hsgp_epidemic()] forecasts.
+#'   Each step of the Gaussian-process path past `now` is multiplied by
+#'   `damping^k` (a damped trend), so `1` (the default) extrapolates the GP
+#'   unchanged and `0` holds it at its value at `now`; the intercept and
+#'   covariate terms are not damped. Other epidemic processes ignore it.
 #' @param include_nowcast If `TRUE` (the default), the result covers the nowcast
 #'   event times as well as the forecast; if `FALSE`, only the `h` new ones.
 #' @param n_draws Number of predictive draws. Defaults to the fit's `n_draws`.
@@ -104,11 +113,13 @@
 #' @export
 forecast.diseasenowcasting_nowcast <- function(
     object, h = 1L, category = NULL, new_data = NULL, include_nowcast = TRUE,
+    damping = 1,
     n_draws = NULL, quantile_levels = tbl.now::nowcast_quantile_levels(),
     seed = sample.int(.Machine$integer.max, 1), ...) {
   native <- .unwrap_nowcast(object)
   if (!is.null(seed)) set.seed(seed)
-  spec <- .forecast_spec(native, h = h, category = category, new_data = new_data)
+  spec <- .forecast_spec(native, h = h, category = category, new_data = new_data,
+                         damping = damping)
   n_draws <- n_draws %||% native@n_draws
   per_fit <- max(1L, ceiling(n_draws / length(native@fits)))
   pooled <- .pool_fit_draws(native@fits, native@target, n_draws = per_fit,
@@ -137,7 +148,11 @@ forecast.diseasenowcasting_nowcast <- function(
 #' Validate the request and resolve everything a forecast draw needs
 #' @keywords internal
 #' @noRd
-.forecast_spec <- function(native, h, category = NULL, new_data = NULL) {
+.forecast_spec <- function(native, h, category = NULL, new_data = NULL,
+                           damping = 1) {
+  if (!is.numeric(damping) || length(damping) != 1L || !is.finite(damping) ||
+      damping < 0 || damping > 1)
+    cli::cli_abort("{.arg damping} must be a single number in [0, 1], not {.val {damping}}.")
   if (!is.numeric(h) || length(h) != 1L || !is.finite(h) || h < 1 ||
       h != round(h))
     cli::cli_abort("{.arg h} must be a single positive whole number, not {.val {h}}.")
@@ -163,7 +178,7 @@ forecast.diseasenowcasting_nowcast <- function(
   resolved <- .forecast_category(native, category)
   if (as.integer(engine$epidemic_model) == 1L)
     .hsgp_extended_basis(engine, as.integer(engine$max_time) + h)
-  c(list(horizon = h,
+  c(list(horizon = h, damping = damping,
          X_future = .forecast_design(native, h, new_data)),
     resolved)
 }
@@ -308,7 +323,8 @@ forecast.diseasenowcasting_nowcast <- function(
   h <- forecast$horizon
   log_mean <- .reconstruct_log_mean(
     data, .fill_fixed_parameters(parlist, data, priors), fit$Bmat, fit$freq,
-    horizon = h, X_future = forecast$X_future, priors = priors
+    horizon = h, X_future = forecast$X_future, priors = priors,
+    damping = forecast$damping %||% 1
   )
   upper <- data$mu_log_upper_bound
   future_log_mean <- log_mean[n_time + seq_len(h), , drop = FALSE]
